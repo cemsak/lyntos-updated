@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+.env.*
+.DS_Store
+_data/
+out_*.json
+meta.json
+
+!.env.example

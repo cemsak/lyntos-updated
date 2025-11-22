@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">LYNTOS Symbol — Minimal Logo</title>
+  <desc id="desc">Rounded-square outline with a monoline L for the Lyntos brand. Clean and dashboard-friendly.</desc>
+  <!-- Rounded square outline -->
+  <rect x="20" y="20" width="216" height="216" rx="40" ry="40" fill="none" stroke="#3B82F6" stroke-width="16"/>
+  <!-- Monoline L -->
+  <path d="M92 68 V188 H180" fill="none" stroke="#3B82F6" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
