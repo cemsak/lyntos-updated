@@ -1,0 +1,1160 @@
+from __future__ import annotations
+import re
+
+from dataclasses import dataclass, asdict
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+from data_engine.loader import load_all_for_client_period
+
+
+Number = float  # sade okunurluk için
+
+
+@dataclass
+class RiskScores:
+    kurgan_risk: Number
+    tax_compliance: Number
+    smiyb_risk: Number
+    radar_risk: Number
+    edefter_risk: Number
+    inflation_risk: Number
+
+
+def _safe_float(value: Any, default: Number = 0.0) -> Number:
+    if value is None:
+        return default
+    try:
+        return float(str(value).replace(",", "."))
+    except Exception:
+        return default
+
+
+def _first_digit(hesap_kodu: str) -> Optional[str]:
+    if not hesap_kodu:
+        return None
+    for ch in str(hesap_kodu):
+        if ch.isdigit():
+            return ch
+    return None
+
+
+def _clamp(value: Number, lo: Number = 0.0, hi: Number = 100.0) -> Number:
+    return max(lo, min(hi, value))
+
+
+# ---------------------------------------------------------------------
+# 1) BEYANNAME METRİKLERİ
+# ---------------------------------------------------------------------
+def compute_beyanname_metrics(beyan_list: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    Beyannameleri tür ve dönem bazında özetler.
+
+    Çıktı:
+    {
+      "per_type": {
+          "KDV": {
+              "per_period": { "2025-04": {...}, ... },
+              "summary": {...}
+          },
+          ...
+      },
+      "periods": ["2025-04", "2025-05", ...]
+    }
+    """
+    per_type: Dict[str, Dict[str, Dict[str, Any]]] = {}
+    periods: set[str] = set()
+
+    for rec in beyan_list:
+        btype = rec.get("beyan_type") or "UNKNOWN"
+        period = rec.get("period")  # e.g. "2025-06"
+        details = rec.get("details") or {}
+        if not period:
+            continue
+        periods.add(period)
+        per_type.setdefault(btype, {}).setdefault("per_period", {})
+
+        if btype == "KDV":
+            per_type[btype]["per_period"][period] = {
+                "matrah_toplami": _safe_float(details.get("matrah_toplami")),
+                "hesaplanan_kdv": _safe_float(details.get("hesaplanan_kdv")),
+                "toplam_kdv": _safe_float(details.get("toplam_kdv")),
+                "onceki_devreden_ind_kdv": _safe_float(details.get("onceki_devreden_ind_kdv")),
+                "indirimler_toplami": _safe_float(details.get("indirimler_toplami")),
+            }
+        elif btype == "KDV2":
+            per_type[btype]["per_period"][period] = {
+                "matrah": _safe_float(details.get("matrah")),
+                "tevkif_edilen_kdv": _safe_float(details.get("tevkif_edilen_kdv")),
+                "odenecek_kdv": _safe_float(details.get("odenecek_kdv")),
+            }
+        elif btype == "MUHTASAR":
+            per_type[btype]["per_period"][period] = {
+                "mahsup_edilecek_toplam_vergi": _safe_float(details.get("mahsup_edilecek_toplam_vergi")),
+                "tevkifata_iliskin_damga_vergisi": _safe_float(details.get("tevkifata_iliskin_damga_vergisi")),
+            }
+        elif btype == "GECICI_KV":
+            per_type[btype]["per_period"][period] = {
+                "ticari_bilanco_kari": _safe_float(details.get("ticari_bilanco_kari")),
+                "ticari_bilanco_zarari": _safe_float(details.get("ticari_bilanco_zarari")),
+                "gecici_vergi_matrahi": _safe_float(details.get("gecici_vergi_matrahi")),
+                "hesaplanan_gecici_vergi": _safe_float(details.get("hesaplanan_gecici_vergi")),
+            }
+        else:
+            # bilinmeyen tipleri ham detayla saklıyoruz
+            per_type[btype]["per_period"][period] = {
+                "raw": details
+            }
+
+    # Özetler
+    for btype, data in per_type.items():
+        per_period = data.get("per_period", {})
+        summary: Dict[str, Number] = {}
+        for pvals in per_period.values():
+            for key, val in pvals.items():
+                if isinstance(val, (int, float)):
+                    summary[key + "_sum"] = summary.get(key + "_sum", 0.0) + float(val)
+        per_type[btype]["summary"] = summary
+
+    return {
+        "per_type": per_type,
+        "periods": sorted(periods),
+    }
+
+
+# ---------------------------------------------------------------------
+# 2) TAHAKKUK METRİKLERİ
+# ---------------------------------------------------------------------
+def compute_tahakkuk_metrics(thk_list: List[Dict[str, Any]]) -> Dict[str, Any]:
+    per_type: Dict[str, Dict[str, Dict[str, Any]]] = {}
+    periods: set[str] = set()
+
+    for rec in thk_list:
+        ttype = rec.get("tax_type") or "UNKNOWN"
+        period = rec.get("period")
+        if not period:
+            continue
+        periods.add(period)
+        per_type.setdefault(ttype, {}).setdefault("per_period", {})
+
+        main_row = rec.get("main_row") or {}
+        per_type[ttype]["per_period"][period] = {
+            "matrah": _safe_float(main_row.get("matrah")),
+            "tahakkuk_eden": _safe_float(main_row.get("tahakkuk_eden")),
+            "mahsup_edilen": _safe_float(main_row.get("mahsup_edilen")),
+            "odenecek_olan": _safe_float(main_row.get("odenecek_olan")),
+            "total_payable": _safe_float(rec.get("total_payable")),
+            "acceptance_date": rec.get("acceptance_date"),
+            "issue_date": rec.get("issue_date"),
+            "vade": (main_row.get("vade") or ""),
+            "thn": rec.get("thn"),
+            "source_file": rec.get("source_file"),
+        }
+
+    # özetler
+    for ttype, data in per_type.items():
+        per_period = data.get("per_period", {})
+        summary: Dict[str, Number] = {}
+        for pvals in per_period.values():
+            for key, val in pvals.items():
+                if isinstance(val, (int, float)):
+                    summary[key + "_sum"] = summary.get(key + "_sum", 0.0) + float(val)
+        per_type[ttype]["summary"] = summary
+
+    return {
+        "per_type": per_type,
+        "periods": sorted(periods),
+    }
+
+
+# ---------------------------------------------------------------------
+# 3) MİZAN METRİKLERİ (yapısal / radar için)
+# ---------------------------------------------------------------------
+def compute_mizan_metrics(mizan_list: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    Mizan satırlarından ana sınıf bazlı özetler üretir.
+    """
+    class_sums: Dict[str, Dict[str, Number]] = {}
+    kdv_accounts: Dict[str, Number] = {}
+    equity_total = 0.0
+
+    for row in mizan_list:
+        code = str(row.get("hesap_kodu") or "")
+        first = _first_digit(code)
+        bakiye_borc = _safe_float(row.get("bakiye_borc"))
+        bakiye_alacak = _safe_float(row.get("bakiye_alacak"))
+        net = bakiye_borc - bakiye_alacak
+
+        if first:
+            cs = class_sums.setdefault(first, {"bakiye_borc": 0.0, "bakiye_alacak": 0.0, "net": 0.0})
+            cs["bakiye_borc"] += bakiye_borc
+            cs["bakiye_alacak"] += bakiye_alacak
+            cs["net"] += net
+
+        # KDV ilişkili hesaplar
+        if code.startswith("191") or code.startswith("190") or code.startswith("360"):
+            kdv_accounts[code] = kdv_accounts.get(code, 0.0) + net
+
+        # Özkaynak sınıfı (5xx)
+        if code.startswith("5"):
+            equity_total += net
+
+    assets_net = class_sums.get("1", {}).get("net", 0.0) + class_sums.get("2", {}).get("net", 0.0)
+    liab_net = (
+        class_sums.get("3", {}).get("net", 0.0)
+        + class_sums.get("4", {}).get("net", 0.0)
+        + class_sums.get("5", {}).get("net", 0.0)
+    )
+
+    # Basit likidite göstergeleri
+    cash_bank = 0.0
+    receivables = 0.0
+    inventory = 0.0
+    short_term_liab = 0.0
+
+    for row in mizan_list:
+        code = str(row.get("hesap_kodu") or "")
+        net = _safe_float(row.get("bakiye_borc")) - _safe_float(row.get("bakiye_alacak"))
+
+        if code.startswith(("10", "100", "101", "102")):
+            cash_bank += net
+        if code.startswith(("12", "120", "121")):
+            receivables += net
+        if code.startswith(("15", "150", "153")):
+            inventory += net
+        if code.startswith(("30", "300", "320", "321", "329", "33", "331", "332", "333", "336")):
+            short_term_liab += abs(net)
+
+    total_current_assets = cash_bank + receivables + inventory
+
+    return {
+        "class_sums": class_sums,
+        "assets_net": assets_net,
+        "liabilities_equity_net": liab_net,
+        "equity_total": equity_total,
+        "cash_bank": cash_bank,
+        "receivables": receivables,
+        "inventory": inventory,
+        "short_term_liabilities": short_term_liab,
+        "total_current_assets": total_current_assets,
+        "kdv_accounts": kdv_accounts,
+    }
+
+
+# ---------------------------------------------------------------------
+# 4) BANKA METRİKLERİ
+# ---------------------------------------------------------------------
+def compute_banka_metrics(banka_list: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    Banka hareketlerinden özet metrikler.
+    Not: Bu katman hukuki yorum yapmaz; sadece sınıflandırma + sayısal özet üretir.
+    """
+    from datetime import datetime
+
+    def parse_date(s: str):
+        s = (s or "").strip()
+        for fmt in ("%d.%m.%Y", "%d/%m/%Y", "%Y-%m-%d"):
+            try:
+                return datetime.strptime(s, fmt).date()
+            except Exception:
+                pass
+        return None
+
+    total_borc = 0.0
+    total_alacak = 0.0
+    pos_inflows = 0.0
+    bank_fees = 0.0
+
+    # “Kesin” vergi ödemesi: bankada VERGI- / VERGİ- ile gelen tahsilatlar (senin datanda çok net).
+    tax_payments_gib_confirmed = 0.0
+    tax_confirmed_rows = []
+
+    # SGK ödemeleri
+    sgk_payments = 0.0
+    sgk_samples = []
+
+    # Banka kaynaklı vergi-benzeri kesintiler (BSMV vb) – bunlar GİB vergi ödemesi değildir.
+    bank_tax_like_charges = 0.0
+    bank_tax_like_samples = []
+
+    bank_row_count = 0
+    bank_date_min = None
+    bank_date_max = None
+
+    for row in banka_list:
+        bank_row_count += 1
+
+        d = parse_date(row.get("tarih") or "")
+        if d:
+            bank_date_min = d if (bank_date_min is None or d < bank_date_min) else bank_date_min
+            bank_date_max = d if (bank_date_max is None or d > bank_date_max) else bank_date_max
+
+        borc = _safe_float(row.get("borc"))
+        alacak = _safe_float(row.get("alacak"))
+        desc_raw = (row.get("aciklama") or "")
+        desc = desc_raw.upper()
+
+        total_borc += borc
+        total_alacak += alacak
+
+        # POS inflow (ciro proxysi)
+        if "POS" in desc or "PESINSATIS" in desc or "PEŞİNSATIŞ" in desc or "TAKSİTSATIŞ" in desc:
+            pos_inflows += alacak
+
+        # bank fees / commissions
+        if ("ÜYE İŞYERİ ÜCRETİ" in desc) or ("KOMİSYON" in desc) or ("MASRAF" in desc):
+            bank_fees += borc
+
+        # bank tax-like charges (BSMV/BSMV vb)
+        if ("BSMV" in desc) or ("BESMV" in desc):
+            bank_tax_like_charges += borc
+            if len(bank_tax_like_samples) < 20:
+                bank_tax_like_samples.append({
+                    "tarih": d.isoformat() if d else None,
+                    "tutar": borc,
+                    "aciklama": desc_raw[:160],
+                })
+
+
+        # confirmed tax payments (expanded patterns)
+
+        desc_u = (desc_raw or "").upper()
+
+        src = ((row.get("source_file") or "") if isinstance(row, dict) else "").lower()
+
+
+        # THN pattern (very strong signal for GIB payments)
+
+        thn_m = re.search(r"\b(20\d{6}01M[A-Z0-9]{2,3}\d{7})\b", desc_u)
+
+        thn = thn_m.group(1) if thn_m else None
+
+
+        is_vergi_dash = ("VERGI-" in desc_u) or ("VERGİ-" in desc_u)
+
+
+        # state bank file hint (if filename contains these)
+
+        is_state_bank_file = ("ziraat" in src) or ("halk" in src) or ("vakif" in src)
+
+
+        has_tax_context = (
+
+            ("VN:" in desc_u) or ("VD:" in desc_u)
+
+            or ("GIB" in desc_u) or ("GİB" in desc_u)
+
+            or ("GELIR" in desc_u) or ("GELİR" in desc_u)
+
+            or ("IVD" in desc_u) or ("İVD" in desc_u)
+
+            or ("INTERNET VERG" in desc_u) or ("İNTERNET VERG" in desc_u)
+
+        )
+
+
+        has_tax_keyword = (
+
+            ("VERGI" in desc_u) or ("VERGİ" in desc_u)
+
+            or ("KDV" in desc_u) or ("4017" in desc_u)
+
+            or ("STOPAJ" in desc_u) or ("MUHTASAR" in desc_u)
+
+            or ("GECICI" in desc_u) or ("GEÇİCİ" in desc_u)
+
+        )
+
+
+        # Decision:
+
+        # - If VERGI- exists -> accept
+
+        # - Else if THN exists AND tax context exists -> accept
+
+        # - Else accept only if (state bank file) AND (tax keyword + context)
+
+        is_tax = (
+
+            is_vergi_dash
+
+            or ((thn is not None) and has_tax_context)
+
+            or (is_state_bank_file and has_tax_keyword and has_tax_context)
+
+        )
+
+
+        if is_tax:
+
+            tax_payments_gib_confirmed += borc
+
+            if len(tax_confirmed_rows) < 500:
+
+                tax_confirmed_rows.append({
+
+                    "tarih": d.isoformat() if d else None,
+
+                    "borc": borc,
+
+                    "aciklama": desc_raw[:500],
+
+                    "thn": thn,
+
+                    "source_file": (row.get("source_file") if isinstance(row, dict) else None),
+
+                })
+
+
+        # SGK
+        if "SGK" in desc:
+            sgk_payments += borc
+            if len(sgk_samples) < 20:
+                sgk_samples.append({
+                    "tarih": d.isoformat() if d else None,
+                    "tutar": borc,
+                    "aciklama": desc_raw[:500],
+                })
+
+    return {
+        "total_borc": total_borc,
+        "total_alacak": total_alacak,
+        "net_change": total_alacak - total_borc,
+
+        "pos_inflows": pos_inflows,
+        "bank_fees": bank_fees,
+
+        "bank_row_count": bank_row_count,
+        "bank_date_min": bank_date_min.isoformat() if bank_date_min else None,
+        "bank_date_max": bank_date_max.isoformat() if bank_date_max else None,
+
+        "tax_payments_gib_confirmed": tax_payments_gib_confirmed,
+        "tax_confirmed_rows": tax_confirmed_rows,
+
+        "sgk_payments": sgk_payments,
+        "sgk_samples": sgk_samples,
+
+        "bank_tax_like_charges": bank_tax_like_charges,
+        "bank_tax_like_samples": bank_tax_like_samples,
+    }
+
+
+def compute_edefter_metrics(edefter_list: List[Dict[str, Any]]) -> Dict[str, Any]:
+    total_lines = len(edefter_list)
+    kdv_lines = 0
+    fx_lines = 0
+    inflation_lines = 0
+
+    for row in edefter_list:
+        code = str(row.get("hesap_kodu") or "")
+        name = (row.get("hesap_adi") or "").upper()
+        aciklama = (row.get("aciklama") or "").upper()
+        detay = (row.get("detay") or "").upper()
+
+        text = name + " " + aciklama + " " + detay
+
+        if code.startswith(("190", "191", "360")) or "KDV" in text:
+            kdv_lines += 1
+
+        if any(token in text for token in ["USD", "EUR", "DOLAR", "EURO", "STERLIN"]):
+            fx_lines += 1
+
+        if "ENFLASYON" in text or "DÜZELTME" in text or "ENF.DÜZ" in text:
+            inflation_lines += 1
+
+    return {
+        "total_lines": total_lines,
+        "kdv_lines": kdv_lines,
+        "fx_lines": fx_lines,
+        "inflation_lines": inflation_lines,
+        "kdv_line_ratio": (kdv_lines / total_lines) if total_lines else 0.0,
+    }
+
+
+# ---------------------------------------------------------------------
+# 6) TUTARLILIK / UYUM METRİKLERİ (Beyan + Tahakkuk + Banka)
+# ---------------------------------------------------------------------
+def compute_consistency_metrics(
+    beyan_metrics: Dict[str, Any],
+    thk_metrics: Dict[str, Any],
+    banka_metrics: Dict[str, Any],
+) -> Dict[str, Any]:
+    """
+    1) Beyanname ↔ Tahakkuk (karşılaştırılabilir kalemler) farkları
+    2) Tahakkuk yükümlülükleri ↔ Banka "confirmed tax" satırları eşleştirmesi
+       - Banka verisi eksik dönemi kapsıyorsa: 'unverifiable' olarak işaretler.
+    """
+    import re
+    from datetime import datetime, timedelta
+
+    def parse_date(s: str):
+        s = (s or "").strip()
+        for fmt in ("%d.%m.%Y", "%d/%m/%Y", "%Y-%m-%d"):
+            try:
+                return datetime.strptime(s, fmt).date()
+            except Exception:
+                pass
+        return None
+
+    # Parametreler: tek yerde yönetelim
+    WINDOW_BY_TYPE = {
+        "KDV": 7,
+        "KDV2": 10,
+        "MUHTASAR": 15,
+        "GECICI_KV": 35,
+    }
+    TOL_BY_TYPE = {
+        "KDV": 2.0,
+        "KDV2": 2.0,
+        "MUHTASAR": 2.0,
+        "GECICI_KV": 2.0,
+    }
+    DEFAULT_WINDOW_DAYS = 15
+    DEFAULT_TOL_TL = 2.0
+
+    def window_for(ttype: str) -> int:
+        return int(WINDOW_BY_TYPE.get((ttype or "").upper(), DEFAULT_WINDOW_DAYS))
+
+    def tol_for(ttype: str, expected: float) -> float:
+        _ = expected  # future use
+        return float(TOL_BY_TYPE.get((ttype or "").upper(), DEFAULT_TOL_TL))
+
+    per_type_b = beyan_metrics.get("per_type", {}) or {}
+    per_type_t = thk_metrics.get("per_type", {}) or {}
+
+    # --------------------------
+    # (1) BEYAN ↔ TAHAKKUK farkı
+    # --------------------------
+    mismatch_total = 0.0
+    mismatch_max = 0.0
+    mismatch_over_100 = 0
+    missing_beyan = 0
+    missing_thk = 0
+    mismatch_details = []
+
+    comparable_codes = ["KDV", "KDV2", "GECICI_KV"]
+
+    for code in comparable_codes:
+        b_data = per_type_b.get(code, {}) or {}
+        t_data = per_type_t.get(code, {}) or {}
+        b_pp = b_data.get("per_period", {}) or {}
+        t_pp = t_data.get("per_period", {}) or {}
+
+        all_periods = set(b_pp.keys()) | set(t_pp.keys())
+        for period in sorted(all_periods):
+            b_val = None
+            t_val = None
+
+            if period in b_pp:
+                b = b_pp[period] or {}
+                if code == "KDV":
+                    b_val = _safe_float(b.get("toplam_kdv"))
+                elif code == "KDV2":
+                    b_val = _safe_float(b.get("odenecek_kdv"))
+                elif code == "GECICI_KV":
+                    b_val = _safe_float(b.get("hesaplanan_gecici_vergi"))
+            else:
+                missing_beyan += 1
+
+            if period in t_pp:
+                t = t_pp[period] or {}
+                if code == "KDV":
+                    t_val = _safe_float(t.get("tahakkuk_eden"))
+                elif code == "KDV2":
+                    t_val = _safe_float(t.get("odenecek_olan")) or _safe_float(t.get("tahakkuk_eden"))
+                elif code == "GECICI_KV":
+                    t_val = _safe_float(t.get("tahakkuk_eden"))
+            else:
+                missing_thk += 1
+
+            if b_val is None or t_val is None:
+                continue
+
+            diff = abs(b_val - t_val)
+            mismatch_total += diff
+            mismatch_max = max(mismatch_max, diff)
+            if diff > 100.0:
+                mismatch_over_100 += 1
+
+            if diff > 0:
+                mismatch_details.append(
+                    {"type": code, "period": period, "beyan": b_val, "tahakkuk": t_val, "diff": diff}
+                )
+
+    # -------------------------------------------------
+    # (2) TAHAKKUK yükümlülükleri ↔ BANKA eşleştirmesi
+    # -------------------------------------------------
+    bank_min = parse_date(banka_metrics.get("bank_date_min") or "")
+    bank_max = parse_date(banka_metrics.get("bank_date_max") or "")
+
+    confirmed_rows = banka_metrics.get("tax_confirmed_rows", []) or []
+    bank_tax_rows = []
+    bank_by_thn: Dict[str, list] = {}
+
+    thn_re = re.compile(r"\b(20\d{6}01M[A-Za-z0-9]{2,3}\d{7})\b", re.IGNORECASE)
+
+    for r in confirmed_rows:
+        d = parse_date(r.get("tarih") or "")
+        if not d:
+            continue
+        desc_full = (r.get("aciklama") or "")
+        ac = desc_full[:200]
+        m_thn = thn_re.search(desc_full)
+        thn = m_thn.group(1) if m_thn else None
+        br = {"tarih": d, "borc": _safe_float(r.get("borc")), "aciklama": ac, "thn": thn}
+        bank_tax_rows.append(br)
+        if thn:
+            bank_by_thn.setdefault(thn, []).append(br)
+
+    obligations = []
+
+    def best_rows_by_amount(rows, ttype, target, vade):
+        if not rows:
+            return []
+        t = tol_for(ttype, target)
+        # Önce tutar farkı, sonra vade gün farkı
+        ranked = sorted(rows, key=lambda br: (abs(br["borc"] - target), abs((br["tarih"] - vade).days)))
+        # En iyi tek adayı dön
+        if abs(ranked[0]["borc"] - target) <= t:
+            return [ranked[0]]
+        return []
+
+    for ttype, data in (per_type_t.items() if isinstance(per_type_t, dict) else []):
+        pp = (data or {}).get("per_period", {}) or {}
+        for period, r in pp.items():
+            r = r or {}
+            vade = parse_date(r.get("vade") or "")
+            if not vade:
+                continue
+
+            cash = _safe_float(r.get("odenecek_olan"))
+            total = _safe_float(r.get("total_payable"))
+            expected_total = total if total > 0 else 0.0
+            expected_cash = cash if cash > 0 else 0.0
+
+            # eşleştirme hedefleri: önce total_payable, sonra odenecek_olan
+            targets = []
+            if expected_total > 0:
+                targets.append(("total_payable", expected_total))
+            if expected_cash > 0 and (expected_cash != expected_total):
+                targets.append(("odenecek_olan", expected_cash))
+            if not targets:
+                continue
+
+            w = window_for(ttype)
+            tol = tol_for(ttype, expected_total if expected_total > 0 else expected_cash)
+            lo = vade - timedelta(days=w)
+            hi = vade + timedelta(days=w)
+
+            verifiable = True
+            reason = None
+            if bank_min is None or bank_max is None:
+                verifiable = False
+                reason = "bank_date_range_missing"
+            else:
+                if bank_max < lo or bank_min > hi:
+                    verifiable = False
+                    reason = "bank_range_outside_window"
+
+            thn = (r.get("thn") or "").strip() or None
+            match_method = None
+            matched_rows = []
+
+            # 1) THN ile eşleştir
+            if thn and thn in bank_by_thn and bank_by_thn[thn]:
+                # THN’de birden çok satır olabilir; hedefe en çok yaklaşanı topla
+                thn_rows = [br for br in bank_by_thn[thn] if lo <= br["tarih"] <= hi]
+                # total hedefi öncelik
+                for basis, target in targets:
+                    s = sum(_safe_float(x.get("borc")) for x in thn_rows)
+                    if abs(s - target) <= tol_for(ttype, target):
+                        matched_rows = thn_rows
+                        match_method = f"thn_sum_{basis}"
+                        break
+                if not match_method and thn_rows:
+                    # THN var ama tutar tutmuyor → yine de “thn_seen” olarak işaretle
+                    match_method = "thn_seen_unmatched"
+
+            # 2) THN yoksa / eşleşmediyse: tutar+pencere
+            if not matched_rows and verifiable:
+                window_rows = [br for br in bank_tax_rows if lo <= br["tarih"] <= hi]
+                for basis, target in targets:
+                    picked = best_rows_by_amount(window_rows, ttype, target, vade)
+                    if picked:
+                        matched_rows = picked
+                        match_method = f"amount_window_{basis}"
+                        break
+
+            matched_amount = sum(_safe_float(m.get("borc")) for m in matched_rows)
+            match_sample = None
+            if matched_rows:
+                best = matched_rows[0]
+                match_sample = {
+                    "tarih": best["tarih"].isoformat(),
+                    "borc": best["borc"],
+                    "aciklama": best.get("aciklama"),
+                    "thn": best.get("thn"),
+                }
+
+            obligations.append(
+                {
+                    "type": ttype,
+                    "period": period,
+                    "vade": vade.isoformat(),
+                    "expected_total": expected_total,
+                    "expected_cash": expected_cash,
+                    "window_lo": lo.isoformat(),
+                    "window_hi": hi.isoformat(),
+                    "verifiable": verifiable,
+                    "reason": reason,
+                    "thn": (r.get("thn") if isinstance(r, dict) else None),
+                    "match_method": match_method,
+                    "match_count": len(matched_rows),
+                    "matched_amount": matched_amount,
+                    "match_sample": match_sample,
+                }
+            )
+
+    # bank_data_sufficient: tüm yükümlülük pencerelerini kapsıyor mu?
+    all_lo = None
+    all_hi = None
+    bank_data_sufficient = False
+    if obligations and bank_min and bank_max:
+        all_lo = min(parse_date(o["window_lo"]) for o in obligations)
+        all_hi = max(parse_date(o["window_hi"]) for o in obligations)
+        bank_data_sufficient = (bank_min <= all_lo and bank_max >= all_hi)
+
+    verifiable_obs = [o for o in obligations if o["verifiable"]]
+    unverifiable_obs = [o for o in obligations if not o["verifiable"]]
+    matched_obs = [o for o in verifiable_obs if _safe_float(o.get("matched_amount")) > 0]
+    unmatched_obs = [o for o in verifiable_obs if _safe_float(o.get("matched_amount")) <= 0]
+
+    expected_sum = 0.0
+    for o in verifiable_obs:
+        # total hedefi varsa onu, yoksa cash hedefini baz al
+        base = _safe_float(o.get("expected_total")) or _safe_float(o.get("expected_cash"))
+        expected_sum += base
+
+    matched_sum = sum(_safe_float(o.get("matched_amount")) for o in matched_obs)
+
+    coverage_rate = None
+    if expected_sum > 0:
+        coverage_rate = matched_sum / expected_sum
+
+    verified_obs = [o for o in matched_obs if (o.get("match_method") or "").startswith(("thn_", "amount_window_"))]
+
+    coverage_rate_verified = None
+    expected_sum_verified = expected_sum
+    matched_sum_verified = matched_sum
+    if expected_sum_verified > 0:
+        coverage_rate_verified = matched_sum_verified / expected_sum_verified
+
+    thn_matched_obligation_count = sum(1 for o in obligations if (o.get("match_method") or "").startswith("thn_"))
+    bank_tax_thn_row_count = sum(1 for br in bank_tax_rows if br.get("thn"))
+
+    return {
+        "beyan_tahakkuk_mismatch_total": mismatch_total,
+        "beyan_tahakkuk_mismatch_max": mismatch_max,
+        "beyan_tahakkuk_mismatch_over_100": mismatch_over_100,
+        "missing_beyan_count": missing_beyan,
+        "missing_tahakkuk_count": missing_thk,
+        "mismatch_details": mismatch_details[:50],
+
+        "bank_date_min": bank_min.isoformat() if bank_min else None,
+        "bank_date_max": bank_max.isoformat() if bank_max else None,
+        "bank_data_sufficient": bank_data_sufficient,
+        "bank_tax_thn_row_count": bank_tax_thn_row_count,
+        "bank_tax_thn_unique_count": len(bank_by_thn),
+        "thn_matched_obligation_count": thn_matched_obligation_count,
+
+        "bank_expected_min": all_lo.isoformat() if all_lo else None,
+        "bank_expected_max": all_hi.isoformat() if all_hi else None,
+        "evidence_level": "verified" if bank_data_sufficient else ("hybrid" if thn_matched_obligation_count > 0 else "partial"),
+
+        "obligation_count": len(obligations),
+        "verifiable_obligation_count": len(verifiable_obs),
+        "unverifiable_obligation_count": len(unverifiable_obs),
+        "matched_obligation_count": len(matched_obs),
+        "unmatched_obligation_count": len(unmatched_obs),
+        "expected_sum_verifiable": expected_sum,
+        "matched_sum_verifiable": matched_sum,
+        "tax_payment_coverage_rate": coverage_rate,
+        "tax_payment_coverage_rate_verified": coverage_rate_verified,
+        "verified_obligation_count": len(verified_obs),
+
+        "payment_matching": obligations[:80],
+    }
+
+
+def compute_scores(metrics: Dict[str, Any]) -> RiskScores:
+    beyan = metrics.get("beyanname", {})
+    mizan = metrics.get("mizan", {})
+    banka = metrics.get("banka", {})
+    edefter = metrics.get("edefter", {})
+    cons = metrics.get("consistency", {})
+
+    # --- Vergi uyum skoru (100 = iyi uyum, 0 = kötü uyum) ---
+    tax_compliance = 100.0
+
+    mismatch_total = _safe_float(cons.get("beyan_tahakkuk_mismatch_total"))
+    mismatch_over_100 = int(cons.get("beyan_tahakkuk_mismatch_over_100") or 0)
+    missing_forms = int(cons.get("missing_beyan_count") or 0) + int(cons.get("missing_tahakkuk_count") or 0)  # noqa
+    coverage_rate = cons.get("tax_payment_coverage_rate_verified")
+    if coverage_rate is None:
+        coverage_rate = cons.get("tax_payment_coverage_rate")
+    bank_ok = bool(cons.get("bank_data_sufficient"))
+    verifiable = int(cons.get("verifiable_obligation_count") or 0)
+
+    # Banka verisi dönem açısından yeterli değilse coverage_rate cezası uygulamayız.
+
+    # Beyan–tahakkuk tutarlılığı: fark büyüdükçe uyum düşer
+    tax_compliance -= min(40.0, mismatch_total / 1000.0 * 5.0)
+    tax_compliance -= mismatch_over_100 * 5.0
+    tax_compliance -= missing_forms * 10.0
+
+    # Ödeme kapsamı: sadece "eksik ödeme" sinyalinde düşür.
+    # coverage_rate > 1 çoğu zaman dönem kayması / sınıflandırma genişliği nedeniyle olabilir.
+    if bank_ok and verifiable > 0 and coverage_rate is not None and coverage_rate < 0.95:
+        tax_compliance -= 20.0
+
+    tax_compliance = _clamp(tax_compliance)
+
+    # KURGAN harmanı risk üzerinden yapılır (0 iyi, 100 kötü)
+    tax_risk = 100.0 - tax_compliance
+
+    # --- E-defter skoru ---
+    total_lines = int(edefter.get("total_lines") or 0)
+    kdv_ratio = _safe_float(edefter.get("kdv_line_ratio"))
+    fx_lines = int(edefter.get("fx_lines") or 0)
+    inflation_lines = int(edefter.get("inflation_lines") or 0)
+
+    if total_lines == 0:
+        edefter_score = 90.0  # veri yok → yüksek risk
+    else:
+        edefter_score = 30.0
+        if kdv_ratio < 0.02:
+            edefter_score += 20.0  # KDV ile ilgili satır oranı çok düşük
+        if fx_lines > 0 and inflation_lines == 0:
+            edefter_score += 20.0  # döviz var ama enflasyon/düzeltme izi yok
+        if total_lines > 20000:
+            edefter_score += 10.0  # çok büyük yevmiye → karmaşıklık
+
+    edefter_score = _clamp(edefter_score)
+
+    # --- SMİYB riski (sadece sayısal pattern) ---
+    b_kdv = beyan.get("per_type", {}).get("KDV", {}).get("summary", {})
+    b_kdv2 = beyan.get("per_type", {}).get("KDV2", {}).get("summary", {})
+    kdv_matrah = _safe_float(b_kdv.get("matrah_toplami_sum"))
+    kdv2_matrah = _safe_float(b_kdv2.get("matrah_sum"))
+    pos_inflows = _safe_float(banka.get("pos_inflows"))
+    receivables = _safe_float(mizan.get("receivables"))
+
+    smiyb_score = 25.0
+    if kdv_matrah > 0:
+        ratio_kdv2 = kdv2_matrah / kdv_matrah
+        if ratio_kdv2 > 0.1:
+            smiyb_score += min(30.0, (ratio_kdv2 - 0.1) * 100.0)  # 0.4+ seviyede ekstra puan
+
+    approx_turnover = kdv_matrah
+    if approx_turnover > 0 and pos_inflows > approx_turnover * 1.2:
+        smiyb_score += 20.0  # POS cirosu beyana göre çok yüksek
+
+    if receivables > approx_turnover * 1.5:
+        smiyb_score += 10.0  # alacaklar satışa göre çok yüksek
+
+    smiyb_score = _clamp(smiyb_score)
+
+    # --- Radar / yapısal risk ---
+    total_current_assets = _safe_float(mizan.get("total_current_assets"))
+    short_term_liab = _safe_float(mizan.get("short_term_liabilities"))
+    equity_total = _safe_float(mizan.get("equity_total"))
+
+    radar_score = 30.0
+    if total_current_assets and short_term_liab:
+        current_ratio = total_current_assets / short_term_liab
+        if current_ratio < 1.0:
+            radar_score += 25.0
+        elif current_ratio < 1.2:
+            radar_score += 15.0
+        elif current_ratio < 1.5:
+            radar_score += 5.0
+
+    if equity_total <= 0:
+        radar_score += 20.0  # negatif veya çok düşük özkaynak
+
+    radar_score = _clamp(radar_score)
+
+    # --- Enflasyon / kur risk skoru (kabaca, hukuki görüş değil) ---
+    fx_lines = int(edefter.get("fx_lines") or 0)
+    inflation_lines = int(edefter.get("inflation_lines") or 0)
+    fx_exposed = fx_lines > 0
+
+    inflation_score = 30.0
+    if fx_exposed and inflation_lines == 0:
+        inflation_score += 30.0  # döviz var, düzeltme izi yok
+    elif fx_exposed and inflation_lines > 0:
+        inflation_score += 10.0
+    else:
+        inflation_score += 5.0  # döviz yok → yine de genel enflasyon kontrolü gerekir
+
+    inflation_score = _clamp(inflation_score)
+
+    # --- Genel KURGAN skoru (blend) ---
+    kurgan = (
+        tax_risk * 0.3
+        + smiyb_score * 0.25
+        + radar_score * 0.2
+        + edefter_score * 0.15
+        + inflation_score * 0.1
+    )
+
+    kurgan = _clamp(kurgan)
+
+    return RiskScores(
+        kurgan_risk=kurgan,
+        tax_compliance=tax_compliance,
+        smiyb_risk=smiyb_score,
+        radar_risk=radar_score,
+        edefter_risk=edefter_score,
+        inflation_risk=inflation_score,
+    )
+
+
+# ---------------------------------------------------------------------
+# 8) KURAL TABANLI AI METİN KATI
+# ---------------------------------------------------------------------
+def build_ai_layer(
+    smmm_id: str,
+    client_id: str,
+    period: str,
+    metrics: Dict[str, Any],
+    scores: RiskScores,
+) -> Dict[str, Any]:
+    """
+    from datetime import datetime
+
+    Dış LLM çağrısı yapmadan kural tabanlı Türkçe özet üretir.
+    Hukuki sonuç cümlesi üretmez, sadece SMMM için checklist / tavsiye üretir.
+    """
+    cons = metrics.get("consistency", {})
+    evidence = (cons.get("evidence_level") or "partial")
+    mizan = metrics.get("mizan", {})
+    edefter = metrics.get("edefter", {})
+
+    def fmt_pct(x: Optional[Number]) -> str:
+        if x is None:
+            return "-"
+        return f"{x*100:.1f}%"
+
+    coverage_all = cons.get("tax_payment_coverage_rate")
+    coverage_verified = cons.get("tax_payment_coverage_rate_verified")
+    coverage_rate = coverage_verified if (evidence in ("verified","hybrid") and coverage_verified is not None) else coverage_all
+    coverage_txt = fmt_pct(coverage_rate) if coverage_rate is not None else "-"
+    evidence = cons.get("evidence_level") or ("verified" if cons.get("bank_data_sufficient") else "partial")
+    bank_min = cons.get("bank_date_min")
+    bank_max = cons.get("bank_date_max")
+    exp_min = cons.get("bank_expected_min")
+    exp_max = cons.get("bank_expected_max")
+
+
+    summary_lines: List[str] = []
+
+    # --- Banka ödeme eşleştirme: Unpaid VERIFIED vs PARTIAL ayrımı (AI anlatımı için) ---
+    pm = cons.get("payment_matching", []) or []
+    evidence = cons.get("evidence_level") or "partial"
+
+    def _iso_date(s: str):
+        try:
+            return datetime.fromisoformat((s or "").strip()).date()
+        except Exception:
+            return None
+
+    bank_min_d = _iso_date(cons.get("bank_date_min") or "")
+    bank_max_d = _iso_date(cons.get("bank_date_max") or "")
+
+    unpaid_verified = []
+    unpaid_partial = []
+
+    for o in pm:
+        if not o.get("verifiable"):
+            continue
+        if (o.get("matched_amount") or 0) > 0:
+            continue
+
+        # window_lo/window_hi yoksa vade±window_days ile hesapla (robust)
+        lo = _iso_date(o.get("window_lo") or "")
+        hi = _iso_date(o.get("window_hi") or "")
+        if lo is None or hi is None:
+            vd = _iso_date(o.get("vade") or "")
+            if vd:
+                from datetime import timedelta
+                lo = vd - timedelta(days=window_days)
+                hi = vd + timedelta(days=window_days)
+
+        # pencere tamamen banka aralığı içinde mi?
+        if bank_min_d and bank_max_d and lo and hi and (bank_min_d <= lo) and (bank_max_d >= hi):
+            unpaid_verified.append(o)
+        else:
+            unpaid_partial.append(o)
+
+    summary_lines.append(
+        f"{client_id} için {period} dönemi verileri (beyanname, tahakkuk, mizan, banka, e-defter) birlikte analiz edildi."
+    )
+    summary_lines.append(
+        f"Kurgan toplam risk skoru: {scores.kurgan_risk:.1f} / 100 "
+        f"(Vergi uyumu: {scores.tax_compliance:.1f}, SMİYB: {scores.smiyb_risk:.1f}, "
+        f"Yapısal radar: {scores.radar_risk:.1f}, E-defter: {scores.edefter_risk:.1f}, Enflasyon: {scores.inflation_risk:.1f})."
+    )
+    if evidence == "verified" and coverage_rate is not None:
+        summary_lines.append(
+            f"Tahakkuk eden vergilerin banka hareketleri üzerinden ödeme kapsam oranı yaklaşık {coverage_txt} seviyesinde."
+        )
+    elif evidence == "hybrid" and coverage_rate is not None:
+        thn_cnt = int(cons.get("thn_matched_obligation_count") or 0)
+        ver_cnt = int(cons.get("verified_obligation_count") or 0)
+        summary_lines.append(
+            "Uyarı: Banka hareketleri bu dönemin vade penceresini tam kapsamıyor; "
+            f"ancak THN üzerinden {thn_cnt} ödeme doğrulandı. "
+            f"Mevcut banka aralığında tamamen kapsanan {ver_cnt} yükümlülük için ödeme kapsam oranı yaklaşık {coverage_txt}. "
+            "Bu oran bilgi amaçlıdır; skora ceza uygulanmaz."
+        )
+
+    elif evidence == "partial" and coverage_rate is not None:
+        summary_lines.append(
+            "Uyarı: Banka hareketleri bu dönemin vade penceresini tam kapsamıyor "
+            f"(mevcut: {bank_min} → {bank_max}, beklenen: {exp_min} → {exp_max}). "
+            f"Bu nedenle ödeme kapsam oranı ({coverage_txt}) yalnızca bilgi amaçlıdır; skora ceza uygulanmaz."
+        )
+
+
+    # Unpaid VERIFIED ise (pencere tamamen kapsanıyor ama ödeme yok) bunu ayrıca özetle
+    if unpaid_verified:
+        ex = unpaid_verified[:3]
+        ex_txt = ", ".join(f'{x.get("type")} {x.get("period")} vade={x.get("vade")} expected={x.get("expected")}' for x in ex)
+        summary_lines.append(
+            f"Not: Banka aralığında tamamen kapsanan {len(unpaid_verified)} yükümlülük için ödeme hareketi görünmedi (örnek: {ex_txt})."
+        )
+    # Checklist
+    checklist: List[str] = []
+
+    if unpaid_verified:
+        checklist.append(
+            f"Banka aralığında tamamen kapsanan yükümlülüklerde ödeme görünmeyen {len(unpaid_verified)} kalem var; farklı banka hesabı/şube/kanal, mahsup-parçalı ödeme veya gecikme ihtimalini kontrol edin."
+        )
+    if unpaid_partial:
+        checklist.append(
+            f"Banka aralığı vade penceresini kesen {len(unpaid_partial)} kalem var; ilgili aylara ait eksik banka CSV'leri geldikçe bu kalemler yeniden doğrulanmalıdır."
+        )
+    if _safe_float(cons.get("beyan_tahakkuk_mismatch_total")) > 0:
+        checklist.append(
+            "Beyanname ile tahakkuk tutarları arasındaki farkları (özellikle 100 TL üzeri olanları) tek tek kontrol edin."
+        )
+    if evidence == "verified" and coverage_rate is not None and (coverage_rate < 0.95 or coverage_rate > 1.05):
+        checklist.append(
+            "Banka hesap hareketlerinde vergi dairesi ödemeleri ile tahakkuk toplamlarını karşılaştırın; eksik veya fazla ödeme var mı?"
+        )
+    if _safe_float(mizan.get("equity_total")) <= 0:
+        checklist.append(
+            "Özkaynakların negatif veya çok zayıf olup olmadığını kontrol edin; sermaye tamamlama / güçlendirme ihtiyacını değerlendirin."
+        )
+    if int(edefter.get("fx_lines") or 0) > 0 and int(edefter.get("inflation_lines") or 0) == 0:
+        checklist.append(
+            "Dövizli işlemler için kur değerlemesi ve enflasyon muhasebesi kayıtlarının (varsa) doğru yapıldığını doğrulayın."
+        )
+    if not checklist:
+        checklist.append(
+            "Bu dönem için kritik bir alarm görünmüyor; yine de örnekleme yoluyla birkaç beyanname, banka hareketi ve yevmiye kaydını manuel kontrol edin."
+        )
+
+    advice_lines: List[str] = []
+    advice_lines.append(
+        "Bu çıktı, sayısal tutarlılık ve oran analizi yapar; hukuki nitelikte bir vergi görüşü değildir."
+    )
+    advice_lines.append(
+        "Herhangi bir önemli fark veya yüksek risk görülen alan için, ilgili beyannameleri, tahakkuk fişlerini ve e-defter kayıtlarını resmi mevzuat çerçevesinde detaylı inceleyin."
+    )
+    advice_lines.append(
+        "Özellikle enflasyon muhasebesi ve kur değerlemesi konularında, güncel Vergi Usul Kanunu düzenlemeleri ve Gelir İdaresi Başkanlığı özelgeleri esas alınmalıdır."
+    )
+
+    return {
+        "summary": "\n".join(summary_lines),
+        "checklist": "\n".join(f"- {item}" for item in checklist),
+        "advice": "\n".join(advice_lines),
+    }
+
+
+# ---------------------------------------------------------------------
+# 9) DIŞA AÇILAN ANA FONKSİYON
+# ---------------------------------------------------------------------
+def run_risk_model_v1(
+    base_dir: str | Path,
+    smmm_id: str,
+    client_id: str,
+    period: str,
+) -> Dict[str, Any]:
+    """
+    FastAPI endpoint'inin çağıracağı üst seviye fonksiyon.
+    """
+    base_path = Path(base_dir)
+    raw = load_all_for_client_period(
+        base_dir=base_path,
+        smmm_id=smmm_id,
+        client_id=client_id,
+        period=period,
+    )
+
+    beyan_metrics = compute_beyanname_metrics(raw.get("beyanname", []))
+    thk_metrics = compute_tahakkuk_metrics(raw.get("tahakkuk", []))
+    mizan_metrics = compute_mizan_metrics(raw.get("mizan", []))
+    banka_metrics = compute_banka_metrics(raw.get("banka", []))
+    edefter_metrics = compute_edefter_metrics(raw.get("edefter", []))
+    consistency_metrics = compute_consistency_metrics(beyan_metrics, thk_metrics, banka_metrics)
+
+    metrics = {
+        "beyanname": beyan_metrics,
+        "tahakkuk": thk_metrics,
+        "mizan": mizan_metrics,
+        "banka": banka_metrics,
+        "edefter": edefter_metrics,
+        "consistency": consistency_metrics,
+    }
+
+    # -------------------------------------------------
+    # (Rule Engine) Diagnostic-only: mizan_deep + rule_engine
+    # Skorlamayı etkilemez; sadece metrics içine eklenir.
+    # -------------------------------------------------
+    mizan_deep = None
+    rule_engine = None
+
+    try:
+        from risk_model.v1_rule_engine import ConfigLoader, AccountParser, RiskAnalyzer
+
+        cfg = ConfigLoader().load()
+
+        # mizan ham satırları (rule_engine için)
+        mizan_rows = raw.get("mizan", []) or []
+        mizan_deep = AccountParser().process_mizan(mizan_rows)
+
+        rule_engine = RiskAnalyzer(cfg).analyze(
+            period=period,
+            mizan_deep=mizan_deep,
+            beyan_metrics=beyan_metrics or {},
+            bank_metrics=banka_metrics or {},
+            # sector parametresi ileride (NACE) bağlanınca verilecek
+        )
+
+    except Exception as e:
+        rule_engine = {"error": str(e)}
+
+    metrics["mizan_deep"] = mizan_deep
+    metrics["rule_engine"] = rule_engine
+
+    scores = compute_scores(metrics)
+    ai = build_ai_layer(smmm_id=smmm_id, client_id=client_id, period=period, metrics=metrics, scores=scores)
+
+    return {
+        "metrics": metrics,
+        "scores": asdict(scores),
+        "ai": ai,
+    }

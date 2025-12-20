@@ -1,177 +1,380 @@
+"""
+kpi_service.py
+
+LYNTOS KPI ve panel servisleri.
+
+Bu sürümde:
+- Eski demo / MVP tarzı skor hesapları KALDIRILMIŞTIR.
+- Tüm risk skorları risk_model paketine yönlendirilir.
+- Henüz formülü yazılmamış skorlar None döndürür veya
+  "not_implemented" bayrağı ile işaretlenir.
+- Böylece SMMM'lere hiçbir şekilde sahte, uydurma skor verilmez.
+
+Not:
+- Bu dosya sadece backend tarafındaki iş mantığını içerir.
+- CSV okuma, Luca export'ları vb. için basit yardımcılar kullanılır.
+"""
+
+from __future__ import annotations
+
+from typing import Any, Dict
+
 from utils.read_csv_as_dict import read_csv_as_dict
+from data_engine import load_data_for_firma_period
+from risk_model import (
+    compute_all_metrics,
+    compute_scores_from_metrics,
+    RISK_MODEL_VERSION,
+)
+from ai_layer import build_ai_explanation
 
-def kurgan_risk_score(firma, donem):
-    mizan = read_csv_as_dict("data/converted/converted_özkan mizan 3 ay.csv")
-    # örnek risk hesaplaması:
-    bakiye = sum(float(r['borc_bakiyesi']) for r in mizan if r['hesap_kodu'].startswith('102') and donem in r.values())
-    score = min(100, bakiye // 10000)
-    return {"score": score, "explanation": f"Banka bakiyesi: {bakiye}"}
 
-def smiyb_risk_status(firma, donem):
-    # örnek, data/converted/smiyb.csv dosyası ile çalışacak şekilde
+def _not_implemented(name: str, reason: str) -> Dict[str, Any]:
+    """
+    Henüz tanımlanmamış panel / skor fonksiyonları için
+    standart bir çıktı üretir.
+    """
+    return {
+        "ok": False,
+        "not_implemented": True,
+        "name": name,
+        "reason": reason,
+    }
+
+
+def risk_model_v1_scores(firma: str, donem: str) -> Dict[str, Any]:
+    """
+    Lyntos Risk Model v1 ana giriş fonksiyonu.
+
+    Adımlar:
+    1) data_engine üzerinden ilgili firma/döneme ait tüm ham veriyi yükler.
+    2) risk_model.metrics ile ham metrikleri hesaplar.
+    3) risk_model.scoring ile ana skorları üretir.
+    4) ai_layer ile skor ve metriklere dair açıklama/tavsiye iskeletini döndürür.
+
+    ÖNEMLİ:
+    - Şu an risk_model.metrics ve scoring içinde formüller
+      kademeli olarak yazılacaktır.
+    - Hiçbir yerde "kafadan atılmış" rakam yoktur.
+      Henüz tanımlanmayan skorlar None olarak kalır.
+    """
     try:
-        smiyb = read_csv_as_dict("data/converted/smiyb.csv")
-        filtered = [r for r in smiyb if r.get("firma") == firma and r.get("period") == donem]
-        score = len(filtered) * 10
-        return {"score": score, "level": "Yüksek" if score >= 60 else "Düşük", "explanation": "Risk datası mevcut"}
-    except:
-        return {"score": 0, "level": "Eksik", "explanation": "SMIYB datası yüklenmemiş"}
+        data_bundle = load_data_for_firma_period(firma, donem)
+    except Exception as exc:
+        return {
+            "ok": False,
+            "error": "DATA_LOAD_ERROR",
+            "message": str(exc),
+        }
 
-def radar_risk_score(firma, donem):
-    mizan = read_csv_as_dict("data/converted/converted_özkan mizan 3 ay.csv")
-    rows = [r for r in mizan if donem in r.values()]
-    satis_sum = sum(float(r.get("alacak_bakiyesi", 0)) for r in rows if r.get("hesap_adi", "").upper().find("SATIŞ") > -1)
-    stock_sum = sum(float(r.get("borc_bakiyesi", 0)) for r in rows if r.get("hesap_kodu", "").startswith('153'))
-    score = min(100, int(stock_sum // 1e6 + satis_sum // 1e5))
-    return {"score": score, "explanation": f"Stok: {stock_sum}, Satış: {satis_sum}"}
+    # Ham metrikler (şu an için boş sözlük dönebilir)
+    metrics = compute_all_metrics(firma, donem, data_bundle)
 
-def tax_compliance_score(firma, donem):
+    # Ana skorlar (şu an için her biri None olabilir)
+    scores_struct = compute_scores_from_metrics(metrics)
+    scores = scores_struct.get("scores", {})
+
+    # AI açıklama katmanı (şu an için boş stringler dönebilir)
+    ai_explanation = build_ai_explanation(scores, metrics)
+
+    return {
+        "ok": True,
+        "version": RISK_MODEL_VERSION,
+        "firma": firma,
+        "donem": donem,
+        "metrics": metrics,
+        "scores": scores,
+        "ai": ai_explanation,
+    }
+
+
+# ---------------------------------------------------------------------------
+#  Aşağıdaki fonksiyonlar, main.py'nin import ettiği eski isimleri korur.
+#  Böylece frontend kodu kırılmadan, yeni risk motoruna yönlendirme yapılabilir.
+# ---------------------------------------------------------------------------
+
+def kurgan_risk_score(firma: str, donem: str) -> Dict[str, Any]:
+    """
+    Eski kurgan_risk_score yerine, yeni risk motorundan sadece
+    kurgan_risk skorunu döndürür.
+
+    Eğer skor henüz hesaplanmıyorsa (None), bu bilgi aynen çağırana iletilir.
+    Demo amaçlı hiçbir uydurma skor üretmez.
+    """
+    base = risk_model_v1_scores(firma, donem)
+    if not base.get("ok"):
+        return base
+    skor = (base.get("scores") or {}).get("kurgan_risk")
+    return {
+        "ok": True,
+        "version": base.get("version"),
+        "firma": firma,
+        "donem": donem,
+        "score": skor,
+    }
+
+
+def radar_risk_score(firma: str, donem: str) -> Dict[str, Any]:
+    """
+    Yeni risk motorundaki RADAR / RAS benzeri skor alanı için
+    placeholder fonksiyonu.
+
+    Gerçek formül risk_model.scoring içinde tanımlanacaktır.
+    """
+    base = risk_model_v1_scores(firma, donem)
+    if not base.get("ok"):
+        return base
+    skor = (base.get("scores") or {}).get("radar_risk")
+    return {
+        "ok": True,
+        "version": base.get("version"),
+        "firma": firma,
+        "donem": donem,
+        "score": skor,
+    }
+
+
+def tax_compliance_score(firma: str, donem: str) -> Dict[str, Any]:
+    """
+    Vergi uyum skorunun yeni risk motorundan alınan hali.
+
+    Gerçek kriterler:
+    - Beyanname verme ve ödeme tarihlerinin zamanında olup olmadığı
+    - Son yıllardaki ceza kayıtları vb.
+    risk_model.metrics & scoring'te tanımlanacaktır.
+    """
+    base = risk_model_v1_scores(firma, donem)
+    if not base.get("ok"):
+        return base
+    skor = (base.get("scores") or {}).get("tax_compliance")
+    return {
+        "ok": True,
+        "version": base.get("version"),
+        "firma": firma,
+        "donem": donem,
+        "score": skor,
+    }
+
+
+def smiyb_risk_status(firma: str, donem: str) -> Dict[str, Any]:
+    """
+    Sahte / muhteviyatı itibariyle yanıltıcı belge (SMİYB) analizi için
+    skor alanını döndürür.
+
+    Burada da gerçek formül risk_model tarafında olacaktır. Bu fonksiyon,
+    sadece skorun kendisini ve basit bir "status" alanını taşır.
+    """
+    base = risk_model_v1_scores(firma, donem)
+    if not base.get("ok"):
+        return base
+    skor = (base.get("scores") or {}).get("smiyb_risk")
+
+    status = None
+    if isinstance(skor, (int, float)):
+        # Eşikler ileride yeniden tanımlanabilir; şu an sadece örnek mantık
+        # olarak boş bırakıyoruz.
+        status = None
+
+    return {
+        "ok": True,
+        "version": base.get("version"),
+        "firma": firma,
+        "donem": donem,
+        "score": skor,
+        "status": status,
+    }
+
+
+# ---------------------------------------------------------------------------
+#  Panel fonksiyonları
+#  (Şimdilik büyük kısmı "henüz tasarlanmamış" olarak işaretleniyor.)
+# ---------------------------------------------------------------------------
+
+def uyum_panel_data(firma: str, donem: str) -> Dict[str, Any]:
+    return _not_implemented(
+        "uyum_panel_data",
+        "Uyum paneli, risk_model metrics sonuçlarına göre tasarlanacaktır."
+    )
+
+
+def mizan_panel_data(firma: str, donem: str) -> Dict[str, Any]:
+    """
+    Mizan paneli için basit, demo olmayan özet:
+    - Sadece mizan satır sayısı ve toplam borç/alacak gibi agregasyonlar döner.
+    - Risk skoru üretmez.
+    """
     try:
-        ticaret = read_csv_as_dict("data/converted/beyanname_tahakkuk_durum.csv")
-        filtered = [r for r in ticaret if r.get("donem") == donem]
-        eksikler = [r for r in filtered if r.get("odeme_durumu", "") != "ÖDENDİ"]
-        score = 100 - len(eksikler) * 10
-        return {"score": max(score,0), "explanation": f"{len(eksikler)} eksik/ödenmemiş beyanname"}
-    except:
-        return {"score": 0, "explanation": "Beyanname datası eksik"}
+        rows = read_csv_as_dict("data/converted/mizan.csv")
+    except Exception as exc:
+        return {
+            "ok": False,
+            "error": "DATA_READ_ERROR",
+            "message": str(exc),
+        }
 
-def uyum_panel_data(firma, donem):
+    borc = 0.0
+    alacak = 0.0
+    satir_sayisi = 0
+
+    for r in rows:
+        if r.get("firma") == firma and r.get("period") == donem:
+            try:
+                borc += float(r.get("borc_toplam") or 0)
+                alacak += float(r.get("alacak_toplam") or 0)
+            except (TypeError, ValueError):
+                continue
+            satir_sayisi += 1
+
+    return {
+        "ok": True,
+        "firma": firma,
+        "donem": donem,
+        "borc_toplam": round(borc, 2),
+        "alacak_toplam": round(alacak, 2),
+        "dengeli": abs(borc - alacak) < 0.01,
+        "satir_sayisi": satir_sayisi,
+    }
+
+
+def banka_mutabakat_panel_data(firma: str, donem: str) -> Dict[str, Any]:
+    return _not_implemented(
+        "banka_mutabakat_panel_data",
+        "Banka mutabakat paneli henüz yeni risk mimarisine göre tasarlanmamıştır."
+    )
+
+
+def karsifirma_panel_data(firma: str, donem: str) -> Dict[str, Any]:
+    return _not_implemented(
+        "karsifirma_panel_data",
+        "Karşı firma risk paneli henüz tanımlanmadı."
+    )
+
+
+def matrix13_panel_data(firma: str, donem: str) -> Dict[str, Any]:
+    return _not_implemented(
+        "matrix13_panel_data",
+        "Matrix 13 paneli, risk_model KPI seti netleşince yazılacaktır."
+    )
+
+
+def fmea_panel_data(firma: str, donem: str) -> Dict[str, Any]:
+    return _not_implemented(
+        "fmea_panel_data",
+        "FMEA paneli henüz tanımlanmadı."
+    )
+
+
+def anomaly_panel_data(firma: str, donem: str) -> Dict[str, Any]:
+    return _not_implemented(
+        "anomaly_panel_data",
+        "Anomali paneli, risk_model metrikslerine göre tasarlanacaktır."
+    )
+
+
+def ag_panel_data(firma: str, donem: str) -> Dict[str, Any]:
+    return _not_implemented(
+        "ag_panel_data",
+        "Ağ / fraud paneli henüz tanımlanmadı."
+    )
+
+
+def bowtie_panel_data(firma: str, donem: str) -> Dict[str, Any]:
+    return _not_implemented(
+        "bowtie_panel_data",
+        "COSO/BowTie kontrol tasarımı paneli henüz tanımlanmadı."
+    )
+
+
+def capa_panel_data(firma: str, donem: str) -> Dict[str, Any]:
+    return _not_implemented(
+        "capa_panel_data",
+        "CAPA/8D aksiyon takip paneli henüz tanımlanmadı."
+    )
+
+
+def why5_panel_data(firma: str, donem: str) -> Dict[str, Any]:
+    return _not_implemented(
+        "why5_panel_data",
+        "5N1K / 5 Why kök neden paneli henüz tanımlanmadı."
+    )
+
+
+def ishikawa_panel_data(firma: str, donem: str) -> Dict[str, Any]:
+    return _not_implemented(
+        "ishikawa_panel_data",
+        "Balık kılçığı (Ishikawa) paneli henüz tanımlanmadı."
+    )
+
+
+def ai_panel_data(firma: str, donem: str) -> Dict[str, Any]:
+    """
+    Genel AI paneli:
+    - risk_model_v1_scores çıktılarını ve metrikleri kullanarak
+      SMMM için özet / checklist / tavsiye üretmek amacıyla kullanılacaktır.
+    - Şimdilik sadece risk_model_v1_scores sonucunu pass-through ediyor.
+    """
+    return risk_model_v1_scores(firma, donem)
+
+
+def vdk_panel_data(firma: str, donem: str) -> Dict[str, Any]:
+    return _not_implemented(
+        "vdk_panel_data",
+        "VDK odaklı detay panel (kasa, alacaklar, stoklar, amortisman vb.) "
+        "risk_model KPI sözlüğü tamamlandıktan sonra yazılacaktır."
+    )
+
+
+def edefter_panel_data(firma: str, donem: str) -> Dict[str, Any]:
+    """
+    E-defter paneli:
+    - Sadece veri var/yok, satır sayısı gibi basit bilgileri döndürür.
+    - Risk veya mevzuata uygunluk skoru üretmez.
+    """
     try:
-        uyum = read_csv_as_dict("data/converted/uyum.csv")
-        filtered = [r for r in uyum if r.get("firma") == firma and r.get("period") == donem]
-        eksik = [r for r in filtered if not r.get("tamam_mi", "1") == "1"]
-        score = 100 - len(eksik)*10
-        notes = [r.get("eksik_neden", "Bilinmiyor") for r in eksik]
-        return {"score": max(score, 0), "explanation": "; ".join(notes) if notes else "Tam uyum"}
-    except:
-        return {"score": 0, "explanation": "Uyum datası eksik"}
+        rows = read_csv_as_dict("data/converted/edefter.csv")
+    except Exception as exc:
+        return {
+            "ok": False,
+            "error": "DATA_READ_ERROR",
+            "message": str(exc),
+        }
 
-def mizan_panel_data(firma, donem):
-    mizan = read_csv_as_dict("data/converted/converted_özkan mizan 3 ay.csv")
-    filtered = [r for r in mizan if donem in r.values()]
-    toplam_bakiye = sum(float(r.get("borc_bakiyesi", 0)) for r in filtered)
-    return {"toplam_bakiye": toplam_bakiye, "satir_sayisi": len(filtered)}
+    count = 0
+    for r in rows:
+        if r.get("firma") == firma and r.get("period") == donem:
+            count += 1
 
-def banka_mutabakat_panel_data(firma, donem):
-    files = [
-        "data/converted/102.01_ykb_converted.csv",
-        "data/converted/102.02_akbank_converted.csv",
-        "data/converted/102.04_halkbank_converted.csv",
-        "data/converted/102.09_zi_converted.csv",
-        "data/converted/102.15_albaraka_converted.csv",
-        "data/converted/102.19_zi_converted.csv",
-        "data/converted/102.25_albaraka_converted.csv"
-    ]
-    all_tx = []
-    for f in files:
-        try: all_tx.extend(read_csv_as_dict(f))
-        except: continue
-    filtered = [r for r in all_tx if r.get("hesap_no") == firma]
-    toplam_bakiye = sum(float(r.get("bakiye", 0)) for r in filtered)
-    return {"bakiye": toplam_bakiye, "islem_sayisi": len(filtered), "son_islemler": filtered[-5:]}
+    return {
+        "ok": True,
+        "firma": firma,
+        "donem": donem,
+        "record_count": count,
+    }
 
-def karsifirma_panel_data(firma, donem):
+
+def musteri_panel_data(firma: str, donem: str) -> Dict[str, Any]:
+    """
+    Müşteri paneli:
+    - Sadece müşteri satır sayısını döndürür.
+    - Risk skoru üretmez.
+    """
     try:
-        karsifirma = read_csv_as_dict("data/converted/karsi_firma.csv")
-        riskli = [r for r in karsifirma if r.get("firma") == firma and r.get("period") == donem and r.get("risklevel", "Düşük") == "Yüksek"]
-        return {"riskli_sayi": len(riskli), "riskli_firmalar": [r.get("unvan") for r in riskli]}
-    except:
-        return {"riskli_sayi": 0, "riskli_firmalar": [], "explanation": "Mutabakat datası yok"}
+        rows = read_csv_as_dict("data/converted/musteri.csv")
+    except Exception as exc:
+        return {
+            "ok": False,
+            "error": "DATA_READ_ERROR",
+            "message": str(exc),
+        }
 
-def matrix13_panel_data(firma, donem):
-    try:
-        matrix = read_csv_as_dict("data/converted/matrix13.csv")
-        filtered = [r for r in matrix if r.get("firma") == firma and r.get("period") == donem]
-        score = sum(float(r.get("skor", 0)) for r in filtered)
-        return {"score": score, "explanation": "Matrix riskleri"}
-    except:
-        return {"score": 0, "explanation": "Matrix datası eksik"}
+    count = 0
+    for r in rows:
+        if r.get("firma") == firma and r.get("period") == donem:
+            count += 1
 
-def fmea_panel_data(firma, donem):
-    try:
-        fmea = read_csv_as_dict("data/converted/fmea.csv")
-        kritiks = [r for r in fmea if r.get("firma") == firma and r.get("period") == donem and float(r.get("rpn", 0)) > 100]
-        return {"count": len(kritiks), "critical_list": kritiks[:5]}
-    except:
-        return {"count": 0, "critical_list": [], "explanation": "FMEA datası yok"}
-
-def anomaly_panel_data(firma, donem):
-    try:
-        anomaly = read_csv_as_dict("data/converted/anomaly.csv")
-        anomali_sayi = sum(1 for r in anomaly if r.get("firma") == firma and r.get("period") == donem and r.get("anomaly", "0") == "1")
-        return {"count": anomali_sayi}
-    except:
-        return {"count": 0, "explanation": "Anomaly datası eksik"}
-
-def ag_panel_data(firma, donem):
-    try:
-        ag = read_csv_as_dict("data/converted/ag.csv")
-        suspicious = [r for r in ag if r.get("firma") == firma and r.get("period") == donem]
-        return {"count": len(suspicious), "items": suspicious}
-    except:
-        return {"count": 0, "items": []}
-
-def bowtie_panel_data(firma, donem):
-    try:
-        bowtie = read_csv_as_dict("data/converted/bowtie.csv")
-        risks = [r for r in bowtie if r.get("firma") == firma and r.get("period") == donem]
-        return {"risk_count": len(risks), "risk_list": risks[:5]}
-    except:
-        return {"risk_count": 0, "risk_list": []}
-
-def capa_panel_data(firma, donem):
-    try:
-        capa = read_csv_as_dict("data/converted/capa.csv")
-        open_actions = [r for r in capa if r.get("firma") == firma and r.get("period") == donem and r.get("kapanis", "0") == "0"]
-        return {"open_count": len(open_actions), "open_list": open_actions[:5]}
-    except:
-        return {"open_count": 0, "open_list": []}
-
-def why5_panel_data(firma, donem):
-    try:
-        why5 = read_csv_as_dict("data/converted/why5.csv")
-        chains = [r for r in why5 if r.get("firma") == firma and r.get("period") == donem]
-        return {"chain_list": chains[:3]}
-    except:
-        return {"chain_list": []}
-
-def ishikawa_panel_data(firma, donem):
-    try:
-        ishikawa = read_csv_as_dict("data/converted/ishikawa.csv")
-        cats = [r for r in ishikawa if r.get("firma") == firma and r.get("period") == donem]
-        return {"categories": [r.get("kategori") for r in cats]}
-    except:
-        return {"categories": []}
-
-def ai_panel_data(firma, donem):
-    try:
-        ai = read_csv_as_dict("data/converted/ai.csv")
-        preds = [r for r in ai if r.get("firma") == firma and r.get("period") == donem]
-        return {"prediction_count": len(preds), "predictions": preds[:5]}
-    except:
-        return {"prediction_count": 0, "predictions": []}
-
-def vdk_panel_data(firma, donem):
-    try:
-        vdk = read_csv_as_dict("data/converted/vdk.csv")
-        raporlar = [r for r in vdk if r.get("firma") == firma and r.get("period") == donem]
-        return {"reports": raporlar[:3]}
-    except:
-        return {"reports": [], "explanation": "VDK datası yok"}
-
-# E-defter ve müşteri dataları geldiğinde benzer şekilde ekleyebilirsin:
-def edefter_panel_data(firma, donem):
-    try:
-        edefter = read_csv_as_dict("data/converted/edefter.csv")
-        records = [r for r in edefter if r.get("firma") == firma and r.get("period") == donem]
-        return {"count": len(records), "records": records}
-    except:
-        return {"count": 0, "records": [], "explanation": "E-defter datası henüz yok"}
-
-def musteri_panel_data(firma, donem):
-    try:
-        musteri = read_csv_as_dict("data/converted/musteri.csv")
-        records = [r for r in musteri if r.get("firma") == firma and r.get("period") == donem]
-        return {"count": len(records), "records": records}
-    except:
-        return {"count": 0, "records": [], "explanation": "Müşteri datası henüz yok"}
+    return {
+        "ok": True,
+        "firma": firma,
+        "donem": donem,
+        "record_count": count,
+    }

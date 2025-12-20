@@ -1,0 +1,162 @@
+import json
+import subprocess
+from collections import Counter
+from datetime import datetime
+
+
+def load_result():
+    out = subprocess.check_output(["python", "scripts/test_risk_model_v1.py"], text=True)
+    return json.loads(out)
+
+
+def pct(x):
+    if x is None:
+        return "-"
+    return f"{x*100:.1f}%"
+
+
+def parse_date(s):
+    s = (s or "").strip()
+    for fmt in ("%d.%m.%Y", "%d/%m/%Y", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(s, fmt).date()
+        except Exception:
+            pass
+    return None
+
+
+def bank_candidates(o, confirmed_rows, limit=5):
+    lo = o.get("window_lo")
+    hi = o.get("window_hi")
+    exp = float(o.get("expected") or 0.0)
+
+    if not (lo and hi):
+        return []
+
+    try:
+        lo_d = datetime.strptime(lo, "%Y-%m-%d").date()
+        hi_d = datetime.strptime(hi, "%Y-%m-%d").date()
+    except Exception:
+        return []
+
+    cands = []
+    for r in confirmed_rows:
+        d0 = parse_date(r.get("tarih"))
+        if not d0:
+            continue
+        if lo_d <= d0 <= hi_d:
+            borc = float(r.get("borc") or 0.0)
+            delta = abs(borc - exp)
+            ac = (r.get("aciklama") or "")[:120]
+            cands.append((delta, d0.isoformat(), borc, ac))
+
+    cands.sort(key=lambda x: x[0])
+    return cands[:limit]
+
+
+def main():
+    d = load_result()
+    cons = d["metrics"]["consistency"]
+    pm = cons.get("payment_matching", []) or []
+
+    banka = d["metrics"].get("banka", {}) or {}
+    confirmed = banka.get("tax_confirmed_rows", []) or []
+
+    print("\n=== PAYMENT MATCHING QA (v1) ===")
+    print("period =", d.get("period"))
+    print("client =", d.get("client_id"))
+    print()
+
+    keys = [
+        "bank_date_min",
+        "bank_date_max",
+        "bank_expected_min",
+        "bank_expected_max",
+        "bank_data_sufficient",
+        "evidence_level",
+        "bank_tax_thn_row_count",
+        "thn_matched_obligation_count",
+        "verified_obligation_count",
+        "tax_payment_coverage_rate",
+        "tax_payment_coverage_rate_verified",
+    ]
+
+    print("CONSISTENCY:")
+    for k in keys:
+        v = cons.get(k)
+        if "coverage_rate" in k:
+            print(f"  {k} = {pct(v)}")
+        else:
+            print(f"  {k} = {v}")
+
+    print("\nCOUNTS:")
+    c = Counter()
+    for o in pm:
+        c["total"] += 1
+        if not o.get("verifiable"):
+            c["unverifiable"] += 1
+
+        method = o.get("match_method") or "none"
+        c[f"method:{method}"] += 1
+
+        if (o.get("matched_amount") or 0) > 0:
+            c["paid_count(matched_amount>0)"] += 1
+
+        if method == "amount_window_ambiguous":
+            c["ambiguous"] += 1
+
+    for k in sorted(c.keys()):
+        print(f"  {k}: {c[k]}")
+
+    def row(o):
+        return (
+            f'{o.get("type")} {o.get("period")} '
+            f'vade={o.get("vade")} expected={o.get("expected")} '
+            f'basis={o.get("expected_basis")} '
+            f'method={o.get("match_method")} '
+            f'match_count={o.get("match_count")} '
+            f'matched_amount={o.get("matched_amount")} '
+            f'thn={o.get("thn")}'
+        )
+
+    print("\n--- THN matches ---")
+    for o in pm:
+        if o.get("match_method") == "thn":
+            print("  ", row(o))
+
+    print("\n--- Ambiguous amount_window ---")
+    for o in pm:
+        if o.get("match_method") == "amount_window_ambiguous":
+            print("  ", row(o))
+            mc = o.get("match_candidates") or []
+            for cand in mc:
+                print("     cand:", cand)
+
+    bmin = cons.get("bank_date_min")
+    bmax = cons.get("bank_date_max")
+
+    def covered(o):
+        # string ISO compare yeterli (YYYY-MM-DD)
+        if not (bmin and bmax):
+            return False
+        lo = o.get("window_lo") or ""
+        hi = o.get("window_hi") or ""
+        return (bmin <= lo) and (bmax >= hi)
+
+    print("\n--- Unpaid VERIFIED (window fully covered) ---")
+    for o in pm:
+        if covered(o) and (o.get("matched_amount") or 0) <= 0:
+            print("  ", row(o))
+            for cand in bank_candidates(o, confirmed, limit=5):
+                print("     cand:", cand)
+
+    print("\n--- Unpaid PARTIAL COVERAGE (bank range cuts the window) ---")
+    for o in pm:
+        if o.get("verifiable") and (not covered(o)) and (o.get("matched_amount") or 0) <= 0:
+            print("  ", row(o))
+
+    print("\nOK.")
+
+
+if __name__ == "__main__":
+    main()

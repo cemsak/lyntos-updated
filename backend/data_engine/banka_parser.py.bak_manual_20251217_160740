@@ -1,0 +1,376 @@
+from dataclasses import dataclass, asdict
+from typing import Optional, List, Dict, Any, Literal
+from pathlib import Path
+import csv
+
+
+@dataclass
+class BankTxn:
+    tarih: str
+    aciklama: str
+    borc: float
+    alacak: float
+    bakiye: Optional[float]
+    hesap_no: Optional[str]
+    iban: Optional[str]
+    referans: Optional[str]
+    source_file: str
+    status: Literal["ok", "unreliable"]
+    warnings: List[str]
+
+
+def _parse_tr_number(s: Optional[str]) -> float:
+    """
+    Türkçe sayı formatını (3.983.434,26 gibi) float'a çevirir.
+    Boş, None veya '-' ise 0.0 döner.
+    """
+    if s is None:
+        return 0.0
+    s = s.strip()
+    if not s or s == "-":
+        return 0.0
+    s = s.replace(".", "").replace(",", ".")
+    try:
+        return float(s)
+    except ValueError:
+        return 0.0
+
+
+def _build_bank_dict_rows(path: Path) -> List[Dict[str, str]]:
+    """
+    Banka CSV'sini satır satır okur,
+    HEADER satırını tespit eder,
+    altındaki satırları dict listesine çevirir.
+
+    ÖNEMLİ:
+    - Banka dosyaları genelde UTF-8 değil → cp1254 / iso-8859-9 vs.
+    - Delimiter bazen ';', bazen ',' olabilir.
+    Bu yüzden:
+      1) Birden fazla encoding deneriz.
+      2) Delimiter'ı otomatik tahmin ederiz.
+      3) Header bulunamazsa, en mantıklı satırı header kabul ederiz.
+    """
+    text: Optional[str] = None
+    last_error: Optional[Exception] = None
+
+    # 1) Encoding denemeleri
+    encodings_to_try = ["utf-8-sig", "cp1254", "iso-8859-9", "latin-1"]
+
+    for enc in encodings_to_try:
+        try:
+            with path.open("r", encoding=enc) as f:
+                text = f.read()
+            break
+        except UnicodeDecodeError as e:
+            last_error = e
+            continue
+
+    # Hiçbiri olmadıysa: son çare, utf-8 + ignore
+    if text is None:
+        try:
+            with path.open("r", encoding="utf-8", errors="ignore") as f:
+                text = f.read()
+        except Exception as e:
+            raise RuntimeError(f"Banka CSV okunamadı: {path} - son hata: {last_error or e}")
+
+    lines = text.splitlines()
+    if not lines:
+        raise RuntimeError(f"Banka CSV boş görünüyor: {path}")
+
+    # 2) Delimiter'ı tahmin et
+    first_nonempty: Optional[str] = None
+    for line in lines:
+        if line.strip():
+            first_nonempty = line
+            break
+
+    if first_nonempty is None:
+        raise RuntimeError(f"Banka CSV boş görünüyor: {path}")
+
+    semi = first_nonempty.count(";")
+    comma = first_nonempty.count(",")
+
+    if semi == 0 and comma == 0:
+        delim = ";"  # default
+    elif semi >= comma:
+        delim = ";"
+    else:
+        delim = ","
+
+    reader = csv.reader(lines, delimiter=delim)
+    all_rows = list(reader)
+
+    header_idx: Optional[int] = None
+    best_idx: Optional[int] = None
+    best_score = -1
+
+    # 3) Header satırının tespiti (daha esnek)
+    for i, row in enumerate(all_rows):
+        if not row or not any((c or "").strip() for c in row):
+            continue
+
+        norm = [(c or "").strip().upper() for c in row]
+        score = 0
+        for cell in norm:
+            # Tarih ile ilgili ipuçları
+            if "TARİH" in cell or "TARIH" in cell:
+                score += 1
+            # Açıklama ipuçları
+            if "AÇIK" in cell or "ACIK" in cell:
+                score += 1
+            # Borç / Borc
+            if "BORÇ" in cell or "BORC" in cell:
+                score += 1
+            # Alacak
+            if "ALACAK" in cell:
+                score += 1
+            # Bakiye
+            if "BAKİYE" in cell or "BAKIYE" in cell:
+                score += 1
+
+        # En yüksek puanlı satırı akılda tut
+        if score > best_score:
+            best_score = score
+            best_idx = i
+
+        # Yeterince güçlü bir satırsa direkt header kabul et (erken çıkış)
+        if score >= 2 and header_idx is None:
+            header_idx = i
+
+    # Eğer güçlü header bulamazsak:
+    if header_idx is None:
+        if best_idx is not None:
+            header_idx = best_idx  # En çok uyan satırı header kabul et
+        else:
+            raise RuntimeError(f"Banka CSV başlık satırı tespit edilemedi: {path}")
+
+    header = [(c or "").strip() for c in all_rows[header_idx]]
+    data_rows = all_rows[header_idx + 1 :]
+
+    dict_rows: List[Dict[str, str]] = []
+    for row in data_rows:
+        # Tamamen boş satırları at
+        if not any((cell or "").strip() for cell in row):
+            continue
+
+        if len(row) < len(header):
+            row = list(row) + [""] * (len(header) - len(row))
+
+        record: Dict[str, str] = {}
+        for idx, col_name in enumerate(header):
+            record[col_name] = row[idx] if idx < len(row) else ""
+
+        dict_rows.append(record)
+
+    return dict_rows
+
+
+def _try_get(row: Dict[str, str], keys: List[str]) -> Optional[str]:
+    """
+    Farklı isimlerle gelebilecek kolonları yakalamak için:
+    - Önce tam eşleşme dener.
+    - Bulamazsa, wanted ifadenin kolon adının içinde geçtiği durumları (substring) yakalar.
+      Örn: "borç" → "BORÇ(-)" veya "Borç Tutarı (-)" içinde geçtiğinde de eşleşir.
+    """
+    lower_map: Dict[str, str] = {}
+    for k in row.keys():
+        if k is None:
+            continue
+        norm = k.strip().lower()
+        lower_map[norm] = k
+
+    # 1) Tam eşleşme denemesi
+    for key in keys:
+        wanted = key.strip().lower()
+        if wanted in lower_map:
+            return row[lower_map[wanted]]
+
+    # 2) Substring (içinde geçme) denemesi
+    for key in keys:
+        wanted = key.strip().lower()
+        if not wanted:
+            continue
+        for norm_key, orig_key in lower_map.items():
+            if wanted in norm_key:
+                return row[orig_key]
+
+    return None
+
+
+def parse_banka_csv(path: Path) -> List[Dict[str, Any]]:
+    """
+    Tek bir banka CSV dosyasını okur ve normalize edilmiş hareket listesi döner.
+
+    2 tip formatı destekler:
+    1) Ayrı Borç / Alacak kolonları olan format
+       (Borç, Alacak, Borç(-), Alacak(+), vb.)
+    2) Tek "Tutar" veya "İşlem Tutarı" kolonu olan format
+       (negatif = borç, pozitif = alacak)
+    """
+    dict_rows = _build_bank_dict_rows(path)
+    results: List[Dict[str, Any]] = []
+
+    for row in dict_rows:
+        warnings: List[str] = []
+
+        # --- Ortak alanlar: tarih, açıklama ---
+        tarih = _try_get(
+            row,
+            ["İşlem Tarihi", "Islem Tarihi", "Tarih", "TARİH", "TARIH"],
+        ) or ""
+
+        aciklama = (
+            _try_get(
+                row,
+                ["Açıklama", "ACIKLAMA", "AÇIKLAMA", "İşlem Açıklaması"],
+            )
+            or ""
+        )
+
+        # --- 1) Ayrı BORÇ / ALACAK kolonlarını yakalamaya çalış ---
+        borc_str = _try_get(
+            row,
+            [
+                "Borç",
+                "BORÇ",
+                "Borc",
+                "BORC",
+                "Borç Tutarı",
+                "Borç Tutar",
+                "Borç(-)",
+                "Borç Tutarı(-)",
+            ],
+        )
+        alacak_str = _try_get(
+            row,
+            [
+                "Alacak",
+                "ALACAK",
+                "Alck",
+                "Alacak Tutarı",
+                "Alacak Tutar",
+                "Alacak(+)",
+                "Alacak Tutarı(+)",
+            ],
+        )
+
+        # --- Bakiye (farklı isimler) ---
+        bakiye_str = _try_get(
+            row,
+            [
+                "Bakiye",
+                "BAKİYE",
+                "BAKIYE",
+                "Bakiye(TL)",
+                "Güncel Bakiye(TL)",
+                "Güncel Bakiye",
+                "Yeni Bakiye",
+            ],
+        )
+
+        # Hesap/IBAN/Referans (varsa)
+        hesap_no = _try_get(
+            row,
+            ["Hesap No", "HESAP NO", "Hesap Numarası"],
+        )
+        iban = _try_get(
+            row,
+            ["IBAN", "IBAN NO", "IBAN No"],
+        )
+        referans = _try_get(
+            row,
+            ["Referans No", "Referans", " İşlem No", "İşlem No"],
+        )
+
+        # --- 2) Eğer gerçekten BORÇ/ALACAK kolonları varsa bunları kullan ---
+        if borc_str or alacak_str:
+            borc = _parse_tr_number(borc_str)
+            alacak = _parse_tr_number(alacak_str)
+        else:
+            # --- 3) Tek "Tutar / İşlem Tutarı" kolonu varsa, işarete göre borç/alacak ayır ---
+            tutar_str = _try_get(
+                row,
+                [
+                    "İşlem Tutarı",
+                    "Islem Tutarı",
+                    "Islem Tutari",
+                    "İşlem Tutarı(TL)",
+                    "Tutar",
+                    "Tutar(TL)",
+                    "İŞLEM TUTARI",
+                    "TUTAR",
+                ],
+            )
+
+            amount = _parse_tr_number(tutar_str)
+
+            if amount < 0:
+                # Negatif → BORÇ
+                borc = abs(amount)
+                alacak = 0.0
+            else:
+                # Pozitif veya 0 → ALACAK (0 ise hem borç hem alacak 0)
+                borc = 0.0
+                alacak = amount
+
+        bakiye = _parse_tr_number(bakiye_str)
+
+        # Tamamen boş satırları at (hem borç hem alacak 0 ve açıklama boş ise)
+        if borc == 0.0 and alacak == 0.0 and not aciklama.strip():
+            continue
+
+        status: Literal["ok", "unreliable"] = "ok"
+        if borc > 0.0 and alacak > 0.0:
+            warnings.append("Hem borç hem alacak dolu görünüyor; satır kontrol edilmeli.")
+            status = "unreliable"
+
+        rec = BankTxn(
+            tarih=tarih.strip(),
+            aciklama=aciklama.strip(),
+            borc=borc,
+            alacak=alacak,
+            bakiye=bakiye if bakiye != 0.0 else None,
+            hesap_no=hesap_no.strip() if hesap_no else None,
+            iban=iban.strip() if iban else None,
+            referans=referans.strip() if referans else None,
+            source_file=path.name,
+            status=status,
+            warnings=warnings,
+        )
+
+        results.append(asdict(rec))
+
+    return results
+
+
+
+def parse_banka_for_client(
+    base_dir: Path, smmm_id: str, entity_id: str, period: str
+) -> List[Dict[str, Any]]:
+    """
+    Banka CSV'lerini toplar ve parse eder.
+
+    Yapı (önerilen ve desteklenen):
+      data/banka/<SMMM>/<CLIENT>/<PERIOD>/_raw/*.csv   (asıl ham CSV'ler)
+      data/banka/<SMMM>/<CLIENT>/<PERIOD>/_archive/... (arşiv)
+
+    Geriye dönük destek:
+      data/banka/<SMMM>/<CLIENT>/<PERIOD>/*.csv
+    """
+    folder = base_dir / "banka" / smmm_id / entity_id / period
+    if not folder.exists():
+        raise FileNotFoundError(f"Banka klasörü yok: {folder}")
+
+    # Öncelik: _raw varsa orayı oku; yoksa period kökünü tara.
+    scan_root = (folder / "_raw") if (folder / "_raw").exists() else folder
+
+    all_records: List[Dict[str, Any]] = []
+    for csv_path in sorted(scan_root.rglob("*.csv")):
+        # _archive altı varsa atla; _raw kalsın
+        if "_archive" in csv_path.parts:
+            continue
+        recs = parse_banka_csv(csv_path)
+        all_records.extend(recs)
+
+    return all_records
+

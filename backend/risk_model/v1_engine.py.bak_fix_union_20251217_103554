@@ -1,0 +1,806 @@
+from __future__ import annotations
+
+import re
+from dataclasses import dataclass, asdict
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
+from data_engine.loader import load_all_for_client_period
+
+Number = float  # readability
+
+
+# ---------------------------------------------------------------------
+# Data model
+# ---------------------------------------------------------------------
+@dataclass
+class RiskScores:
+    kurgan_risk: Number
+    tax_compliance: Number
+    smiyb_risk: Number
+    radar_risk: Number
+    edefter_risk: Number
+    inflation_risk: Number
+
+
+# ---------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------
+def _safe_float(value: Any, default: Number = 0.0) -> Number:
+    if value is None:
+        return default
+    try:
+        # supports "1.234,56" and "1234,56"
+        s = str(value).strip().replace(" ", "")
+        s = s.replace(".", "").replace(",", ".") if ("," in s and s.count(",") == 1 and s.count(".") >= 1) else s.replace(",", ".")
+        return float(s)
+    except Exception:
+        return default
+
+
+def _first_digit(hesap_kodu: str) -> Optional[str]:
+    if not hesap_kodu:
+        return None
+    for ch in str(hesap_kodu):
+        if ch.isdigit():
+            return ch
+    return None
+
+
+def _clamp(value: Number, lo: Number = 0.0, hi: Number = 100.0) -> Number:
+    return max(lo, min(hi, value))
+
+
+def _parse_date_any(s: str) -> Optional[datetime]:
+    s = (s or "").strip()
+    if not s:
+        return None
+    for fmt in ("%d.%m.%Y", "%d/%m/%Y", "%Y-%m-%d", "%d-%m-%Y"):
+        try:
+            return datetime.strptime(s, fmt)
+        except Exception:
+            pass
+    return None
+
+
+def _norm_desc(s: str) -> str:
+    return (s or "").upper().replace("İ", "I").strip()
+
+
+# THN examples: 2025072601Mkx0000342
+_THN_RE = re.compile(r"THN[:\s]*([0-9]{10}[A-Z0-9]{3}[0-9]{7,10})", re.IGNORECASE)
+_THN_RE_FALLBACK = re.compile(r"\b([0-9]{10}[A-Z0-9]{3}[0-9]{7,10})\b", re.IGNORECASE)
+
+# VERGI-xxxx example: VERGI-0015
+_TAXCODE_RE = re.compile(r"(VERGI|VERG[Iİ])\s*-\s*([0-9]{2,5})", re.IGNORECASE)
+
+
+def _extract_thn(desc: str) -> Optional[str]:
+    d = desc or ""
+    m = _THN_RE.search(d)
+    if m:
+        return m.group(1).strip()
+    # fallback: if desc contains VN/VD blocks and a token that matches the THN shape
+    m2 = _THN_RE_FALLBACK.search(d)
+    if m2 and ("VN:" in d.upper() or "VD:" in d.upper()):
+        return m2.group(1).strip()
+    return None
+
+
+def _extract_tax_code(desc: str) -> Optional[str]:
+    m = _TAXCODE_RE.search(desc or "")
+    if not m:
+        return None
+    return m.group(2)
+
+
+# ---------------------------------------------------------------------
+# 1) BEYANNAME METRİKLERİ
+# ---------------------------------------------------------------------
+def compute_beyanname_metrics(beyan_list: List[Dict[str, Any]]) -> Dict[str, Any]:
+    per_type: Dict[str, Dict[str, Any]] = {}
+    periods: set[str] = set()
+
+    for rec in beyan_list:
+        btype = rec.get("beyan_type") or "UNKNOWN"
+        period = rec.get("period")
+        details = rec.get("details") or {}
+        if not period:
+            continue
+        periods.add(period)
+        per_type.setdefault(btype, {}).setdefault("per_period", {})
+
+        if btype == "KDV":
+            per_type[btype]["per_period"][period] = {
+                "matrah_toplami": _safe_float(details.get("matrah_toplami")),
+                "hesaplanan_kdv": _safe_float(details.get("hesaplanan_kdv")),
+                "toplam_kdv": _safe_float(details.get("toplam_kdv")),
+                "onceki_devreden_ind_kdv": _safe_float(details.get("onceki_devreden_ind_kdv")),
+                "indirimler_toplami": _safe_float(details.get("indirimler_toplami")),
+            }
+        elif btype == "KDV2":
+            per_type[btype]["per_period"][period] = {
+                "matrah": _safe_float(details.get("matrah")),
+                "tevkif_edilen_kdv": _safe_float(details.get("tevkif_edilen_kdv")),
+                "odenecek_kdv": _safe_float(details.get("odenecek_kdv")),
+            }
+        elif btype == "MUHTASAR":
+            per_type[btype]["per_period"][period] = {
+                "mahsup_edilecek_toplam_vergi": _safe_float(details.get("mahsup_edilecek_toplam_vergi")),
+                "tevkifata_iliskin_damga_vergisi": _safe_float(details.get("tevkifata_iliskin_damga_vergisi")),
+            }
+        elif btype == "GECICI_KV":
+            per_type[btype]["per_period"][period] = {
+                "ticari_bilanco_kari": _safe_float(details.get("ticari_bilanco_kari")),
+                "ticari_bilanco_zarari": _safe_float(details.get("ticari_bilanco_zarari")),
+                "gecici_vergi_matrahi": _safe_float(details.get("gecici_vergi_matrahi")),
+                "hesaplanan_gecici_vergi": _safe_float(details.get("hesaplanan_gecici_vergi")),
+            }
+        else:
+            per_type[btype]["per_period"][period] = {"raw": details}
+
+    # summary
+    for btype, data in per_type.items():
+        per_period = data.get("per_period", {}) or {}
+        summary: Dict[str, Number] = {}
+        for pvals in per_period.values():
+            for key, val in (pvals or {}).items():
+                if isinstance(val, (int, float)):
+                    summary[key + "_sum"] = summary.get(key + "_sum", 0.0) + float(val)
+        data["summary"] = summary
+
+    return {"per_type": per_type, "periods": sorted(periods)}
+
+
+# ---------------------------------------------------------------------
+# 2) TAHAKKUK METRİKLERİ
+# ---------------------------------------------------------------------
+def compute_tahakkuk_metrics(thk_list: List[Dict[str, Any]]) -> Dict[str, Any]:
+    per_type: Dict[str, Dict[str, Any]] = {}
+    periods: set[str] = set()
+
+    for rec in thk_list:
+        ttype = rec.get("tax_type") or "UNKNOWN"
+        period = rec.get("period")
+        if not period:
+            continue
+        periods.add(period)
+        per_type.setdefault(ttype, {}).setdefault("per_period", {})
+
+        main_row = rec.get("main_row") or {}
+        per_type[ttype]["per_period"][period] = {
+            "matrah": _safe_float(main_row.get("matrah")),
+            "tahakkuk_eden": _safe_float(main_row.get("tahakkuk_eden")),
+            "mahsup_edilen": _safe_float(main_row.get("mahsup_edilen")),
+            "odenecek_olan": _safe_float(main_row.get("odenecek_olan")),
+            "total_payable": _safe_float(rec.get("total_payable")),
+            "acceptance_date": rec.get("acceptance_date"),
+            "issue_date": rec.get("issue_date"),
+            "vade": (main_row.get("vade") or ""),
+            "thn": (rec.get("thn") or "").strip() or None,
+            "source_file": rec.get("source_file"),
+        }
+
+    for ttype, data in per_type.items():
+        per_period = data.get("per_period", {}) or {}
+        summary: Dict[str, Number] = {}
+        for pvals in per_period.values():
+            for key, val in (pvals or {}).items():
+                if isinstance(val, (int, float)):
+                    summary[key + "_sum"] = summary.get(key + "_sum", 0.0) + float(val)
+        data["summary"] = summary
+
+    return {"per_type": per_type, "periods": sorted(periods)}
+
+
+# ---------------------------------------------------------------------
+# 3) BANKA METRİKLERİ
+# ---------------------------------------------------------------------
+def compute_banka_metrics(banka_list: List[Dict[str, Any]]) -> Dict[str, Any]:
+    dates: List[datetime] = []
+    tax_rows: List[Dict[str, Any]] = []
+
+    # keywords for "tax payment" detection (very conservative, but covers real-world variants)
+    tax_markers = (
+        "VERGI-", "VERGİ-", "G.STOPAJ", "STOPAJ", "MUHTASAR", "KDV", "KDV2", "SGK", "PRIM", "TAHAKKUK"
+    )
+
+    # state bank hints for evidence
+    state_bank_hints = ("ZIRAAT", "HALK", "VAKIF", "VAKIFBANK", "VAKIF BANK", "T.C. ZIRAAT", "T. HALK", "ZIRAATBANK")
+
+    row_count = 0
+    debit_sum = 0.0
+    credit_sum = 0.0
+
+    for row in banka_list:
+        if not isinstance(row, dict):
+            continue
+        row_count += 1
+
+        tarih = row.get("tarih") or row.get("date") or ""
+        dt = _parse_date_any(str(tarih))
+        if dt:
+            dates.append(dt)
+
+        borc = _safe_float(row.get("borc") or row.get("debit"))
+        alacak = _safe_float(row.get("alacak") or row.get("credit"))
+        debit_sum += max(borc, 0.0)
+        credit_sum += max(alacak, 0.0)
+
+        desc = row.get("aciklama") or row.get("description") or ""
+        dnorm = _norm_desc(desc)
+
+        # detect tax payment rows (we focus on outflows)
+        is_tax = (any(m in dnorm for m in tax_markers) and (borc > 0))
+        if not is_tax:
+            continue
+
+        src = (row.get("source_file") or "").upper()
+        is_state_bank = any(h in src for h in state_bank_hints) or any(h in dnorm for h in state_bank_hints)
+
+        thn = _extract_thn(desc)
+        tax_code = _extract_tax_code(desc)
+
+        tax_rows.append({
+            "tarih": dt.strftime("%Y-%m-%d") if dt else str(tarih),
+            "borc": borc,
+            "alacak": alacak,
+            "aciklama": desc,
+            "thn": thn,
+            "tax_code": tax_code,
+            "is_state_bank": is_state_bank,
+            "source_file": row.get("source_file"),
+        })
+
+    bank_date_min = min(dates).date().isoformat() if dates else None
+    bank_date_max = max(dates).date().isoformat() if dates else None
+
+    thns = [r.get("thn") for r in tax_rows if r.get("thn")]
+    thn_unique = sorted(set(thns))
+
+    return {
+        "bank_row_count": row_count,
+        "debit_sum": debit_sum,
+        "credit_sum": credit_sum,
+        "bank_date_min": bank_date_min,
+        "bank_date_max": bank_date_max,
+        "tax_confirmed_rows": tax_rows,
+        "bank_tax_thn_row_count": len(thns),
+        "bank_tax_thn_unique_count": len(thn_unique),
+    }
+
+
+# ---------------------------------------------------------------------
+# 4) MİZAN METRİKLERİ
+# ---------------------------------------------------------------------
+def compute_mizan_metrics(mizan_list: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    Minimal but stable mizan summary. Works with the parsed mizan rows produced by data_engine.mizan_parser.
+    """
+    totals_by_prefix: Dict[str, Dict[str, Number]] = {}
+    pl_rows = 0
+    pl_borc = 0.0
+    pl_alacak = 0.0
+
+    for row in mizan_list:
+        if not isinstance(row, dict):
+            continue
+        code = str(row.get("hesap_kodu") or row.get("HESAP KODU") or row.get("hesap") or "").strip()
+        if not code:
+            continue
+        pref = _first_digit(code) or "?"
+        borc = _safe_float(row.get("borc") or row.get("BORÇ"))
+        alacak = _safe_float(row.get("alacak") or row.get("ALACAK"))
+
+        bucket = totals_by_prefix.setdefault(pref, {"borc_sum": 0.0, "alacak_sum": 0.0, "row_count": 0.0})
+        bucket["borc_sum"] += max(borc, 0.0)
+        bucket["alacak_sum"] += max(alacak, 0.0)
+        bucket["row_count"] += 1.0
+
+        if pref in ("6", "7"):
+            pl_rows += 1
+            pl_borc += max(borc, 0.0)
+            pl_alacak += max(alacak, 0.0)
+
+    return {
+        "row_count": len(mizan_list),
+        "totals_by_prefix": totals_by_prefix,
+        "pl_row_count": pl_rows,
+        "pl_borc_sum": pl_borc,
+        "pl_alacak_sum": pl_alacak,
+        "pl_net": (pl_alacak - pl_borc),
+    }
+
+
+# ---------------------------------------------------------------------
+# 5) E-DEFTER METRİKLERİ (unchanged, lightweight)
+# ---------------------------------------------------------------------
+def compute_edefter_metrics(edefter_list: List[Dict[str, Any]]) -> Dict[str, Any]:
+    total_lines = len(edefter_list)
+    kdv_lines = 0
+    fx_lines = 0
+    inflation_lines = 0
+
+    for row in edefter_list:
+        code = str(row.get("hesap_kodu") or "")
+        name = (row.get("hesap_adi") or "").upper()
+        aciklama = (row.get("aciklama") or "").upper()
+        detay = (row.get("detay") or "").upper()
+        text = name + " " + aciklama + " " + detay
+
+        if code.startswith(("190", "191", "360")) or "KDV" in text:
+            kdv_lines += 1
+        if any(token in text for token in ["USD", "EUR", "DOLAR", "EURO", "STERLIN"]):
+            fx_lines += 1
+        if "ENFLASYON" in text or "DUZELTME" in text or "DÜZELTME" in text or "ENF.DUZ" in text or "ENF.DÜZ" in text:
+            inflation_lines += 1
+
+    return {
+        "total_lines": total_lines,
+        "kdv_lines": kdv_lines,
+        "fx_lines": fx_lines,
+        "inflation_lines": inflation_lines,
+        "kdv_line_ratio": (kdv_lines / total_lines) if total_lines else 0.0,
+    }
+
+
+# ---------------------------------------------------------------------
+# 6) TUTARLILIK / UYUM METRİKLERİ
+# ---------------------------------------------------------------------
+def compute_consistency_metrics(
+
+    def norm_thn(s: str | None):
+        s = (s or '').strip()
+        return s.upper() if s else None
+
+    beyan_metrics: Dict[str, Any],
+    thk_metrics: Dict[str, Any],
+    banka_metrics: Dict[str, Any],
+) -> Dict[str, Any]:
+    """
+    1) (Light) Beyan ↔ Tahakkuk: derived payable comparisons (non-blocking, informational)
+    2) Tahakkuk yükümlülükleri ↔ Banka 'tax_confirmed_rows' eşleştirmesi:
+       - THN varsa THN ile,
+       - yoksa vade penceresi + tutar toleransı ile.
+    """
+
+    # --- matching parameters (final, no more loops) ---
+    # Window days by type (user preference)
+    WINDOW_DAYS_BY_TYPE = {
+        "KDV": 5,
+        "KDV2": 7,
+        "MUHTASAR": 15,
+        "GECICI_KV": 15,
+        "SGK": 10,
+        "UNKNOWN": 10,
+    }
+
+    def window_for(ttype: str) -> int:
+        return int(WINDOW_DAYS_BY_TYPE.get(ttype or "UNKNOWN", 10))
+
+    def tol_for(ttype: str, expected: float = 0.0) -> float:
+        # dynamic tolerance: base 2 TL, scaled slightly with amount, capped
+        base = 2.0
+        scaled = max(base, min(50.0, abs(expected) * 0.002))  # 0.2% capped at 50 TL
+        # for small, keep 2 TL
+        return scaled
+
+    # --- bank index ---
+    bank_rows = (banka_metrics or {}).get("tax_confirmed_rows") or []
+    bank_rows_norm: List[Dict[str, Any]] = []
+    bank_dates: List[datetime] = []
+
+    for r in bank_rows:
+        if not isinstance(r, dict):
+            continue
+        dt = _parse_date_any(r.get("tarih") or "")
+        if dt:
+            bank_dates.append(dt)
+        thn = (norm_thn(r.get("thn")) or "").upper() or None
+        bank_rows_norm.append({
+            "dt": dt,
+            "tarih": r.get("tarih"),
+            "borc": _safe_float(r.get("borc")),
+            "aciklama": r.get("aciklama") or "",
+            "thn": thn,
+            "source_file": r.get("source_file"),
+            "is_state_bank": bool(r.get("is_state_bank")),
+        })
+
+    bank_min = min(bank_dates) if bank_dates else None
+    bank_max = max(bank_dates) if bank_dates else None
+
+    by_thn: Dict[str, List[Dict[str, Any]]] = {}
+    for r in bank_rows_norm:
+        if r["thn"]:
+            by_thn.setdefault(r["thn"], []).append(r)
+
+    bank_tax_thn_row_count = sum(1 for r in bank_rows_norm if r.get("thn"))
+    bank_tax_thn_unique_count = len(by_thn)
+
+    # --- build obligations from tahakkuk ---
+    obligations: List[Dict[str, Any]] = []
+    per_type = ((thk_metrics or {}).get("per_type") or {})
+    for ttype, data in per_type.items():
+        per_period = (data or {}).get("per_period") or {}
+        for period, r in per_period.items():
+            r = r or {}
+            vade_dt = _parse_date_any(r.get("vade") or "")
+            # if no vade, skip matching but still count as obligation
+            obligations.append({
+                "type": ttype,
+                "period": period,
+                "vade_dt": vade_dt,
+                "vade": vade_dt.date().isoformat() if vade_dt else (r.get("vade") or None),
+                "total_payable": _safe_float(r.get("total_payable")),
+                "odenecek_olan": _safe_float(r.get("odenecek_olan")),
+                "thn": (r.get("thn") or "").strip().upper() or None,
+                "source_file": r.get("source_file"),
+            })
+
+    # If no bank data, return early but structured
+    if not obligations:
+        return {
+            "bank_date_min": bank_min.date().isoformat() if bank_min else None,
+            "bank_date_max": bank_max.date().isoformat() if bank_max else None,
+            "bank_tax_thn_row_count": bank_tax_thn_row_count,
+            "bank_tax_thn_unique_count": bank_tax_thn_unique_count,
+            "obligation_count": 0,
+            "verifiable_obligation_count": 0,
+            "unverifiable_obligation_count": 0,
+            "verified_obligation_count": 0,
+            "matched_obligation_count": 0,
+            "unmatched_obligation_count": 0,
+            "thn_matched_obligation_count": 0,
+            "expected_sum_verifiable": 0.0,
+            "matched_sum_verifiable": 0.0,
+            "tax_payment_coverage_rate": 0.0,
+            "tax_payment_coverage_rate_verified": 0.0,
+            "evidence_level": "no_obligations",
+            "bank_data_sufficient": bool(bank_min and bank_max),
+            "payment_matching": [],
+            "obligations": [],
+            "mismatch_details": [],
+            "beyan_tahakkuk_mismatch_total": 0.0,
+            "beyan_tahakkuk_mismatch_over_100": 0,
+            "beyan_tahakkuk_mismatch_max": 0.0,
+            "missing_beyan_count": 0,
+            "missing_tahakkuk_count": 0,
+        }
+
+    # --- informational: beyan vs tahakkuk mismatch (derived payable) ---
+    mismatch_details: List[Dict[str, Any]] = []
+    mismatch_total = 0.0
+    mismatch_over_100 = 0
+    mismatch_max = 0.0
+    missing_beyan_count = 0
+    missing_tahakkuk_count = 0
+
+    b_per = ((beyan_metrics or {}).get("per_type") or {})
+    t_per = per_type
+
+    def _get_btype_period(btype: str, period: str) -> Optional[Dict[str, Any]]:
+        return (((b_per.get(btype) or {}).get("per_period") or {}).get(period))
+
+    def _get_ttype_period(ttype: str, period: str) -> Optional[Dict[str, Any]]:
+        return (((t_per.get(ttype) or {}).get("per_period") or {}).get(period))
+
+    # Compare limited set
+    compare_pairs = [("KDV", "KDV"), ("KDV2", "KDV2"), ("MUHTASAR", "MUHTASAR"), ("GECICI_KV", "GECICI_KV")]
+    for btype, ttype in compare_pairs:
+        # periods union
+        b_periods = set((((b_per.get(btype) or {}).get("per_period") or {}).keys()))
+        t_periods = set((((t_per.get(ttype) or {}).get("per_period") or {}).keys()))
+        all_p = sorted(b_periods.union(t_periods))
+        for period in all_p:
+            b = _get_btype_period(btype, period)
+            t = _get_ttype_period(ttype, period)
+            if b is None:
+                missing_beyan_count += 1
+                continue
+            if t is None:
+                missing_tahakkuk_count += 1
+                continue
+
+            # derive "expected payable" from beyan (best-effort)
+            b_expected = 0.0
+            if btype == "KDV":
+                toplam_kdv = _safe_float(b.get("toplam_kdv"))
+                ind = _safe_float(b.get("indirimler_toplami"))
+                dev = _safe_float(b.get("onceki_devreden_ind_kdv"))
+                b_expected = max(toplam_kdv - ind - dev, 0.0)
+            elif btype == "KDV2":
+                b_expected = max(_safe_float(b.get("odenecek_kdv")), 0.0)
+            elif btype == "MUHTASAR":
+                b_expected = max(_safe_float(b.get("mahsup_edilecek_toplam_vergi")) + _safe_float(b.get("tevkifata_iliskin_damga_vergisi")), 0.0)
+            elif btype == "GECICI_KV":
+                b_expected = max(_safe_float(b.get("hesaplanan_gecici_vergi")), 0.0)
+
+            t_pay = _safe_float(t.get("total_payable")) if _safe_float(t.get("total_payable")) > 0 else _safe_float(t.get("odenecek_olan"))
+            diff = abs(b_expected - t_pay)
+            mismatch_total += diff
+            mismatch_max = max(mismatch_max, diff)
+            if diff >= 100.0:
+                mismatch_over_100 += 1
+            mismatch_details.append({
+                "type": ttype,
+                "period": period,
+                "beyan_expected": round(b_expected, 2),
+                "tahakkuk_payable": round(t_pay, 2),
+                "abs_diff": round(diff, 2),
+            })
+
+    # --- payment matching ---
+    payment_matching: List[Dict[str, Any]] = []
+    verifiable = 0
+    unverifiable = 0
+    verified = 0
+    matched = 0
+    unmatched = 0
+    thn_matched = 0
+
+    expected_sum_verifiable = 0.0
+    matched_sum_verifiable = 0.0
+
+    bank_expected_min = None
+    bank_expected_max = None
+
+    def _within_window(dt: Optional[datetime], lo: datetime, hi: datetime) -> bool:
+        if dt is None:
+            return False
+        return lo <= dt <= hi
+
+    for ob in obligations:
+        ttype = ob["type"]
+        vade_dt = ob["vade_dt"]
+        total = float(ob.get("total_payable") or 0.0)
+        cash = float(ob.get("odenecek_olan") or 0.0)
+
+        expected_total = total if total > 0 else 0.0
+        expected_cash = cash if cash > 0 else 0.0
+
+        targets: List[Tuple[str, float]] = []
+        if expected_total > 0:
+            targets.append(("total_payable", expected_total))
+        if expected_cash > 0 and (abs(expected_cash - expected_total) > 1e-9):
+            targets.append(("odenecek_olan", expected_cash))
+
+        # if no payable, skip (still an obligation, but cannot match money)
+        if not targets or vade_dt is None:
+            payment_matching.append({
+                "type": ttype,
+                "period": ob["period"],
+                "vade": ob["vade"],
+                "thn": ob.get("thn"),
+                "expected_total": expected_total,
+                "expected_cash": expected_cash,
+                "expected_basis": None,
+                "expected": 0.0,
+                "tol": None,
+                "window_days": None,
+                "verifiable": False,
+                "match_method": None,
+                "match_count": 0,
+                "matched_amount": 0.0,
+                "match_sample": None,
+                "reason": "no_targets_or_vade",
+            })
+            continue
+
+        w = window_for(ttype)
+        lo = vade_dt - timedelta(days=w)
+        hi = vade_dt + timedelta(days=w)
+
+        if bank_expected_min is None or lo < bank_expected_min:
+            bank_expected_min = lo
+        if bank_expected_max is None or hi > bank_expected_max:
+            bank_expected_max = hi
+
+        is_verifiable = True
+        reason = None
+        if bank_min is None or bank_max is None:
+            is_verifiable = False
+            reason = "bank_date_range_missing"
+        else:
+            if bank_max < lo or bank_min > hi:
+                is_verifiable = False
+                reason = "bank_range_outside_window"
+
+        if is_verifiable:
+            verifiable += 1
+            # evidence: verified if any of the candidate rows are state-bank OR thn exists and found
+            expected_sum_verifiable += targets[0][1]
+        else:
+            unverifiable += 1
+
+        thn = ob.get("thn")
+        match_method = None
+        match_count = 0
+        matched_amount = 0.0
+        match_sample = None
+        expected_basis = None
+        expected_val = 0.0
+        tol_val = None
+
+        # 1) THN match (best)
+        if thn and thn in by_thn:
+            candidates = [r for r in by_thn[thn] if _within_window(r.get("dt"), lo, hi)]
+            if not candidates:
+                # if THN exists but date doesn't fit, still keep as unmatched
+                candidates = []
+            if candidates:
+                # choose target that best fits (usually total_payable)
+                for basis, target in targets:
+                    tol = tol_for(ttype, target)
+                    # sum matches by THN (could be split)
+                    s = sum(float(r.get("borc") or 0.0) for r in candidates)
+                    if abs(s - target) <= tol:
+                        match_method = f"thn_sum_{basis}"
+                        match_count = len(candidates)
+                        matched_amount = s
+                        match_sample = {
+                            "tarih": candidates[0].get("tarih"),
+                            "borc": float(candidates[0].get("borc") or 0.0),
+                            "aciklama": candidates[0].get("aciklama"),
+                            "thn": candidates[0].get("thn"),
+                            "source_file": candidates[0].get("source_file"),
+                        }
+                        expected_basis = basis
+                        expected_val = target
+                        tol_val = tol
+                        break
+
+                # if THN candidates exist but sum doesn't match any target, keep closest
+                if match_method is None and targets:
+                    basis, target = targets[0]
+                    match_method = "thn_present_but_amount_mismatch"
+                    match_count = len(candidates)
+                    matched_amount = sum(float(r.get("borc") or 0.0) for r in candidates)
+                    match_sample = {
+                        "tarih": candidates[0].get("tarih"),
+                        "borc": float(candidates[0].get("borc") or 0.0),
+                        "aciklama": candidates[0].get("aciklama"),
+                        "thn": candidates[0].get("thn"),
+                        "source_file": candidates[0].get("source_file"),
+                    }
+                    expected_basis = basis
+                    expected_val = target
+                    tol_val = tol_for(ttype, target)
+
+        # 2) Amount+window match (fallback)
+        if match_method is None and is_verifiable:
+            # window candidates
+            window_rows = [r for r in bank_rows_norm if _within_window(r.get("dt"), lo, hi)]
+            # try each target
+            for basis, target in targets:
+                tol = tol_for(ttype, target)
+                tol_val = tol
+                # pick exact single-row match first
+                exact = [r for r in window_rows if abs(float(r.get("borc") or 0.0) - target) <= tol]
+                if exact:
+                    # prefer state bank
+                    exact.sort(key=lambda x: (not x.get("is_state_bank"), abs(float(x.get("borc") or 0.0) - target)))
+                    pick = exact[0]
+                    match_method = f"amount_window_{basis}"
+                    match_count = 1
+                    matched_amount = float(pick.get("borc") or 0.0)
+                    match_sample = {
+                        "tarih": pick.get("tarih"),
+                        "borc": matched_amount,
+                        "aciklama": pick.get("aciklama"),
+                        "thn": pick.get("thn"),
+                        "source_file": pick.get("source_file"),
+                    }
+                    expected_basis = basis
+                    expected_val = target
+                    break
+
+        # update counters
+        if is_verifiable:
+            # verified = at least one match and evidence via state bank OR THN match
+            if match_method and matched_amount > 0:
+                matched += 1
+                matched_sum_verifiable += expected_val if expected_val > 0 else matched_amount
+                if thn and (match_method.startswith("thn_") or match_method.startswith("thn_present")):
+                    thn_matched += 1
+                # evidence: verified if match_sample exists and (THN match OR state bank)
+                if match_sample and (match_method.startswith("thn_") or (match_sample.get("source_file") or "").upper().find("ZIRAAT") >= 0 or (match_sample.get("source_file") or "").upper().find("HALK") >= 0 or (match_sample.get("source_file") or "").upper().find("VAKIF") >= 0):
+                    verified += 1
+            else:
+                unmatched += 1
+
+        payment_matching.append({
+            "type": ttype,
+            "period": ob["period"],
+            "vade": ob["vade"],
+            "thn": thn,
+            "expected_total": expected_total,
+            "expected_cash": expected_cash,
+            "expected_basis": expected_basis,
+            "expected": expected_val,
+            "tol": tol_val,
+            "window_days": w,
+            "verifiable": is_verifiable,
+            "match_method": match_method,
+            "match_count": match_count,
+            "matched_amount": round(matched_amount, 2),
+            "match_sample": match_sample,
+            "reason": reason,
+        })
+
+    obligation_count = len([o for o in obligations if o.get("vade_dt") is not None])
+    verifiable_count = verifiable
+    unverifiable_count = unverifiable
+    matched_obligation_count = matched
+    unmatched_obligation_count = unmatched
+    verified_obligation_count = verified
+
+    coverage = (matched_sum_verifiable / expected_sum_verifiable) if expected_sum_verifiable else 0.0
+
+    # Keep compatibility with earlier output names
+    out = {
+        "bank_date_min": bank_min.date().isoformat() if bank_min else None,
+        "bank_date_max": bank_max.date().isoformat() if bank_max else None,
+        "bank_expected_min": bank_expected_min.date().isoformat() if bank_expected_min else None,
+        "bank_expected_max": bank_expected_max.date().isoformat() if bank_expected_max else None,
+        "bank_tax_thn_row_count": bank_tax_thn_row_count,
+        "bank_tax_thn_unique_count": bank_tax_thn_unique_count,
+        "obligation_count": obligation_count,
+        "verifiable_obligation_count": verifiable_count,
+        "unverifiable_obligation_count": unverifiable_count,
+        "matched_obligation_count": matched_obligation_count,
+        "unmatched_obligation_count": unmatched_obligation_count,
+        "verified_obligation_count": verified_obligation_count,
+        "thn_matched_obligation_count": thn_matched,
+        "expected_sum_verifiable": round(expected_sum_verifiable, 2),
+        "matched_sum_verifiable": round(matched_sum_verifiable, 2),
+        "tax_payment_coverage_rate": coverage,
+        "tax_payment_coverage_rate_verified": coverage,  # same until we hard-split evidence levels
+        "coverage_rate": coverage,  # legacy alias
+        "verifiable_count": verifiable_count,  # legacy alias
+        "matched_count": matched_obligation_count,  # legacy alias
+        "bank_data_sufficient": bool(bank_min and bank_max),
+        "evidence_level": "verified" if (verified_obligation_count > 0) else ("unverifiable" if (verifiable_count == 0) else "partial"),
+        "payment_matching": payment_matching,
+        "obligations": payment_matching,  # compat: some scripts referenced cm["obligations"]
+        "mismatch_details": mismatch_details,
+        "beyan_tahakkuk_mismatch_total": round(mismatch_total, 2),
+        "beyan_tahakkuk_mismatch_over_100": mismatch_over_100,
+        "beyan_tahakkuk_mismatch_max": round(mismatch_max, 2),
+        "missing_beyan_count": missing_beyan_count,
+        "missing_tahakkuk_count": missing_tahakkuk_count,
+    }
+    return out
+
+
+# ---------------------------------------------------------------------
+# 7) Runner
+# ---------------------------------------------------------------------
+def run_risk_model_v1(base_dir: str | Path, smmm_id: str, client_id: str, period: str) -> Dict[str, Any]:
+    base_dir = Path(base_dir)
+    raw = load_all_for_client_period(base_dir=base_dir, smmm_id=smmm_id, client_id=client_id, period=period)
+
+    beyan_metrics = compute_beyanname_metrics(raw.get("beyanname", []))
+    thk_metrics = compute_tahakkuk_metrics(raw.get("tahakkuk", []))
+    banka_metrics = compute_banka_metrics(raw.get("banka", []))
+    mizan_metrics = compute_mizan_metrics(raw.get("mizan", []))
+    edefter_metrics = compute_edefter_metrics(raw.get("edefter", []))
+
+    consistency_metrics = compute_consistency_metrics(beyan_metrics, thk_metrics, banka_metrics)
+
+    return {
+        "ok": True,
+        "version": "v1",
+        "smmm_id": smmm_id,
+        "client_id": client_id,
+        "period": period,
+        "metrics": {
+            "beyanname": beyan_metrics,
+            "tahakkuk": thk_metrics,
+            "banka": banka_metrics,
+            "mizan": mizan_metrics,
+            "edefter": edefter_metrics,
+            "consistency": consistency_metrics,
+        },
+    }

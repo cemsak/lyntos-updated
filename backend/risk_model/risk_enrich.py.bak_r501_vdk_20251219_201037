@@ -1,0 +1,182 @@
+from __future__ import annotations
+
+from typing import Any
+
+
+def _lookup_account_name(metrics: dict | None, account_code: str) -> str | None:
+    """
+    Best-effort: find a human-readable account name/title for a given account code.
+    Returns None if not found.
+    """
+    if not metrics or not isinstance(metrics, dict):
+        return None
+
+    mizan = metrics.get("mizan")
+    if not isinstance(mizan, dict):
+        return None
+
+    # common map keys
+    for k in ("account_names", "account_name_map", "hesap_adlari", "account_titles", "hesap_adi_map"):
+        mp = mizan.get(k)
+        if isinstance(mp, dict):
+            v = mp.get(account_code)
+            if isinstance(v, str) and v.strip():
+                return v.strip()
+
+    # common list forms
+    rows = mizan.get("accounts") or mizan.get("rows") or mizan.get("lines") or []
+    if isinstance(rows, list):
+        for it in rows:
+            if not isinstance(it, dict):
+                continue
+            code = it.get("account") or it.get("hesap") or it.get("code") or it.get("account_code")
+            if str(code) == str(account_code):
+                name = it.get("name") or it.get("hesap_adi") or it.get("title") or it.get("account_name")
+                if isinstance(name, str) and name.strip():
+                    return name.strip()
+
+    return None
+
+
+def _enrich_r401a(risk: dict, metrics: dict | None, period: str | None) -> None:
+    risk.setdefault("title", "Banka ekstresi eksik (102 alt hesap mizanda var, bankada yok)")
+    risk.setdefault(
+        "what_it_means",
+        "Mizanda 102.xx altında bakiye görünen bir hesap için ilgili dönemde banka ekstresi satırı bulunamadı. "
+        "Bu durum; eksik ekstre/dosya, farklı IBAN, bloke/vadeli hesap veya POS/teminat gibi bankacılık ürünlerinden kaynaklanabilir.",
+    )
+
+    vf = risk.get("value_found") or {}
+    if isinstance(vf, dict):
+        missing = vf.get("missing_102")
+        if isinstance(missing, dict):
+            details: list[dict[str, Any]] = []
+            for acc, amt in missing.items():
+                acc_s = str(acc)
+                name = _lookup_account_name(metrics, acc_s)
+                try:
+                    amt_f = float(amt)
+                except Exception:
+                    amt_f = amt
+                details.append({"account_code": acc_s, "account_name": name, "amount": amt_f})
+            details.sort(key=lambda x: x.get("account_code") or "")
+            vf.setdefault("missing_102_details", details)
+            risk["value_found"] = vf
+
+    risk.setdefault(
+        "smmm_actions",
+        [
+            "Eksik görünen 102.xx hesabın bankadaki karşılığını (IBAN/hesap no) doğrulayın.",
+            "2025-Q2 (Nisan–Haziran) dönemine ait tüm ekstre dosyalarının sisteme yüklendiğini kontrol edin.",
+            "Hesap vadeli/bloke/POS/teminat vb. bir ürünse, hareketlerin farklı raporlarda tutulup tutulmadığını teyit edin (POS raporu, bloke hesap ekstresi, sanal POS).",
+            "Mizan kaydı doğruysa bankadan ilgili döneme ait resmi ekstreyi temin edip sisteme ekleyin ve modeli yeniden çalıştırın.",
+        ],
+    )
+
+    risk.setdefault(
+        "checklist",
+        [
+            "2025-Q2 için banka klasöründe ilgili bankaya ait tüm CSV/XLSX ekstreler var mı?",
+            "Aynı bankada birden fazla hesap/IBAN var mı (alt hesaplar farklı IBAN’lara bağlı olabilir)?",
+            "Tarih parse/format nedeniyle satırlar ‘dönem dışı’ kalmış olabilir mi (özellikle gün/ay yer değişimi)?",
+            "102.xx alt hesap adı POS/bloke/vadeli gibi ürünleri işaret ediyor mu?",
+            "Eksik ekstre eklendikten sonra: yeniden çalıştır ve R-401A’nın kaybolduğunu doğrula.",
+        ],
+    )
+
+    ed = risk.setdefault("evidence_details", {})
+    if isinstance(ed, dict):
+        ed.setdefault("period", period)
+        ed.setdefault("rule_logic", "Mizan 102.xx var AND bankada ilgili dönemde hesap hareketi yok → missing_102")
+
+
+def _enrich_r501(risk: dict, period: str | None) -> None:
+    risk.setdefault("title", "KDV Matrahı ↔ Satışlar uyumsuzluğu (600/601/602 ile beyan matrahı sapması)")
+    risk.setdefault(
+        "what_it_means",
+        "KDV beyannamesindeki matrah toplamı ile satış hesapları (600/601/602) arasında anlamlı bir sapma tespit edildi. "
+        "Dönem kayması, istisna/iade/iskonto hesapları veya kayıtların hatalı sınıflanması olasıdır.",
+    )
+
+    risk.setdefault(
+        "assumption_set",
+        {
+            "included_sales_accounts": ["600", "601", "602"],
+            "common_exception_accounts": ["610", "611", "612", "603", "646", "656"],
+        },
+    )
+
+    risk.setdefault(
+        "smmm_actions",
+        [
+            "KDV matrahının toplandığı beyan dönemlerinin doğru olduğundan emin olun (2025-Q2: 2025-04/05/06).",
+            "Satış toplamını 600/601/602 yanında 610/611/612 (iskonto/iade) ve istisna kaynaklı hesaplarla birlikte kontrol edin.",
+            "Kur/vade/fiyat farkı gibi dönem sonu kayıtlarının KDV matrahını etkileyen şekilde yanlış sınıflanmadığını kontrol edin (646/656 ve ilgili hesaplar).",
+            "Sapma büyükse: ay bazında kırılım çıkarıp kopuşun hangi ayda olduğunu tespit edin ve örnek yevmiye fişlerini delil olarak çıkarın.",
+        ],
+    )
+
+    risk.setdefault(
+        "checklist",
+        [
+            "KDV1 matrah toplamı ile 600+601+602 toplamı aynı dönem mi?",
+            "İade/iskonto (610/611/612) satış toplamından düşülmesi gereken şekilde kaydedilmiş mi?",
+            "İstisna/tevkifat satışları doğru sınıflanmış mı (beyanname kırılımları ile karşılaştır)?",
+            "E-defter/yevmiye satış fişlerinde KDV oranı/hesap kodu tutarlı mı?",
+            "Sapma devam ediyorsa: ay ay delil üret (hangi ay, hangi hesap, hangi fark).",
+        ],
+    )
+
+    # best-effort: surface calculation fields if they exist in value_found
+    vf = risk.get("value_found")
+    if isinstance(vf, dict):
+        calc: dict[str, Any] = {}
+        for k in ("kdv_matrah_total", "matrah_total", "matrah_toplami"):
+            if k in vf:
+                calc["kdv_matrah_total"] = vf.get(k)
+                break
+        for k in ("sales_total", "satis_total", "satislar_toplami"):
+            if k in vf:
+                calc["sales_total"] = vf.get(k)
+                break
+        for k in ("diff", "difference", "sapma"):
+            if k in vf:
+                calc["difference"] = vf.get(k)
+                break
+        for k in ("diff_ratio", "difference_ratio", "sapma_orani"):
+            if k in vf:
+                calc["difference_ratio"] = vf.get(k)
+                break
+        if calc:
+            risk.setdefault("calculation", calc)
+
+    ed = risk.setdefault("evidence_details", {})
+    if isinstance(ed, dict):
+        ed.setdefault("period", period)
+        ed.setdefault("rule_logic", "KDV matrah toplamı ≠ (600/601/602) satış toplamı → sapma analizi")
+
+
+def enrich_rules_in_metrics(metrics: dict, period: str | None = None) -> None:
+    """
+    Enriches metrics['rules']['risks'] in-place (SMMM-grade texts/actions/checklists/evidence),
+    without changing numeric detection logic.
+    """
+    if not isinstance(metrics, dict):
+        return
+
+    rules = metrics.get("rules")
+    if not isinstance(rules, dict):
+        return
+
+    risks = rules.get("risks")
+    if not isinstance(risks, list):
+        return
+
+    for r in risks:
+        if not isinstance(r, dict):
+            continue
+        code = r.get("code")
+        if code == "R-401A":
+            _enrich_r401a(r, metrics=metrics, period=period)
+        elif code == "R-501":
+            _enrich_r501(r, period=period)
