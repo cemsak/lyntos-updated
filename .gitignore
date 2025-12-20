@@ -1,0 +1,15 @@
+
+### LYNTOS AUTO-IGNORE ###
+.DS_Store
+*.zip
+/tmp/
+__pycache__/
+*.pyc
+venv/
+node_modules/
+*.bak
+*.broken*
+*.CHECKPOINT*
+data/
+backend/data/
+### /LYNTOS AUTO-IGNORE ###
