@@ -13,3 +13,5 @@ node_modules/
 data/
 backend/data/
 ### /LYNTOS AUTO-IGNORE ###
+
+*.bak.*
