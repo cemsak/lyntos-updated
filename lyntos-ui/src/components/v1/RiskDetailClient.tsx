@@ -5,11 +5,18 @@ import Link from "next/link";
 import { ErrorBox, JsonBox, Pill, SectionCard } from "@/components/v1/ui/Atoms";
 import R501View from "@/components/v1/risks/R501View";
 import R401AView from "@/components/v1/risks/R401AView";
+import { DataQualityBand } from "../risk/DataQualityBand";
+import { KurganCriteriaPanel } from "../risk/KurganCriteriaPanel";
 
 type AnyObj = Record<string, any>;
 
 export default function RiskDetailClient({ code }: { code: string }) {
   const CODE = (code || "").toUpperCase();
+
+  // --- KURGAN layer (read-only, non-breaking) ---
+  const periodWindow = (data as any)?.period_window ?? (data as any)?.enriched_data?.period_window ?? null;
+  const dataQuality = (data as any)?.data_quality ?? (data as any)?.enriched_data?.data_quality ?? null;
+  const kurganSignals = (data as any)?.kurgan_criteria_signals ?? (data as any)?.enriched_data?.kurgan_criteria_signals ?? null;
   const [data, setData] = useState<AnyObj | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -95,7 +102,18 @@ export default function RiskDetailClient({ code }: { code: string }) {
 
       {!loading && !err && data ? (
         <div className="mt-4 space-y-4">
-          {CODE === "R-501" ? <R501View contract={data} /> : null}
+          {(periodWindow || dataQuality) ? (
+  <div className="mb-4">
+    <DataQualityBand periodWindow={periodWindow} dataQuality={dataQuality} />
+  </div>
+) : null}
+{Array.isArray(kurganSignals) && kurganSignals.length ? (
+  <div className="mb-4">
+    <KurganCriteriaPanel signals={kurganSignals} />
+  </div>
+) : null}
+
+{CODE === "R-501" ? <R501View contract={data} /> : null}
           {CODE === "R-401A" ? <R401AView contract={data} /> : null}
 
           {CODE !== "R-501" && CODE !== "R-401A" ? (
