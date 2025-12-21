@@ -1,0 +1,34 @@
+{
+  "id": "VDK-AUDITDOSSIER/1.0",
+  "description": "Lyntos audit dossier contract for risk scenarios (frontend-safe).",
+  "required_top_level": [
+    "version",
+    "period",
+    "risk_code",
+    "title",
+    "severity",
+    "headline"
+  ],
+  "required_evidence_pack": [
+    "worst_month",
+    "month_table",
+    "samples_counts"
+  ],
+  "month_table_row_required": [
+    "month",
+    "kdv_matrah",
+    "edefter_net_sales",
+    "delta_net_minus_kdv",
+    "ratio_net_over_kdv"
+  ],
+  "types": {
+    "version": "str",
+    "period": "str",
+    "risk_code": "str",
+    "title": "str",
+    "severity": "str",
+    "headline": "str",
+    "reconciliation_plan": "list[str]",
+    "samples_counts": "dict[str,int]"
+  }
+}

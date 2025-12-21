@@ -1,0 +1,45 @@
+import React from "react";
+
+export function Pill(props: { label?: string; text?: string; children?: React.ReactNode }) {
+  const t =
+    props.label ??
+    props.text ??
+    (typeof props.children === "string" ? props.children : undefined) ??
+    "";
+  return (
+    <span className="inline-flex items-center rounded-full border px-3 py-1 text-sm">
+      {t}
+    </span>
+  );
+}
+
+export function SectionCard(props: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-xl border bg-white p-5">
+      <div className="text-lg font-semibold mb-3">{props.title}</div>
+      <div>{props.children}</div>
+    </div>
+  );
+}
+
+export function ErrorBox(props: { title?: string; message?: string; children?: React.ReactNode }) {
+  const title = props.title ?? "Hata";
+  const msg = props.message;
+  return (
+    <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+      <div className="font-semibold text-red-900">{title}</div>
+      {msg ? <div className="mt-1 text-red-800 text-sm whitespace-pre-wrap">{msg}</div> : null}
+      {props.children ? <div className="mt-2">{props.children}</div> : null}
+    </div>
+  );
+}
+
+export function JsonBox(props: { data?: any; value?: any; title?: string }) {
+  const data = props.data ?? props.value;
+  return (
+    <div className="rounded-xl border bg-slate-950 p-4 text-slate-50 overflow-auto">
+      {props.title ? <div className="mb-2 text-sm opacity-80">{props.title}</div> : null}
+      <pre className="text-xs leading-5">{JSON.stringify(data, null, 2)}</pre>
+    </div>
+  );
+}

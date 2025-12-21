@@ -1,0 +1,175 @@
+#!/bin/zsh
+set -e
+set -u
+set -o pipefail
+
+cd "$(git rev-parse --show-toplevel)/backend" || exit 1
+
+if [[ -f venv/bin/activate ]]; then
+  source venv/bin/activate
+fi
+
+python -m py_compile risk_model/v1_engine.py risk_model/v1_rule_engine.py risk_model/risk_enrich.py
+python scripts/test_risk_model_v1.py > /tmp/risk_v1.json
+
+python - <<'PY'
+import json
+d=json.load(open("/tmp/risk_v1.json"))
+rules=((d.get("metrics") or {}).get("rules") or {})
+print("rules.enriched =", rules.get("enriched"))
+print("rules.enrich_error =", rules.get("enrich_error"))
+
+risks=rules.get("risks") or []
+def pick(code):
+    for r in risks:
+        if r.get("code")==code:
+            return r
+    return {}
+
+r401a=pick("R-401A")
+r501=pick("R-501")
+
+print("\n== Codes ==")
+print([r.get("code") for r in risks])
+
+print("\n== R-401A ==")
+vf401=(r401a.get("value_found") or {})
+print("has missing_102_details:", "missing_102_details" in vf401)
+
+print("\n== R-501 ==")
+ed501=(r501.get("evidence_details") or {})
+ap=(ed501.get("audit_pack") or {})
+dossier=(ed501.get("audit_dossier") or {})
+ep=(dossier.get("evidence_pack") or {})
+
+print("audit_pack.worst_month:", ap.get("worst_month"))
+print("dossier.version:", dossier.get("version"))
+
+sc = ep.get("samples_counts")
+where = "dossier.evidence_pack.samples_counts"
+if sc is None:
+    sc = dossier.get("samples_counts")
+    where = "dossier.samples_counts"
+print("samples_counts:", sc, f"(from {where})")
+
+assert rules.get("enriched") is True
+assert "audit_pack" in ed501
+assert "audit_dossier" in ed501
+print("\nOK: VERIFY PASS")
+PY
+
+### LYNTOS VERIFY V1 ###
+# 1) Compile + risk json + run_rules
+python -m py_compile risk_model/v1_engine.py risk_model/v1_rule_engine.py risk_model/risk_enrich.py
+python scripts/test_risk_model_v1.py > /tmp/risk_v1.json
+PYTHONPATH=. python /tmp/run_rules.py
+
+# 2) PDF üret + bundle zip üret (generate_dossier_pdf.py içinde)
+python -m py_compile scripts/generate_dossier_pdf.py
+python scripts/generate_dossier_pdf.py /tmp/risk_v1.json
+
+# 2.1) audit_dossier schema doğrula
+python scripts/validate_audit_dossier.py /tmp/risk_v1.json R-501
+
+# 3) LINEAGE + MANIFEST güncelle (bundle içini repack)
+python - <<'PYY'
+import os, json, zipfile, hashlib, datetime
+from pathlib import Path
+
+# latest bundle
+bundle = sorted(Path("out").glob("*_BUNDLE.zip"), key=lambda p: p.stat().st_mtime, reverse=True)
+if not bundle:
+    raise SystemExit("HATA: out/ içinde *_BUNDLE.zip yok (PDF/bundle üretimi başarısız?)")
+bundle_path = bundle[0].resolve()
+
+def sha256_file(fp: Path) -> str:
+    h = hashlib.sha256()
+    with fp.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024*1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+with zipfile.ZipFile(bundle_path, "r") as z:
+    names = set(z.namelist())
+    if "risk_v1.json" not in names:
+        raise SystemExit("HATA: bundle içinde risk_v1.json yok")
+    risk = json.loads(z.read("risk_v1.json").decode("utf-8","replace"))
+    manifest_old = z.read("MANIFEST.txt").decode("utf-8","replace") if "MANIFEST.txt" in names else ""
+
+smmm_id = (risk.get("smmm_id") or "").strip()
+client_id = (risk.get("client_id") or "").strip()
+period = (risk.get("period") or "").strip()
+if not (smmm_id and client_id and period):
+    raise SystemExit("HATA: risk_v1.json smmm_id/client_id/period eksik")
+
+backend_root = Path(".").resolve()
+targets = [
+    backend_root / "data" / "banka" / smmm_id / client_id / period,
+    backend_root / "data" / "luca" / smmm_id / client_id / period,
+    backend_root / "data" / "edefter" / smmm_id / client_id / period,
+]
+
+files=[]
+for base in targets:
+    if not base.exists():
+        continue
+    for fp in base.rglob("*"):
+        if fp.is_file() and fp.name != ".DS_Store":
+            files.append(fp)
+files=sorted(set(files), key=lambda p: str(p))
+
+now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+lines=[]
+lines.append("LYNTOS LINEAGE v1")
+lines.append(f"generated_at: {now}")
+lines.append(f"smmm_id: {smmm_id}")
+lines.append(f"client_id: {client_id}")
+lines.append(f"period: {period}")
+lines.append(f"backend_root: {backend_root}")
+lines.append("")
+lines.append("FILES:")
+if not files:
+    lines.append("  (none found under backend/data for this smmm/client/period)")
+else:
+    for fp in files:
+        st=fp.stat()
+        rel=fp.relative_to(backend_root)
+        h=sha256_file(fp)
+        lines.append(f"- path: {rel}")
+        lines.append(f"  size: {st.st_size}")
+        lines.append(f"  mtime: {datetime.datetime.fromtimestamp(st.st_mtime).strftime('%Y-%m-%d %H:%M:%S')}")
+        lines.append(f"  sha256: {h}")
+lineage_text="\n".join(lines) + "\n"
+lineage_sha=hashlib.sha256(lineage_text.encode("utf-8")).hexdigest()
+
+manifest_new = (manifest_old.rstrip() + "\n") if manifest_old else ""
+manifest_new += f"lineage_in_bundle: LINEAGE.txt\n"
+manifest_new += f"lineage_sha256: {lineage_sha}\n"
+manifest_new += f"lineage_files_count: {len(files)}\n"
+
+tmp = bundle_path.with_suffix(".zip.tmp")
+with zipfile.ZipFile(bundle_path, "r") as zin, zipfile.ZipFile(tmp, "w", compression=zipfile.ZIP_DEFLATED) as zout:
+    for item in zin.infolist():
+        if item.filename in ("MANIFEST.txt","LINEAGE.txt"):
+            continue
+        zout.writestr(item, zin.read(item.filename))
+    zout.writestr("MANIFEST.txt", manifest_new)
+    zout.writestr("LINEAGE.txt", lineage_text)
+tmp.replace(bundle_path)
+
+print(f"OK: lineage refresh -> {bundle_path.name} (files={len(files)})")
+PYY
+
+# 4) Son kontrol (hızlı)
+python - <<'PZ'
+import zipfile, glob, os
+paths=sorted(glob.glob("out/*_BUNDLE.zip"), key=lambda p: os.path.getmtime(p), reverse=True)
+assert paths, "HATA: bundle yok"
+z=zipfile.ZipFile(paths[0],"r")
+need={"risk_v1.json","MANIFEST.txt","LINEAGE.txt"}
+missing=need-set(z.namelist())
+assert not missing, f"HATA: bundle içinde eksik: {missing}"
+print("OK: bundle içerik PASS ->", os.path.basename(paths[0]))
+PZ
+### /LYNTOS VERIFY V1 ###
+

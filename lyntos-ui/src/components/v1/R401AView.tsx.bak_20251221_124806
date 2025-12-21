@@ -1,0 +1,130 @@
+import React from "react";
+import { Pill, SectionCard, JsonBox } from "./Atoms";
+
+type AnyObj = Record<string, any>;
+
+function get(obj: any, path: string): any {
+  if (!obj) return undefined;
+  const parts = path.split(".");
+  let cur = obj;
+  for (const p of parts) {
+    if (cur && typeof cur === "object" && p in cur) cur = cur[p];
+    else return undefined;
+  }
+  return cur;
+}
+
+function pick(obj: any, paths: string[]): any {
+  for (const p of paths) {
+    const v = get(obj, p);
+    if (v !== undefined && v !== null) return v;
+  }
+  return undefined;
+}
+
+function dictToRows(d: any): { account: string; amount: any }[] {
+  if (!d || typeof d !== "object" || Array.isArray(d)) return [];
+  return Object.entries(d).map(([k, v]) => ({ account: String(k), amount: v }));
+}
+
+export default function R401AView({ contract }: { contract: AnyObj }) {
+  // missing_102 genelde value_found veya evidence_pack altında çıkar
+  const missing =
+    pick(contract, [
+      "missing_102_details",
+      "evidence_pack.missing_102_details",
+      "value_found.missing_102",
+      "value_found.missing_102_details",
+      "risk.value_found.missing_102",
+      "risk.missing_102_details",
+    ]) || {};
+
+  const checklist =
+    pick(contract, [
+      "checklist",
+      "evidence_pack.checklist",
+      "risk.checklist",
+      "risk.evidence_pack.checklist",
+    ]) || [];
+
+  const recommended =
+    pick(contract, [
+      "recommended_files",
+      "evidence_pack.recommended_files",
+      "risk.recommended_files",
+      "risk.evidence_pack.recommended_files",
+    ]) || [];
+
+  const missingRows = Array.isArray(missing) ? missing : dictToRows(missing);
+
+  return (
+    <div className="space-y-4">
+      <SectionCard title="Özet">
+        <div className="flex flex-wrap gap-2">
+          <Pill label={`missing_102_details: ${missingRows.length}`} />
+          <Pill label={`checklist: ${Array.isArray(checklist) ? checklist.length : 0}`} />
+          <Pill
+            label={`recommended_files: ${Array.isArray(recommended) ? recommended.length : 0}`}
+          />
+        </div>
+        <div className="mt-3 text-sm text-neutral-700">
+          Bu risk genelde “mizan 102 alt hesap var ama ilgili dönemde banka ekstresi/delil dosyası eksik olabilir”
+          anlamına gelir. Amaç: eksik dosyayı tamamlayıp riski kapatmak ve dönemi/doğru IBAN’ı netleştirmek.
+        </div>
+      </SectionCard>
+
+      <SectionCard title="102 Alt Hesap Detayı">
+        {missingRows.length > 0 ? (
+          <div className="overflow-auto">
+            <table className="min-w-full text-sm">
+              <thead>
+                <tr className="text-left border-b">
+                  <th className="py-2 pr-4">Hesap</th>
+                  <th className="py-2 pr-4">Tutar</th>
+                </tr>
+              </thead>
+              <tbody>
+                {missingRows.map((r, i) => (
+                  <tr key={i} className="border-b">
+                    <td className="py-2 pr-4">{r.account}</td>
+                    <td className="py-2 pr-4">{String(r.amount)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div>Detay bulunamadı.</div>
+        )}
+      </SectionCard>
+
+      <SectionCard title="Kontrol Listesi">
+        {Array.isArray(checklist) && checklist.length > 0 ? (
+          <ul className="list-disc pl-5 space-y-1">
+            {checklist.map((x: any, i: number) => (
+              <li key={i}>{String(x)}</li>
+            ))}
+          </ul>
+        ) : (
+          <div>Checklist bulunamadı.</div>
+        )}
+      </SectionCard>
+
+      <SectionCard title="Önerilen Dosyalar">
+        {Array.isArray(recommended) && recommended.length > 0 ? (
+          <ul className="list-disc pl-5 space-y-1">
+            {recommended.map((x: any, i: number) => (
+              <li key={i}>{String(x)}</li>
+            ))}
+          </ul>
+        ) : (
+          <div>Önerilen dosya listesi bulunamadı.</div>
+        )}
+      </SectionCard>
+
+      <SectionCard title="Ham JSON (her zaman mevcut)">
+        <JsonBox value={contract} />
+      </SectionCard>
+    </div>
+  );
+}

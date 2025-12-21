@@ -1,0 +1,51 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import HeaderBar from "@/components/v1/layout/HeaderBar";
+import ErrorBox from "@/components/v1/blocks/ErrorBox";
+import JsonBox from "@/components/v1/blocks/JsonBox";
+import { apiContracts, getJson } from "@/lib/v1/http";
+import type { RiskDetail } from "@/lib/v1/types";
+
+export default function RiskDetailClient({ code }: { code: string }) {
+  const safeCode = useMemo(() => (code || "").toUpperCase(), [code]);
+  const [data, setData] = useState<RiskDetail | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    setErr(null);
+
+    getJson<RiskDetail>(apiContracts(`/risks/${encodeURIComponent(safeCode)}`))
+      .then((j) => {
+        if (!alive) return;
+        setData(j);
+      })
+      .catch((e: any) => {
+        if (!alive) return;
+        setErr(e?.message || String(e));
+      })
+      .finally(() => {
+        if (!alive) return;
+        setLoading(false);
+      });
+
+    return () => {
+      alive = false;
+    };
+  }, [safeCode]);
+
+  return (
+    <main style={{ padding: 16, maxWidth: 1100, margin: "0 auto" }}>
+      <HeaderBar title={`Risk Detayı: ${safeCode}`} />
+
+      {loading && <p>Yükleniyor…</p>}
+
+      {!loading && err && <ErrorBox message={err} />}
+
+      {!loading && !err && <JsonBox data={data} label="Ham JSON (Adım 18'de kartlara bölünecek)" />}
+    </main>
+  );
+}

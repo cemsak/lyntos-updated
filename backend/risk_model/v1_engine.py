@@ -1585,18 +1585,8 @@ def run_risk_model_v1(
     except Exception:
         pass
 
-    # --- LYNTOS: KURGAN layer (non-breaking enrichment) ---
-    try:
-        from .kurgan_layer import attach_kurgan_layer
-        result = attach_kurgan_layer(result, base_dir=base_dir, period=period)
-    except Exception as _e:
-        # Do not fail the whole run; surface a warning instead
-        try:
-            result.setdefault("warnings", []).append(f"kurgan_layer_error: {_e}")
-        except Exception:
-            pass
 
-    return {
+    out = {
         "ok": True,
         "version": "v1",
         "smmm_id": smmm_id,
@@ -1606,4 +1596,17 @@ def run_risk_model_v1(
         "scores": asdict(scores),
         "ai": ai_layer,
     }
+
+    # --- LYNTOS: KURGAN layer (non-breaking enrichment) ---
+    try:
+        from .kurgan_layer import attach_kurgan_layer
+        out = attach_kurgan_layer(out, base_dir=base_dir, period=period)
+    except Exception as _e:
+        try:
+            if isinstance(out, dict):
+                out.setdefault('warnings', []).append(f'kurgan_layer_error: {_e}')
+        except Exception:
+            pass
+    return out
+
 

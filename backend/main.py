@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException, Query
+from api_v1_contracts import router as v1_router
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -50,6 +51,23 @@ SECRET_KEY = os.getenv("JWT_SECRET_KEY", "lyntos_secret_key_2025")
 ALGORITHM = "HS256"
 
 app = FastAPI(title="LYNTOS SMMM Backend – Risk Motoru v1")
+
+
+# --- LYNTOS v1 API ---
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://192.168.1.102:3000",
+        "http://192.168.1.172:3000",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+app.include_router(v1_router)
+# --- /LYNTOS v1 API ---
 
 app.add_middleware(
     CORSMiddleware,

@@ -1,18 +1,24 @@
 "use client";
-import React from "react";
-import ThemeToggle from "@/components/ThemeToggle";
-import ExportBar from "@/components/ExportBar";
-export default function HeaderBar(props: any) {
+
+import * as React from "react";
+
+export default function HeaderBar(props: {
+  title?: string;
+  subtitle?: string;
+  right?: React.ReactNode;
+}) {
+  const { title = "LYNTOS", subtitle, right } = props;
+
   return (
-    <div className="w-full border-b bg-white/80 backdrop-blur dark:bg-slate-900/80">
-      <div className="mx-auto max-w-7xl px-4 py-2 flex items-center justify-between gap-3">
-        <div className="text-sm font-medium text-slate-800 dark:text-slate-100">
-          Lyntos · DEV TOOLBAR
+    <div className="w-full border-b bg-white/50 backdrop-blur">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
+        <div className="min-w-0">
+          <div className="truncate text-lg font-semibold">{title}</div>
+          {subtitle ? (
+            <div className="truncate text-sm text-neutral-600">{subtitle}</div>
+          ) : null}
         </div>
-        <div className="flex items-center gap-3 flex-wrap">
-          <ExportBar {...props} />
-          <ThemeToggle />
-        </div>
+        <div className="shrink-0">{right}</div>
       </div>
     </div>
   );

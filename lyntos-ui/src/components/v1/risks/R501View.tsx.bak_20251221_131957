@@ -1,0 +1,92 @@
+"use client";
+
+import React from "react";
+import { SectionCard, Pill } from "@/components/v1/ui/Atoms";
+import { fmtNumber, fmtPercent } from "@/lib/v1/format";
+
+function pickDossier(data: any) {
+  return data?.enriched?.audit_dossier || data?.audit_dossier || null;
+}
+function pickPack(data: any) {
+  return data?.enriched?.evidence_pack || data?.enriched?.audit_pack || data?.evidence_pack || data?.audit_pack || null;
+}
+
+export default function R501View({ data }: { data: any }) {
+  const dossier = pickDossier(data);
+  const pack = pickPack(data);
+
+  const worst = dossier?.worst_month || pack?.worst_month;
+  const counts = dossier?.samples_counts || pack?.samples_counts;
+  const table = dossier?.month_table || pack?.month_table;
+
+  return (
+    <div style={{ display: "grid", gap: 12 }}>
+      <SectionCard title="Özet">
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <Pill text={`worst_month: ${worst || "-"}`} />
+          <Pill text={`samples: sales=${counts?.sales ?? "-"} | kdv=${counts?.kdv ?? "-"}`} />
+          {pack?.scale_flag ? <Pill text={`scale_flag: ${pack.scale_flag}`} /> : null}
+        </div>
+        {dossier?.headline ? <div style={{ marginTop: 10, color: "#111827" }}>{dossier.headline}</div> : null}
+      </SectionCard>
+
+      <SectionCard title="Ay Bazında Mutabakat Tablosu">
+        {!Array.isArray(table) ? (
+          <div>Tablo bulunamadı. (Contract içinde month_table yok)</div>
+        ) : (
+          <div style={{ overflow: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <thead>
+                <tr>
+                  {Object.keys(table?.[0] || {}).map((k) => (
+                    <th key={k} style={{ textAlign: "left", padding: 8, borderBottom: "1px solid #e5e7eb" }}>
+                      {k}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {table.map((row: any, idx: number) => {
+                  const isWorst = worst && (row?.month === worst || row?.period === worst || row?.ay === worst);
+                  return (
+                    <tr key={idx} style={{ background: isWorst ? "#fff7ed" : "transparent" }}>
+                      {Object.keys(table?.[0] || {}).map((k) => {
+                        const v = row?.[k];
+                        const txt =
+                          typeof v === "number"
+                            ? (k.toLowerCase().includes("pct") || k.toLowerCase().includes("rel")) ? fmtPercent(v) : fmtNumber(v)
+                            : String(v ?? "");
+                        return (
+                          <td key={k} style={{ padding: 8, borderBottom: "1px solid #f3f4f6" }}>
+                            {txt}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            <div style={{ marginTop: 8, fontSize: 12, color: "#6b7280" }}>
+              Not: “worst_month” satırı vurgulanır. Bu ay için delil seçimi (5–10 fiş/fatura) önerilir.
+            </div>
+          </div>
+        )}
+      </SectionCard>
+
+      <SectionCard title="Mutabakat Planı">
+        {Array.isArray(dossier?.reconciliation_plan) ? (
+          <ol style={{ margin: 0, paddingLeft: 18 }}>
+            {dossier.reconciliation_plan.map((x: string, i: number) => (
+              <li key={i} style={{ marginBottom: 6 }}>
+                {x}
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <div>Plan bulunamadı.</div>
+        )}
+      </SectionCard>
+    </div>
+  );
+}

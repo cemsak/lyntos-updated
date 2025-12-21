@@ -1,0 +1,59 @@
+#!/bin/zsh
+set -e
+set -u
+set -o pipefail
+
+cd "$(git rev-parse --show-toplevel)/backend" || exit 1
+
+if [[ -f venv/bin/activate ]]; then
+  source venv/bin/activate
+fi
+
+python -m py_compile risk_model/v1_engine.py risk_model/v1_rule_engine.py risk_model/risk_enrich.py
+python scripts/test_risk_model_v1.py > /tmp/risk_v1.json
+
+python - <<'PY'
+import json
+d=json.load(open("/tmp/risk_v1.json"))
+rules=((d.get("metrics") or {}).get("rules") or {})
+print("rules.enriched =", rules.get("enriched"))
+print("rules.enrich_error =", rules.get("enrich_error"))
+
+risks=rules.get("risks") or []
+def pick(code):
+    for r in risks:
+        if r.get("code")==code:
+            return r
+    return {}
+
+r401a=pick("R-401A")
+r501=pick("R-501")
+
+print("\n== Codes ==")
+print([r.get("code") for r in risks])
+
+print("\n== R-401A ==")
+vf401=(r401a.get("value_found") or {})
+print("has missing_102_details:", "missing_102_details" in vf401)
+
+print("\n== R-501 ==")
+ed501=(r501.get("evidence_details") or {})
+ap=(ed501.get("audit_pack") or {})
+dossier=(ed501.get("audit_dossier") or {})
+ep=(dossier.get("evidence_pack") or {})
+
+print("audit_pack.worst_month:", ap.get("worst_month"))
+print("dossier.version:", dossier.get("version"))
+
+sc = ep.get("samples_counts")
+where = "dossier.evidence_pack.samples_counts"
+if sc is None:
+    sc = dossier.get("samples_counts")
+    where = "dossier.samples_counts"
+print("samples_counts:", sc, f"(from {where})")
+
+assert rules.get("enriched") is True
+assert "audit_pack" in ed501
+assert "audit_dossier" in ed501
+print("\nOK: VERIFY PASS")
+PY

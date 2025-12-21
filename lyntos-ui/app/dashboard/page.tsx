@@ -1,11 +1,5 @@
-"use client";
-import DashboardShell from "@/components/layout/dashboard-shell";
-import LyntosDashboard from "@/components/LyntosDashboard";
+import { redirect } from "next/navigation";
 
-export default function Page() {
-  return (
-    <DashboardShell>
-      <LyntosDashboard />
-    </DashboardShell>
-  );
+export default function DashboardPage() {
+  redirect("/v1");
 }

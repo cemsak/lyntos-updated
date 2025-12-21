@@ -1,0 +1,135 @@
+import React from "react";
+import { Pill, SectionCard, JsonBox } from "./Atoms";
+
+type AnyObj = Record<string, any>;
+
+function get(obj: any, path: string): any {
+  if (!obj) return undefined;
+  const parts = path.split(".");
+  let cur = obj;
+  for (const p of parts) {
+    if (cur && typeof cur === "object" && p in cur) cur = cur[p];
+    else return undefined;
+  }
+  return cur;
+}
+
+function pick(obj: any, paths: string[]): any {
+  for (const p of paths) {
+    const v = get(obj, p);
+    if (v !== undefined && v !== null) return v;
+  }
+  return undefined;
+}
+
+export default function R501View({ contract }: { contract: AnyObj }) {
+  // contract içinde farklı nesting’leri tolere et
+  const dossier =
+    pick(contract, [
+      "audit_dossier",
+      "evidence_pack.audit_dossier",
+      "enriched_details.audit_dossier",
+      "risk.audit_dossier",
+      "risk.enriched_details.audit_dossier",
+    ]) || {};
+
+  const monthTable =
+    pick(contract, [
+      "month_table",
+      "audit_pack.month_table",
+      "evidence_pack.month_table",
+      "audit_dossier.month_table",
+      "evidence_pack.audit_pack.month_table",
+      "risk.audit_dossier.month_table",
+    ]) || pick(dossier, ["month_table"]) || [];
+
+  const worstMonth =
+    pick(contract, [
+      "worst_month",
+      "audit_pack.worst_month",
+      "evidence_pack.worst_month",
+      "audit_dossier.worst_month",
+      "risk.audit_dossier.worst_month",
+    ]) || pick(dossier, ["worst_month"]) || "-";
+
+  const samples =
+    pick(contract, [
+      "samples_counts",
+      "evidence_pack.samples_counts",
+      "audit_pack.samples_counts",
+      "audit_dossier.samples_counts",
+      "risk.audit_dossier.samples_counts",
+    ]) || pick(dossier, ["samples_counts"]) || {};
+
+  const plan =
+    pick(contract, [
+      "reconciliation_plan",
+      "audit_dossier.reconciliation_plan",
+      "evidence_pack.reconciliation_plan",
+      "risk.audit_dossier.reconciliation_plan",
+      // bazı varyantlar:
+      "vdK_reconciliation_plan",
+      "vdk_reconciliation_plan",
+      "enriched_details.vdK_reconciliation_plan",
+    ]) || pick(dossier, ["reconciliation_plan"]) || null;
+
+  return (
+    <div className="space-y-4">
+      <SectionCard title="Özet">
+        <div className="flex flex-wrap gap-2">
+          <Pill label={`worst_month: ${worstMonth || "-"}`} />
+          <Pill
+            label={`samples: sales=${samples?.sales ?? "-"} | kdv=${samples?.kdv ?? "-"}`}
+          />
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Ay Bazında Mutabakat Tablosu">
+        {Array.isArray(monthTable) && monthTable.length > 0 ? (
+          <div className="overflow-auto">
+            <table className="min-w-full text-sm">
+              <thead>
+                <tr className="text-left border-b">
+                  <th className="py-2 pr-4">Ay</th>
+                  <th className="py-2 pr-4">KDV Matrah</th>
+                  <th className="py-2 pr-4">E-Defter Satış</th>
+                  <th className="py-2 pr-4">Fark</th>
+                  <th className="py-2 pr-4">%</th>
+                </tr>
+              </thead>
+              <tbody>
+                {monthTable.map((r: any, i: number) => (
+                  <tr key={i} className="border-b">
+                    <td className="py-2 pr-4">{r?.month ?? "-"}</td>
+                    <td className="py-2 pr-4">{r?.kdv_matrah ?? r?.kdv ?? "-"}</td>
+                    <td className="py-2 pr-4">{r?.sales_ref ?? r?.sales ?? "-"}</td>
+                    <td className="py-2 pr-4">{r?.diff ?? "-"}</td>
+                    <td className="py-2 pr-4">{r?.rel_pct ?? r?.rel ?? "-"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div>Tablo bulunamadı. (Contract içinde month_table yok)</div>
+        )}
+      </SectionCard>
+
+      <SectionCard title="Mutabakat Planı">
+        {Array.isArray(plan) && plan.length > 0 ? (
+          <ul className="list-disc pl-5 space-y-1">
+            {plan.map((x: any, i: number) => (
+              <li key={i}>{String(x)}</li>
+            ))}
+          </ul>
+        ) : (
+          <div>Plan bulunamadı.</div>
+        )}
+      </SectionCard>
+
+      <SectionCard title="Ham JSON (her zaman mevcut)">
+        <JsonBox value={contract} />
+      </SectionCard>
+    </div>
+  );
+}

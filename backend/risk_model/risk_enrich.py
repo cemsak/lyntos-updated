@@ -157,6 +157,23 @@ def _enrich_r401a(risk: dict, metrics: dict | None, period: str | None) -> None:
     )
 
 
+
+
+    # R-401A evidence_pack (frontend-safe, lightweight)
+    # Only add if not already present
+    ed = risk.get("evidence_details")
+    if isinstance(ed, dict):
+        dossier = ed.get("audit_dossier")
+        # R-401A dossier standardı yok; burada evidence_pack kullanıyoruz
+        if "evidence_pack" not in ed:
+            vf = risk.get("value_found") or {}
+            details = vf.get("missing_102_details") if isinstance(vf, dict) else None
+            ed["evidence_pack"] = {
+                "summary": "102.xx alt hesap var ancak ilgili dönemde banka hareketi/ekstresi bulunamadı (dosya eksikliği veya sınıflama hatası olabilir).",
+                "missing_102_details": details if isinstance(details, list) else [],
+                "recommended_files": ["Banka ekstreleri (CSV/XLSX)", "POS raporu (varsa)", "Bloke/Vadeli hesap ekstreleri (varsa)"],
+                "checklist": risk.get("checklist") or []
+            }
 def _median(xs: List[float]) -> Optional[float]:
     if not xs:
         return None
@@ -289,12 +306,19 @@ def _enrich_r501(risk: dict, metrics: dict | None, period: str | None) -> None:
 
     # audit_dossier (VDK paket formatı – deterministic, printable)
     ed["audit_dossier"] = {
-        "version": "VDK-AUDITPACK/1.0",
+        "version": "VDK-AUDITDOSSIER/1.0",
         "period": period,
         "risk_code": risk.get("code"),
         "title": risk.get("title"),
         "severity": risk.get("severity"),
         "headline": "KDV matrahı ile satışlar (e-defter net satış referansı) arasında ay bazında mutabakat analizi.",
+        "evidence_pack": {
+            "samples_counts": {"sales": int(sales_cnt), "kdv": int(kdv_cnt)},
+            "worst_month": worst_month,
+            "month_table": month_table,
+            "scale_flag": scale_flag,
+            "scale_stats": scale_stats,
+        },
         "samples_counts": {"sales": int(sales_cnt), "kdv": int(kdv_cnt)},
         "worst_month": worst_month,
         "month_table": month_table,

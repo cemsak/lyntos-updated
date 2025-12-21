@@ -1,0 +1,183 @@
+#!/usr/bin/env python3
+import json
+import os
+import sys
+from datetime import datetime
+
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import cm
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib import colors
+
+
+def _fmt_money(x):
+    try:
+        if x is None:
+            return "-"
+        v = float(x)
+        return f"{v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    except Exception:
+        return str(x)
+
+
+def _safe_get(dct, *keys, default=None):
+    cur = dct
+    for k in keys:
+        if not isinstance(cur, dict):
+            return default
+        cur = cur.get(k)
+    return cur if cur is not None else default
+
+
+def main():
+    in_path = sys.argv[1] if len(sys.argv) > 1 else "/tmp/risk_v1.json"
+    if not os.path.exists(in_path):
+        print(f"HATA: input bulunamadı: {in_path}")
+        sys.exit(1)
+
+    d = json.load(open(in_path, "r", encoding="utf-8"))
+    smmm_id = d.get("smmm_id") or "-"
+    client_id = d.get("client_id") or "-"
+    period = d.get("period") or "-"
+
+    rules = _safe_get(d, "metrics", "rules", default={}) or {}
+    risks = rules.get("risks") or []
+
+    out_name = f"LYNTOS_DOSSIER_{client_id}_{period}.pdf".replace("/", "_").replace(" ", "_")
+    out_path = os.path.join("out", out_name)
+
+    styles = getSampleStyleSheet()
+    story = []
+
+    title = f"LYNTOS | İnceleme Öncesi Risk Dossier"
+    story.append(Paragraph(title, styles["Title"]))
+    story.append(Spacer(1, 0.4*cm))
+    story.append(Paragraph(f"<b>SMMM:</b> {smmm_id}", styles["Normal"]))
+    story.append(Paragraph(f"<b>Mükellef:</b> {client_id}", styles["Normal"]))
+    story.append(Paragraph(f"<b>Dönem:</b> {period}", styles["Normal"]))
+    story.append(Paragraph(f"<b>Üretim Zamanı:</b> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", styles["Normal"]))
+    story.append(Spacer(1, 0.6*cm))
+
+    story.append(Paragraph("<b>Özet</b>", styles["Heading2"]))
+    summary_rows = [["Risk Kodu", "Seviye", "Başlık"]]
+    for r in risks:
+        summary_rows.append([r.get("code","-"), r.get("severity","-"), r.get("title","-")])
+    tbl = Table(summary_rows, colWidths=[3*cm, 3*cm, 11*cm])
+    tbl.setStyle(TableStyle([
+        ("FONTNAME", (0,0), (-1,0), "Helvetica-Bold"),
+        ("GRID", (0,0), (-1,-1), 0.25, colors.grey),
+        ("VALIGN", (0,0), (-1,-1), "TOP"),
+        ("BACKGROUND", (0,0), (-1,0), colors.whitesmoke),
+    ]))
+    story.append(tbl)
+    story.append(PageBreak())
+
+    def add_kv(title, value):
+        story.append(Paragraph(f"<b>{title}:</b> {value}", styles["Normal"]))
+
+    for r in risks:
+        code = r.get("code","-")
+        sev = r.get("severity","-")
+        rtitle = r.get("title","-")
+        ed = r.get("evidence_details") or {}
+        vf = r.get("value_found") or {}
+
+        story.append(Paragraph(f"{code} | {rtitle}", styles["Heading1"]))
+        add_kv("Severity", sev)
+        rl = ed.get("rule_logic") or "-"
+        add_kv("Rule Logic", rl)
+        note = ed.get("note") or "-"
+        story.append(Spacer(1, 0.2*cm))
+        story.append(Paragraph(f"<b>Not:</b> {note}", styles["Normal"]))
+        story.append(Spacer(1, 0.4*cm))
+
+        # R-401A detay
+        if code == "R-401A":
+            story.append(Paragraph("<b>Bulgu</b>", styles["Heading3"]))
+            miss = _safe_get(vf, "missing_102_details", default=[]) or []
+            if miss:
+                rows = [["Hesap Kodu", "Hesap Adı", "Tutar"]]
+                for it in miss[:20]:
+                    rows.append([
+                        it.get("account_code","-"),
+                        it.get("account_name","-"),
+                        _fmt_money(it.get("amount")),
+                    ])
+                t = Table(rows, colWidths=[3*cm, 11*cm, 3*cm])
+                t.setStyle(TableStyle([
+                    ("FONTNAME", (0,0), (-1,0), "Helvetica-Bold"),
+                    ("GRID", (0,0), (-1,-1), 0.25, colors.grey),
+                    ("VALIGN", (0,0), (-1,-1), "TOP"),
+                    ("BACKGROUND", (0,0), (-1,0), colors.whitesmoke),
+                ]))
+                story.append(t)
+            else:
+                story.append(Paragraph("Detay bulunamadı (missing_102_details boş).", styles["Normal"]))
+
+        # R-501 dossier
+        if code == "R-501":
+            dossier = ed.get("audit_dossier") or {}
+            ep = dossier.get("evidence_pack") or {}
+            # geri uyum
+            month_table = ep.get("month_table") or dossier.get("month_table") or []
+            worst_month = ep.get("worst_month") or dossier.get("worst_month") or "-"
+            sc = ep.get("samples_counts") or dossier.get("samples_counts") or {}
+
+            story.append(Spacer(1, 0.3*cm))
+            story.append(Paragraph("<b>Dossier Özeti</b>", styles["Heading3"]))
+            add_kv("Dossier Version", dossier.get("version","-"))
+            add_kv("Worst Month", worst_month)
+            add_kv("Samples Counts", f"sales={sc.get('sales','-')}, kdv={sc.get('kdv','-')}")
+
+            story.append(Spacer(1, 0.3*cm))
+            story.append(Paragraph("<b>Ay Bazlı Mutabakat Tablosu</b>", styles["Heading3"]))
+            rows = [["Ay", "KDV Matrah", "E-Defter Net Satış", "Delta (Net-KDV)", "Oran (Net/KDV)"]]
+            for row in month_table:
+                rows.append([
+                    row.get("month","-"),
+                    _fmt_money(row.get("kdv_matrah")),
+                    _fmt_money(row.get("edefter_net_sales")),
+                    _fmt_money(row.get("delta_net_minus_kdv")),
+                    str(row.get("ratio_net_over_kdv","-")),
+                ])
+            t = Table(rows, colWidths=[2.5*cm, 3.5*cm, 4.2*cm, 3.8*cm, 3.0*cm])
+            t.setStyle(TableStyle([
+                ("FONTNAME", (0,0), (-1,0), "Helvetica-Bold"),
+                ("GRID", (0,0), (-1,-1), 0.25, colors.grey),
+                ("VALIGN", (0,0), (-1,-1), "TOP"),
+                ("BACKGROUND", (0,0), (-1,0), colors.whitesmoke),
+            ]))
+            story.append(t)
+
+            plan = dossier.get("reconciliation_plan") or []
+            if plan:
+                story.append(Spacer(1, 0.4*cm))
+                story.append(Paragraph("<b>Mutabakat / Aksiyon Planı</b>", styles["Heading3"]))
+                for i, item in enumerate(plan, start=1):
+                    story.append(Paragraph(f"{i}. {item}", styles["Normal"]))
+
+        # Checklist / actions (varsa)
+        actions = r.get("actions") or r.get("smmm_actions") or []
+        checklist = r.get("checklist") or []
+        if actions:
+            story.append(Spacer(1, 0.4*cm))
+            story.append(Paragraph("<b>SMMM Aksiyonları</b>", styles["Heading3"]))
+            for i, item in enumerate(actions, start=1):
+                story.append(Paragraph(f"{i}. {item}", styles["Normal"]))
+        if checklist:
+            story.append(Spacer(1, 0.4*cm))
+            story.append(Paragraph("<b>Kontrol Listesi</b>", styles["Heading3"]))
+            for i, item in enumerate(checklist, start=1):
+                story.append(Paragraph(f"{i}. {item}", styles["Normal"]))
+
+        story.append(PageBreak())
+
+    doc = SimpleDocTemplate(out_path, pagesize=A4, leftMargin=2*cm, rightMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
+    doc.build(story)
+
+    print(f"OK: PDF üretildi -> {out_path}")
+
+
+if __name__ == "__main__":
+    main()

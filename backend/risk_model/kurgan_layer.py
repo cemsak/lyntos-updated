@@ -174,6 +174,30 @@ def scan_bank_raw_folder(raw_dir: str, start: date, end: date) -> BankScanResult
     return BankScanResult(total, in_p, out_p, out_files)
 
 
+
+def _get_risks_list(result: Dict[str, Any]) -> Optional[List[Dict[str, Any]]]:
+    # 1) primary: metrics.rules.risks
+    metrics = result.get("metrics")
+    if isinstance(metrics, dict):
+        rules = metrics.get("rules")
+        if isinstance(rules, dict):
+            risks = rules.get("risks")
+            if isinstance(risks, list):
+                return [r for r in risks if isinstance(r, dict)]
+
+    # 2) fallback: top-level rules list
+    rules2 = result.get("rules")
+    if isinstance(rules2, list):
+        return [r for r in rules2 if isinstance(r, dict)]
+
+    # 3) fallback: findings list
+    f2 = result.get("findings")
+    if isinstance(f2, list):
+        return [r for r in f2 if isinstance(r, dict)]
+
+    return None
+
+
 def attach_kurgan_layer(result: Dict[str, Any], base_dir: str, period: str) -> Dict[str, Any]:
     """
     Non-breaking enrichment:
@@ -222,14 +246,16 @@ def attach_kurgan_layer(result: Dict[str, Any], base_dir: str, period: str) -> D
         warnings.append(f"Çeyrek dışı satır içeren banka dosyaları tespit edildi (örnek): {scan.out_of_period_files[:3]}")
 
     # Add kurgan_criteria_signals (minimal heuristic mapping)
-    findings = result.get("rules") or result.get("findings")
+    findings = _get_risks_list(result)
     if isinstance(findings, list):
         for f in findings:
             if not isinstance(f, dict):
                 continue
             f.setdefault("kurgan_criteria_signals", [])
 
-            rule_id = str(f.get("rule_id") or f.get("id") or "")
+            rule_id = str(f.get("rule_id") or f.get("id") or f.get("code") or "");
+            if "rule_id" not in f and f.get("code"):
+                f["rule_id"] = f.get("code")
             # Only add if empty (avoid overwriting future logic)
             if f["kurgan_criteria_signals"]:
                 continue

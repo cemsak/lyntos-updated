@@ -1,0 +1,134 @@
+"use client";
+import React from "react";
+import { Pill, SectionCard, JsonBox } from "@/components/v1/ui/Atoms";
+import { findAnyWithPath } from "@/lib/v1/contractFind";
+
+type AnyObj = Record<string, any>;
+const s = (v: any) => (v === null || v === undefined ? "" : String(v));
+
+function normalizeMissing102(v: any): Array<{ account: string; amount: any }> {
+  if (!v) return [];
+  if (Array.isArray(v)) {
+    // beklenen format: [{account, amount}] ya da [{key, value}] vs.
+    return v.map((x: any) => ({
+      account: s(x?.account ?? x?.key ?? x?.code ?? ""),
+      amount: x?.amount ?? x?.value ?? x,
+    }));
+  }
+  if (typeof v === "object") {
+    // beklenen format: {"102.50": 3431.68, ...}
+    return Object.entries(v).map(([k, val]) => ({ account: k, amount: val }));
+  }
+  return [];
+}
+
+export default function R401AView({ contract }: { contract: AnyObj }) {
+  const detailsF = findAnyWithPath(contract, ["missing_102_details", "missing102Details", "missing_102"]);
+  const detailsCountF = findAnyWithPath(contract, ["missing_102_details_count", "missing102DetailsCount"]);
+
+  const checklistF = findAnyWithPath(contract, ["checklist", "kontrol_listesi"]);
+  const checklistCountF = findAnyWithPath(contract, ["checklist_count"]);
+
+  const recommendedF = findAnyWithPath(contract, ["recommended_files", "recommendedFiles", "recommended"]);
+  const recommendedCountF = findAnyWithPath(contract, ["recommended_files_count", "recommendedFilesCount"]);
+
+  const rows = normalizeMissing102(detailsF?.value);
+  const checklist = Array.isArray(checklistF?.value) ? checklistF?.value : [];
+  const recommended = Array.isArray(recommendedF?.value) ? recommendedF?.value : [];
+
+  const rowsCount = rows.length || (typeof detailsCountF?.value === "number" ? detailsCountF.value : 0);
+  const checklistCount = checklist.length || (typeof checklistCountF?.value === "number" ? checklistCountF.value : 0);
+  const recCount = recommended.length || (typeof recommendedCountF?.value === "number" ? recommendedCountF.value : 0);
+
+  return (
+    <div className="space-y-6">
+      <SectionCard title="Özet" subtitle="R-401A | Mizan 102 alt hesap var, banka ekstresi/delil dosyası eksik olabilir">
+        <div className="flex gap-2 flex-wrap">
+          <Pill label={`missing_102_details: ${rowsCount}`} />
+          <Pill label={`checklist: ${checklistCount}`} />
+          <Pill label={`recommended_files: ${recCount}`} />
+        </div>
+        <div className="mt-3 text-xs opacity-70">
+          Bulunan yollar: missing_102_details={detailsF?.path ?? "-"} | checklist={checklistF?.path ?? "-"} | recommended_files={recommendedF?.path ?? "-"}
+        </div>
+        <div className="mt-3 text-sm opacity-80">
+          Amaç: ilgili dönemde 102 alt hesapların banka ekstresiyle/delil dosyasıyla eşleşmesini netleştirip riski kapatmak.
+        </div>
+      </SectionCard>
+
+      <SectionCard title="102 Alt Hesap Detayı">
+        {rows.length ? (
+          <div className="overflow-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left border-b">
+                  <th className="py-2 pr-4">Hesap</th>
+                  <th className="py-2 pr-4">Tutar</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r, idx) => (
+                  <tr key={idx} className="border-b">
+                    <td className="py-2 pr-4">{r.account}</td>
+                    <td className="py-2 pr-4">{s(r.amount)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="text-sm opacity-80">
+            Detay bulunamadı.{" "}
+            {rowsCount ? (
+              <span>
+                Not: contract içinde sadece <b>missing_102_details_count={rowsCount}</b> var; detay satırları export edilmiyor olabilir.
+              </span>
+            ) : null}
+          </div>
+        )}
+      </SectionCard>
+
+      <SectionCard title="Kontrol Listesi">
+        {checklist.length ? (
+          <ul className="list-disc pl-5 text-sm">
+            {checklist.map((c: any, i: number) => (
+              <li key={i}>{s(c?.text ?? c?.title ?? c)}</li>
+            ))}
+          </ul>
+        ) : (
+          <div className="text-sm opacity-80">
+            Checklist bulunamadı.{" "}
+            {checklistCount ? (
+              <span>
+                Not: contract içinde sadece <b>checklist_count={checklistCount}</b> var; satırlar export edilmiyor olabilir.
+              </span>
+            ) : null}
+          </div>
+        )}
+      </SectionCard>
+
+      <SectionCard title="Önerilen Dosyalar">
+        {recommended.length ? (
+          <ul className="list-disc pl-5 text-sm">
+            {recommended.map((f: any, i: number) => (
+              <li key={i}>{s(f?.path ?? f?.name ?? f)}</li>
+            ))}
+          </ul>
+        ) : (
+          <div className="text-sm opacity-80">
+            Önerilen dosya listesi bulunamadı.{" "}
+            {recCount ? (
+              <span>
+                Not: contract içinde sadece <b>recommended_files_count={recCount}</b> var; liste export edilmiyor olabilir.
+              </span>
+            ) : null}
+          </div>
+        )}
+      </SectionCard>
+
+      <SectionCard title="Ham JSON (her zaman mevcut)">
+        <JsonBox value={contract} />
+      </SectionCard>
+    </div>
+  );
+}
