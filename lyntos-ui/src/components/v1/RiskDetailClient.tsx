@@ -13,11 +13,13 @@ type AnyObj = Record<string, any>;
 export default function RiskDetailClient({ code }: { code: string }) {
   const CODE = (code || "").toUpperCase();
 
+  const [data, setData] = useState<AnyObj | null>(null);
+
   // --- KURGAN layer (read-only, non-breaking) ---
   const periodWindow = (data as any)?.period_window ?? (data as any)?.enriched_data?.period_window ?? null;
   const dataQuality = (data as any)?.data_quality ?? (data as any)?.enriched_data?.data_quality ?? null;
   const kurganSignals = (data as any)?.kurgan_criteria_signals ?? (data as any)?.enriched_data?.kurgan_criteria_signals ?? null;
-  const [data, setData] = useState<AnyObj | null>(null);
+
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
