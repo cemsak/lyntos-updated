@@ -13,8 +13,8 @@ export type KurganCriterionSignal = {
   code: string;                // KRG-01..KRG-13
   status: CriterionStatus;     // OK/WARN/MISSING/UNKNOWN
   score: number;               // 0..100
-  weight?: number;             // optional
-  rationale_tr?: string;       // short explanation
+  weight?: number;
+  rationale_tr?: string;
   evidence_refs?: Array<{ artifact_id: string; note?: string }>;
   missing_refs?: MissingRef[];
 };
@@ -29,7 +29,6 @@ function statusBadge(status: CriterionStatus) {
 }
 
 function titleFor(code: string) {
-  // Minimal: UI title mapping. (We will later bind full catalog.)
   const map: Record<string, string> = {
     "KRG-11": "Ödeme",
     "KRG-02": "Oranlama",
@@ -42,11 +41,8 @@ function titleFor(code: string) {
 }
 
 export function KurganCriteriaPanel({ signals }: { signals?: KurganCriterionSignal[] }) {
-  if (!signals || signals.length === 0) {
-    return null;
-  }
+  if (!signals || signals.length === 0) return null;
 
-  // Sort: MISSING -> WARN -> UNKNOWN -> OK
   const order: Record<CriterionStatus, number> = { MISSING: 0, WARN: 1, UNKNOWN: 2, OK: 3 };
   const sorted = [...signals].sort((a, b) => (order[a.status] ?? 99) - (order[b.status] ?? 99));
 
@@ -59,9 +55,7 @@ export function KurganCriteriaPanel({ signals }: { signals?: KurganCriterionSign
             Bu bölüm, işlemin/tespitin riskini “kesin hüküm” olarak değil; kanıt tamlığı ve uyarı sinyali olarak sunar.
           </div>
         </div>
-        <div className="text-xs text-slate-500">
-          {signals.length} kriter
-        </div>
+        <div className="text-xs text-slate-500">{signals.length} kriter</div>
       </div>
 
       <div className="mt-4 space-y-3">
