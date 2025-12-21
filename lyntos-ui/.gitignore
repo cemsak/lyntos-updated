@@ -39,3 +39,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+### LYNTOS-UI IGNORE ###
+node_modules
+.next
+.turbo
+.pnpm-store
+out
+*.log
+.DS_Store
