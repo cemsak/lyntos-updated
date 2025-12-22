@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { DataQualityBand } from "../risk/DataQualityBand";
+import { KurganCriteriaPanel } from "../risk/KurganCriteriaPanel";
 
 type PeriodWindow = { period?: string; start_date?: string; end_date?: string };
 
@@ -45,6 +47,56 @@ type Props = { code: string };
 export default function RiskDetailClient({ code }: Props) {
   const normalized = useMemo(() => (code || "").toUpperCase(), [code]);
   const [data, setData] = useState<any>(null);
+  const [ctx, setCtx] = useState<unknown | null>(null);
+
+
+  // --- Context-aware KURGAN layer (non-breaking) ---
+  const dataAny = data as any;
+  const ctxAny = ctx as any;
+
+  const ctxPeriodWindow =
+    ctxAny?.period_window ??
+    ctxAny?.data?.period_window ??
+    ctxAny?.payload?.period_window ??
+    null;
+
+  const ctxDataQuality =
+    ctxAny?.data_quality ??
+    ctxAny?.data?.data_quality ??
+    ctxAny?.payload?.data_quality ??
+    null;
+
+  const ctxRisks =
+    (((ctxAny?.metrics || {})?.rules || {})?.risks) ??
+    ctxAny?.risks ??
+    ctxAny?.items ??
+    ctxAny?.data?.risks ??
+    ctxAny?.payload?.risks ??
+    [];
+
+  const ctxMatch = Array.isArray(ctxRisks)
+    ? ctxRisks.find((r: any) => String(r?.code || r?.rule_id || "").toUpperCase() === String(code).toUpperCase())
+    : null;
+
+  const periodWindow =
+    dataAny?.period_window ??
+    dataAny?.enriched_data?.period_window ??
+    ctxPeriodWindow ??
+    null;
+
+  const dataQuality =
+    dataAny?.data_quality ??
+    dataAny?.enriched_data?.data_quality ??
+    ctxDataQuality ??
+    null;
+
+  const kurganSignals =
+    dataAny?.kurgan_criteria_signals ??
+    dataAny?.enriched_data?.kurgan_criteria_signals ??
+    ctxMatch?.kurgan_criteria_signals ??
+    ctxMatch?.kurganSignals ??
+    null;
+
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
@@ -54,7 +106,29 @@ export default function RiskDetailClient({ code }: Props) {
         setErr(null);
         setData(null);
 
-        // Proxy route: /api/v1/contracts/...
+        
+
+        // Context: period_window / data_quality / (varsa) kurgan sinyalleri
+        (async () => {
+          try {
+            const r2 = await fetch("/api/risk", { cache: "no-store" });
+            if (r2.ok) {
+              const j2 = await r2.json();
+              setCtx(j2);
+              return;
+            }
+          } catch {}
+
+          // Fallback: portfolio contract
+          try {
+            const r3 = await fetch("/api/v1/contracts/portfolio", { cache: "no-store" });
+            if (r3.ok) {
+              const j3 = await r3.json();
+              setCtx(j3);
+            }
+          } catch {}
+        })();
+// Proxy route: /api/v1/contracts/...
         const res = await fetch(`/api/v1/contracts/risks/${encodeURIComponent(normalized)}`, {
           cache: "no-store",
         });
@@ -78,6 +152,18 @@ export default function RiskDetailClient({ code }: Props) {
 
   return (
     <div style={{ padding: 16 }}>
+      {(periodWindow || dataQuality) ? (
+        <div className="mb-4">
+          <DataQualityBand periodWindow={periodWindow} dataQuality={dataQuality} />
+        </div>
+      ) : null}
+
+      {Array.isArray(kurganSignals) && kurganSignals.length ? (
+        <div className="mb-4">
+          <KurganCriteriaPanel signals={kurganSignals} />
+        </div>
+      ) : null}
+
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
         <h1 style={{ fontSize: 20, fontWeight: 700 }}>Risk Detay: {normalized}</h1>
         <a href="/v1" style={{ fontSize: 12, textDecoration: "underline" }}>← V1</a>
