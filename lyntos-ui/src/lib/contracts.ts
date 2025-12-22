@@ -63,11 +63,81 @@ export async function getRiskDetail(code: string): Promise<any> {
   const safe = String(code || "").trim();
   if (!safe) throw new Error("risk code boş");
 
+  // 1) önce detail kontratı al
+  let detail: any = null;
+
   if (SOURCE === "api") {
-    // (isteğe bağlı) backend'e eklerseniz: GET /api/v1/contracts/risks/{code}
-    // Şimdilik local fallback.
+    // Backend bunu destekliyorsa kullanırız:
+    // GET /api/v1/contracts/risks/{code}
+    // Şimdilik hata olursa local fallback'e düşer.
+    try {
+      detail = await fetchJsonAbsolute(`${API_BASE}/api/v1/contracts/risks/${encodeURIComponent(safe)}`);
+    }
+ catch {
+      detail = null;
+    }
+
   }
-  return readPublicContractsJson(`risk_detail_${safe}.json`);
+
+
+  if (!detail) {
+    detail = await readPublicContractsJson(`risk_detail_${safe}.json`);
+  }
+
+
+  // 2) period_window / data_quality / kurgan signals detail'de yoksa,
+  //    portfolio kontratından tamamla (ödüllük UX için kritik bağlam)
+  try {
+    const portfolio = await getPortfolioSummary();
+
+    // portfolio içindeki risk listesinden aynı code'u bul
+    const risks = extractRisks(portfolio);
+    const match = risks.find((r: any) => String(r?.code || r?.rule_id || r?.risk_id || "").toUpperCase() === safe.toUpperCase());
+
+    const pw =
+      detail?.period_window ??
+      detail?.periodWindow ??
+      portfolio?.period_window ??
+      portfolio?.periodWindow ??
+      portfolio?.payload?.period_window ??
+      portfolio?.data?.period_window ??
+      null;
+
+    const dq =
+      detail?.data_quality ??
+      detail?.dataQuality ??
+      portfolio?.data_quality ??
+      portfolio?.dataQuality ??
+      portfolio?.payload?.data_quality ??
+      portfolio?.data?.data_quality ??
+      null;
+
+    const ks =
+      detail?.kurgan_criteria_signals ??
+      detail?.kurganSignals ??
+      match?.kurgan_criteria_signals ??
+      match?.kurganSignals ??
+      match?.kurgan_criteria?.signals ??
+      null;
+
+    if (pw && !detail?.period_window) {
+      detail.period_window = pw;
+    }
+
+    if (dq && !detail?.data_quality) {
+      detail.data_quality = dq;
+    }
+
+    if (ks && !detail?.kurgan_criteria_signals) {
+      detail.kurgan_criteria_signals = ks;
+
+  }
+ catch {
+    // sessiz geç: UI yine de detail'i gösterebilsin
+  }
+
+
+  return detail;
 }
 
 /** UI'da risks listesini olabildiğince toleranslı çekmek için yardımcı */
