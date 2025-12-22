@@ -2,6 +2,44 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+type PeriodWindow = { period?: string; start_date?: string; end_date?: string };
+
+type DataQuality = {
+  bank_rows_total?: number;
+  bank_rows_in_period?: number;
+  bank_rows_out_of_period?: number;
+  sources_present?: string[];
+  warnings?: string[];
+};
+
+type KurganSignal = {
+  code: string;
+  status: "OK" | "WARN" | "MISSING" | "UNKNOWN";
+  score: number;
+  weight?: number;
+  rationale_tr?: string;
+  evidence_refs?: Array<{ artifact_id: string; note?: string }>;
+  missing_refs?: Array<{ code: string; title_tr: string; severity: "LOW" | "MEDIUM" | "HIGH"; how_to_fix_tr?: string }>;
+};
+
+type RiskMeta = { code?: string; severity?: string; title?: string; note?: string };
+
+type RiskDetailContract = {
+  risk?: RiskMeta;
+  downloads?: { pdf_latest?: string; bundle_latest?: string };
+
+  period_window?: PeriodWindow;
+  data_quality?: DataQuality;
+  kurgan_criteria_signals?: KurganSignal[];
+
+  enriched_data?: {
+    period_window?: PeriodWindow;
+    data_quality?: DataQuality;
+    kurgan_criteria_signals?: KurganSignal[];
+  };
+};
+
+
 type Props = { code: string };
 
 export default function RiskDetailClient({ code }: Props) {
@@ -28,7 +66,7 @@ export default function RiskDetailClient({ code }: Props) {
 
         const json = await res.json();
         if (alive) setData(json);
-      } catch (e: any) {
+      } catch (e: unknown) {
         if (alive) setErr(e?.message || String(e));
       }
     }

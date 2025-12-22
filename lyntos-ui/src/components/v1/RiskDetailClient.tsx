@@ -8,17 +8,53 @@ import R401AView from "@/components/v1/risks/R401AView";
 import { DataQualityBand } from "../risk/DataQualityBand";
 import { KurganCriteriaPanel } from "../risk/KurganCriteriaPanel";
 
-type AnyObj = Record<string, any>;
+type PeriodWindow = { period?: string; start_date?: string; end_date?: string };
+
+type DataQuality = {
+  bank_rows_total?: number;
+  bank_rows_in_period?: number;
+  bank_rows_out_of_period?: number;
+  sources_present?: string[];
+  warnings?: string[];
+};
+
+type KurganSignal = {
+  code: string;
+  status: "OK" | "WARN" | "MISSING" | "UNKNOWN";
+  score: number;
+  weight?: number;
+  rationale_tr?: string;
+  evidence_refs?: Array<{ artifact_id: string; note?: string }>;
+  missing_refs?: Array<{ code: string; title_tr: string; severity: "LOW" | "MEDIUM" | "HIGH"; how_to_fix_tr?: string }>;
+};
+
+type RiskMeta = { code?: string; severity?: string; title?: string; note?: string };
+
+type RiskDetailContract = {
+  risk?: RiskMeta;
+  downloads?: { pdf_latest?: string; bundle_latest?: string };
+
+  period_window?: PeriodWindow;
+  data_quality?: DataQuality;
+  kurgan_criteria_signals?: KurganSignal[];
+
+  enriched_data?: {
+    period_window?: PeriodWindow;
+    data_quality?: DataQuality;
+    kurgan_criteria_signals?: KurganSignal[];
+  };
+};
+
 
 export default function RiskDetailClient({ code }: { code: string }) {
   const CODE = (code || "").toUpperCase();
 
-  const [data, setData] = useState<AnyObj | null>(null);
+  const [data, setData] = useState<RiskDetailContract | null>(null);
 
   // --- KURGAN layer (read-only, non-breaking) ---
-  const periodWindow = (data as any)?.period_window ?? (data as any)?.enriched_data?.period_window ?? null;
-  const dataQuality = (data as any)?.data_quality ?? (data as any)?.enriched_data?.data_quality ?? null;
-  const kurganSignals = (data as any)?.kurgan_criteria_signals ?? (data as any)?.enriched_data?.kurgan_criteria_signals ?? null;
+  const periodWindow = data?.period_window ?? data?.enriched_data?.period_window ?? null;
+  const dataQuality = data?.data_quality ?? data?.enriched_data?.data_quality ?? null;
+  const kurganSignals = data?.kurgan_criteria_signals ?? data?.enriched_data?.kurgan_criteria_signals ?? null;
 
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -28,7 +64,7 @@ export default function RiskDetailClient({ code }: { code: string }) {
     setLoading(true);
     setErr(null);
 
-    fetch(`/api/v1/contracts/risks/${encodeURIComponent(CODE)}`, { cache: "no-store" as any })
+    fetch(`/api/v1/contracts/risks/${encodeURIComponent(CODE)}`, { cache: "no-store" })
       .then(async (r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status} ${r.statusText}`);
         return r.json();
@@ -39,7 +75,7 @@ export default function RiskDetailClient({ code }: { code: string }) {
       })
       .catch((e: any) => {
         if (!alive) return;
-        setErr(e?.message ? String(e.message) : String(e));
+        setErr(e instanceof Error ? e.message : String(e));
       })
       .finally(() => {
         if (!alive) return;
