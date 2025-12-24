@@ -15,3 +15,18 @@ backend/data/
 ### /LYNTOS AUTO-IGNORE ###
 
 *.bak.*
+
+# --- LYNTOS hygiene ---
+**/_patch_backups/
+**/*.bak
+**/*.bak_*
+**/*.bak.*
+**/*.old
+**/*.tmp
+backend/out/
+lyntos-ui/.next/
+lyntos-ui/node_modules/
+backend/.venv/
+backend/venv/
+backend/__pycache__/
+**/__pycache__/
