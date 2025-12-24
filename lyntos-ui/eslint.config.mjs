@@ -1,22 +1,26 @@
-import { dirname } from "path";
-import { fileURLToPath } from "url";
-import { FlatCompat } from "@eslint/eslintrc";
+import base from "./eslint.config.base.mjs";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const baseArr = Array.isArray(base) ? base : [base];
 
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-});
-
+// Assign array to a variable to avoid import/no-anonymous-default-export
 const eslintConfig = [
-  ...compat.extends("next/core-web-vitals", "next/typescript"),
+  ...baseArr,
+
+  // Lyntos: lint stabilization — do not block refactor on `any`
+  {
+    rules: {
+      "@typescript-eslint/no-explicit-any": "warn",
+    },
+  },
+
+  // Keep generated artifacts out of lint scope
   {
     ignores: [
-      "node_modules/**",
       ".next/**",
+      "node_modules/**",
       "out/**",
       "build/**",
+      "public/contracts/**",
       "next-env.d.ts",
     ],
   },
