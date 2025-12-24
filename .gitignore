@@ -30,3 +30,7 @@ backend/.venv/
 backend/venv/
 backend/__pycache__/
 **/__pycache__/
+
+# generated contract exports (keep schemas/examples tracked, ignore generated outputs)
+backend/docs/contracts/portfolio.json
+backend/docs/contracts/risks/
