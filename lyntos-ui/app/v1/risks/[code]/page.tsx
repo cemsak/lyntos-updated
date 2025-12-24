@@ -1,7 +1,26 @@
 import RiskDetailClient from "@/components/v1/RiskDetailClient";
 
-export default async function RiskDetailPage({ params }: { params: any }) {
-  const p = await params; // (next15) params can be Promise
-  const code = ((p?.code ?? "") as string).toUpperCase();
-  return <RiskDetailClient code={code} />;
+type SP = Record<string, string | string[] | undefined>;
+
+function pick(sp: SP, key: string): string | undefined {
+  const v = sp?.[key];
+  return Array.isArray(v) ? v[0] : v;
+}
+
+export default async function Page({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ code: string }>;
+  searchParams?: Promise<SP> | SP;
+}) {
+  const { code } = await params;
+
+  const sp: SP = (await Promise.resolve(searchParams ?? {})) as SP;
+
+  const smmm = pick(sp, "smmm");
+  const client = pick(sp, "client");
+  const period = pick(sp, "period");
+
+  return <RiskDetailClient code={code} smmm={smmm} client={client} period={period} />;
 }

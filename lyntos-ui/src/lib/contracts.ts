@@ -60,85 +60,71 @@ export async function getMbrView(): Promise<any> {
 
 /** RISK DETAIL (R-401A, R-501, vb.) */
 export async function getRiskDetail(code: string): Promise<any> {
-  const safe = String(code || "").trim();
-  if (!safe) throw new Error("risk code boş");
+  const CODE = String(code || "").trim();
+  if (!CODE) throw new Error("Risk code boş olamaz.");
 
-  // 1) önce detail kontratı al
+  // 1) Önce API (varsa) dene
   let detail: any = null;
 
   if (SOURCE === "api") {
-    // Backend bunu destekliyorsa kullanırız:
-    // GET /api/v1/contracts/risks/{code}
-    // Şimdilik hata olursa local fallback'e düşer.
     try {
-      detail = await fetchJsonAbsolute(`${API_BASE}/api/v1/contracts/risks/${encodeURIComponent(safe)}`);
-    }
- catch {
+      detail = await fetchJsonAbsolute(
+        `${API_BASE}/api/v1/contracts/risks/${encodeURIComponent(CODE)}`
+      );
+    } catch {
       detail = null;
     }
-
   }
 
-
+  // 2) Fallback: local/public contract (UI build / offline için)
   if (!detail) {
-    detail = await readPublicContractsJson(`risk_detail_${safe}.json`);
+    detail = await readPublicContractsJson(`risk_detail_${CODE}.json`);
   }
 
-
-  // 2) period_window / data_quality / kurgan signals detail'de yoksa,
-  //    portfolio kontratından tamamla (ödüllük UX için kritik bağlam)
+  // 3) Context sabitleme: period_window / data_quality / kurgan sinyalleri (portfolio'dan)
   try {
-    const portfolio = await getPortfolioSummary();
+    const portfolio: any = await getPortfolioSummary();
+    const risks: any[] = extractRisks(portfolio);
 
-    // portfolio içindeki risk listesinden aynı code'u bul
-    const risks = extractRisks(portfolio);
-    const match = risks.find((r: any) => String(r?.code || r?.rule_id || r?.risk_id || "").toUpperCase() === safe.toUpperCase());
+    const match =
+      Array.isArray(risks)
+        ? risks.find((r: any) =>
+            String(r?.code ?? r?.rule_id ?? r?.risk_id ?? "").toUpperCase() === CODE.toUpperCase()
+          )
+        : null;
 
     const pw =
-      detail?.period_window ??
-      detail?.periodWindow ??
+      (detail as any)?.period_window ??
+      (detail as any)?.enriched_data?.period_window ??
       portfolio?.period_window ??
-      portfolio?.periodWindow ??
-      portfolio?.payload?.period_window ??
-      portfolio?.data?.period_window ??
+      portfolio?.enriched_data?.period_window ??
       null;
 
     const dq =
-      detail?.data_quality ??
-      detail?.dataQuality ??
+      (detail as any)?.data_quality ??
+      (detail as any)?.enriched_data?.data_quality ??
       portfolio?.data_quality ??
-      portfolio?.dataQuality ??
-      portfolio?.payload?.data_quality ??
-      portfolio?.data?.data_quality ??
+      portfolio?.enriched_data?.data_quality ??
       null;
 
     const ks =
-      detail?.kurgan_criteria_signals ??
-      detail?.kurganSignals ??
+      (detail as any)?.kurgan_criteria_signals ??
+      (detail as any)?.enriched_data?.kurgan_criteria_signals ??
+      (detail as any)?.risk?.kurgan_criteria_signals ??
       match?.kurgan_criteria_signals ??
-      match?.kurganSignals ??
-      match?.kurgan_criteria?.signals ??
+      match?.enriched_data?.kurgan_criteria_signals ??
       null;
 
-    if (pw && !detail?.period_window) {
-      detail.period_window = pw;
-    }
-
-    if (dq && !detail?.data_quality) {
-      detail.data_quality = dq;
-    }
-
-    if (ks && !detail?.kurgan_criteria_signals) {
-      detail.kurgan_criteria_signals = ks;
-
-  }
- catch {
+    if (pw && !(detail as any)?.period_window) (detail as any).period_window = pw;
+    if (dq && !(detail as any)?.data_quality) (detail as any).data_quality = dq;
+    if (ks && !(detail as any)?.kurgan_criteria_signals) (detail as any).kurgan_criteria_signals = ks;
+  } catch {
     // sessiz geç: UI yine de detail'i gösterebilsin
   }
 
-
   return detail;
 }
+
 
 /** UI'da risks listesini olabildiğince toleranslı çekmek için yardımcı */
 export function extractRisks(portfolio: any): AnyObj[] {

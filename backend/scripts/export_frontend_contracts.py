@@ -1,148 +1,151 @@
-#!/usr/bin/env python3
-from __future__ import annotations
 import json
-import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-def _find_risk(metrics: Dict[str, Any], code: str) -> Optional[Dict[str, Any]]:
-    rules = metrics.get("rules") or {}
-    risks = rules.get("risks") or []
-    if not isinstance(risks, list):
-        return None
-    for r in risks:
-        if isinstance(r, dict) and r.get("code") == code:
-            return r
-    return None
 
-def _safe_get(d: Dict[str, Any], path: List[str], default=None):
-    cur: Any = d
-    for k in path:
+def _safe_get(obj: Any, path: List[str], default=None):
+    cur = obj
+    for key in path:
         if not isinstance(cur, dict):
             return default
-        cur = cur.get(k)
-    return cur if cur is not None else default
+        cur = cur.get(key)
+        if cur is None:
+            return default
+    return cur
 
-def main() -> None:
-    if len(sys.argv) < 2:
-        print("kullanım: python scripts/export_frontend_contracts.py /tmp/risk_v1.json")
-        sys.exit(1)
 
-    in_path = Path(sys.argv[1])
-    out_dir = Path("docs/contracts")
-    out_dir.mkdir(parents=True, exist_ok=True)
+def _read_json(p: Path) -> Dict[str, Any]:
+    return json.loads(p.read_text(encoding="utf-8"))
 
-    data = json.loads(in_path.read_text(encoding="utf-8"))
-    metrics = data.get("metrics") or {}
-    rules = (metrics.get("rules") or {}) if isinstance(metrics, dict) else {}
-    risks = rules.get("risks") or []
 
-    smmm_id = (data.get("smmm_id") or "").strip()
-    client_id = (data.get("client_id") or "").strip()
-    period = (data.get("period") or "").strip()
+def _write_json(p: Path, data: Any) -> None:
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    # 1) Portfolio summary (list item DTO)
-    # Not: Şimdilik tek müşteri üzerinden örnekliyoruz; frontend listesi bunu çoğaltacak.
-    portfolio_item = {
-        "client_id": client_id,
-        "client_title": client_id,   # ileride ticaret ünvanı vs
-        "period": period,
-        "score": _safe_get(metrics, ["scoring", "overall_score"], None),
-        "risk_count": len([r for r in risks if isinstance(r, dict)]),
-        "critical_risks": [
-            {
-                "code": r.get("code"),
-                "severity": r.get("severity"),
-                "title": r.get("title"),
-            }
-            for r in risks[:3] if isinstance(r, dict)
-        ],
-        "data_coverage": {
-            "has_banka": bool(_safe_get(metrics, ["banka"], None)),
-            "has_edefter": bool(_safe_get(metrics, ["edefter"], None)),
-            "has_beyanname": bool(_safe_get(metrics, ["beyanname"], None)),
-            "has_mizan": bool(_safe_get(metrics, ["mizan"], None)),
-        }
+
+def _extract_period_window(root: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    return root.get("period_window") or _safe_get(root, ["enriched_data", "period_window"]) or None
+
+
+def _extract_data_quality(root: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    dq = root.get("data_quality") or _safe_get(root, ["enriched_data", "data_quality"]) or None
+
+    # warnings bazen üstte, bazen dq.warnings'ta
+    top_warn = root.get("warnings")
+    if isinstance(dq, dict):
+        if isinstance(top_warn, list) and top_warn:
+            existing = dq.get("warnings")
+            if isinstance(existing, list):
+                dq["warnings"] = existing + [w for w in top_warn if w not in existing]
+            else:
+                dq["warnings"] = top_warn
+    return dq
+
+
+def _extract_risks(root: Dict[str, Any]) -> List[Dict[str, Any]]:
+    # canonical
+    r = _safe_get(root, ["metrics", "rules", "risks"], default=None)
+    if isinstance(r, list):
+        return r
+    # fallback
+    r = _safe_get(root, ["metrics", "rules", "findings"], default=None)
+    if isinstance(r, list):
+        return r
+    return []
+
+
+def _risk_code(r: Dict[str, Any]) -> str:
+    return str(r.get("code") or r.get("rule_id") or "").strip()
+
+
+def export_contracts(risk_json_path: Path, outdir: Path) -> None:
+    root = _read_json(risk_json_path)
+
+    period_window = _extract_period_window(root)
+    data_quality = _extract_data_quality(root)
+    warnings = None
+    if isinstance(data_quality, dict) and isinstance(data_quality.get("warnings"), list):
+        warnings = data_quality.get("warnings")
+
+    risks = _extract_risks(root)
+
+    # 1) Portfolio (UI /v1)
+    portfolio = {
+        "kind": "portfolio_customer_summary",
+        "period_window": period_window,
+        "data_quality": data_quality,
+        "warnings": warnings,
+        "risks": [],
     }
 
-    (out_dir / "portfolio_customer_summary.json").write_text(
-        json.dumps(portfolio_item, ensure_ascii=False, indent=2),
-        encoding="utf-8"
-    )
-
-    # 2) MBR view (müşteri detay ekranı DTO)
-    mbr = {
-        "smmm_id": smmm_id,
-        "client_id": client_id,
-        "period": period,
-        "summary": {
-            "score": _safe_get(metrics, ["scoring", "overall_score"], None),
-            "risk_count": len([r for r in risks if isinstance(r, dict)]),
-            "risk_codes": [r.get("code") for r in risks if isinstance(r, dict)],
-        },
-        "tabs": {
-            "beyanname": _safe_get(metrics, ["beyanname"], {}),
-            "edefter": _safe_get(metrics, ["edefter"], {}),
-            "banka": _safe_get(metrics, ["banka"], {}),
-            "mizan": _safe_get(metrics, ["mizan"], {}),
-        },
-        "risk_scenarios": [
-            {
-                "code": r.get("code"),
-                "severity": r.get("severity"),
-                "title": r.get("title"),
-                "value_found": r.get("value_found"),
-                "evidence_details": r.get("evidence_details"),
-                "actions": r.get("actions") or r.get("SMMM_actions"),
-                "checklist": r.get("checklist"),
-            }
-            for r in risks if isinstance(r, dict)
-        ]
-    }
-    (out_dir / "mbr_view.json").write_text(
-        json.dumps(mbr, ensure_ascii=False, indent=2),
-        encoding="utf-8"
-    )
-
-    # 3) Risk detail DTO (tek risk sayfası)
-    # R-401A ve R-501 örneğini ayrı yaz
-    for code in ("R-401A", "R-501"):
-        r = _find_risk(metrics, code)
-        if not r:
+    for r in risks:
+        code = _risk_code(r)
+        if not code:
             continue
-        detail = {
-            "smmm_id": smmm_id,
-            "client_id": client_id,
-            "period": period,
-            "risk": {
-                "code": r.get("code"),
+        portfolio["risks"].append(
+            {
+                "code": code,
                 "severity": r.get("severity"),
-                "title": r.get("title"),
-                "rule_logic": (r.get("evidence_details") or {}).get("rule_logic"),
-                "note": (r.get("evidence_details") or {}).get("note"),
-                "value_found": r.get("value_found"),
-                "evidence_details": r.get("evidence_details"),
-                "actions": r.get("actions") or r.get("SMMM_actions"),
-                "checklist": r.get("checklist"),
-            },
-            "downloads": {
-                "pdf_latest": str(sorted(Path("out").glob("LYNTOS_DOSSIER_*.pdf"), key=lambda p: p.stat().st_mtime, reverse=True)[0]) if list(Path("out").glob("LYNTOS_DOSSIER_*.pdf")) else None,
-                "bundle_latest": str(sorted(Path("out").glob("LYNTOS_DOSSIER_*_BUNDLE.zip"), key=lambda p: p.stat().st_mtime, reverse=True)[0]) if list(Path("out").glob("LYNTOS_DOSSIER_*_BUNDLE.zip")) else None,
+                "score": r.get("score"),
+                "title_tr": r.get("title_tr") or r.get("title") or r.get("name"),
+                "summary_tr": r.get("summary_tr") or r.get("summary"),
+                # KURGAN sinyalleri (portfolio seviyesinde opsiyonel)
+                "kurgan_criteria_signals": r.get("kurgan_criteria_signals"),
             }
-        }
-        (out_dir / f"risk_detail_{code}.json").write_text(
-            json.dumps(detail, ensure_ascii=False, indent=2),
-            encoding="utf-8"
         )
 
-    # ayrıca /tmp içine kopya
-    tmp_dir = Path("/tmp/lyntos_contracts")
-    tmp_dir.mkdir(parents=True, exist_ok=True)
-    for fp in out_dir.glob("*.json"):
-        tmp_dir.joinpath(fp.name).write_text(fp.read_text(encoding="utf-8"), encoding="utf-8")
+    _write_json(outdir / "portfolio_customer_summary.json", portfolio)
 
-    print("OK: contracts exported -> docs/contracts/ and /tmp/lyntos_contracts")
-    print("OK: files:", ", ".join(sorted([p.name for p in out_dir.glob('*.json')])))
+    # 2) MBR (UI /v1/mbr)
+    mbr = {
+        "kind": "mbr_view",
+        "period_window": period_window,
+        "data_quality": data_quality,
+        "warnings": warnings,
+        "metrics": root.get("metrics") or {},
+        "scores": root.get("scores") or {},
+        "risks": portfolio["risks"],
+    }
+    _write_json(outdir / "mbr_view.json", mbr)
+
+    # 3) Risk details (UI /v1/risks/[code])
+    risks_dir = outdir / "risks"
+    for r in risks:
+        code = _risk_code(r)
+        if not code:
+            continue
+
+        payload = {
+            "kind": "risk_detail",
+            "code": code,
+            "period_window": period_window,
+            "data_quality": data_quality,
+            "warnings": warnings,
+            # risk objesi (bozmadan)
+            **r,
+            # garanti: sinyaller üstte de bulunsun
+            "kurgan_criteria_signals": r.get("kurgan_criteria_signals"),
+        }
+        _write_json(risks_dir / f"risk_detail_{code}.json", payload)
+
+    print(f"OK: contracts exported -> {outdir}")
+
+
+def main():
+    import sys
+
+    if len(sys.argv) < 2:
+        print("Usage: python3 scripts/export_frontend_contracts.py <risk_json_path> [outdir]")
+        raise SystemExit(2)
+
+    risk_json = Path(sys.argv[1]).resolve()
+
+    # default outdir: backend/docs/contracts (senin API endpoint'lerin buradan servis ediyor)
+    base = Path(__file__).resolve().parent.parent
+    outdir = Path(sys.argv[2]).resolve() if len(sys.argv) >= 3 else (base / "docs" / "contracts")
+
+    export_contracts(risk_json, outdir)
+
 
 if __name__ == "__main__":
     main()

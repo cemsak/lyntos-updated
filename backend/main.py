@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException, Query
+from fastapi.responses import FileResponse
 from api_v1_contracts import router as v1_router
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -265,3 +266,20 @@ def meta_options():
         ],
         "periods": ["2025-Q4", "2025-Q3", "2025-10", "2025"],
     }
+
+
+# --- Dossier Bundle Download (demo critical) ---
+@app.api_route("/v1/dossier/bundle", methods=["GET","HEAD"])
+def get_latest_bundle(smmm: str, client: str, period: str):
+    out_dir = Path(__file__).resolve().parent / "out"
+    zip_name = f"LYNTOS_DOSSIER_{client}_{period}_BUNDLE.zip"
+    zip_path = out_dir / zip_name
+    if not zip_path.exists():
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail=f"bundle_not_found: {zip_name}")
+    return FileResponse(
+        path=str(zip_path),
+        media_type="application/zip",
+        filename=zip_name
+    )
+

@@ -1,13 +1,30 @@
 {
-  "smmm_id": "HKOZKAN",
-  "client_id": "OZKAN_KIRTASIYE",
-  "period": "2025-Q2",
+  "code": "R-501",
+  "period_window": {
+    "period": "2025-Q2",
+    "start_date": "2025-04-01",
+    "end_date": "2025-06-30"
+  },
+  "data_quality": {
+    "bank_rows_total": 5441,
+    "bank_rows_in_period": 2649,
+    "bank_rows_out_of_period": 2792,
+    "sources_present": [
+      "MIZAN",
+      "EDEFTER",
+      "BANK"
+    ],
+    "warnings": [
+      "Banka verilerinde seçili çeyrek dışı satırlar bulundu; metriklere dahil edilmedi.",
+      "Çeyrek dışı satır içeren banka dosyaları tespit edildi (örnek): ['102.01 YKB 7. AY.csv', '102.01 YKB 8. AY.csv', '102.01 YKB 9. AY.csv']"
+    ]
+  },
+  "warnings": null,
   "risk": {
     "code": "R-501",
-    "severity": "MEDIUM",
     "title": "KDV Matrahı - Satışlar Uyumsuzluğu",
-    "rule_logic": null,
-    "note": "Otomatik mutabakat sinyali; kesin hüküm değildir. Kaynak kayıtlar (yevmiye/fatura) ile doğrulama önerilir.",
+    "severity": "MEDIUM",
+    "description": "Beyanname KDV matrahı ile 600/601/602 satışları arasında sapma var.",
     "value_found": {
       "kdv_matrah_sum": 11303524.559999999,
       "mizan_sales": 11858574.260000002,
@@ -15,6 +32,11 @@
       "diff_ratio": 0.046805770055531354,
       "diff_ratio_pct": 4.680577005553135
     },
+    "threshold": {
+      "rel_tolerance": 0.02,
+      "severity_high_rel": 0.1
+    },
+    "evidence": "declaration+ledger",
     "evidence_details": {
       "comparison": "KDV Matrahı (beyanname) ↔ Brüt Satışlar (mizan)",
       "mizan_sales_accounts": [
@@ -192,11 +214,33 @@
       },
       "severity_policy_applied": true
     },
-    "actions": null,
-    "checklist": null
+    "derived": {
+      "diff_amount": 555049.700000003,
+      "diff_ratio": 0.046805770055531354,
+      "diff_ratio_pct": 4.680577005553135
+    },
+    "kurgan_criteria_signals": [
+      {
+        "code": "KRG-02",
+        "status": "WARN",
+        "score": 60,
+        "weight": 0.08,
+        "rationale_tr": "Oranlama/tutarlılık açısından (matrah-KDV-satış) çeyrek içinde anlamlı sapma olabilir; detay eşleştirme ile doğrulayın.",
+        "evidence_refs": [],
+        "missing_refs": []
+      }
+    ],
+    "rule_id": "R-501"
   },
-  "downloads": {
-    "pdf_latest": "out/LYNTOS_DOSSIER_OZKAN_KIRTASIYE_2025-Q2.pdf",
-    "bundle_latest": "out/LYNTOS_DOSSIER_OZKAN_KIRTASIYE_2025-Q2_BUNDLE.zip"
-  }
+  "kurgan_criteria_signals": [
+    {
+      "code": "KRG-02",
+      "status": "WARN",
+      "score": 60,
+      "weight": 0.08,
+      "rationale_tr": "Oranlama/tutarlılık açısından (matrah-KDV-satış) çeyrek içinde anlamlı sapma olabilir; detay eşleştirme ile doğrulayın.",
+      "evidence_refs": [],
+      "missing_refs": []
+    }
+  ]
 }

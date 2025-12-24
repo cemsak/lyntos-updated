@@ -2,102 +2,173 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+
 import { ErrorBox, JsonBox, Pill, SectionCard } from "@/components/v1/ui/Atoms";
 import R501View from "@/components/v1/risks/R501View";
 import R401AView from "@/components/v1/risks/R401AView";
-import { DataQualityBand } from "../risk/DataQualityBand";
-import { KurganCriteriaPanel } from "../risk/KurganCriteriaPanel";
 
-type PeriodWindow = { period?: string; start_date?: string; end_date?: string };
+import { DataQualityBand } from "@/components/risk/DataQualityBand";
+import { KurganCriteriaPanel } from "@/components/risk/KurganCriteriaPanel";
 
-type DataQuality = {
-  bank_rows_total?: number;
-  bank_rows_in_period?: number;
-  bank_rows_out_of_period?: number;
-  sources_present?: string[];
-  warnings?: string[];
-};
+type AnyObj = Record<string, unknown>;
 
-type KurganSignal = {
+type Props = {
   code: string;
-  status: "OK" | "WARN" | "MISSING" | "UNKNOWN";
-  score: number;
-  weight?: number;
-  rationale_tr?: string;
-  evidence_refs?: Array<{ artifact_id: string; note?: string }>;
-  missing_refs?: Array<{ code: string; title_tr: string; severity: "LOW" | "MEDIUM" | "HIGH"; how_to_fix_tr?: string }>;
+  smmm?: string;
+  client?: string;
+  period?: string;
 };
 
-type RiskMeta = { code?: string; severity?: string; title?: string; note?: string };
+function getLS(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
 
-type RiskDetailContract = {
-  risk?: RiskMeta;
-  downloads?: { pdf_latest?: string; bundle_latest?: string };
+function setLS(key: string, val: string): void {
+  try {
+    localStorage.setItem(key, val);
+  } catch {
+    // ignore
+  }
+}
 
-  period_window?: PeriodWindow;
-  data_quality?: DataQuality;
-  kurgan_criteria_signals?: KurganSignal[];
+function buildQuery(params: Record<string, string | null | undefined>): string {
+  const q = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    if (v && String(v).trim().length) q.set(k, String(v));
+  }
+  const s = q.toString();
+  return s ? `?${s}` : "";
+}
 
-  enriched_data?: {
-    period_window?: PeriodWindow;
-    data_quality?: DataQuality;
-    kurgan_criteria_signals?: KurganSignal[];
-  };
-};
-
-
-export default function RiskDetailClient({ code }: { code: string }) {
+export default function RiskDetailClient({ code, smmm, client, period }: Props) {
   const CODE = (code || "").toUpperCase();
 
-  const [data, setData] = useState<RiskDetailContract | null>(null);
-
-  // --- KURGAN layer (read-only, non-breaking) ---
-  const periodWindow = data?.period_window ?? data?.enriched_data?.period_window ?? null;
-  const dataQuality = data?.data_quality ?? data?.enriched_data?.data_quality ?? null;
-  const kurganSignals = data?.kurgan_criteria_signals ?? data?.enriched_data?.kurgan_criteria_signals ?? null;
-
+  const [data, setData] = useState<AnyObj | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
+  // Context: önce URL (props) → sonra localStorage fallback
+  const [ctxSmmm, setCtxSmmm] = useState<string | null>(smmm ?? null);
+  const [ctxClient, setCtxClient] = useState<string | null>(client ?? null);
+  const [ctxPeriod, setCtxPeriod] = useState<string | null>(period ?? null);
+
+  // URL’den geldiyse LS'e yaz (direct open + refresh için kritik)
   useEffect(() => {
-    let alive = true;
+    if (smmm) {
+      setCtxSmmm(smmm);
+      setLS("lyntos_smmm", smmm);
+    }
+    if (client) {
+      setCtxClient(client);
+      setLS("lyntos_client", client);
+    }
+    if (period) {
+      setCtxPeriod(period);
+      setLS("lyntos_period", period);
+    }
+  }, [smmm, client, period]);
+
+  // LS fallback (props yoksa)
+  useEffect(() => {
+    setCtxSmmm((prev) => prev ?? getLS("lyntos_smmm"));
+    setCtxClient((prev) => prev ?? getLS("lyntos_client"));
+    setCtxPeriod((prev) => prev ?? getLS("lyntos_period"));
+  }, []);
+
+  async function loadRisk(): Promise<void> {
     setLoading(true);
     setErr(null);
+    try {
+      const riskRes = await fetch(`/api/v1/contracts/risks/${encodeURIComponent(CODE)}`, { cache: "no-store" });
+      if (!riskRes.ok) {
+        const t = await riskRes.text().catch(() => "");
+        throw new Error(`HTTP ${riskRes.status} ${riskRes.statusText} :: ${t.slice(0, 300)}`);
+      }
+      const riskJson = (await riskRes.json()) as AnyObj;
+      setData(riskJson);
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : String(e));
+      setData(null);
+    } finally {
+      setLoading(false);
+    }
+  }
 
-    fetch(`/api/v1/contracts/risks/${encodeURIComponent(CODE)}`, { cache: "no-store" })
-      .then(async (r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status} ${r.statusText}`);
-        return r.json();
-      })
-      .then((j) => {
-        if (!alive) return;
-        setData(j);
-      })
-      .catch((e: any) => {
-        if (!alive) return;
-        setErr(e instanceof Error ? e.message : String(e));
-      })
-      .finally(() => {
-        if (!alive) return;
-        setLoading(false);
-      });
-
-    return () => {
-      alive = false;
-    };
+  useEffect(() => {
+    void loadRisk();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [CODE]);
 
   const meta = useMemo(() => {
-    const risk = data?.risk ?? {};
+    const d: any = data ?? {};
+    const risk = d?.risk ?? d?.data?.risk ?? {};
     return {
       code: risk?.code ?? CODE,
       severity: risk?.severity ?? null,
-      title: risk?.title ?? null,
+      title: risk?.title ?? risk?.title_tr ?? null,
       note: risk?.note ?? null,
     };
   }, [data, CODE]);
 
-  const downloads = data?.downloads ?? {};
+  const periodWindow = useMemo(() => {
+    const d: any = data ?? {};
+    return d?.period_window ?? d?.risk?.period_window ?? d?.meta?.period_window ?? null;
+  }, [data]);
+
+  const dataQuality = useMemo(() => {
+    const d: any = data ?? {};
+    return d?.data_quality ?? d?.risk?.data_quality ?? d?.meta?.data_quality ?? null;
+  }, [data]);
+
+  const kurganSignals = useMemo(() => {
+    const d: any = data ?? {};
+    return (
+      d?.kurgan_criteria_signals ??
+      d?.risk?.kurgan_criteria_signals ??
+      d?.enriched_data?.kurgan_criteria_signals ??
+      null
+    );
+  }, [data]);
+
+  const effectivePeriod = ctxPeriod ?? (periodWindow?.period ? String((periodWindow as any).period) : null);
+
+  // Dossier linkleri: backend tarafı client+period ile çalışıyor; smmm varsa ekleriz
+  const dossierQuery = buildQuery({
+    smmm: ctxSmmm,
+    client: ctxClient,
+    period: effectivePeriod,
+  });
+
+  const bundleHref = `/api/v1/dossier/bundle${dossierQuery}`;
+  const pdfHref = `/api/v1/dossier/pdf${dossierQuery}`;
+
+  const refreshMissing = !ctxSmmm || !ctxClient || !effectivePeriod;
+
+  async function onRefresh() {
+    const q = buildQuery({ smmm: ctxSmmm, client: ctxClient, period: effectivePeriod });
+    if (!q) {
+      setErr("Refresh için SMMM + Client + Period gerekli. /v1 sayfasından seçin veya URL'e ?smmm=...&client=...&period=... ekleyin.");
+      return;
+    }
+    setLoading(true);
+    setErr(null);
+    try {
+      const res = await fetch(`/api/v1/refresh${q}`, { method: "POST", cache: "no-store" });
+      if (!res.ok) {
+        const t = await res.text().catch(() => "");
+        throw new Error(`refresh http ${res.status}: ${t.slice(0, 300)}`);
+      }
+      await loadRisk();
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-8">
@@ -109,28 +180,48 @@ export default function RiskDetailClient({ code }: { code: string }) {
           <Pill label={meta.code} />
         </div>
 
-        <a
-          href="/api/v1/dossier/bundle"
-          className="rounded-xl border px-4 py-2 text-sm hover:bg-slate-50"
-        >
-          Bundle indir (ZIP)
-        </a>
-      </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onRefresh}
+            className="rounded border px-3 py-1 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+            disabled={loading || refreshMissing}
+            type="button"
+            title={refreshMissing ? "Refresh için smmm+client+period gerekli" : "Refresh"}
+          >
+            Yenile (Refresh)
+          </button>
 
-      <h1 className="mb-4 text-3xl font-bold">Risk Detayı</h1>
+          <Link className="text-sm text-slate-600 hover:underline" href={pdfHref} target="_blank" rel="noreferrer">
+            PDF indir
+          </Link>
+          <Link className="text-sm text-slate-600 hover:underline" href={bundleHref} target="_blank" rel="noreferrer">
+            Bundle (ZIP)
+          </Link>
+        </div>
+      </div>
 
       <SectionCard title="Özet">
         <div className="flex flex-wrap gap-2">
           <Pill label={meta.code} />
           {meta.severity ? <Pill label={`severity: ${meta.severity}`} /> : null}
           {meta.title ? <Pill label={meta.title} /> : null}
+          {effectivePeriod ? <Pill label={`period: ${effectivePeriod}`} /> : null}
         </div>
+
+        {refreshMissing ? (
+          <div className="mt-3 text-sm text-amber-700">
+            Refresh butonu devre dışı: SMMM + Client + Period bulunamadı. /v1 sayfasında seçin veya URL’e
+            {" "}
+            <span className="font-mono">?smmm=HKOZKAN&amp;client=OZKAN_KIRTASIYE&amp;period=2025-Q2</span>
+            {" "}
+            gibi ekleyin.
+          </div>
+        ) : null}
+
         {meta.note ? <div className="mt-3 text-sm text-slate-700">{meta.note}</div> : null}
       </SectionCard>
 
-      {loading ? (
-        <div className="mt-4 text-sm text-slate-600">Yükleniyor…</div>
-      ) : null}
+      {loading ? <div className="mt-4 text-sm text-slate-600">Yükleniyor…</div> : null}
 
       {err ? (
         <div className="mt-4">
@@ -140,31 +231,26 @@ export default function RiskDetailClient({ code }: { code: string }) {
 
       {!loading && !err && data ? (
         <div className="mt-4 space-y-4">
-          {(periodWindow || dataQuality) ? (
-  <div className="mb-4">
-    <DataQualityBand periodWindow={periodWindow} dataQuality={dataQuality} />
-  </div>
-) : null}
-{Array.isArray(kurganSignals) && kurganSignals.length ? (
-  <div className="mb-4">
-    <KurganCriteriaPanel signals={kurganSignals} />
-  </div>
-) : null}
+          {periodWindow || dataQuality ? (
+            <div className="mb-4">
+              <DataQualityBand periodWindow={periodWindow} dataQuality={dataQuality} />
+            </div>
+          ) : null}
 
-{CODE === "R-501" ? <R501View contract={data} /> : null}
-          {CODE === "R-401A" ? <R401AView contract={data} /> : null}
+          {Array.isArray(kurganSignals) && kurganSignals.length ? (
+            <div className="mb-4">
+              <KurganCriteriaPanel signals={kurganSignals as any} />
+            </div>
+          ) : null}
+
+          {CODE === "R-501" ? <R501View contract={data as any} /> : null}
+          {CODE === "R-401A" ? <R401AView contract={data as any} /> : null}
 
           {CODE !== "R-501" && CODE !== "R-401A" ? (
-            <SectionCard title="Ham JSON (her zaman mevcut)">
-              <JsonBox value={data} />
+            <SectionCard title="Risk Contract (raw)">
+              <JsonBox value={data as any} />
             </SectionCard>
           ) : null}
-        </div>
-      ) : null}
-
-      {(downloads?.pdf_latest || downloads?.bundle_latest) ? (
-        <div className="mt-6 text-xs text-slate-500">
-          downloads: {JSON.stringify(downloads)}
         </div>
       ) : null}
     </div>

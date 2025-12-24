@@ -1,16 +1,29 @@
 {
-  "smmm_id": "HKOZKAN",
-  "client_id": "OZKAN_KIRTASIYE",
-  "period": "2025-Q2",
-  "summary": {
-    "score": null,
-    "risk_count": 2,
-    "risk_codes": [
-      "R-401A",
-      "R-501"
+  "kind": "mbr_view",
+  "period_window": {
+    "period": "2025-Q2",
+    "start_date": "2025-04-01",
+    "end_date": "2025-06-30"
+  },
+  "data_quality": {
+    "bank_rows_total": 5441,
+    "bank_rows_in_period": 2649,
+    "bank_rows_out_of_period": 2792,
+    "sources_present": [
+      "MIZAN",
+      "EDEFTER",
+      "BANK"
+    ],
+    "warnings": [
+      "Banka verilerinde seçili çeyrek dışı satırlar bulundu; metriklere dahil edilmedi.",
+      "Çeyrek dışı satır içeren banka dosyaları tespit edildi (örnek): ['102.01 YKB 7. AY.csv', '102.01 YKB 8. AY.csv', '102.01 YKB 9. AY.csv']"
     ]
   },
-  "tabs": {
+  "warnings": [
+    "Banka verilerinde seçili çeyrek dışı satırlar bulundu; metriklere dahil edilmedi.",
+    "Çeyrek dışı satır içeren banka dosyaları tespit edildi (örnek): ['102.01 YKB 7. AY.csv', '102.01 YKB 8. AY.csv', '102.01 YKB 9. AY.csv']"
+  ],
+  "metrics": {
     "beyanname": {
       "per_type": {
         "KDV": {
@@ -114,729 +127,202 @@
         "2025-06"
       ]
     },
-    "edefter": {
-      "total_lines": 30263,
-      "kdv_lines": 13029,
-      "fx_lines": 0,
-      "inflation_lines": 4,
-      "kdv_line_ratio": 0.4305257244820408,
-      "date_range": {
-        "min": "2025-04-01",
-        "max": "2025-06-30"
-      },
-      "counts": {
-        "dated_lines": 30263,
-        "undated_lines": 0,
-        "dated_ratio": 1.0
-      },
-      "sales_evidence": {
-        "sales_accounts": [
-          "600",
-          "601",
-          "602"
-        ],
-        "discount_accounts": [
-          "610",
-          "611",
-          "612"
-        ],
-        "per_month_sales_600_601_602": {
-          "2025-04": 4144060.4799999967,
-          "2025-05": 4041688.989999998,
-          "2025-06": 3672824.7899999996
+    "tahakkuk": {
+      "per_type": {
+        "KDV": {
+          "per_period": {
+            "2025-06": {
+              "matrah": 3983434.26,
+              "tahakkuk_eden": 441736.99,
+              "mahsup_edilen": 868760.78,
+              "odenecek_olan": 0.0,
+              "total_payable": 443.7,
+              "acceptance_date": "26/07/2025",
+              "issue_date": "26/07/2025",
+              "vade": "28/07/2025",
+              "thn": "2025072601MKX0000342",
+              "source_file": "OZKAN KIRT_HAZIRAN_KDV(AYLIK).xml_THK.pdf"
+            },
+            "2025-05": {
+              "matrah": 3668651.42,
+              "tahakkuk_eden": 599106.0,
+              "mahsup_edilen": 938633.98,
+              "odenecek_olan": 0.0,
+              "total_payable": 443.7,
+              "acceptance_date": "29/06/2025",
+              "issue_date": "29/06/2025",
+              "vade": "28/06/2025",
+              "thn": "2025062901MKX0000031",
+              "source_file": "OZKAN KIRT_MAYIS_KDV(AYLIK).xml_THK.pdf"
+            },
+            "2025-04": {
+              "matrah": 3651438.88,
+              "tahakkuk_eden": 583238.56,
+              "mahsup_edilen": 1001153.34,
+              "odenecek_olan": 0.0,
+              "total_payable": 443.7,
+              "acceptance_date": "28/05/2025",
+              "issue_date": "28/05/2025",
+              "vade": "28/05/2025",
+              "thn": "2025052801MKX0000117",
+              "source_file": "OZKAN KIRT_NISAN_KDV(AYLIK).xml_THK.pdf"
+            }
+          },
+          "summary": {
+            "matrah_sum": 11303524.559999999,
+            "tahakkuk_eden_sum": 1624081.55,
+            "mahsup_edilen_sum": 2808548.1,
+            "odenecek_olan_sum": 0.0,
+            "total_payable_sum": 1331.1
+          }
         },
-        "per_month_discounts_610_611_612": {
-          "2025-04": 8593.380000000001,
-          "2025-05": 6612.12,
-          "2025-06": 13373.74
+        "GECICI_KV": {
+          "per_period": {
+            "2025-06": {
+              "matrah": 0.0,
+              "tahakkuk_eden": 0.0,
+              "mahsup_edilen": 0.0,
+              "odenecek_olan": 0.0,
+              "total_payable": 691.1,
+              "acceptance_date": "16/08/2025",
+              "issue_date": "16/08/2025",
+              "vade": "17/08/2025",
+              "thn": "2025081601MKX0000161",
+              "source_file": "OZKAN KIRT_HAZIRAN_KGecici(UC_AYLIK).xml_THK.pdf"
+            },
+            "2025-03": {
+              "matrah": 0.0,
+              "tahakkuk_eden": 0.0,
+              "mahsup_edilen": 0.0,
+              "odenecek_olan": 0.0,
+              "total_payable": 691.1,
+              "acceptance_date": "19/05/2025",
+              "issue_date": "19/05/2025",
+              "vade": "17/05/2025",
+              "thn": "2025051901MKX0000231",
+              "source_file": "OZKAN KIRT_MART_KGecici(UC_AYLIK).xml_THK.pdf"
+            }
+          },
+          "summary": {
+            "matrah_sum": 0.0,
+            "tahakkuk_eden_sum": 0.0,
+            "mahsup_edilen_sum": 0.0,
+            "odenecek_olan_sum": 0.0,
+            "total_payable_sum": 1382.2
+          }
         },
-        "per_month_net_sales": {
-          "2025-04": 4135467.099999997,
-          "2025-05": 4035076.869999998,
-          "2025-06": 3659451.0499999993
+        "MUHTASAR": {
+          "per_period": {
+            "2025-06": {
+              "matrah": 594222.16,
+              "tahakkuk_eden": 4864.34,
+              "mahsup_edilen": 0.0,
+              "odenecek_olan": 4864.34,
+              "total_payable": 5639.87,
+              "acceptance_date": "16/07/2025",
+              "issue_date": "16/07/2025",
+              "vade": "26/07/2025",
+              "thn": "2025071601MKX0000188",
+              "source_file": "OZKAN KIRT_HAZIRAN_Muhtasar(AYLIK).xml_THK.pdf"
+            },
+            "2025-05": {
+              "matrah": 622489.69,
+              "tahakkuk_eden": 5932.99,
+              "mahsup_edilen": 0.0,
+              "odenecek_olan": 5932.99,
+              "total_payable": 6775.05,
+              "acceptance_date": "18/06/2025",
+              "issue_date": "18/06/2025",
+              "vade": "26/06/2025",
+              "thn": "2025061801MKX0000029",
+              "source_file": "OZKAN KIRT_MAYIS_Muhtasar(AYLIK).xml_THK.pdf"
+            },
+            "2025-04": {
+              "matrah": 603120.19,
+              "tahakkuk_eden": 3775.37,
+              "mahsup_edilen": 0.0,
+              "odenecek_olan": 3775.37,
+              "total_payable": 4490.14,
+              "acceptance_date": "14/05/2025",
+              "issue_date": "14/05/2025",
+              "vade": "26/05/2025",
+              "thn": "2025051401MKX0000250",
+              "source_file": "OZKAN KIRT_NISAN_Muhtasar(AYLIK).xml_THK.pdf"
+            }
+          },
+          "summary": {
+            "matrah_sum": 1819832.04,
+            "tahakkuk_eden_sum": 14572.7,
+            "mahsup_edilen_sum": 0.0,
+            "odenecek_olan_sum": 14572.7,
+            "total_payable_sum": 16905.06
+          }
         },
-        "samples_sales_by_month": {
-          "2025-04": [
-            {
-              "tarih": "01/04/2025",
-              "yevmiye_no": "04060",
-              "belge_no": null,
-              "hesap_kodu": "600",
-              "hesap_adi": "YURTİÇİ SATIŞLAR",
-              "borc": 0.0,
-              "alacak": 35851.09,
-              "aciklama": "",
-              "source_file": "yevmiye_defteri_ozkan_kirt 4.ay.csv"
+        "KDV2": {
+          "per_period": {
+            "2025-05": {
+              "matrah": 50000.0,
+              "tahakkuk_eden": 3000.0,
+              "mahsup_edilen": 0.0,
+              "odenecek_olan": 3000.0,
+              "total_payable": 3443.7,
+              "acceptance_date": "25/06/2025",
+              "issue_date": "25/06/2025",
+              "vade": "25/06/2025",
+              "thn": "2025062501MKX0000085",
+              "source_file": "OZKAN KIRT_MAYIS_KDV2(AYLIK).xml_THK.pdf"
             },
-            {
-              "tarih": "01/04/2025",
-              "yevmiye_no": "04060",
-              "belge_no": null,
-              "hesap_kodu": "600.19",
-              "hesap_adi": "FENERİUM SATIŞLAR",
-              "borc": 0.0,
-              "alacak": 0.0,
-              "aciklama": "35.851,09",
-              "source_file": "yevmiye_defteri_ozkan_kirt 4.ay.csv"
-            },
-            {
-              "tarih": "01/04/2025",
-              "yevmiye_no": "04060",
-              "belge_no": null,
-              "hesap_kodu": "600.19.10",
-              "hesap_adi": "%10 KDVLİ MALZEME SATIŞLARI",
-              "borc": 0.0,
-              "alacak": 0.0,
-              "aciklama": "ZR 2276 01/04 FENERİUM Z RAPORU",
-              "source_file": "yevmiye_defteri_ozkan_kirt 4.ay.csv"
-            },
-            {
-              "tarih": "01/04/2025",
-              "yevmiye_no": "04060",
-              "belge_no": null,
-              "hesap_kodu": "600.19.20",
-              "hesap_adi": "% 20 KDV Lİ MALZEME SATIŞLARI",
-              "borc": 0.0,
-              "alacak": 0.0,
-              "aciklama": "ZR 2276 01/04 FENERİUM Z RAPORU",
-              "source_file": "yevmiye_defteri_ozkan_kirt 4.ay.csv"
-            },
-            {
-              "tarih": "01/04/2025",
-              "yevmiye_no": "04061",
-              "belge_no": null,
-              "hesap_kodu": "600",
-              "hesap_adi": "YURTİÇİ SATIŞLAR",
-              "borc": 0.0,
-              "alacak": 868.0,
-              "aciklama": "",
-              "source_file": "yevmiye_defteri_ozkan_kirt 4.ay.csv"
-            },
-            {
-              "tarih": "01/04/2025",
-              "yevmiye_no": "04061",
-              "belge_no": null,
-              "hesap_kodu": "600.00",
-              "hesap_adi": "KDV SİZ SATIŞLARI",
-              "borc": 0.0,
-              "alacak": 0.0,
-              "aciklama": "868,00",
-              "source_file": "yevmiye_defteri_ozkan_kirt 4.ay.csv"
-            },
-            {
-              "tarih": "01/04/2025",
-              "yevmiye_no": "04061",
-              "belge_no": null,
-              "hesap_kodu": "600.00.01",
-              "hesap_adi": "KDV SİZ KİTAP SATIŞLARI",
-              "borc": 0.0,
-              "alacak": 0.0,
-              "aciklama": "ZR 2951 01/04 MOBİL Z RAPORU",
-              "source_file": "yevmiye_defteri_ozkan_kirt 4.ay.csv"
-            },
-            {
-              "tarih": "01/04/2025",
-              "yevmiye_no": "04062",
-              "belge_no": null,
-              "hesap_kodu": "600",
-              "hesap_adi": "YURTİÇİ SATIŞLAR",
-              "borc": 0.0,
-              "alacak": 35860.04,
-              "aciklama": "",
-              "source_file": "yevmiye_defteri_ozkan_kirt 4.ay.csv"
-            },
-            {
-              "tarih": "01/04/2025",
-              "yevmiye_no": "04062",
-              "belge_no": null,
-              "hesap_kodu": "600.00",
-              "hesap_adi": "KDV SİZ SATIŞLARI",
-              "borc": 0.0,
-              "alacak": 0.0,
-              "aciklama": "14.726,33",
-              "source_file": "yevmiye_defteri_ozkan_kirt 4.ay.csv"
-            },
-            {
-              "tarih": "01/04/2025",
-              "yevmiye_no": "04062",
-              "belge_no": null,
-              "hesap_kodu": "600.00.01",
-              "hesap_adi": "KDV SİZ KİTAP SATIŞLARI",
-              "borc": 0.0,
-              "alacak": 0.0,
-              "aciklama": "ZR 0868 01/04 MERKEZ Z RAPORU",
-              "source_file": "yevmiye_defteri_ozkan_kirt 4.ay.csv"
+            "2025-04": {
+              "matrah": 50000.0,
+              "tahakkuk_eden": 3000.0,
+              "mahsup_edilen": 0.0,
+              "odenecek_olan": 3000.0,
+              "total_payable": 3443.7,
+              "acceptance_date": "26/05/2025",
+              "issue_date": "26/05/2025",
+              "vade": "25/05/2025",
+              "thn": "2025052601MKX0000274",
+              "source_file": "OZKAN KIRT_NISAN_KDV2(AYLIK).xml_THK.pdf"
             }
-          ],
-          "2025-05": [
-            {
-              "tarih": "01/05/2025",
-              "yevmiye_no": "05248",
-              "belge_no": null,
-              "hesap_kodu": "600",
-              "hesap_adi": "YURTİÇİ SATIŞLAR",
-              "borc": 0.0,
-              "alacak": 577.27,
-              "aciklama": "",
-              "source_file": "yevmiye_defteri_ozkan_kirt 5.ay.csv"
-            },
-            {
-              "tarih": "01/05/2025",
-              "yevmiye_no": "05248",
-              "belge_no": null,
-              "hesap_kodu": "600.10",
-              "hesap_adi": "KAFE SATIŞLARI",
-              "borc": 0.0,
-              "alacak": 0.0,
-              "aciklama": "577,27",
-              "source_file": "yevmiye_defteri_ozkan_kirt 5.ay.csv"
-            },
-            {
-              "tarih": "01/05/2025",
-              "yevmiye_no": "05248",
-              "belge_no": null,
-              "hesap_kodu": "600.10.10",
-              "hesap_adi": "YİYECEK İÇECEK SATIŞLARI %10 KDVLİ",
-              "borc": 0.0,
-              "alacak": 0.0,
-              "aciklama": "ZR 3235 01/05 KAFE Z RAPORU",
-              "source_file": "yevmiye_defteri_ozkan_kirt 5.ay.csv"
-            },
-            {
-              "tarih": "01/05/2025",
-              "yevmiye_no": "05249",
-              "belge_no": null,
-              "hesap_kodu": "600",
-              "hesap_adi": "YURTİÇİ SATIŞLAR",
-              "borc": 0.0,
-              "alacak": 39253.09,
-              "aciklama": "",
-              "source_file": "yevmiye_defteri_ozkan_kirt 5.ay.csv"
-            },
-            {
-              "tarih": "01/05/2025",
-              "yevmiye_no": "05249",
-              "belge_no": null,
-              "hesap_kodu": "600.00",
-              "hesap_adi": "KDV SİZ SATIŞLARI",
-              "borc": 0.0,
-              "alacak": 0.0,
-              "aciklama": "15.029,94",
-              "source_file": "yevmiye_defteri_ozkan_kirt 5.ay.csv"
-            },
-            {
-              "tarih": "01/05/2025",
-              "yevmiye_no": "05249",
-              "belge_no": null,
-              "hesap_kodu": "600.00.01",
-              "hesap_adi": "KDV SİZ KİTAP SATIŞLARI",
-              "borc": 0.0,
-              "alacak": 0.0,
-              "aciklama": "ZR 0918 01/05 MERKEZ Z RAPORU",
-              "source_file": "yevmiye_defteri_ozkan_kirt 5.ay.csv"
-            },
-            {
-              "tarih": "01/05/2025",
-              "yevmiye_no": "05249",
-              "belge_no": null,
-              "hesap_kodu": "600.010",
-              "hesap_adi": "% 10 KDV Lİ SATIŞLAR",
-              "borc": 0.0,
-              "alacak": 0.0,
-              "aciklama": "4.629,82",
-              "source_file": "yevmiye_defteri_ozkan_kirt 5.ay.csv"
-            },
-            {
-              "tarih": "01/05/2025",
-              "yevmiye_no": "05249",
-              "belge_no": null,
-              "hesap_kodu": "600.010.02",
-              "hesap_adi": "KIRTASİYE SATIŞLARI %10 KDVLİ",
-              "borc": 0.0,
-              "alacak": 0.0,
-              "aciklama": "ZR 0918 01/05 MERKEZ Z RAPORU",
-              "source_file": "yevmiye_defteri_ozkan_kirt 5.ay.csv"
-            },
-            {
-              "tarih": "01/05/2025",
-              "yevmiye_no": "05249",
-              "belge_no": null,
-              "hesap_kodu": "600.020",
-              "hesap_adi": "%20 KDV Lİ SATIŞLAR",
-              "borc": 0.0,
-              "alacak": 0.0,
-              "aciklama": "19.593,33",
-              "source_file": "yevmiye_defteri_ozkan_kirt 5.ay.csv"
-            },
-            {
-              "tarih": "01/05/2025",
-              "yevmiye_no": "05249",
-              "belge_no": null,
-              "hesap_kodu": "600.020.01",
-              "hesap_adi": "KIRTASİYE SATIŞLARI %20 KDVLİ",
-              "borc": 0.0,
-              "alacak": 0.0,
-              "aciklama": "ZR 0918 01/05 MERKEZ Z RAPORU",
-              "source_file": "yevmiye_defteri_ozkan_kirt 5.ay.csv"
-            }
-          ],
-          "2025-06": [
-            {
-              "tarih": "01/06/2025",
-              "yevmiye_no": "06353",
-              "belge_no": null,
-              "hesap_kodu": "600",
-              "hesap_adi": "YURTİÇİ SATIŞLAR",
-              "borc": 0.0,
-              "alacak": 16.0,
-              "aciklama": "",
-              "source_file": "yevmiye_defteri_ozkan_kirt 6.ay.csv"
-            },
-            {
-              "tarih": "01/06/2025",
-              "yevmiye_no": "06353",
-              "belge_no": null,
-              "hesap_kodu": "600.00",
-              "hesap_adi": "KDV SİZ SATIŞLARI",
-              "borc": 0.0,
-              "alacak": 0.0,
-              "aciklama": "16,00",
-              "source_file": "yevmiye_defteri_ozkan_kirt 6.ay.csv"
-            },
-            {
-              "tarih": "01/06/2025",
-              "yevmiye_no": "06353",
-              "belge_no": null,
-              "hesap_kodu": "600.00.01",
-              "hesap_adi": "KDV SİZ KİTAP SATIŞLARI",
-              "borc": 0.0,
-              "alacak": 0.0,
-              "aciklama": "ZR 3031 01/06 MOBİL Z RAPORU",
-              "source_file": "yevmiye_defteri_ozkan_kirt 6.ay.csv"
-            },
-            {
-              "tarih": "01/06/2025",
-              "yevmiye_no": "06354",
-              "belge_no": null,
-              "hesap_kodu": "600",
-              "hesap_adi": "YURTİÇİ SATIŞLAR",
-              "borc": 0.0,
-              "alacak": 18925.08,
-              "aciklama": "",
-              "source_file": "yevmiye_defteri_ozkan_kirt 6.ay.csv"
-            },
-            {
-              "tarih": "01/06/2025",
-              "yevmiye_no": "06354",
-              "belge_no": null,
-              "hesap_kodu": "600.00",
-              "hesap_adi": "KDV SİZ SATIŞLARI",
-              "borc": 0.0,
-              "alacak": 0.0,
-              "aciklama": "5.714,60",
-              "source_file": "yevmiye_defteri_ozkan_kirt 6.ay.csv"
-            },
-            {
-              "tarih": "01/06/2025",
-              "yevmiye_no": "06354",
-              "belge_no": null,
-              "hesap_kodu": "600.00.01",
-              "hesap_adi": "KDV SİZ KİTAP SATIŞLARI",
-              "borc": 0.0,
-              "alacak": 0.0,
-              "aciklama": "ZR 0969 01/06 MERKEZ Z RAPORU",
-              "source_file": "yevmiye_defteri_ozkan_kirt 6.ay.csv"
-            },
-            {
-              "tarih": "01/06/2025",
-              "yevmiye_no": "06354",
-              "belge_no": null,
-              "hesap_kodu": "600.010",
-              "hesap_adi": "% 10 KDV Lİ SATIŞLAR",
-              "borc": 0.0,
-              "alacak": 0.0,
-              "aciklama": "1.977,36",
-              "source_file": "yevmiye_defteri_ozkan_kirt 6.ay.csv"
-            },
-            {
-              "tarih": "01/06/2025",
-              "yevmiye_no": "06354",
-              "belge_no": null,
-              "hesap_kodu": "600.010.02",
-              "hesap_adi": "KIRTASİYE SATIŞLARI %10 KDVLİ",
-              "borc": 0.0,
-              "alacak": 0.0,
-              "aciklama": "ZR 0969 01/06 MERKEZ Z RAPORU",
-              "source_file": "yevmiye_defteri_ozkan_kirt 6.ay.csv"
-            },
-            {
-              "tarih": "01/06/2025",
-              "yevmiye_no": "06354",
-              "belge_no": null,
-              "hesap_kodu": "600.020",
-              "hesap_adi": "%20 KDV Lİ SATIŞLAR",
-              "borc": 0.0,
-              "alacak": 0.0,
-              "aciklama": "11.233,12",
-              "source_file": "yevmiye_defteri_ozkan_kirt 6.ay.csv"
-            },
-            {
-              "tarih": "01/06/2025",
-              "yevmiye_no": "06354",
-              "belge_no": null,
-              "hesap_kodu": "600.020.01",
-              "hesap_adi": "KIRTASİYE SATIŞLARI %20 KDVLİ",
-              "borc": 0.0,
-              "alacak": 0.0,
-              "aciklama": "ZR 0969 01/06 MERKEZ Z RAPORU",
-              "source_file": "yevmiye_defteri_ozkan_kirt 6.ay.csv"
-            }
-          ]
+          },
+          "summary": {
+            "matrah_sum": 100000.0,
+            "tahakkuk_eden_sum": 6000.0,
+            "mahsup_edilen_sum": 0.0,
+            "odenecek_olan_sum": 6000.0,
+            "total_payable_sum": 6887.4
+          }
         },
-        "samples_kdv_by_month": {
-          "2025-04": [
-            {
-              "tarih": "01/04/2025",
-              "yevmiye_no": "04050",
-              "belge_no": null,
-              "hesap_kodu": "191",
-              "hesap_adi": "İNDİRİLECEK KATMA DEĞER VERGİSİ",
-              "borc": 262.5,
-              "alacak": 0.0,
-              "aciklama": "",
-              "source_file": "yevmiye_defteri_ozkan_kirt 4.ay.csv"
-            },
-            {
-              "tarih": "01/04/2025",
-              "yevmiye_no": "04050",
-              "belge_no": null,
-              "hesap_kodu": "191.108",
-              "hesap_adi": "Yurtiçi Tevkifatsız Alımlar İçin Ödenen KDV",
-              "borc": 0.0,
-              "alacak": 0.0,
-              "aciklama": "262,50",
-              "source_file": "yevmiye_defteri_ozkan_kirt 4.ay.csv"
-            },
-            {
-              "tarih": "01/04/2025",
-              "yevmiye_no": "04050",
-              "belge_no": null,
-              "hesap_kodu": "191.108.20",
-              "hesap_adi": "%20 İndirilecek KDV - Yurtiçi Tevkifatsız Alımlar İçin Ödenen",
-              "borc": 0.0,
-              "alacak": 0.0,
-              "aciklama": "FT 007393 26/02 HASAN KESKİN ADİ ORTAKLIĞI",
-              "source_file": "yevmiye_defteri_ozkan_kirt 4.ay.csv"
-            },
-            {
-              "tarih": "01/04/2025",
-              "yevmiye_no": "04050",
-              "belge_no": null,
-              "hesap_kodu": "760.05.20",
-              "hesap_adi": "%20 KDV Lİ GENEL GİDERLER",
-              "borc": 0.0,
-              "alacak": 0.0,
-              "aciklama": "FT 007393 26/02 HASAN KESKİN ADİ ORTAKLIĞI",
-              "source_file": "yevmiye_defteri_ozkan_kirt 4.ay.csv"
-            },
-            {
-              "tarih": "01/04/2025",
-              "yevmiye_no": "04051",
-              "belge_no": null,
-              "hesap_kodu": "191",
-              "hesap_adi": "İNDİRİLECEK KATMA DEĞER VERGİSİ",
-              "borc": 145.83,
-              "alacak": 0.0,
-              "aciklama": "",
-              "source_file": "yevmiye_defteri_ozkan_kirt 4.ay.csv"
-            },
-            {
-              "tarih": "01/04/2025",
-              "yevmiye_no": "04051",
-              "belge_no": null,
-              "hesap_kodu": "191.108",
-              "hesap_adi": "Yurtiçi Tevkifatsız Alımlar İçin Ödenen KDV",
-              "borc": 0.0,
-              "alacak": 0.0,
-              "aciklama": "145,83",
-              "source_file": "yevmiye_defteri_ozkan_kirt 4.ay.csv"
-            },
-            {
-              "tarih": "01/04/2025",
-              "yevmiye_no": "04051",
-              "belge_no": null,
-              "hesap_kodu": "191.108.20",
-              "hesap_adi": "%20 İndirilecek KDV - Yurtiçi Tevkifatsız Alımlar İçin Ödenen",
-              "borc": 0.0,
-              "alacak": 0.0,
-              "aciklama": "FT 007392 24/02 HASAN KESKİN ADİ ORTAKLIĞI",
-              "source_file": "yevmiye_defteri_ozkan_kirt 4.ay.csv"
-            },
-            {
-              "tarih": "01/04/2025",
-              "yevmiye_no": "04051",
-              "belge_no": null,
-              "hesap_kodu": "760.05.20",
-              "hesap_adi": "%20 KDV Lİ GENEL GİDERLER",
-              "borc": 0.0,
-              "alacak": 0.0,
-              "aciklama": "FT 007392 24/02 HASAN KESKİN ADİ ORTAKLIĞI",
-              "source_file": "yevmiye_defteri_ozkan_kirt 4.ay.csv"
-            },
-            {
-              "tarih": "01/04/2025",
-              "yevmiye_no": "04052",
-              "belge_no": null,
-              "hesap_kodu": "191",
-              "hesap_adi": "İNDİRİLECEK KATMA DEĞER VERGİSİ",
-              "borc": 152.27,
-              "alacak": 0.0,
-              "aciklama": "",
-              "source_file": "yevmiye_defteri_ozkan_kirt 4.ay.csv"
-            },
-            {
-              "tarih": "01/04/2025",
-              "yevmiye_no": "04052",
-              "belge_no": null,
-              "hesap_kodu": "191.108",
-              "hesap_adi": "Yurtiçi Tevkifatsız Alımlar İçin Ödenen KDV",
-              "borc": 0.0,
-              "alacak": 0.0,
-              "aciklama": "152,27",
-              "source_file": "yevmiye_defteri_ozkan_kirt 4.ay.csv"
+        "UNKNOWN": {
+          "per_period": {
+            "2025-06": {
+              "matrah": 963.2,
+              "tahakkuk_eden": 963.2,
+              "mahsup_edilen": 0.0,
+              "odenecek_olan": 963.2,
+              "total_payable": 963.2,
+              "acceptance_date": "30/07/2025",
+              "issue_date": "30/07/2025",
+              "vade": "31/07/2025",
+              "thn": "2025073001MKX0000020",
+              "source_file": "OZKAN KIRT_NISAN_Poset(UC_AYLIK).xml_THK.pdf"
             }
-          ],
-          "2025-05": [
-            {
-              "tarih": "01/05/2025",
-              "yevmiye_no": "05246",
-              "belge_no": null,
-              "hesap_kodu": "191",
-              "hesap_adi": "İNDİRİLECEK KATMA DEĞER VERGİSİ",
-              "borc": 1718.95,
-              "alacak": 0.0,
-              "aciklama": "",
-              "source_file": "yevmiye_defteri_ozkan_kirt 5.ay.csv"
-            },
-            {
-              "tarih": "01/05/2025",
-              "yevmiye_no": "05246",
-              "belge_no": null,
-              "hesap_kodu": "191.108",
-              "hesap_adi": "Yurtiçi Tevkifatsız Alımlar İçin Ödenen KDV",
-              "borc": 0.0,
-              "alacak": 0.0,
-              "aciklama": "1.718,95",
-              "source_file": "yevmiye_defteri_ozkan_kirt 5.ay.csv"
-            },
-            {
-              "tarih": "01/05/2025",
-              "yevmiye_no": "05246",
-              "belge_no": null,
-              "hesap_kodu": "191.108.20",
-              "hesap_adi": "%20 İndirilecek KDV - Yurtiçi Tevkifatsız Alımlar İçin Ödenen",
-              "borc": 0.0,
-              "alacak": 0.0,
-              "aciklama": "FT KES2025000000687 01/05 MEHMET KESKİN- KESKİN AMBALAJ",
-              "source_file": "yevmiye_defteri_ozkan_kirt 5.ay.csv"
-            },
-            {
-              "tarih": "01/05/2025",
-              "yevmiye_no": "05246",
-              "belge_no": null,
-              "hesap_kodu": "760.05.20",
-              "hesap_adi": "%20 KDV Lİ GENEL GİDERLER",
-              "borc": 0.0,
-              "alacak": 0.0,
-              "aciklama": "FT KES2025000000687 01/05 MEHMET KESKİN- KESKİN AMBALAJ",
-              "source_file": "yevmiye_defteri_ozkan_kirt 5.ay.csv"
-            },
-            {
-              "tarih": "01/05/2025",
-              "yevmiye_no": "05247",
-              "belge_no": null,
-              "hesap_kodu": "153.20",
-              "hesap_adi": "%20 KDV Lİ ALIŞLAR",
-              "borc": 0.0,
-              "alacak": 0.0,
-              "aciklama": "1.398,75",
-              "source_file": "yevmiye_defteri_ozkan_kirt 5.ay.csv"
-            },
-            {
-              "tarih": "01/05/2025",
-              "yevmiye_no": "05247",
-              "belge_no": null,
-              "hesap_kodu": "153.20.01",
-              "hesap_adi": "%20 KDV Lİ KIRTASİYE ALIŞLARI",
-              "borc": 0.0,
-              "alacak": 0.0,
-              "aciklama": "FT AEP2025000003745 01/05 AKKAYMAK KIRTASİYE İŞ EĞİTİMİ MALZEMELERİ KOZMETİK TUHAFİYE BİLGİSAYAR İNŞ.HIR.SAN.VE TİC.LTD.ŞTİ.",
-              "source_file": "yevmiye_defteri_ozkan_kirt 5.ay.csv"
-            },
-            {
-              "tarih": "01/05/2025",
-              "yevmiye_no": "05247",
-              "belge_no": null,
-              "hesap_kodu": "191",
-              "hesap_adi": "İNDİRİLECEK KATMA DEĞER VERGİSİ",
-              "borc": 279.75,
-              "alacak": 0.0,
-              "aciklama": "",
-              "source_file": "yevmiye_defteri_ozkan_kirt 5.ay.csv"
-            },
-            {
-              "tarih": "01/05/2025",
-              "yevmiye_no": "05247",
-              "belge_no": null,
-              "hesap_kodu": "191.108",
-              "hesap_adi": "Yurtiçi Tevkifatsız Alımlar İçin Ödenen KDV",
-              "borc": 0.0,
-              "alacak": 0.0,
-              "aciklama": "279,75",
-              "source_file": "yevmiye_defteri_ozkan_kirt 5.ay.csv"
-            },
-            {
-              "tarih": "01/05/2025",
-              "yevmiye_no": "05247",
-              "belge_no": null,
-              "hesap_kodu": "191.108.20",
-              "hesap_adi": "%20 İndirilecek KDV - Yurtiçi Tevkifatsız Alımlar İçin Ödenen",
-              "borc": 0.0,
-              "alacak": 0.0,
-              "aciklama": "FT AEP2025000003745 01/05 AKKAYMAK KIRTASİYE İŞ EĞİTİMİ MALZEMELERİ KOZMETİK TUHAFİYE BİLGİSAYAR İNŞ.HIR.SAN.VE TİC.LTD.ŞTİ.",
-              "source_file": "yevmiye_defteri_ozkan_kirt 5.ay.csv"
-            },
-            {
-              "tarih": "01/05/2025",
-              "yevmiye_no": "05248",
-              "belge_no": null,
-              "hesap_kodu": "391",
-              "hesap_adi": "HESAPLANAN KDV",
-              "borc": 0.0,
-              "alacak": 57.73,
-              "aciklama": "",
-              "source_file": "yevmiye_defteri_ozkan_kirt 5.ay.csv"
-            }
-          ],
-          "2025-06": [
-            {
-              "tarih": "01/06/2025",
-              "yevmiye_no": "06345",
-              "belge_no": null,
-              "hesap_kodu": "191",
-              "hesap_adi": "İNDİRİLECEK KATMA DEĞER VERGİSİ",
-              "borc": 480.0,
-              "alacak": 0.0,
-              "aciklama": "",
-              "source_file": "yevmiye_defteri_ozkan_kirt 6.ay.csv"
-            },
-            {
-              "tarih": "01/06/2025",
-              "yevmiye_no": "06345",
-              "belge_no": null,
-              "hesap_kodu": "191.108",
-              "hesap_adi": "Yurtiçi Tevkifatsız Alımlar İçin Ödenen KDV",
-              "borc": 0.0,
-              "alacak": 0.0,
-              "aciklama": "480,00",
-              "source_file": "yevmiye_defteri_ozkan_kirt 6.ay.csv"
-            },
-            {
-              "tarih": "01/06/2025",
-              "yevmiye_no": "06345",
-              "belge_no": null,
-              "hesap_kodu": "191.108.20",
-              "hesap_adi": "%20 İndirilecek KDV - Yurtiçi Tevkifatsız Alımlar İçin Ödenen",
-              "borc": 0.0,
-              "alacak": 0.0,
-              "aciklama": "FT 37966 14/04 YÜKSEL AKAR",
-              "source_file": "yevmiye_defteri_ozkan_kirt 6.ay.csv"
-            },
-            {
-              "tarih": "01/06/2025",
-              "yevmiye_no": "06345",
-              "belge_no": null,
-              "hesap_kodu": "760.22",
-              "hesap_adi": "%20 KDV Lİ BAKIM ONARIM GİDERİ",
-              "borc": 0.0,
-              "alacak": 0.0,
-              "aciklama": "FT 37966 14/04 YÜKSEL AKAR",
-              "source_file": "yevmiye_defteri_ozkan_kirt 6.ay.csv"
-            },
-            {
-              "tarih": "01/06/2025",
-              "yevmiye_no": "06346",
-              "belge_no": null,
-              "hesap_kodu": "191",
-              "hesap_adi": "İNDİRİLECEK KATMA DEĞER VERGİSİ",
-              "borc": 200.0,
-              "alacak": 0.0,
-              "aciklama": "",
-              "source_file": "yevmiye_defteri_ozkan_kirt 6.ay.csv"
-            },
-            {
-              "tarih": "01/06/2025",
-              "yevmiye_no": "06346",
-              "belge_no": null,
-              "hesap_kodu": "191.108",
-              "hesap_adi": "Yurtiçi Tevkifatsız Alımlar İçin Ödenen KDV",
-              "borc": 0.0,
-              "alacak": 0.0,
-              "aciklama": "200,00",
-              "source_file": "yevmiye_defteri_ozkan_kirt 6.ay.csv"
-            },
-            {
-              "tarih": "01/06/2025",
-              "yevmiye_no": "06346",
-              "belge_no": null,
-              "hesap_kodu": "191.108.20",
-              "hesap_adi": "%20 İndirilecek KDV - Yurtiçi Tevkifatsız Alımlar İçin Ödenen",
-              "borc": 0.0,
-              "alacak": 0.0,
-              "aciklama": "FT 003524 24/05 KERİM SEVİMLER",
-              "source_file": "yevmiye_defteri_ozkan_kirt 6.ay.csv"
-            },
-            {
-              "tarih": "01/06/2025",
-              "yevmiye_no": "06346",
-              "belge_no": null,
-              "hesap_kodu": "760.05.20",
-              "hesap_adi": "%20 KDV Lİ GENEL GİDERLER",
-              "borc": 0.0,
-              "alacak": 0.0,
-              "aciklama": "FT 003524 24/05 KERİM SEVİMLER",
-              "source_file": "yevmiye_defteri_ozkan_kirt 6.ay.csv"
-            },
-            {
-              "tarih": "01/06/2025",
-              "yevmiye_no": "06352",
-              "belge_no": null,
-              "hesap_kodu": "153.20",
-              "hesap_adi": "%20 KDV Lİ ALIŞLAR",
-              "borc": 0.0,
-              "alacak": 0.0,
-              "aciklama": "3.000,00",
-              "source_file": "yevmiye_defteri_ozkan_kirt 6.ay.csv"
-            },
-            {
-              "tarih": "01/06/2025",
-              "yevmiye_no": "06352",
-              "belge_no": null,
-              "hesap_kodu": "153.20.01",
-              "hesap_adi": "%20 KDV Lİ KIRTASİYE ALIŞLARI",
-              "borc": 0.0,
-              "alacak": 0.0,
-              "aciklama": "FT EFB2025000002040 01/06 KADIOĞLU KIRTASİYE TİCARET VE SANAYİLTD.ŞTİ.",
-              "source_file": "yevmiye_defteri_ozkan_kirt 6.ay.csv"
-            }
-          ]
-        },
-        "totals": {
-          "sales_total_600_601_602": 11858574.259999994,
-          "discount_total_610_611_612": 28579.24,
-          "net_sales_total": 11829995.019999994
+          },
+          "summary": {
+            "matrah_sum": 963.2,
+            "tahakkuk_eden_sum": 963.2,
+            "mahsup_edilen_sum": 0.0,
+            "odenecek_olan_sum": 963.2,
+            "total_payable_sum": 963.2
+          }
         }
-      }
+      },
+      "periods": [
+        "2025-03",
+        "2025-04",
+        "2025-05",
+        "2025-06"
+      ]
     },
     "banka": {
       "bank_date_min": "2025-04-01",
@@ -2124,43 +1610,1436 @@
         "771": "GENEL YÖNETİM GİDERLERİ YANSITMA HESABI",
         "771.00": "GENEL YÖNETİM GİDERLERİ YANSITMA HS"
       }
-    }
-  },
-  "risk_scenarios": [
-    {
-      "code": "R-401A",
-      "severity": "LOW",
-      "title": "Mizan 102 Alt Hesap Var, Banka Ekstresi Yok",
-      "value_found": {
-        "missing_102": {
-          "102.504": 3431.68
-        },
-        "missing_102_details": [
-          {
-            "account_code": "102.504",
-            "account_name": "HALKBANK 571-14014930 571 ALTIN HS",
-            "amount": 3431.68
-          }
-        ]
+    },
+    "edefter": {
+      "total_lines": 30263,
+      "kdv_lines": 13029,
+      "fx_lines": 0,
+      "inflation_lines": 4,
+      "kdv_line_ratio": 0.4305257244820408,
+      "date_range": {
+        "min": "2025-04-01",
+        "max": "2025-06-30"
       },
-      "evidence_details": {
-        "note": "Bu durum tek başına 'usulsüzlük' değildir. 102.xx alt hesabın hangi banka/hesap olduğuna göre ekstre yüklenmeli veya alt hesap sınıflaması gözden geçirilmeli.",
-        "enrich_warnings": [],
-        "period": "2025-Q2",
-        "rule_logic": "Mizan 102.xx var AND bankada ilgili dönemde hesap hareketi yok → missing_102",
-        "evidence_pack": {
-          "summary": "102.xx alt hesap var ancak ilgili dönemde banka hareketi/ekstresi bulunamadı (dosya eksikliği veya sınıflama hatası olabilir).",
-          "missing_102_details": [
+      "counts": {
+        "dated_lines": 30263,
+        "undated_lines": 0,
+        "dated_ratio": 1.0
+      },
+      "sales_evidence": {
+        "sales_accounts": [
+          "600",
+          "601",
+          "602"
+        ],
+        "discount_accounts": [
+          "610",
+          "611",
+          "612"
+        ],
+        "per_month_sales_600_601_602": {
+          "2025-04": 4144060.4799999967,
+          "2025-05": 4041688.989999998,
+          "2025-06": 3672824.7899999996
+        },
+        "per_month_discounts_610_611_612": {
+          "2025-04": 8593.380000000001,
+          "2025-05": 6612.12,
+          "2025-06": 13373.74
+        },
+        "per_month_net_sales": {
+          "2025-04": 4135467.099999997,
+          "2025-05": 4035076.869999998,
+          "2025-06": 3659451.0499999993
+        },
+        "samples_sales_by_month": {
+          "2025-04": [
             {
-              "account_code": "102.504",
-              "account_name": "HALKBANK 571-14014930 571 ALTIN HS",
-              "amount": 3431.68
+              "tarih": "01/04/2025",
+              "yevmiye_no": "04060",
+              "belge_no": null,
+              "hesap_kodu": "600",
+              "hesap_adi": "YURTİÇİ SATIŞLAR",
+              "borc": 0.0,
+              "alacak": 35851.09,
+              "aciklama": "",
+              "source_file": "yevmiye_defteri_ozkan_kirt 4.ay.csv"
+            },
+            {
+              "tarih": "01/04/2025",
+              "yevmiye_no": "04060",
+              "belge_no": null,
+              "hesap_kodu": "600.19",
+              "hesap_adi": "FENERİUM SATIŞLAR",
+              "borc": 0.0,
+              "alacak": 0.0,
+              "aciklama": "35.851,09",
+              "source_file": "yevmiye_defteri_ozkan_kirt 4.ay.csv"
+            },
+            {
+              "tarih": "01/04/2025",
+              "yevmiye_no": "04060",
+              "belge_no": null,
+              "hesap_kodu": "600.19.10",
+              "hesap_adi": "%10 KDVLİ MALZEME SATIŞLARI",
+              "borc": 0.0,
+              "alacak": 0.0,
+              "aciklama": "ZR 2276 01/04 FENERİUM Z RAPORU",
+              "source_file": "yevmiye_defteri_ozkan_kirt 4.ay.csv"
+            },
+            {
+              "tarih": "01/04/2025",
+              "yevmiye_no": "04060",
+              "belge_no": null,
+              "hesap_kodu": "600.19.20",
+              "hesap_adi": "% 20 KDV Lİ MALZEME SATIŞLARI",
+              "borc": 0.0,
+              "alacak": 0.0,
+              "aciklama": "ZR 2276 01/04 FENERİUM Z RAPORU",
+              "source_file": "yevmiye_defteri_ozkan_kirt 4.ay.csv"
+            },
+            {
+              "tarih": "01/04/2025",
+              "yevmiye_no": "04061",
+              "belge_no": null,
+              "hesap_kodu": "600",
+              "hesap_adi": "YURTİÇİ SATIŞLAR",
+              "borc": 0.0,
+              "alacak": 868.0,
+              "aciklama": "",
+              "source_file": "yevmiye_defteri_ozkan_kirt 4.ay.csv"
+            },
+            {
+              "tarih": "01/04/2025",
+              "yevmiye_no": "04061",
+              "belge_no": null,
+              "hesap_kodu": "600.00",
+              "hesap_adi": "KDV SİZ SATIŞLARI",
+              "borc": 0.0,
+              "alacak": 0.0,
+              "aciklama": "868,00",
+              "source_file": "yevmiye_defteri_ozkan_kirt 4.ay.csv"
+            },
+            {
+              "tarih": "01/04/2025",
+              "yevmiye_no": "04061",
+              "belge_no": null,
+              "hesap_kodu": "600.00.01",
+              "hesap_adi": "KDV SİZ KİTAP SATIŞLARI",
+              "borc": 0.0,
+              "alacak": 0.0,
+              "aciklama": "ZR 2951 01/04 MOBİL Z RAPORU",
+              "source_file": "yevmiye_defteri_ozkan_kirt 4.ay.csv"
+            },
+            {
+              "tarih": "01/04/2025",
+              "yevmiye_no": "04062",
+              "belge_no": null,
+              "hesap_kodu": "600",
+              "hesap_adi": "YURTİÇİ SATIŞLAR",
+              "borc": 0.0,
+              "alacak": 35860.04,
+              "aciklama": "",
+              "source_file": "yevmiye_defteri_ozkan_kirt 4.ay.csv"
+            },
+            {
+              "tarih": "01/04/2025",
+              "yevmiye_no": "04062",
+              "belge_no": null,
+              "hesap_kodu": "600.00",
+              "hesap_adi": "KDV SİZ SATIŞLARI",
+              "borc": 0.0,
+              "alacak": 0.0,
+              "aciklama": "14.726,33",
+              "source_file": "yevmiye_defteri_ozkan_kirt 4.ay.csv"
+            },
+            {
+              "tarih": "01/04/2025",
+              "yevmiye_no": "04062",
+              "belge_no": null,
+              "hesap_kodu": "600.00.01",
+              "hesap_adi": "KDV SİZ KİTAP SATIŞLARI",
+              "borc": 0.0,
+              "alacak": 0.0,
+              "aciklama": "ZR 0868 01/04 MERKEZ Z RAPORU",
+              "source_file": "yevmiye_defteri_ozkan_kirt 4.ay.csv"
             }
           ],
-          "recommended_files": [
-            "Banka ekstreleri (CSV/XLSX)",
-            "POS raporu (varsa)",
-            "Bloke/Vadeli hesap ekstreleri (varsa)"
+          "2025-05": [
+            {
+              "tarih": "01/05/2025",
+              "yevmiye_no": "05248",
+              "belge_no": null,
+              "hesap_kodu": "600",
+              "hesap_adi": "YURTİÇİ SATIŞLAR",
+              "borc": 0.0,
+              "alacak": 577.27,
+              "aciklama": "",
+              "source_file": "yevmiye_defteri_ozkan_kirt 5.ay.csv"
+            },
+            {
+              "tarih": "01/05/2025",
+              "yevmiye_no": "05248",
+              "belge_no": null,
+              "hesap_kodu": "600.10",
+              "hesap_adi": "KAFE SATIŞLARI",
+              "borc": 0.0,
+              "alacak": 0.0,
+              "aciklama": "577,27",
+              "source_file": "yevmiye_defteri_ozkan_kirt 5.ay.csv"
+            },
+            {
+              "tarih": "01/05/2025",
+              "yevmiye_no": "05248",
+              "belge_no": null,
+              "hesap_kodu": "600.10.10",
+              "hesap_adi": "YİYECEK İÇECEK SATIŞLARI %10 KDVLİ",
+              "borc": 0.0,
+              "alacak": 0.0,
+              "aciklama": "ZR 3235 01/05 KAFE Z RAPORU",
+              "source_file": "yevmiye_defteri_ozkan_kirt 5.ay.csv"
+            },
+            {
+              "tarih": "01/05/2025",
+              "yevmiye_no": "05249",
+              "belge_no": null,
+              "hesap_kodu": "600",
+              "hesap_adi": "YURTİÇİ SATIŞLAR",
+              "borc": 0.0,
+              "alacak": 39253.09,
+              "aciklama": "",
+              "source_file": "yevmiye_defteri_ozkan_kirt 5.ay.csv"
+            },
+            {
+              "tarih": "01/05/2025",
+              "yevmiye_no": "05249",
+              "belge_no": null,
+              "hesap_kodu": "600.00",
+              "hesap_adi": "KDV SİZ SATIŞLARI",
+              "borc": 0.0,
+              "alacak": 0.0,
+              "aciklama": "15.029,94",
+              "source_file": "yevmiye_defteri_ozkan_kirt 5.ay.csv"
+            },
+            {
+              "tarih": "01/05/2025",
+              "yevmiye_no": "05249",
+              "belge_no": null,
+              "hesap_kodu": "600.00.01",
+              "hesap_adi": "KDV SİZ KİTAP SATIŞLARI",
+              "borc": 0.0,
+              "alacak": 0.0,
+              "aciklama": "ZR 0918 01/05 MERKEZ Z RAPORU",
+              "source_file": "yevmiye_defteri_ozkan_kirt 5.ay.csv"
+            },
+            {
+              "tarih": "01/05/2025",
+              "yevmiye_no": "05249",
+              "belge_no": null,
+              "hesap_kodu": "600.010",
+              "hesap_adi": "% 10 KDV Lİ SATIŞLAR",
+              "borc": 0.0,
+              "alacak": 0.0,
+              "aciklama": "4.629,82",
+              "source_file": "yevmiye_defteri_ozkan_kirt 5.ay.csv"
+            },
+            {
+              "tarih": "01/05/2025",
+              "yevmiye_no": "05249",
+              "belge_no": null,
+              "hesap_kodu": "600.010.02",
+              "hesap_adi": "KIRTASİYE SATIŞLARI %10 KDVLİ",
+              "borc": 0.0,
+              "alacak": 0.0,
+              "aciklama": "ZR 0918 01/05 MERKEZ Z RAPORU",
+              "source_file": "yevmiye_defteri_ozkan_kirt 5.ay.csv"
+            },
+            {
+              "tarih": "01/05/2025",
+              "yevmiye_no": "05249",
+              "belge_no": null,
+              "hesap_kodu": "600.020",
+              "hesap_adi": "%20 KDV Lİ SATIŞLAR",
+              "borc": 0.0,
+              "alacak": 0.0,
+              "aciklama": "19.593,33",
+              "source_file": "yevmiye_defteri_ozkan_kirt 5.ay.csv"
+            },
+            {
+              "tarih": "01/05/2025",
+              "yevmiye_no": "05249",
+              "belge_no": null,
+              "hesap_kodu": "600.020.01",
+              "hesap_adi": "KIRTASİYE SATIŞLARI %20 KDVLİ",
+              "borc": 0.0,
+              "alacak": 0.0,
+              "aciklama": "ZR 0918 01/05 MERKEZ Z RAPORU",
+              "source_file": "yevmiye_defteri_ozkan_kirt 5.ay.csv"
+            }
+          ],
+          "2025-06": [
+            {
+              "tarih": "01/06/2025",
+              "yevmiye_no": "06353",
+              "belge_no": null,
+              "hesap_kodu": "600",
+              "hesap_adi": "YURTİÇİ SATIŞLAR",
+              "borc": 0.0,
+              "alacak": 16.0,
+              "aciklama": "",
+              "source_file": "yevmiye_defteri_ozkan_kirt 6.ay.csv"
+            },
+            {
+              "tarih": "01/06/2025",
+              "yevmiye_no": "06353",
+              "belge_no": null,
+              "hesap_kodu": "600.00",
+              "hesap_adi": "KDV SİZ SATIŞLARI",
+              "borc": 0.0,
+              "alacak": 0.0,
+              "aciklama": "16,00",
+              "source_file": "yevmiye_defteri_ozkan_kirt 6.ay.csv"
+            },
+            {
+              "tarih": "01/06/2025",
+              "yevmiye_no": "06353",
+              "belge_no": null,
+              "hesap_kodu": "600.00.01",
+              "hesap_adi": "KDV SİZ KİTAP SATIŞLARI",
+              "borc": 0.0,
+              "alacak": 0.0,
+              "aciklama": "ZR 3031 01/06 MOBİL Z RAPORU",
+              "source_file": "yevmiye_defteri_ozkan_kirt 6.ay.csv"
+            },
+            {
+              "tarih": "01/06/2025",
+              "yevmiye_no": "06354",
+              "belge_no": null,
+              "hesap_kodu": "600",
+              "hesap_adi": "YURTİÇİ SATIŞLAR",
+              "borc": 0.0,
+              "alacak": 18925.08,
+              "aciklama": "",
+              "source_file": "yevmiye_defteri_ozkan_kirt 6.ay.csv"
+            },
+            {
+              "tarih": "01/06/2025",
+              "yevmiye_no": "06354",
+              "belge_no": null,
+              "hesap_kodu": "600.00",
+              "hesap_adi": "KDV SİZ SATIŞLARI",
+              "borc": 0.0,
+              "alacak": 0.0,
+              "aciklama": "5.714,60",
+              "source_file": "yevmiye_defteri_ozkan_kirt 6.ay.csv"
+            },
+            {
+              "tarih": "01/06/2025",
+              "yevmiye_no": "06354",
+              "belge_no": null,
+              "hesap_kodu": "600.00.01",
+              "hesap_adi": "KDV SİZ KİTAP SATIŞLARI",
+              "borc": 0.0,
+              "alacak": 0.0,
+              "aciklama": "ZR 0969 01/06 MERKEZ Z RAPORU",
+              "source_file": "yevmiye_defteri_ozkan_kirt 6.ay.csv"
+            },
+            {
+              "tarih": "01/06/2025",
+              "yevmiye_no": "06354",
+              "belge_no": null,
+              "hesap_kodu": "600.010",
+              "hesap_adi": "% 10 KDV Lİ SATIŞLAR",
+              "borc": 0.0,
+              "alacak": 0.0,
+              "aciklama": "1.977,36",
+              "source_file": "yevmiye_defteri_ozkan_kirt 6.ay.csv"
+            },
+            {
+              "tarih": "01/06/2025",
+              "yevmiye_no": "06354",
+              "belge_no": null,
+              "hesap_kodu": "600.010.02",
+              "hesap_adi": "KIRTASİYE SATIŞLARI %10 KDVLİ",
+              "borc": 0.0,
+              "alacak": 0.0,
+              "aciklama": "ZR 0969 01/06 MERKEZ Z RAPORU",
+              "source_file": "yevmiye_defteri_ozkan_kirt 6.ay.csv"
+            },
+            {
+              "tarih": "01/06/2025",
+              "yevmiye_no": "06354",
+              "belge_no": null,
+              "hesap_kodu": "600.020",
+              "hesap_adi": "%20 KDV Lİ SATIŞLAR",
+              "borc": 0.0,
+              "alacak": 0.0,
+              "aciklama": "11.233,12",
+              "source_file": "yevmiye_defteri_ozkan_kirt 6.ay.csv"
+            },
+            {
+              "tarih": "01/06/2025",
+              "yevmiye_no": "06354",
+              "belge_no": null,
+              "hesap_kodu": "600.020.01",
+              "hesap_adi": "KIRTASİYE SATIŞLARI %20 KDVLİ",
+              "borc": 0.0,
+              "alacak": 0.0,
+              "aciklama": "ZR 0969 01/06 MERKEZ Z RAPORU",
+              "source_file": "yevmiye_defteri_ozkan_kirt 6.ay.csv"
+            }
+          ]
+        },
+        "samples_kdv_by_month": {
+          "2025-04": [
+            {
+              "tarih": "01/04/2025",
+              "yevmiye_no": "04050",
+              "belge_no": null,
+              "hesap_kodu": "191",
+              "hesap_adi": "İNDİRİLECEK KATMA DEĞER VERGİSİ",
+              "borc": 262.5,
+              "alacak": 0.0,
+              "aciklama": "",
+              "source_file": "yevmiye_defteri_ozkan_kirt 4.ay.csv"
+            },
+            {
+              "tarih": "01/04/2025",
+              "yevmiye_no": "04050",
+              "belge_no": null,
+              "hesap_kodu": "191.108",
+              "hesap_adi": "Yurtiçi Tevkifatsız Alımlar İçin Ödenen KDV",
+              "borc": 0.0,
+              "alacak": 0.0,
+              "aciklama": "262,50",
+              "source_file": "yevmiye_defteri_ozkan_kirt 4.ay.csv"
+            },
+            {
+              "tarih": "01/04/2025",
+              "yevmiye_no": "04050",
+              "belge_no": null,
+              "hesap_kodu": "191.108.20",
+              "hesap_adi": "%20 İndirilecek KDV - Yurtiçi Tevkifatsız Alımlar İçin Ödenen",
+              "borc": 0.0,
+              "alacak": 0.0,
+              "aciklama": "FT 007393 26/02 HASAN KESKİN ADİ ORTAKLIĞI",
+              "source_file": "yevmiye_defteri_ozkan_kirt 4.ay.csv"
+            },
+            {
+              "tarih": "01/04/2025",
+              "yevmiye_no": "04050",
+              "belge_no": null,
+              "hesap_kodu": "760.05.20",
+              "hesap_adi": "%20 KDV Lİ GENEL GİDERLER",
+              "borc": 0.0,
+              "alacak": 0.0,
+              "aciklama": "FT 007393 26/02 HASAN KESKİN ADİ ORTAKLIĞI",
+              "source_file": "yevmiye_defteri_ozkan_kirt 4.ay.csv"
+            },
+            {
+              "tarih": "01/04/2025",
+              "yevmiye_no": "04051",
+              "belge_no": null,
+              "hesap_kodu": "191",
+              "hesap_adi": "İNDİRİLECEK KATMA DEĞER VERGİSİ",
+              "borc": 145.83,
+              "alacak": 0.0,
+              "aciklama": "",
+              "source_file": "yevmiye_defteri_ozkan_kirt 4.ay.csv"
+            },
+            {
+              "tarih": "01/04/2025",
+              "yevmiye_no": "04051",
+              "belge_no": null,
+              "hesap_kodu": "191.108",
+              "hesap_adi": "Yurtiçi Tevkifatsız Alımlar İçin Ödenen KDV",
+              "borc": 0.0,
+              "alacak": 0.0,
+              "aciklama": "145,83",
+              "source_file": "yevmiye_defteri_ozkan_kirt 4.ay.csv"
+            },
+            {
+              "tarih": "01/04/2025",
+              "yevmiye_no": "04051",
+              "belge_no": null,
+              "hesap_kodu": "191.108.20",
+              "hesap_adi": "%20 İndirilecek KDV - Yurtiçi Tevkifatsız Alımlar İçin Ödenen",
+              "borc": 0.0,
+              "alacak": 0.0,
+              "aciklama": "FT 007392 24/02 HASAN KESKİN ADİ ORTAKLIĞI",
+              "source_file": "yevmiye_defteri_ozkan_kirt 4.ay.csv"
+            },
+            {
+              "tarih": "01/04/2025",
+              "yevmiye_no": "04051",
+              "belge_no": null,
+              "hesap_kodu": "760.05.20",
+              "hesap_adi": "%20 KDV Lİ GENEL GİDERLER",
+              "borc": 0.0,
+              "alacak": 0.0,
+              "aciklama": "FT 007392 24/02 HASAN KESKİN ADİ ORTAKLIĞI",
+              "source_file": "yevmiye_defteri_ozkan_kirt 4.ay.csv"
+            },
+            {
+              "tarih": "01/04/2025",
+              "yevmiye_no": "04052",
+              "belge_no": null,
+              "hesap_kodu": "191",
+              "hesap_adi": "İNDİRİLECEK KATMA DEĞER VERGİSİ",
+              "borc": 152.27,
+              "alacak": 0.0,
+              "aciklama": "",
+              "source_file": "yevmiye_defteri_ozkan_kirt 4.ay.csv"
+            },
+            {
+              "tarih": "01/04/2025",
+              "yevmiye_no": "04052",
+              "belge_no": null,
+              "hesap_kodu": "191.108",
+              "hesap_adi": "Yurtiçi Tevkifatsız Alımlar İçin Ödenen KDV",
+              "borc": 0.0,
+              "alacak": 0.0,
+              "aciklama": "152,27",
+              "source_file": "yevmiye_defteri_ozkan_kirt 4.ay.csv"
+            }
+          ],
+          "2025-05": [
+            {
+              "tarih": "01/05/2025",
+              "yevmiye_no": "05246",
+              "belge_no": null,
+              "hesap_kodu": "191",
+              "hesap_adi": "İNDİRİLECEK KATMA DEĞER VERGİSİ",
+              "borc": 1718.95,
+              "alacak": 0.0,
+              "aciklama": "",
+              "source_file": "yevmiye_defteri_ozkan_kirt 5.ay.csv"
+            },
+            {
+              "tarih": "01/05/2025",
+              "yevmiye_no": "05246",
+              "belge_no": null,
+              "hesap_kodu": "191.108",
+              "hesap_adi": "Yurtiçi Tevkifatsız Alımlar İçin Ödenen KDV",
+              "borc": 0.0,
+              "alacak": 0.0,
+              "aciklama": "1.718,95",
+              "source_file": "yevmiye_defteri_ozkan_kirt 5.ay.csv"
+            },
+            {
+              "tarih": "01/05/2025",
+              "yevmiye_no": "05246",
+              "belge_no": null,
+              "hesap_kodu": "191.108.20",
+              "hesap_adi": "%20 İndirilecek KDV - Yurtiçi Tevkifatsız Alımlar İçin Ödenen",
+              "borc": 0.0,
+              "alacak": 0.0,
+              "aciklama": "FT KES2025000000687 01/05 MEHMET KESKİN- KESKİN AMBALAJ",
+              "source_file": "yevmiye_defteri_ozkan_kirt 5.ay.csv"
+            },
+            {
+              "tarih": "01/05/2025",
+              "yevmiye_no": "05246",
+              "belge_no": null,
+              "hesap_kodu": "760.05.20",
+              "hesap_adi": "%20 KDV Lİ GENEL GİDERLER",
+              "borc": 0.0,
+              "alacak": 0.0,
+              "aciklama": "FT KES2025000000687 01/05 MEHMET KESKİN- KESKİN AMBALAJ",
+              "source_file": "yevmiye_defteri_ozkan_kirt 5.ay.csv"
+            },
+            {
+              "tarih": "01/05/2025",
+              "yevmiye_no": "05247",
+              "belge_no": null,
+              "hesap_kodu": "153.20",
+              "hesap_adi": "%20 KDV Lİ ALIŞLAR",
+              "borc": 0.0,
+              "alacak": 0.0,
+              "aciklama": "1.398,75",
+              "source_file": "yevmiye_defteri_ozkan_kirt 5.ay.csv"
+            },
+            {
+              "tarih": "01/05/2025",
+              "yevmiye_no": "05247",
+              "belge_no": null,
+              "hesap_kodu": "153.20.01",
+              "hesap_adi": "%20 KDV Lİ KIRTASİYE ALIŞLARI",
+              "borc": 0.0,
+              "alacak": 0.0,
+              "aciklama": "FT AEP2025000003745 01/05 AKKAYMAK KIRTASİYE İŞ EĞİTİMİ MALZEMELERİ KOZMETİK TUHAFİYE BİLGİSAYAR İNŞ.HIR.SAN.VE TİC.LTD.ŞTİ.",
+              "source_file": "yevmiye_defteri_ozkan_kirt 5.ay.csv"
+            },
+            {
+              "tarih": "01/05/2025",
+              "yevmiye_no": "05247",
+              "belge_no": null,
+              "hesap_kodu": "191",
+              "hesap_adi": "İNDİRİLECEK KATMA DEĞER VERGİSİ",
+              "borc": 279.75,
+              "alacak": 0.0,
+              "aciklama": "",
+              "source_file": "yevmiye_defteri_ozkan_kirt 5.ay.csv"
+            },
+            {
+              "tarih": "01/05/2025",
+              "yevmiye_no": "05247",
+              "belge_no": null,
+              "hesap_kodu": "191.108",
+              "hesap_adi": "Yurtiçi Tevkifatsız Alımlar İçin Ödenen KDV",
+              "borc": 0.0,
+              "alacak": 0.0,
+              "aciklama": "279,75",
+              "source_file": "yevmiye_defteri_ozkan_kirt 5.ay.csv"
+            },
+            {
+              "tarih": "01/05/2025",
+              "yevmiye_no": "05247",
+              "belge_no": null,
+              "hesap_kodu": "191.108.20",
+              "hesap_adi": "%20 İndirilecek KDV - Yurtiçi Tevkifatsız Alımlar İçin Ödenen",
+              "borc": 0.0,
+              "alacak": 0.0,
+              "aciklama": "FT AEP2025000003745 01/05 AKKAYMAK KIRTASİYE İŞ EĞİTİMİ MALZEMELERİ KOZMETİK TUHAFİYE BİLGİSAYAR İNŞ.HIR.SAN.VE TİC.LTD.ŞTİ.",
+              "source_file": "yevmiye_defteri_ozkan_kirt 5.ay.csv"
+            },
+            {
+              "tarih": "01/05/2025",
+              "yevmiye_no": "05248",
+              "belge_no": null,
+              "hesap_kodu": "391",
+              "hesap_adi": "HESAPLANAN KDV",
+              "borc": 0.0,
+              "alacak": 57.73,
+              "aciklama": "",
+              "source_file": "yevmiye_defteri_ozkan_kirt 5.ay.csv"
+            }
+          ],
+          "2025-06": [
+            {
+              "tarih": "01/06/2025",
+              "yevmiye_no": "06345",
+              "belge_no": null,
+              "hesap_kodu": "191",
+              "hesap_adi": "İNDİRİLECEK KATMA DEĞER VERGİSİ",
+              "borc": 480.0,
+              "alacak": 0.0,
+              "aciklama": "",
+              "source_file": "yevmiye_defteri_ozkan_kirt 6.ay.csv"
+            },
+            {
+              "tarih": "01/06/2025",
+              "yevmiye_no": "06345",
+              "belge_no": null,
+              "hesap_kodu": "191.108",
+              "hesap_adi": "Yurtiçi Tevkifatsız Alımlar İçin Ödenen KDV",
+              "borc": 0.0,
+              "alacak": 0.0,
+              "aciklama": "480,00",
+              "source_file": "yevmiye_defteri_ozkan_kirt 6.ay.csv"
+            },
+            {
+              "tarih": "01/06/2025",
+              "yevmiye_no": "06345",
+              "belge_no": null,
+              "hesap_kodu": "191.108.20",
+              "hesap_adi": "%20 İndirilecek KDV - Yurtiçi Tevkifatsız Alımlar İçin Ödenen",
+              "borc": 0.0,
+              "alacak": 0.0,
+              "aciklama": "FT 37966 14/04 YÜKSEL AKAR",
+              "source_file": "yevmiye_defteri_ozkan_kirt 6.ay.csv"
+            },
+            {
+              "tarih": "01/06/2025",
+              "yevmiye_no": "06345",
+              "belge_no": null,
+              "hesap_kodu": "760.22",
+              "hesap_adi": "%20 KDV Lİ BAKIM ONARIM GİDERİ",
+              "borc": 0.0,
+              "alacak": 0.0,
+              "aciklama": "FT 37966 14/04 YÜKSEL AKAR",
+              "source_file": "yevmiye_defteri_ozkan_kirt 6.ay.csv"
+            },
+            {
+              "tarih": "01/06/2025",
+              "yevmiye_no": "06346",
+              "belge_no": null,
+              "hesap_kodu": "191",
+              "hesap_adi": "İNDİRİLECEK KATMA DEĞER VERGİSİ",
+              "borc": 200.0,
+              "alacak": 0.0,
+              "aciklama": "",
+              "source_file": "yevmiye_defteri_ozkan_kirt 6.ay.csv"
+            },
+            {
+              "tarih": "01/06/2025",
+              "yevmiye_no": "06346",
+              "belge_no": null,
+              "hesap_kodu": "191.108",
+              "hesap_adi": "Yurtiçi Tevkifatsız Alımlar İçin Ödenen KDV",
+              "borc": 0.0,
+              "alacak": 0.0,
+              "aciklama": "200,00",
+              "source_file": "yevmiye_defteri_ozkan_kirt 6.ay.csv"
+            },
+            {
+              "tarih": "01/06/2025",
+              "yevmiye_no": "06346",
+              "belge_no": null,
+              "hesap_kodu": "191.108.20",
+              "hesap_adi": "%20 İndirilecek KDV - Yurtiçi Tevkifatsız Alımlar İçin Ödenen",
+              "borc": 0.0,
+              "alacak": 0.0,
+              "aciklama": "FT 003524 24/05 KERİM SEVİMLER",
+              "source_file": "yevmiye_defteri_ozkan_kirt 6.ay.csv"
+            },
+            {
+              "tarih": "01/06/2025",
+              "yevmiye_no": "06346",
+              "belge_no": null,
+              "hesap_kodu": "760.05.20",
+              "hesap_adi": "%20 KDV Lİ GENEL GİDERLER",
+              "borc": 0.0,
+              "alacak": 0.0,
+              "aciklama": "FT 003524 24/05 KERİM SEVİMLER",
+              "source_file": "yevmiye_defteri_ozkan_kirt 6.ay.csv"
+            },
+            {
+              "tarih": "01/06/2025",
+              "yevmiye_no": "06352",
+              "belge_no": null,
+              "hesap_kodu": "153.20",
+              "hesap_adi": "%20 KDV Lİ ALIŞLAR",
+              "borc": 0.0,
+              "alacak": 0.0,
+              "aciklama": "3.000,00",
+              "source_file": "yevmiye_defteri_ozkan_kirt 6.ay.csv"
+            },
+            {
+              "tarih": "01/06/2025",
+              "yevmiye_no": "06352",
+              "belge_no": null,
+              "hesap_kodu": "153.20.01",
+              "hesap_adi": "%20 KDV Lİ KIRTASİYE ALIŞLARI",
+              "borc": 0.0,
+              "alacak": 0.0,
+              "aciklama": "FT EFB2025000002040 01/06 KADIOĞLU KIRTASİYE TİCARET VE SANAYİLTD.ŞTİ.",
+              "source_file": "yevmiye_defteri_ozkan_kirt 6.ay.csv"
+            }
+          ]
+        },
+        "totals": {
+          "sales_total_600_601_602": 11858574.259999994,
+          "discount_total_610_611_612": 28579.24,
+          "net_sales_total": 11829995.019999994
+        }
+      }
+    },
+    "consistency": {
+      "bank_date_min": "2025-04-01",
+      "bank_date_max": "2025-06-30",
+      "bank_tax_thn_row_count": 3,
+      "bank_tax_thn_unique_count": 3,
+      "obligation_count": 11,
+      "verifiable_obligation_count": 7,
+      "verified_obligation_count": 1,
+      "matched_obligation_count": 1,
+      "unmatched_obligation_count": 10,
+      "unverifiable_obligation_count": 4,
+      "expected_sum_verifiable": 19731.09,
+      "matched_sum_verifiable": 443.7,
+      "tax_payment_coverage_rate_verified": 0.022487353714366515,
+      "evidence_level": "verified",
+      "tax_payment_coverage_rate": 0.016152777535079592,
+      "bank_data_sufficient": true,
+      "expected_sum_all": 27468.960000000003,
+      "matched_sum_all": 443.7,
+      "payment_matching": [
+        {
+          "type": "KDV",
+          "period": "2025-06",
+          "vade": "2025-07-28",
+          "expected_total": 443.7,
+          "expected_cash": 0.0,
+          "expected_basis": null,
+          "tol": null,
+          "window_days": 5,
+          "verifiable": false,
+          "verifiable_reason": "bank_range_outside_window",
+          "thn": "2025072601MKX0000342",
+          "thn_seen_any": false,
+          "thn_in_window": null,
+          "match_method": null,
+          "match_count": 0,
+          "matched_amount": 0.0,
+          "match_sample": null,
+          "payment_date": null,
+          "days_from_vade": null,
+          "paid_within_window": null,
+          "payment_status": "UNKNOWN",
+          "possible_offbank_payment": true,
+          "smmm_action": "CHECK_BANK_DATA_RANGE",
+          "window_lo": "2025-07-23",
+          "window_hi": "2025-08-02"
+        },
+        {
+          "type": "KDV",
+          "period": "2025-05",
+          "vade": "2025-06-28",
+          "expected_total": 443.7,
+          "expected_cash": 0.0,
+          "expected_basis": "total_payable",
+          "tol": 2.2185,
+          "window_days": 5,
+          "verifiable": true,
+          "verifiable_reason": null,
+          "thn": "2025062901MKX0000031",
+          "thn_seen_any": true,
+          "thn_in_window": true,
+          "match_method": "thn_sum_total_payable_in_window",
+          "match_count": 1,
+          "matched_amount": 443.7,
+          "match_sample": {
+            "tarih": "30.06.2025",
+            "borc": 443.7,
+            "alacak": 0.0,
+            "bakiye": 185826.78,
+            "aciklama": "VERGI-0015 KDV GERÇEK VD:007201-İÇ:0107230-THN:2025062901Mkx0000031-VN:0480525636 ALANYA ÖZKAN KIRTASİ YE MATBAACILIK Y",
+            "thn": "2025062901MKX0000031",
+            "source_file": "102.19 ziraat 06.csv",
+            "acc_key": "102.19 ZIRAAT"
+          },
+          "payment_date": "30.06.2025",
+          "days_from_vade": 2,
+          "paid_within_window": true,
+          "payment_status": "PAID_ON_TIME",
+          "possible_offbank_payment": false,
+          "smmm_action": "OK",
+          "window_lo": "2025-06-23",
+          "window_hi": "2025-07-03"
+        },
+        {
+          "type": "KDV",
+          "period": "2025-04",
+          "vade": "2025-05-28",
+          "expected_total": 443.7,
+          "expected_cash": 0.0,
+          "expected_basis": null,
+          "tol": null,
+          "window_days": 5,
+          "verifiable": true,
+          "verifiable_reason": null,
+          "thn": "2025052801MKX0000117",
+          "thn_seen_any": true,
+          "thn_in_window": false,
+          "match_method": null,
+          "match_count": 0,
+          "matched_amount": 0.0,
+          "match_sample": null,
+          "payment_date": null,
+          "days_from_vade": null,
+          "paid_within_window": null,
+          "payment_status": "UNPAID",
+          "possible_offbank_payment": true,
+          "smmm_action": "CHECK_PAYMENT_OR_MATCHING_RULES",
+          "window_lo": "2025-05-23",
+          "window_hi": "2025-06-02"
+        },
+        {
+          "type": "GECICI_KV",
+          "period": "2025-06",
+          "vade": "2025-08-17",
+          "expected_total": 691.1,
+          "expected_cash": 0.0,
+          "expected_basis": null,
+          "tol": null,
+          "window_days": 15,
+          "verifiable": false,
+          "verifiable_reason": "bank_range_outside_window",
+          "thn": "2025081601MKX0000161",
+          "thn_seen_any": false,
+          "thn_in_window": null,
+          "match_method": null,
+          "match_count": 0,
+          "matched_amount": 0.0,
+          "match_sample": null,
+          "payment_date": null,
+          "days_from_vade": null,
+          "paid_within_window": null,
+          "payment_status": "UNKNOWN",
+          "possible_offbank_payment": true,
+          "smmm_action": "CHECK_BANK_DATA_RANGE",
+          "window_lo": "2025-08-02",
+          "window_hi": "2025-09-01"
+        },
+        {
+          "type": "GECICI_KV",
+          "period": "2025-03",
+          "vade": "2025-05-17",
+          "expected_total": 691.1,
+          "expected_cash": 0.0,
+          "expected_basis": null,
+          "tol": null,
+          "window_days": 15,
+          "verifiable": true,
+          "verifiable_reason": null,
+          "thn": "2025051901MKX0000231",
+          "thn_seen_any": false,
+          "thn_in_window": null,
+          "match_method": null,
+          "match_count": 0,
+          "matched_amount": 0.0,
+          "match_sample": null,
+          "payment_date": null,
+          "days_from_vade": null,
+          "paid_within_window": null,
+          "payment_status": "UNPAID",
+          "possible_offbank_payment": true,
+          "smmm_action": "CHECK_PAYMENT_OR_MATCHING_RULES",
+          "window_lo": "2025-05-02",
+          "window_hi": "2025-06-01"
+        },
+        {
+          "type": "MUHTASAR",
+          "period": "2025-06",
+          "vade": "2025-07-26",
+          "expected_total": 5639.87,
+          "expected_cash": 4864.34,
+          "expected_basis": null,
+          "tol": null,
+          "window_days": 15,
+          "verifiable": false,
+          "verifiable_reason": "bank_range_outside_window",
+          "thn": "2025071601MKX0000188",
+          "thn_seen_any": false,
+          "thn_in_window": null,
+          "match_method": null,
+          "match_count": 0,
+          "matched_amount": 0.0,
+          "match_sample": null,
+          "payment_date": null,
+          "days_from_vade": null,
+          "paid_within_window": null,
+          "payment_status": "UNKNOWN",
+          "possible_offbank_payment": true,
+          "smmm_action": "CHECK_BANK_DATA_RANGE",
+          "window_lo": "2025-07-11",
+          "window_hi": "2025-08-10"
+        },
+        {
+          "type": "MUHTASAR",
+          "period": "2025-05",
+          "vade": "2025-06-26",
+          "expected_total": 6775.05,
+          "expected_cash": 5932.99,
+          "expected_basis": null,
+          "tol": null,
+          "window_days": 15,
+          "verifiable": true,
+          "verifiable_reason": null,
+          "thn": "2025061801MKX0000029",
+          "thn_seen_any": false,
+          "thn_in_window": null,
+          "match_method": null,
+          "match_count": 0,
+          "matched_amount": 0.0,
+          "match_sample": null,
+          "payment_date": null,
+          "days_from_vade": null,
+          "paid_within_window": null,
+          "payment_status": "UNPAID",
+          "possible_offbank_payment": true,
+          "smmm_action": "CHECK_PAYMENT_OR_MATCHING_RULES",
+          "window_lo": "2025-06-11",
+          "window_hi": "2025-07-11"
+        },
+        {
+          "type": "MUHTASAR",
+          "period": "2025-04",
+          "vade": "2025-05-26",
+          "expected_total": 4490.14,
+          "expected_cash": 3775.37,
+          "expected_basis": null,
+          "tol": null,
+          "window_days": 15,
+          "verifiable": true,
+          "verifiable_reason": null,
+          "thn": "2025051401MKX0000250",
+          "thn_seen_any": false,
+          "thn_in_window": null,
+          "match_method": null,
+          "match_count": 0,
+          "matched_amount": 0.0,
+          "match_sample": null,
+          "payment_date": null,
+          "days_from_vade": null,
+          "paid_within_window": null,
+          "payment_status": "UNPAID",
+          "possible_offbank_payment": true,
+          "smmm_action": "CHECK_PAYMENT_OR_MATCHING_RULES",
+          "window_lo": "2025-05-11",
+          "window_hi": "2025-06-10"
+        },
+        {
+          "type": "KDV2",
+          "period": "2025-05",
+          "vade": "2025-06-25",
+          "expected_total": 3443.7,
+          "expected_cash": 3000.0,
+          "expected_basis": null,
+          "tol": null,
+          "window_days": 7,
+          "verifiable": true,
+          "verifiable_reason": null,
+          "thn": "2025062501MKX0000085",
+          "thn_seen_any": false,
+          "thn_in_window": null,
+          "match_method": null,
+          "match_count": 0,
+          "matched_amount": 0.0,
+          "match_sample": null,
+          "payment_date": null,
+          "days_from_vade": null,
+          "paid_within_window": null,
+          "payment_status": "UNPAID",
+          "possible_offbank_payment": true,
+          "smmm_action": "CHECK_PAYMENT_OR_MATCHING_RULES",
+          "window_lo": "2025-06-18",
+          "window_hi": "2025-07-02"
+        },
+        {
+          "type": "KDV2",
+          "period": "2025-04",
+          "vade": "2025-05-25",
+          "expected_total": 3443.7,
+          "expected_cash": 3000.0,
+          "expected_basis": null,
+          "tol": null,
+          "window_days": 7,
+          "verifiable": true,
+          "verifiable_reason": null,
+          "thn": "2025052601MKX0000274",
+          "thn_seen_any": false,
+          "thn_in_window": null,
+          "match_method": null,
+          "match_count": 0,
+          "matched_amount": 0.0,
+          "match_sample": null,
+          "payment_date": null,
+          "days_from_vade": null,
+          "paid_within_window": null,
+          "payment_status": "UNPAID",
+          "possible_offbank_payment": true,
+          "smmm_action": "CHECK_PAYMENT_OR_MATCHING_RULES",
+          "window_lo": "2025-05-18",
+          "window_hi": "2025-06-01"
+        },
+        {
+          "type": "UNKNOWN",
+          "period": "2025-06",
+          "vade": "2025-07-31",
+          "expected_total": 963.2,
+          "expected_cash": 963.2,
+          "expected_basis": null,
+          "tol": null,
+          "window_days": 10,
+          "verifiable": false,
+          "verifiable_reason": "bank_range_outside_window",
+          "thn": "2025073001MKX0000020",
+          "thn_seen_any": false,
+          "thn_in_window": null,
+          "match_method": null,
+          "match_count": 0,
+          "matched_amount": 0.0,
+          "match_sample": null,
+          "payment_date": null,
+          "days_from_vade": null,
+          "paid_within_window": null,
+          "payment_status": "UNKNOWN",
+          "possible_offbank_payment": true,
+          "smmm_action": "CHECK_BANK_DATA_RANGE",
+          "window_lo": "2025-07-21",
+          "window_hi": "2025-08-10"
+        }
+      ],
+      "obligations": [
+        {
+          "type": "KDV",
+          "period": "2025-06",
+          "vade": "2025-07-28",
+          "expected_total": 443.7,
+          "expected_cash": 0.0,
+          "expected_basis": null,
+          "tol": null,
+          "window_days": 5,
+          "verifiable": false,
+          "verifiable_reason": "bank_range_outside_window",
+          "thn": "2025072601MKX0000342",
+          "thn_seen_any": false,
+          "thn_in_window": null,
+          "match_method": null,
+          "match_count": 0,
+          "matched_amount": 0.0,
+          "match_sample": null,
+          "payment_date": null,
+          "days_from_vade": null,
+          "paid_within_window": null,
+          "payment_status": "UNKNOWN",
+          "possible_offbank_payment": true,
+          "smmm_action": "CHECK_BANK_DATA_RANGE",
+          "window_lo": "2025-07-23",
+          "window_hi": "2025-08-02"
+        },
+        {
+          "type": "KDV",
+          "period": "2025-05",
+          "vade": "2025-06-28",
+          "expected_total": 443.7,
+          "expected_cash": 0.0,
+          "expected_basis": "total_payable",
+          "tol": 2.2185,
+          "window_days": 5,
+          "verifiable": true,
+          "verifiable_reason": null,
+          "thn": "2025062901MKX0000031",
+          "thn_seen_any": true,
+          "thn_in_window": true,
+          "match_method": "thn_sum_total_payable_in_window",
+          "match_count": 1,
+          "matched_amount": 443.7,
+          "match_sample": {
+            "tarih": "30.06.2025",
+            "borc": 443.7,
+            "alacak": 0.0,
+            "bakiye": 185826.78,
+            "aciklama": "VERGI-0015 KDV GERÇEK VD:007201-İÇ:0107230-THN:2025062901Mkx0000031-VN:0480525636 ALANYA ÖZKAN KIRTASİ YE MATBAACILIK Y",
+            "thn": "2025062901MKX0000031",
+            "source_file": "102.19 ziraat 06.csv",
+            "acc_key": "102.19 ZIRAAT"
+          },
+          "payment_date": "30.06.2025",
+          "days_from_vade": 2,
+          "paid_within_window": true,
+          "payment_status": "PAID_ON_TIME",
+          "possible_offbank_payment": false,
+          "smmm_action": "OK",
+          "window_lo": "2025-06-23",
+          "window_hi": "2025-07-03"
+        },
+        {
+          "type": "KDV",
+          "period": "2025-04",
+          "vade": "2025-05-28",
+          "expected_total": 443.7,
+          "expected_cash": 0.0,
+          "expected_basis": null,
+          "tol": null,
+          "window_days": 5,
+          "verifiable": true,
+          "verifiable_reason": null,
+          "thn": "2025052801MKX0000117",
+          "thn_seen_any": true,
+          "thn_in_window": false,
+          "match_method": null,
+          "match_count": 0,
+          "matched_amount": 0.0,
+          "match_sample": null,
+          "payment_date": null,
+          "days_from_vade": null,
+          "paid_within_window": null,
+          "payment_status": "UNPAID",
+          "possible_offbank_payment": true,
+          "smmm_action": "CHECK_PAYMENT_OR_MATCHING_RULES",
+          "window_lo": "2025-05-23",
+          "window_hi": "2025-06-02"
+        },
+        {
+          "type": "GECICI_KV",
+          "period": "2025-06",
+          "vade": "2025-08-17",
+          "expected_total": 691.1,
+          "expected_cash": 0.0,
+          "expected_basis": null,
+          "tol": null,
+          "window_days": 15,
+          "verifiable": false,
+          "verifiable_reason": "bank_range_outside_window",
+          "thn": "2025081601MKX0000161",
+          "thn_seen_any": false,
+          "thn_in_window": null,
+          "match_method": null,
+          "match_count": 0,
+          "matched_amount": 0.0,
+          "match_sample": null,
+          "payment_date": null,
+          "days_from_vade": null,
+          "paid_within_window": null,
+          "payment_status": "UNKNOWN",
+          "possible_offbank_payment": true,
+          "smmm_action": "CHECK_BANK_DATA_RANGE",
+          "window_lo": "2025-08-02",
+          "window_hi": "2025-09-01"
+        },
+        {
+          "type": "GECICI_KV",
+          "period": "2025-03",
+          "vade": "2025-05-17",
+          "expected_total": 691.1,
+          "expected_cash": 0.0,
+          "expected_basis": null,
+          "tol": null,
+          "window_days": 15,
+          "verifiable": true,
+          "verifiable_reason": null,
+          "thn": "2025051901MKX0000231",
+          "thn_seen_any": false,
+          "thn_in_window": null,
+          "match_method": null,
+          "match_count": 0,
+          "matched_amount": 0.0,
+          "match_sample": null,
+          "payment_date": null,
+          "days_from_vade": null,
+          "paid_within_window": null,
+          "payment_status": "UNPAID",
+          "possible_offbank_payment": true,
+          "smmm_action": "CHECK_PAYMENT_OR_MATCHING_RULES",
+          "window_lo": "2025-05-02",
+          "window_hi": "2025-06-01"
+        },
+        {
+          "type": "MUHTASAR",
+          "period": "2025-06",
+          "vade": "2025-07-26",
+          "expected_total": 5639.87,
+          "expected_cash": 4864.34,
+          "expected_basis": null,
+          "tol": null,
+          "window_days": 15,
+          "verifiable": false,
+          "verifiable_reason": "bank_range_outside_window",
+          "thn": "2025071601MKX0000188",
+          "thn_seen_any": false,
+          "thn_in_window": null,
+          "match_method": null,
+          "match_count": 0,
+          "matched_amount": 0.0,
+          "match_sample": null,
+          "payment_date": null,
+          "days_from_vade": null,
+          "paid_within_window": null,
+          "payment_status": "UNKNOWN",
+          "possible_offbank_payment": true,
+          "smmm_action": "CHECK_BANK_DATA_RANGE",
+          "window_lo": "2025-07-11",
+          "window_hi": "2025-08-10"
+        },
+        {
+          "type": "MUHTASAR",
+          "period": "2025-05",
+          "vade": "2025-06-26",
+          "expected_total": 6775.05,
+          "expected_cash": 5932.99,
+          "expected_basis": null,
+          "tol": null,
+          "window_days": 15,
+          "verifiable": true,
+          "verifiable_reason": null,
+          "thn": "2025061801MKX0000029",
+          "thn_seen_any": false,
+          "thn_in_window": null,
+          "match_method": null,
+          "match_count": 0,
+          "matched_amount": 0.0,
+          "match_sample": null,
+          "payment_date": null,
+          "days_from_vade": null,
+          "paid_within_window": null,
+          "payment_status": "UNPAID",
+          "possible_offbank_payment": true,
+          "smmm_action": "CHECK_PAYMENT_OR_MATCHING_RULES",
+          "window_lo": "2025-06-11",
+          "window_hi": "2025-07-11"
+        },
+        {
+          "type": "MUHTASAR",
+          "period": "2025-04",
+          "vade": "2025-05-26",
+          "expected_total": 4490.14,
+          "expected_cash": 3775.37,
+          "expected_basis": null,
+          "tol": null,
+          "window_days": 15,
+          "verifiable": true,
+          "verifiable_reason": null,
+          "thn": "2025051401MKX0000250",
+          "thn_seen_any": false,
+          "thn_in_window": null,
+          "match_method": null,
+          "match_count": 0,
+          "matched_amount": 0.0,
+          "match_sample": null,
+          "payment_date": null,
+          "days_from_vade": null,
+          "paid_within_window": null,
+          "payment_status": "UNPAID",
+          "possible_offbank_payment": true,
+          "smmm_action": "CHECK_PAYMENT_OR_MATCHING_RULES",
+          "window_lo": "2025-05-11",
+          "window_hi": "2025-06-10"
+        },
+        {
+          "type": "KDV2",
+          "period": "2025-05",
+          "vade": "2025-06-25",
+          "expected_total": 3443.7,
+          "expected_cash": 3000.0,
+          "expected_basis": null,
+          "tol": null,
+          "window_days": 7,
+          "verifiable": true,
+          "verifiable_reason": null,
+          "thn": "2025062501MKX0000085",
+          "thn_seen_any": false,
+          "thn_in_window": null,
+          "match_method": null,
+          "match_count": 0,
+          "matched_amount": 0.0,
+          "match_sample": null,
+          "payment_date": null,
+          "days_from_vade": null,
+          "paid_within_window": null,
+          "payment_status": "UNPAID",
+          "possible_offbank_payment": true,
+          "smmm_action": "CHECK_PAYMENT_OR_MATCHING_RULES",
+          "window_lo": "2025-06-18",
+          "window_hi": "2025-07-02"
+        },
+        {
+          "type": "KDV2",
+          "period": "2025-04",
+          "vade": "2025-05-25",
+          "expected_total": 3443.7,
+          "expected_cash": 3000.0,
+          "expected_basis": null,
+          "tol": null,
+          "window_days": 7,
+          "verifiable": true,
+          "verifiable_reason": null,
+          "thn": "2025052601MKX0000274",
+          "thn_seen_any": false,
+          "thn_in_window": null,
+          "match_method": null,
+          "match_count": 0,
+          "matched_amount": 0.0,
+          "match_sample": null,
+          "payment_date": null,
+          "days_from_vade": null,
+          "paid_within_window": null,
+          "payment_status": "UNPAID",
+          "possible_offbank_payment": true,
+          "smmm_action": "CHECK_PAYMENT_OR_MATCHING_RULES",
+          "window_lo": "2025-05-18",
+          "window_hi": "2025-06-01"
+        },
+        {
+          "type": "UNKNOWN",
+          "period": "2025-06",
+          "vade": "2025-07-31",
+          "expected_total": 963.2,
+          "expected_cash": 963.2,
+          "expected_basis": null,
+          "tol": null,
+          "window_days": 10,
+          "verifiable": false,
+          "verifiable_reason": "bank_range_outside_window",
+          "thn": "2025073001MKX0000020",
+          "thn_seen_any": false,
+          "thn_in_window": null,
+          "match_method": null,
+          "match_count": 0,
+          "matched_amount": 0.0,
+          "match_sample": null,
+          "payment_date": null,
+          "days_from_vade": null,
+          "paid_within_window": null,
+          "payment_status": "UNKNOWN",
+          "possible_offbank_payment": true,
+          "smmm_action": "CHECK_BANK_DATA_RANGE",
+          "window_lo": "2025-07-21",
+          "window_hi": "2025-08-10"
+        }
+      ]
+    },
+    "rules": {
+      "period": "2025-Q2",
+      "sector": null,
+      "derived": {
+        "net_sales": 35489985.06,
+        "gross_sales": 11858574.260000002,
+        "gross_margin": 0.2540769319782859,
+        "cash_100": 144526.84,
+        "bank_102": 2204869.74,
+        "equity_5xx": 88578353.68,
+        "total_assets_1_2": 230239785.27000016,
+        "rp_recv": 0.0,
+        "rp_pay": 13037543.72
+      },
+      "risks": [
+        {
+          "code": "R-401A",
+          "title": "Mizan 102 Alt Hesap Var, Banka Ekstresi Yok",
+          "severity": "LOW",
+          "description": "Mizanda görünen bazı 102.xx alt hesaplar için banka ekstresi verisi bulunamadı (eksik ekstre veya banka dışı alt hesap olabilir).",
+          "value_found": {
+            "missing_102": {
+              "102.504": 3431.68
+            },
+            "missing_102_details": [
+              {
+                "account_code": "102.504",
+                "account_name": "HALKBANK 571-14014930 571 ALTIN HS",
+                "amount": 3431.68
+              }
+            ]
+          },
+          "threshold": {
+            "min_abs_balance": 1.0
+          },
+          "evidence": "ledger",
+          "evidence_details": {
+            "note": "Bu durum tek başına 'usulsüzlük' değildir. 102.xx alt hesabın hangi banka/hesap olduğuna göre ekstre yüklenmeli veya alt hesap sınıflaması gözden geçirilmeli.",
+            "enrich_warnings": [],
+            "period": "2025-Q2",
+            "rule_logic": "Mizan 102.xx var AND bankada ilgili dönemde hesap hareketi yok → missing_102",
+            "evidence_pack": {
+              "summary": "102.xx alt hesap var ancak ilgili dönemde banka hareketi/ekstresi bulunamadı (dosya eksikliği veya sınıflama hatası olabilir).",
+              "missing_102_details": [
+                {
+                  "account_code": "102.504",
+                  "account_name": "HALKBANK 571-14014930 571 ALTIN HS",
+                  "amount": 3431.68
+                }
+              ],
+              "recommended_files": [
+                "Banka ekstreleri (CSV/XLSX)",
+                "POS raporu (varsa)",
+                "Bloke/Vadeli hesap ekstreleri (varsa)"
+              ],
+              "checklist": [
+                "İlgili dönem için banka klasöründe ilgili bankaya ait tüm ekstre dosyaları var mı?",
+                "Aynı bankada birden fazla hesap/IBAN var mı (alt hesaplar farklı IBAN’lara bağlı olabilir)?",
+                "Tarih parse/format nedeniyle satırlar ‘dönem dışı’ kalmış olabilir mi (özellikle gün/ay yer değişimi)?",
+                "102.xx alt hesap adı POS/bloke/vadeli gibi ürünleri işaret ediyor mu?",
+                "Eksik ekstre eklendikten sonra: yeniden çalıştır ve R-401A’nın kaybolduğunu doğrula."
+              ]
+            }
+          },
+          "smmm_actions": [
+            "Eksik görünen 102.xx hesabın bankadaki karşılığını (IBAN/hesap no) doğrulayın.",
+            "İlgili döneme ait tüm ekstre dosyalarının sisteme yüklendiğini kontrol edin (CSV/XLSX).",
+            "Hesap vadeli/bloke/POS/teminat vb. bir ürünse hareketlerin farklı raporlarda tutulup tutulmadığını teyit edin (POS raporu, bloke hesap ekstresi, sanal POS).",
+            "Mizan kaydı doğruysa bankadan ilgili döneme ait resmi ekstreyi temin edip sisteme ekleyin ve modeli yeniden çalıştırın."
           ],
           "checklist": [
             "İlgili dönem için banka klasöründe ilgili bankaya ait tüm ekstre dosyaları var mı?",
@@ -2168,208 +3047,374 @@
             "Tarih parse/format nedeniyle satırlar ‘dönem dışı’ kalmış olabilir mi (özellikle gün/ay yer değişimi)?",
             "102.xx alt hesap adı POS/bloke/vadeli gibi ürünleri işaret ediyor mu?",
             "Eksik ekstre eklendikten sonra: yeniden çalıştır ve R-401A’nın kaybolduğunu doğrula."
-          ]
-        }
-      },
-      "actions": null,
-      "checklist": [
-        "İlgili dönem için banka klasöründe ilgili bankaya ait tüm ekstre dosyaları var mı?",
-        "Aynı bankada birden fazla hesap/IBAN var mı (alt hesaplar farklı IBAN’lara bağlı olabilir)?",
-        "Tarih parse/format nedeniyle satırlar ‘dönem dışı’ kalmış olabilir mi (özellikle gün/ay yer değişimi)?",
-        "102.xx alt hesap adı POS/bloke/vadeli gibi ürünleri işaret ediyor mu?",
-        "Eksik ekstre eklendikten sonra: yeniden çalıştır ve R-401A’nın kaybolduğunu doğrula."
-      ]
-    },
-    {
-      "code": "R-501",
-      "severity": "MEDIUM",
-      "title": "KDV Matrahı - Satışlar Uyumsuzluğu",
-      "value_found": {
-        "kdv_matrah_sum": 11303524.559999999,
-        "mizan_sales": 11858574.260000002,
-        "diff": 555049.700000003,
-        "diff_ratio": 0.046805770055531354,
-        "diff_ratio_pct": 4.680577005553135
-      },
-      "evidence_details": {
-        "comparison": "KDV Matrahı (beyanname) ↔ Brüt Satışlar (mizan)",
-        "mizan_sales_accounts": [
-          "600",
-          "601",
-          "602"
-        ],
-        "period": "2025-Q2",
-        "note": "Otomatik mutabakat sinyali; kesin hüküm değildir. Kaynak kayıtlar (yevmiye/fatura) ile doğrulama önerilir.",
-        "enrich_warnings": [],
-        "kdv_matrah_by_month": {
-          "2025-06": 3983434.26,
-          "2025-05": 3668651.42,
-          "2025-04": 3651438.88
-        },
-        "kdv_matrah_sum_check": {
-          "sum_of_months": 11303524.559999999,
-          "delta_vs_kdv_matrah_sum": 0.0
-        },
-        "edefter_sales_evidence": {
-          "sales_accounts": [
-            "600",
-            "601",
-            "602"
           ],
-          "discount_accounts": [
-            "610",
-            "611",
-            "612"
-          ],
-          "per_month_sales_600_601_602": {
-            "2025-04": 4144060.4799999967,
-            "2025-05": 4041688.989999998,
-            "2025-06": 3672824.7899999996
-          },
-          "per_month_discounts_610_611_612": {
-            "2025-04": 8593.380000000001,
-            "2025-05": 6612.12,
-            "2025-06": 13373.74
-          },
-          "per_month_net_sales": {
-            "2025-04": 4135467.099999997,
-            "2025-05": 4035076.869999998,
-            "2025-06": 3659451.0499999993
-          },
-          "totals": {
-            "sales_total_600_601_602": 11858574.259999994,
-            "discount_total_610_611_612": 28579.24,
-            "net_sales_total": 11829995.019999994
-          }
-        },
-        "audit_pack": {
-          "period": "2025-Q2",
-          "month_table": [
+          "kurgan_criteria_signals": [
             {
-              "month": "2025-04",
-              "kdv_matrah": 3651438.88,
-              "edefter_net_sales": 4135467.099999997,
-              "delta_net_minus_kdv": 484028.21999999695,
-              "ratio_net_over_kdv": 1.1325582149686693
-            },
-            {
-              "month": "2025-05",
-              "kdv_matrah": 3668651.42,
-              "edefter_net_sales": 4035076.869999998,
-              "delta_net_minus_kdv": 366425.44999999786,
-              "ratio_net_over_kdv": 1.0998801488749776
-            },
-            {
-              "month": "2025-06",
-              "kdv_matrah": 3983434.26,
-              "edefter_net_sales": 3659451.0499999993,
-              "delta_net_minus_kdv": -323983.2100000004,
-              "ratio_net_over_kdv": 0.9186673636732741
+              "code": "KRG-11",
+              "status": "WARN",
+              "score": 55,
+              "weight": 0.14,
+              "rationale_tr": "Ödeme/finansal hareket kanıtı için ilgili dönem banka hareketlerinin kapsamı eksik veya eşleştirme için yetersiz.",
+              "evidence_refs": [],
+              "missing_refs": [
+                {
+                  "code": "BANK_STATEMENT",
+                  "title_tr": "İlgili 102 alt hesabı için banka ekstresi",
+                  "severity": "MEDIUM",
+                  "how_to_fix_tr": "Seçili çeyreği (Q) kapsayan banka hareket dökümünü ekleyin; Q dışındaki satırlar otomatik filtrelenir."
+                }
+              ]
             }
           ],
-          "worst_month": "2025-04",
-          "worst_month_details": {
-            "month": "2025-04",
-            "kdv_matrah": 3651438.88,
-            "edefter_net_sales": 4135467.099999997,
-            "delta_net_minus_kdv": 484028.21999999695,
-            "ratio_net_over_kdv": 1.1325582149686693
-          },
-          "samples_counts": {
-            "sales": 30,
-            "kdv": 30
-          },
-          "scale_flag": null,
-          "scale_stats": {
-            "ratio_min": 0.9186673636732741,
-            "ratio_median": 1.0998801488749776,
-            "ratio_max": 1.1325582149686693
-          },
-          "note": "Ay bazında e-defter net satış ↔ KDV matrah farkı; delil seçimi ve kök neden analizi için yön verir."
+          "rule_id": "R-401A"
         },
-        "audit_dossier": {
-          "version": "VDK-AUDITDOSSIER/1.0",
-          "period": "2025-Q2",
-          "risk_code": "R-501",
+        {
+          "code": "R-501",
           "title": "KDV Matrahı - Satışlar Uyumsuzluğu",
           "severity": "MEDIUM",
-          "headline": "KDV matrahı ile satışlar (e-defter net satış referansı) arasında ay bazında mutabakat analizi.",
-          "evidence_pack": {
-            "samples_counts": {
-              "sales": 30,
-              "kdv": 30
+          "description": "Beyanname KDV matrahı ile 600/601/602 satışları arasında sapma var.",
+          "value_found": {
+            "kdv_matrah_sum": 11303524.559999999,
+            "mizan_sales": 11858574.260000002,
+            "diff": 555049.700000003,
+            "diff_ratio": 0.046805770055531354,
+            "diff_ratio_pct": 4.680577005553135
+          },
+          "threshold": {
+            "rel_tolerance": 0.02,
+            "severity_high_rel": 0.1
+          },
+          "evidence": "declaration+ledger",
+          "evidence_details": {
+            "comparison": "KDV Matrahı (beyanname) ↔ Brüt Satışlar (mizan)",
+            "mizan_sales_accounts": [
+              "600",
+              "601",
+              "602"
+            ],
+            "period": "2025-Q2",
+            "note": "Otomatik mutabakat sinyali; kesin hüküm değildir. Kaynak kayıtlar (yevmiye/fatura) ile doğrulama önerilir.",
+            "enrich_warnings": [],
+            "kdv_matrah_by_month": {
+              "2025-06": 3983434.26,
+              "2025-05": 3668651.42,
+              "2025-04": 3651438.88
             },
-            "worst_month": "2025-04",
-            "month_table": [
-              {
+            "kdv_matrah_sum_check": {
+              "sum_of_months": 11303524.559999999,
+              "delta_vs_kdv_matrah_sum": 0.0
+            },
+            "edefter_sales_evidence": {
+              "sales_accounts": [
+                "600",
+                "601",
+                "602"
+              ],
+              "discount_accounts": [
+                "610",
+                "611",
+                "612"
+              ],
+              "per_month_sales_600_601_602": {
+                "2025-04": 4144060.4799999967,
+                "2025-05": 4041688.989999998,
+                "2025-06": 3672824.7899999996
+              },
+              "per_month_discounts_610_611_612": {
+                "2025-04": 8593.380000000001,
+                "2025-05": 6612.12,
+                "2025-06": 13373.74
+              },
+              "per_month_net_sales": {
+                "2025-04": 4135467.099999997,
+                "2025-05": 4035076.869999998,
+                "2025-06": 3659451.0499999993
+              },
+              "totals": {
+                "sales_total_600_601_602": 11858574.259999994,
+                "discount_total_610_611_612": 28579.24,
+                "net_sales_total": 11829995.019999994
+              }
+            },
+            "audit_pack": {
+              "period": "2025-Q2",
+              "month_table": [
+                {
+                  "month": "2025-04",
+                  "kdv_matrah": 3651438.88,
+                  "edefter_net_sales": 4135467.099999997,
+                  "delta_net_minus_kdv": 484028.21999999695,
+                  "ratio_net_over_kdv": 1.1325582149686693
+                },
+                {
+                  "month": "2025-05",
+                  "kdv_matrah": 3668651.42,
+                  "edefter_net_sales": 4035076.869999998,
+                  "delta_net_minus_kdv": 366425.44999999786,
+                  "ratio_net_over_kdv": 1.0998801488749776
+                },
+                {
+                  "month": "2025-06",
+                  "kdv_matrah": 3983434.26,
+                  "edefter_net_sales": 3659451.0499999993,
+                  "delta_net_minus_kdv": -323983.2100000004,
+                  "ratio_net_over_kdv": 0.9186673636732741
+                }
+              ],
+              "worst_month": "2025-04",
+              "worst_month_details": {
                 "month": "2025-04",
                 "kdv_matrah": 3651438.88,
                 "edefter_net_sales": 4135467.099999997,
                 "delta_net_minus_kdv": 484028.21999999695,
                 "ratio_net_over_kdv": 1.1325582149686693
               },
-              {
-                "month": "2025-05",
-                "kdv_matrah": 3668651.42,
-                "edefter_net_sales": 4035076.869999998,
-                "delta_net_minus_kdv": 366425.44999999786,
-                "ratio_net_over_kdv": 1.0998801488749776
+              "samples_counts": {
+                "sales": 30,
+                "kdv": 30
               },
-              {
-                "month": "2025-06",
-                "kdv_matrah": 3983434.26,
-                "edefter_net_sales": 3659451.0499999993,
-                "delta_net_minus_kdv": -323983.2100000004,
-                "ratio_net_over_kdv": 0.9186673636732741
-              }
-            ],
-            "scale_flag": null,
-            "scale_stats": {
-              "ratio_min": 0.9186673636732741,
-              "ratio_median": 1.0998801488749776,
-              "ratio_max": 1.1325582149686693
-            }
-          },
-          "samples_counts": {
-            "sales": 30,
-            "kdv": 30
-          },
-          "worst_month": "2025-04",
-          "month_table": [
-            {
-              "month": "2025-04",
-              "kdv_matrah": 3651438.88,
-              "edefter_net_sales": 4135467.099999997,
-              "delta_net_minus_kdv": 484028.21999999695,
-              "ratio_net_over_kdv": 1.1325582149686693
+              "scale_flag": null,
+              "scale_stats": {
+                "ratio_min": 0.9186673636732741,
+                "ratio_median": 1.0998801488749776,
+                "ratio_max": 1.1325582149686693
+              },
+              "note": "Ay bazında e-defter net satış ↔ KDV matrah farkı; delil seçimi ve kök neden analizi için yön verir."
             },
-            {
-              "month": "2025-05",
-              "kdv_matrah": 3668651.42,
-              "edefter_net_sales": 4035076.869999998,
-              "delta_net_minus_kdv": 366425.44999999786,
-              "ratio_net_over_kdv": 1.0998801488749776
+            "audit_dossier": {
+              "version": "VDK-AUDITDOSSIER/1.0",
+              "period": "2025-Q2",
+              "risk_code": "R-501",
+              "title": "KDV Matrahı - Satışlar Uyumsuzluğu",
+              "severity": "MEDIUM",
+              "headline": "KDV matrahı ile satışlar (e-defter net satış referansı) arasında ay bazında mutabakat analizi.",
+              "evidence_pack": {
+                "samples_counts": {
+                  "sales": 30,
+                  "kdv": 30
+                },
+                "worst_month": "2025-04",
+                "month_table": [
+                  {
+                    "month": "2025-04",
+                    "kdv_matrah": 3651438.88,
+                    "edefter_net_sales": 4135467.099999997,
+                    "delta_net_minus_kdv": 484028.21999999695,
+                    "ratio_net_over_kdv": 1.1325582149686693
+                  },
+                  {
+                    "month": "2025-05",
+                    "kdv_matrah": 3668651.42,
+                    "edefter_net_sales": 4035076.869999998,
+                    "delta_net_minus_kdv": 366425.44999999786,
+                    "ratio_net_over_kdv": 1.0998801488749776
+                  },
+                  {
+                    "month": "2025-06",
+                    "kdv_matrah": 3983434.26,
+                    "edefter_net_sales": 3659451.0499999993,
+                    "delta_net_minus_kdv": -323983.2100000004,
+                    "ratio_net_over_kdv": 0.9186673636732741
+                  }
+                ],
+                "scale_flag": null,
+                "scale_stats": {
+                  "ratio_min": 0.9186673636732741,
+                  "ratio_median": 1.0998801488749776,
+                  "ratio_max": 1.1325582149686693
+                }
+              },
+              "samples_counts": {
+                "sales": 30,
+                "kdv": 30
+              },
+              "worst_month": "2025-04",
+              "month_table": [
+                {
+                  "month": "2025-04",
+                  "kdv_matrah": 3651438.88,
+                  "edefter_net_sales": 4135467.099999997,
+                  "delta_net_minus_kdv": 484028.21999999695,
+                  "ratio_net_over_kdv": 1.1325582149686693
+                },
+                {
+                  "month": "2025-05",
+                  "kdv_matrah": 3668651.42,
+                  "edefter_net_sales": 4035076.869999998,
+                  "delta_net_minus_kdv": 366425.44999999786,
+                  "ratio_net_over_kdv": 1.0998801488749776
+                },
+                {
+                  "month": "2025-06",
+                  "kdv_matrah": 3983434.26,
+                  "edefter_net_sales": 3659451.0499999993,
+                  "delta_net_minus_kdv": -323983.2100000004,
+                  "ratio_net_over_kdv": 0.9186673636732741
+                }
+              ],
+              "reconciliation_plan": [
+                "KDV matrahının toplandığı beyan dönemlerini doğrula (örn. 2025-04/05/06).",
+                "Satışları brüt→net etkileyen 610/611/612 (iskonto/iade) kayıtlarını kontrol et.",
+                "İstisna/tevkifat satışlarını beyanname kırılımlarıyla karşılaştır.",
+                "Dönem kayması ve yanlış hesap sınıflaması ihtimalini ay bazında test et.",
+                "En kötü ay için 5–10 yevmiye fişi/fatura örneğini delil olarak seç ve doğrula."
+              ]
             },
+            "severity_policy_applied": true
+          },
+          "derived": {
+            "diff_amount": 555049.700000003,
+            "diff_ratio": 0.046805770055531354,
+            "diff_ratio_pct": 4.680577005553135
+          },
+          "kurgan_criteria_signals": [
             {
-              "month": "2025-06",
-              "kdv_matrah": 3983434.26,
-              "edefter_net_sales": 3659451.0499999993,
-              "delta_net_minus_kdv": -323983.2100000004,
-              "ratio_net_over_kdv": 0.9186673636732741
+              "code": "KRG-02",
+              "status": "WARN",
+              "score": 60,
+              "weight": 0.08,
+              "rationale_tr": "Oranlama/tutarlılık açısından (matrah-KDV-satış) çeyrek içinde anlamlı sapma olabilir; detay eşleştirme ile doğrulayın.",
+              "evidence_refs": [],
+              "missing_refs": []
             }
           ],
-          "reconciliation_plan": [
-            "KDV matrahının toplandığı beyan dönemlerini doğrula (örn. 2025-04/05/06).",
-            "Satışları brüt→net etkileyen 610/611/612 (iskonto/iade) kayıtlarını kontrol et.",
-            "İstisna/tevkifat satışlarını beyanname kırılımlarıyla karşılaştır.",
-            "Dönem kayması ve yanlış hesap sınıflaması ihtimalini ay bazında test et.",
-            "En kötü ay için 5–10 yevmiye fişi/fatura örneğini delil olarak seç ve doğrula."
-          ]
-        },
-        "severity_policy_applied": true
+          "rule_id": "R-501"
+        }
+      ],
+      "risk_count": 2,
+      "severity_counts": {
+        "LOW": 1,
+        "MEDIUM": 1
       },
-      "actions": null,
-      "checklist": null
+      "config_snapshot": {
+        "thresholds": {
+          "cash_to_sales": 0.05,
+          "cash_to_assets": 0.1,
+          "bank_min_balance_when_sales_gt": {
+            "sales": 1000000.0,
+            "bank_min": 5000.0
+          },
+          "related_party_receivable_to_equity": 0.1,
+          "thin_cap_debt_to_equity": 3.0,
+          "opex_7xx_to_sales": 0.8,
+          "recon_bank_vs_mizan": 0.1,
+          "tolerance_beyan_mizan": 0.02
+        },
+        "benchmarks": {
+          "safe_gross_margin_by_sector": {
+            "imalat": 0.07,
+            "hizmet": 0.15
+          },
+          "default_gross_margin": 0.03
+        }
+      },
+      "enriched": true
+    },
+    "rules_summary": {
+      "period": "2025-Q2",
+      "sector": null,
+      "risk_count": 2,
+      "severity_counts": {
+        "LOW": 1,
+        "MEDIUM": 1
+      },
+      "top_risks": [
+        {
+          "code": "R-401A",
+          "title": "Mizan 102 Alt Hesap Var, Banka Ekstresi Yok",
+          "severity": "LOW",
+          "value_found": {
+            "missing_102": {
+              "102.504": 3431.68
+            },
+            "missing_102_details": [
+              {
+                "account_code": "102.504",
+                "account_name": "HALKBANK 571-14014930 571 ALTIN HS",
+                "amount": 3431.68
+              }
+            ]
+          },
+          "threshold": {
+            "min_abs_balance": 1.0
+          },
+          "evidence": "ledger",
+          "description": "Mizanda görünen bazı 102.xx alt hesaplar için banka ekstresi verisi bulunamadı (eksik ekstre veya banka dışı alt hesap olabilir).",
+          "recommended_action": "Mizan–beyan mutabakatını belge bazında kontrol edin; ilgili hesaplar (600/601/602/391/191 vb.) ve dönem kırılımını doğrulayın; gerekiyorsa tahakkuk/beyan düzeltmesini değerlendirin."
+        },
+        {
+          "code": "R-501",
+          "title": "KDV Matrahı - Satışlar Uyumsuzluğu",
+          "severity": "MEDIUM",
+          "value_found": {
+            "kdv_matrah_sum": 11303524.559999999,
+            "mizan_sales": 11858574.260000002,
+            "diff": 555049.700000003,
+            "diff_ratio": 0.046805770055531354,
+            "diff_ratio_pct": 4.680577005553135
+          },
+          "threshold": {
+            "rel_tolerance": 0.02,
+            "severity_high_rel": 0.1
+          },
+          "evidence": "declaration+ledger",
+          "description": "Beyanname KDV matrahı ile 600/601/602 satışları arasında sapma var.",
+          "recommended_action": "Mizan–beyan mutabakatını belge bazında kontrol edin; ilgili hesaplar (600/601/602/391/191 vb.) ve dönem kırılımını doğrulayın; gerekiyorsa tahakkuk/beyan düzeltmesini değerlendirin."
+        }
+      ]
+    }
+  },
+  "scores": {
+    "kurgan_risk": 31.75,
+    "tax_compliance": 80.0,
+    "smiyb_risk": 25.0,
+    "radar_risk": 50.0,
+    "edefter_risk": 40.0,
+    "inflation_risk": 35.0
+  },
+  "risks": [
+    {
+      "code": "R-401A",
+      "severity": "LOW",
+      "score": null,
+      "title_tr": "Mizan 102 Alt Hesap Var, Banka Ekstresi Yok",
+      "summary_tr": null,
+      "kurgan_criteria_signals": [
+        {
+          "code": "KRG-11",
+          "status": "WARN",
+          "score": 55,
+          "weight": 0.14,
+          "rationale_tr": "Ödeme/finansal hareket kanıtı için ilgili dönem banka hareketlerinin kapsamı eksik veya eşleştirme için yetersiz.",
+          "evidence_refs": [],
+          "missing_refs": [
+            {
+              "code": "BANK_STATEMENT",
+              "title_tr": "İlgili 102 alt hesabı için banka ekstresi",
+              "severity": "MEDIUM",
+              "how_to_fix_tr": "Seçili çeyreği (Q) kapsayan banka hareket dökümünü ekleyin; Q dışındaki satırlar otomatik filtrelenir."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "R-501",
+      "severity": "MEDIUM",
+      "score": null,
+      "title_tr": "KDV Matrahı - Satışlar Uyumsuzluğu",
+      "summary_tr": null,
+      "kurgan_criteria_signals": [
+        {
+          "code": "KRG-02",
+          "status": "WARN",
+          "score": 60,
+          "weight": 0.08,
+          "rationale_tr": "Oranlama/tutarlılık açısından (matrah-KDV-satış) çeyrek içinde anlamlı sapma olabilir; detay eşleştirme ile doğrulayın.",
+          "evidence_refs": [],
+          "missing_refs": []
+        }
+      ]
     }
   ]
 }

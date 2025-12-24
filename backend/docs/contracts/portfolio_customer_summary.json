@@ -1,25 +1,71 @@
 {
-  "client_id": "OZKAN_KIRTASIYE",
-  "client_title": "OZKAN_KIRTASIYE",
-  "period": "2025-Q2",
-  "score": null,
-  "risk_count": 2,
-  "critical_risks": [
+  "kind": "portfolio_customer_summary",
+  "period_window": {
+    "period": "2025-Q2",
+    "start_date": "2025-04-01",
+    "end_date": "2025-06-30"
+  },
+  "data_quality": {
+    "bank_rows_total": 5441,
+    "bank_rows_in_period": 2649,
+    "bank_rows_out_of_period": 2792,
+    "sources_present": [
+      "MIZAN",
+      "EDEFTER",
+      "BANK"
+    ],
+    "warnings": [
+      "Banka verilerinde seçili çeyrek dışı satırlar bulundu; metriklere dahil edilmedi.",
+      "Çeyrek dışı satır içeren banka dosyaları tespit edildi (örnek): ['102.01 YKB 7. AY.csv', '102.01 YKB 8. AY.csv', '102.01 YKB 9. AY.csv']"
+    ]
+  },
+  "warnings": [
+    "Banka verilerinde seçili çeyrek dışı satırlar bulundu; metriklere dahil edilmedi.",
+    "Çeyrek dışı satır içeren banka dosyaları tespit edildi (örnek): ['102.01 YKB 7. AY.csv', '102.01 YKB 8. AY.csv', '102.01 YKB 9. AY.csv']"
+  ],
+  "risks": [
     {
       "code": "R-401A",
       "severity": "LOW",
-      "title": "Mizan 102 Alt Hesap Var, Banka Ekstresi Yok"
+      "score": null,
+      "title_tr": "Mizan 102 Alt Hesap Var, Banka Ekstresi Yok",
+      "summary_tr": null,
+      "kurgan_criteria_signals": [
+        {
+          "code": "KRG-11",
+          "status": "WARN",
+          "score": 55,
+          "weight": 0.14,
+          "rationale_tr": "Ödeme/finansal hareket kanıtı için ilgili dönem banka hareketlerinin kapsamı eksik veya eşleştirme için yetersiz.",
+          "evidence_refs": [],
+          "missing_refs": [
+            {
+              "code": "BANK_STATEMENT",
+              "title_tr": "İlgili 102 alt hesabı için banka ekstresi",
+              "severity": "MEDIUM",
+              "how_to_fix_tr": "Seçili çeyreği (Q) kapsayan banka hareket dökümünü ekleyin; Q dışındaki satırlar otomatik filtrelenir."
+            }
+          ]
+        }
+      ]
     },
     {
       "code": "R-501",
       "severity": "MEDIUM",
-      "title": "KDV Matrahı - Satışlar Uyumsuzluğu"
+      "score": null,
+      "title_tr": "KDV Matrahı - Satışlar Uyumsuzluğu",
+      "summary_tr": null,
+      "kurgan_criteria_signals": [
+        {
+          "code": "KRG-02",
+          "status": "WARN",
+          "score": 60,
+          "weight": 0.08,
+          "rationale_tr": "Oranlama/tutarlılık açısından (matrah-KDV-satış) çeyrek içinde anlamlı sapma olabilir; detay eşleştirme ile doğrulayın.",
+          "evidence_refs": [],
+          "missing_refs": []
+        }
+      ]
     }
-  ],
-  "data_coverage": {
-    "has_banka": true,
-    "has_edefter": true,
-    "has_beyanname": true,
-    "has_mizan": true
-  }
+  ]
 }
