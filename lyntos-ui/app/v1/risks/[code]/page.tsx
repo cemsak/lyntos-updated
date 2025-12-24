@@ -1,26 +1,44 @@
-import RiskDetailClient from "@/components/v1/RiskDetailClient";
+import RiskDetailClient from "../../_components/RiskDetailClient";
 
-type SP = Record<string, string | string[] | undefined>;
+export const dynamic = "force-dynamic";
 
-function pick(sp: SP, key: string): string | undefined {
+type SearchParams = Record<string, string | string[] | undefined>;
+
+function pick(sp: SearchParams, key: string, fallback: string): string {
   const v = sp?.[key];
-  return Array.isArray(v) ? v[0] : v;
+  if (Array.isArray(v)) return v[0] || fallback;
+  return (v as string) || fallback;
 }
 
-export default async function Page({
+export default async function RiskPage({
   params,
   searchParams,
 }: {
   params: Promise<{ code: string }>;
-  searchParams?: Promise<SP> | SP;
+  searchParams?: Promise<SearchParams>;
 }) {
-  const { code } = await params;
+  const p = await params;
+  const sp = (await searchParams) || {};
 
-  const sp: SP = (await Promise.resolve(searchParams ?? {})) as SP;
+  const code = p.code;
 
-  const smmm = pick(sp, "smmm");
-  const client = pick(sp, "client");
-  const period = pick(sp, "period");
+  const smmm = pick(sp, "smmm", "HKOZKAN");
+  const client = pick(sp, "client", "OZKAN_KIRTASIYE");
+  const period = pick(sp, "period", "2025-Q2");
 
-  return <RiskDetailClient code={code} smmm={smmm} client={client} period={period} />;
+  return (
+    <div className="mx-auto max-w-6xl p-4">
+      <div className="mb-4">
+        <a
+          className="text-sm underline"
+          href={`/v1?smmm=${encodeURIComponent(smmm)}&client=${encodeURIComponent(
+            client
+          )}&period=${encodeURIComponent(period)}`}
+        >
+          ← /v1 Dashboard
+        </a>
+      </div>
+      <RiskDetailClient code={code} smmm={smmm} client={client} period={period} />
+    </div>
+  );
 }
