@@ -158,6 +158,318 @@ def dossier_pdf_head(client: str | None = None, period: str | None = None):
 # --- Sprint-4: Axis contracts (stub) ---
 from fastapi import HTTPException, Query
 from typing import Optional, List, Dict, Any
+def _axisd_find_mizan_csv(base_dir: str, smmm_id: str, client_id: str, period: str):
+    cand = [
+        os.path.join(base_dir, "data", "luca", smmm_id, client_id, period, "_raw", "mizan_base.csv"),
+        os.path.join(base_dir, "data", "luca", smmm_id, client_id, period, "_raw", "mizan_cum.csv"),
+        os.path.join(base_dir, "data", "luca", smmm_id, client_id, period, "mizan.csv"),
+    ]
+    for fp in cand:
+        try:
+            if os.path.exists(fp) and os.path.getsize(fp) > 0:
+                return fp
+        except Exception:
+            pass
+    return None
+
+
+
+
+# --- AXIS D (v54) mizan-only contract builder (stable) ---
+import csv
+from typing import Any, Dict, List, Optional, Tuple
+
+def _axisd_parse_float(x: Any) -> Optional[float]:
+    if x is None:
+        return None
+    s = str(x).strip()
+    if not s:
+        return None
+    # Turkish number formats: "1.234.567,89" and "1,234,567.89"
+    s = s.replace("\u00a0", " ").replace(" ", "")
+    # If comma is decimal separator (more common in TR)
+    if s.count(",") == 1 and (s.count(".") >= 1):
+        # assume "." are thousands separators
+        s = s.replace(".", "").replace(",", ".")
+    elif s.count(",") == 1 and s.count(".") == 0:
+        s = s.replace(",", ".")
+    else:
+        # already dot-decimal or integer; remove thousands commas
+        if s.count(".") == 1 and s.count(",") >= 1:
+            s = s.replace(",", "")
+    try:
+        return float(s)
+    except Exception:
+        return None
+
+def _axisd_read_mizan_rows(csv_path: Path) -> List[Dict[str, Any]]:
+    raw = csv_path.read_text(encoding="utf-8", errors="replace")
+    sample = raw[:4096]
+    # delimiter sniff
+    delim = ";"
+    try:
+        dialect = csv.Sniffer().sniff(sample, delimiters=";,\t|")
+        delim = dialect.delimiter
+    except Exception:
+        pass
+
+    reader = csv.DictReader(raw.splitlines(), delimiter=delim)
+    if not reader.fieldnames:
+        return []
+
+    # normalize headers
+    def norm(h: str) -> str:
+        return (h or "").strip().lower().replace("\ufeff", "")
+
+    headers = {norm(h): h for h in reader.fieldnames}
+
+    def pick(*cands: str) -> Optional[str]:
+        for c in cands:
+            for nh, orig_h in headers.items():
+                if c in nh:
+                    return orig_h
+        return None
+
+    col_code = pick("hesap kod", "account code", "hesap_kod", "kod")
+    col_name = pick("hesap ad", "account name", "ad", "name")
+    col_debit = pick("borc", "debit")
+    col_credit = pick("alacak", "credit")
+    col_net = pick("bakiye", "net", "balance")
+
+    rows: List[Dict[str, Any]] = []
+    for r in reader:
+        code = (r.get(col_code) if col_code else None) or ""
+        code = str(code).strip()
+        if not code:
+            continue
+
+        name = (r.get(col_name) if col_name else "") or ""
+        name = str(name).strip()
+
+        net_v = _axisd_parse_float(r.get(col_net)) if col_net else None
+        if net_v is None:
+            d = _axisd_parse_float(r.get(col_debit)) if col_debit else None
+            c = _axisd_parse_float(r.get(col_credit)) if col_credit else None
+            d = d or 0.0
+            c = c or 0.0
+            net_v = d - c
+
+        rows.append({"account_code": code, "account_name": name, "net": float(net_v)})
+
+    return rows
+
+def _axisd_sum_prefix(rows: List[Dict[str, Any]], prefixes: List[str]) -> float:
+    total = 0.0
+    for r in rows:
+        code = str(r.get("account_code") or "")
+        if any(code.startswith(p) for p in prefixes):
+            total += float(r.get("net") or 0.0)
+    return total
+
+def _axisd_top_accounts(rows: List[Dict[str, Any]], prefixes: List[str], n: int = 8) -> List[Dict[str, Any]]:
+    bucket = []
+    for r in rows:
+        code = str(r.get("account_code") or "")
+        if any(code.startswith(p) for p in prefixes):
+            bucket.append(r)
+    bucket.sort(key=lambda x: abs(float(x.get("net") or 0.0)), reverse=True)
+    out = []
+    for r in bucket[:n]:
+        out.append({
+            "account_code": r.get("account_code"),
+            "account_name": r.get("account_name"),
+            "net": float(r.get("net") or 0.0),
+        })
+    return out
+
+def _axisd_prev_quarter(period: str) -> Optional[str]:
+    # expects "YYYY-Qn"
+    try:
+        y_s, q_s = period.split("-Q")
+        y = int(y_s)
+        q = int(q_s)
+        if q in (2, 3, 4):
+            return f"{y}-Q{q-1}"
+        if q == 1:
+            return f"{y-1}-Q4"
+        return None
+    except Exception:
+        return None
+
+def _axisd_find_mizan_path(base_dir: Path, smmm_id: str, client_id: str, period: str) -> Optional[Path]:
+    fp = _axisd_find_mizan_csv(base_dir, smmm_id, client_id, period)
+    if fp:
+        return Path(fp)
+    return None
+
+def _axisd_kpi_delta(cur: Optional[float], prev: Optional[float]) -> Tuple[Optional[float], Optional[float]]:
+    if cur is None or prev is None:
+        return None, None
+    delta = cur - prev
+    if abs(prev) < 1e-12:
+        return delta, None
+    return delta, delta / abs(prev)
+
+def build_axis_d_contract_mizan_only(base_dir: Path, smmm_id: str, client_id: str, period: str) -> Dict[str, Any]:
+    cur_fp = _axisd_find_mizan_path(base_dir, smmm_id, client_id, period)
+    if not cur_fp or not cur_fp.exists():
+        raise FileNotFoundError(f"Mizan dosyası bulunamadı: data/luca/{smmm_id}/{client_id}/{period}")
+
+    cur_rows = _axisd_read_mizan_rows(cur_fp)
+
+    cash_bank = _axisd_sum_prefix(cur_rows, ["100", "102"])
+    total_current_assets = _axisd_sum_prefix(cur_rows, ["1"])
+    short_term_liabilities = abs(_axisd_sum_prefix(cur_rows, ["3"]))
+    equity_total = _axisd_sum_prefix(cur_rows, ["5"])
+
+    # balance gap: (Assets total) - (Liabilities+Equity)
+    assets_total = _axisd_sum_prefix(cur_rows, ["1", "2"])
+    liabilities_total = abs(_axisd_sum_prefix(cur_rows, ["3", "4"]))
+    balance_gap = abs(assets_total - (liabilities_total + equity_total))
+
+    liquidity_ratio = (total_current_assets / short_term_liabilities) if short_term_liabilities > 1e-12 else None
+
+    # prev
+    prev_p = _axisd_prev_quarter(period)
+    prev_available = False
+    reason_tr: Optional[str] = None
+    prev_vals: Dict[str, Optional[float]] = {
+        "cash_bank": None,
+        "total_current_assets": None,
+        "short_term_liabilities": None,
+        "liquidity_ratio": None,
+        "equity_total": None,
+        "balance_gap": None,
+    }
+
+    if prev_p:
+        prev_fp = _axisd_find_mizan_path(base_dir, smmm_id, client_id, prev_p)
+        if prev_fp and prev_fp.exists():
+            prev_rows = _axisd_read_mizan_rows(prev_fp)
+            prev_available = True
+            prev_cash_bank = _axisd_sum_prefix(prev_rows, ["100", "102"])
+            prev_tca = _axisd_sum_prefix(prev_rows, ["1"])
+            prev_stl = abs(_axisd_sum_prefix(prev_rows, ["3"]))
+            prev_eq = _axisd_sum_prefix(prev_rows, ["5"])
+            prev_assets_total = _axisd_sum_prefix(prev_rows, ["1", "2"])
+            prev_liab_total = abs(_axisd_sum_prefix(prev_rows, ["3", "4"]))
+            prev_gap = abs(prev_assets_total - (prev_liab_total + prev_eq))
+            prev_lr = (prev_tca / prev_stl) if prev_stl > 1e-12 else None
+
+            prev_vals.update({
+                "cash_bank": prev_cash_bank,
+                "total_current_assets": prev_tca,
+                "short_term_liabilities": prev_stl,
+                "liquidity_ratio": prev_lr,
+                "equity_total": prev_eq,
+                "balance_gap": prev_gap,
+            })
+        else:
+            reason_tr = f"Önceki çeyrek mizan bulunamadı: {prev_p}"
+    else:
+        reason_tr = "Önceki çeyrek hesaplanamadı (period formatı beklenen değil)."
+
+    def kpi(key: str, title: str, cur: Optional[float], prev: Optional[float], kind: str) -> Dict[str, Any]:
+        d, dp = _axisd_kpi_delta(cur, prev)
+        return {
+            "key": key,
+            "title_tr": title,
+            "current": cur,
+            "prev": prev,
+            "delta": d,
+            "delta_pct": dp,
+            "kind": kind,
+        }
+
+    trend = {
+        "mode": "QOQ",
+        "current_period": period,
+        "prev_period": prev_p,
+        "prev_available": prev_available,
+        "reason_tr": (None if prev_available else (reason_tr or "Önceki çeyrek verisi bulunamadı.")),
+        "kpis": [
+            kpi("cash_bank", "Kasa+Banka (Net)", cash_bank, prev_vals["cash_bank"], "amount"),
+            kpi("total_current_assets", "Dönen Varlık (Toplam)", total_current_assets, prev_vals["total_current_assets"], "amount"),
+            kpi("short_term_liabilities", "Kısa Vadeli Borç", short_term_liabilities, prev_vals["short_term_liabilities"], "amount"),
+            kpi("liquidity_ratio", "Likidite Oranı (Dönen/KV)", liquidity_ratio, prev_vals["liquidity_ratio"], "ratio"),
+            kpi("equity_total", "Özkaynak", equity_total, prev_vals["equity_total"], "amount"),
+            kpi("balance_gap", "Bilanço Denge Farkı (Δ)", balance_gap, prev_vals["balance_gap"], "amount"),
+        ],
+    }
+
+    # flags
+    tol = max(10000.0, abs(assets_total) * 0.002)
+    notes_lines = [
+        "Tutarlılık / Radar Bayrakları:",
+        f"- Bilanço denge farkı yüksek: Δ={balance_gap:,.2f} TL (tolerans ~{tol:,.2f} TL)",
+        f"- Özkaynak negatif görünüyor: {equity_total:,.2f} TL" if equity_total < 0 else f"- Özkaynak: {equity_total:,.2f} TL",
+        f"Özet: Dönen varlık={total_current_assets:,.2f} TL, KV borç={short_term_liabilities:,.2f} TL",
+        f"Likidite oranı (dönen/KV) ≈ {liquidity_ratio:.2f}" if liquidity_ratio is not None else "Likidite oranı (dönen/KV) ≈ N/A",
+        f"Trend notu: {trend.get('reason_tr')}" if not prev_available else "Trend notu: Önceki çeyrek verisi okundu.",
+    ]
+
+    items = [
+        {
+            "id": "D-100",
+            "account_prefix": "100",
+            "title_tr": "Kasa (100)",
+            "severity": "MEDIUM",
+            "finding_tr": f"Kasa mutlak toplam (mizan net): {abs(_axisd_sum_prefix(cur_rows, ['100'])):,.2f} TL",
+            "top_accounts": _axisd_top_accounts(cur_rows, ["100"], 10),
+            "required_docs": [{"code": "CASH_COUNT", "title_tr": "Kasa sayım tutanağı (aylık/çeyreklik)"}],
+            "actions_tr": ["Kasa sayımını dosyala.", "Kasa hareketlerini belge ile bağla."],
+        },
+        {
+            "id": "D-102",
+            "account_prefix": "102",
+            "title_tr": "Bankalar (102)",
+            "severity": "LOW",
+            "finding_tr": f"Banka mutlak toplam (mizan net): {abs(_axisd_sum_prefix(cur_rows, ['102'])):,.2f} TL",
+            "top_accounts": _axisd_top_accounts(cur_rows, ["102"], 12),
+            "required_docs": [{"code": "BANK_STMT", "title_tr": "Banka hesap ekstreleri (aylık)"}],
+            "actions_tr": ["Banka ekstrelerini dönem bazında arşivle.", "102 alt hesapları banka bazında doğrula."],
+        },
+        {
+            "id": "D-131-331",
+            "account_prefix": "131/331",
+            "title_tr": "Ortaklar Cari (131/331 vb.)",
+            "severity": "LOW",
+            "finding_tr": f"Ortaklar cari mutlak toplam (mizan net): {abs(_axisd_sum_prefix(cur_rows, ['131','331'])):,.2f} TL",
+            "top_accounts": _axisd_top_accounts(cur_rows, ["131","331"], 12),
+            "required_docs": [{"code": "PARTNER_LEDGER", "title_tr": "Ortaklar cari mutabakat/ekstre"}],
+            "actions_tr": ["Ortak hesap hareketlerini mutabakatla bağla.", "Varsa borç-alacak ilişkisini sözleşme/karar ile belgeye bağla."],
+        },
+        {
+            "id": "D-3X-4X",
+            "account_prefix": "3xx/4xx",
+            "title_tr": "Krediler / Borçlar (3xx/4xx)",
+            "severity": "MEDIUM",
+            "finding_tr": f"KV+UV borç mutlak toplam: {abs(_axisd_sum_prefix(cur_rows, ['3','4'])):,.2f} TL",
+            "top_accounts": _axisd_top_accounts(cur_rows, ["3","4"], 12),
+            "required_docs": [{"code": "LOAN_AGR", "title_tr": "Kredi sözleşmesi + geri ödeme planı"}],
+            "actions_tr": ["Kredi sözleşmelerini ve ödeme planını dosyala.", "Faiz/kur farkı giderlerini ilgili hesaplarla eşle."],
+        },
+        {
+            "id": "D-150",
+            "account_prefix": "150",
+            "title_tr": "Stoklar (150/15x)",
+            "severity": "LOW",
+            "finding_tr": f"Stok mutlak toplam (mizan net): {abs(_axisd_sum_prefix(cur_rows, ['15'])):,.2f} TL",
+            "top_accounts": _axisd_top_accounts(cur_rows, ["15"], 12),
+            "required_docs": [{"code": "STOCK_COUNT", "title_tr": "Stok sayım tutanağı (çeyreklik)"}],
+            "actions_tr": ["Stok sayımını çeyreklik yap ve dosyala.", "Stok hareketlerini fatura/irsaliye ile bağla."],
+        },
+    ]
+
+    return {
+        "axis": "D",
+        "title_tr": "Mizan İncelemesi (Kritik Eksen)",
+        "period_window": {"period": period},
+        "trend": trend,
+        "notes_tr": "\n".join(notes_lines),
+        "items": items,
+    }
+
 
 @router.get("/contracts/axis/{axis}")
 def get_axis_contract(
@@ -171,6 +483,11 @@ def get_axis_contract(
       - D: Mizan incelemesi + QoQ trend (çeyrek karşılaştırma)
     """
     axis = (axis or "").upper()
+
+    if axis == "D":
+        # v54: fully mizan-only, avoids beyanname/banka dependencies
+        return build_axis_d_contract_mizan_only(BASE, smmm, client, period)
+
 
     def prev_quarter(q: str) -> str:
         try:
@@ -340,6 +657,7 @@ def get_axis_contract(
         "current_period": period,
         "prev_period": prev_p,
         "prev_available": prev_available,
+        "reason_tr": reason_tr,
         "kpis": [
             kpi("cash_bank", "Kasa+Banka (Net)", cash_bank, prev_cash_bank),
             kpi("total_current_assets", "Dönen Varlık (Toplam)", current_assets, prev_current_assets),
@@ -349,6 +667,35 @@ def get_axis_contract(
             kpi("balance_gap", "Bilanço Denge Farkı (Δ)", balance_gap, prev_gap),
         ],
     }
+
+    # AXISD_MIZAN_ONLY_OVERRIDE_V52C
+
+    # AXISD_TREND_REASON_FINAL_V52E
+    # Final guarantee: if prev is missing, expose a non-empty reason_tr (mizan-only safe)
+    if isinstance(trend, dict):
+        if not trend.get("prev_available"):
+            if not trend.get("reason_tr"):
+                _pp = trend.get("prev_period") or ""
+                if _pp:
+                    trend["reason_tr"] = "Önceki çeyrek mizan bulunamadı: " + str(_pp)
+                else:
+                    trend["reason_tr"] = "Önceki çeyrek mizan bulunamadı."
+        else:
+            trend["reason_tr"] = None
+
+    # prev_available hesabını beyanname yerine mizan varlığı ile düzelt.
+    try:
+        _prev_period = trend.get("prev_period") if isinstance(trend, dict) else None
+        if _prev_period and (not trend.get("prev_available", False)):
+            _fp = _axisd_find_mizan_csv(base_dir, smmm_id, client_id, _prev_period)
+            if _fp:
+                trend["prev_available"] = True
+                trend["reason_tr"] = None
+            else:
+                trend["prev_available"] = False
+                trend["reason_tr"] = "Önceki çeyrek mizan bulunamadı: " + str(_prev_period)
+    except Exception:
+        pass
 
     # Items (current)
     kasa_abs = abs_sum_prefix(mizan_list, ["100"])
