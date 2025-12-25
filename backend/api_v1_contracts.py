@@ -207,6 +207,24 @@ def get_axis_contract(
     def abs_sum_prefix(mizan_list, prefixes):
         return abs(sum_prefix(mizan_list, prefixes))
 
+    def top_accounts_for_prefix(mizan_list, prefixes, limit=5):
+        # mizan satırlarından prefix'e uyan hesapları net tutara göre sıralar
+        rows = []
+        for r in mizan_list:
+            code = str(r.get("hesap_kodu") or "").strip()
+            if not code:
+                continue
+            if any(code.startswith(px) for px in prefixes):
+                name = (r.get("hesap_adi") or r.get("account_name") or r.get("name") or "")
+                name = name.strip() if isinstance(name, str) else ""
+                net = mizan_net(r)
+                rows.append({"account_code": code, "account_name": name, "net": net, "abs_net": abs(net)})
+        rows.sort(key=lambda x: x["abs_net"], reverse=True)
+        out = []
+        for rr in rows[:limit]:
+            out.append({"account_code": rr["account_code"], "account_name": rr["account_name"], "net": rr["net"]})
+        return out
+
     def sev_from_amount(abs_amount: float, low=1e5, med=1e6, high=5e6):
         if abs_amount >= high:
             return "HIGH"
@@ -341,26 +359,26 @@ def get_axis_contract(
 
     items = [
         {"id": "D-100", "account_prefix": "100", "title_tr": "Kasa (100)", "severity": "MEDIUM" if kasa_abs >= 100000 else "LOW",
-         "finding_tr": f"Kasa mutlak toplam (mizan net): {kasa_abs:,.2f} TL",
+         "finding_tr": f"Kasa mutlak toplam (mizan net): {kasa_abs:,.2f} TL", "top_accounts": top_accounts_for_prefix(mizan_list, ["100"], limit=5),
          "required_docs": [{"code": "CASH_COUNT", "title_tr": "Kasa sayım tutanağı (aylık/çeyreklik)"}],
          "actions_tr": ["Kasa sayımını dosyala.", "Kasa hareketlerini belge ile bağla."]},
         {"id": "D-131-331", "account_prefix": "131/331", "title_tr": "Ortaklar Cari (131/331 vb.)", "severity": "MEDIUM" if ortak_abs >= 250000 else "LOW",
-         "finding_tr": f"Ortaklar cari mutlak toplam (mizan net): {ortak_abs:,.2f} TL",
+         "finding_tr": f"Ortaklar cari mutlak toplam (mizan net): {ortak_abs:,.2f} TL", "top_accounts": top_accounts_for_prefix(mizan_list, ["131","331"], limit=5),
          "required_docs": [{"code": "PARTNER_LEDGER", "title_tr": "Ortak cari detay dökümü + karar/sözleşme"}],
          "actions_tr": ["Kişi bazında dekont+açıklama ile belgeleyin.", "Dayanak karar/sözleşme ekleyin."]},
         {"id": "D-3XX-4XX", "account_prefix": "3xx/4xx", "title_tr": "Yabancı Kaynaklar (3/4 sınıfı)",
          "severity": "HIGH" if borc_abs >= 5000000 else ("MEDIUM" if borc_abs >= 1000000 else "LOW"),
-         "finding_tr": f"3/4 sınıfı mutlak toplam (mizan net): {borc_abs:,.2f} TL",
+         "finding_tr": f"3/4 sınıfı mutlak toplam (mizan net): {borc_abs:,.2f} TL", "top_accounts": top_accounts_for_prefix(mizan_list, ["3","4"], limit=5),
          "required_docs": [{"code": "DEBT_SUPPORT", "title_tr": "Borç mutabakatı / banka yazıları"}],
          "actions_tr": ["Kredi planı + banka yazıları ile mutabakat.", "Vade/kur/faiz riskini çeyrek bazında raporla."]},
         {"id": "D-FIN", "account_prefix": "646/656/78x", "title_tr": "Kur Farkı / Finansman (646/656/78x)",
          "severity": sev_from_amount(fin_abs, low=200000, med=1000000, high=3000000),
-         "finding_tr": f"Kur/finansman kalemleri mutlak toplam: {fin_abs:,.2f} TL",
+         "finding_tr": f"Kur/finansman kalemleri mutlak toplam: {fin_abs:,.2f} TL", "top_accounts": top_accounts_for_prefix(mizan_list, ["646","656","780","781","782","783"], limit=5),
          "required_docs": [{"code": "FIN_SUPPORT", "title_tr": "Kredi sözleşmeleri + kur farkı/komisyon dökümleri"}],
          "actions_tr": ["Kredi/komisyon/kur farkı kayıtlarını dayanaklarıyla bağlayın.", "Yüksek sapmalarda açıklama notu ekleyin."]},
         {"id": "D-STOK", "account_prefix": "15x", "title_tr": "Stok (15x) / Dönen yapı",
          "severity": sev_from_amount(stok_abs, low=250000, med=1500000, high=5000000),
-         "finding_tr": f"Stok mutlak toplam (mizan net): {stok_abs:,.2f} TL",
+         "finding_tr": f"Stok mutlak toplam (mizan net): {stok_abs:,.2f} TL", "top_accounts": top_accounts_for_prefix(mizan_list, ["15","150","153"], limit=5),
          "required_docs": [{"code": "INVENTORY_COUNT", "title_tr": "Stok sayım tutanağı / envanter"}],
          "actions_tr": ["Stok sayımı ve envanteri çeyrek kapanışına bağlayın.", "Stok değerleme yöntemini notlayın."]},
     ]
