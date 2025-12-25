@@ -12,12 +12,31 @@ type AxisItem = {
   required_docs?: { code: string; title_tr?: string | null }[] | null;
 };
 
+type TrendKpi = {
+  key: string;
+  title_tr: string;
+  kind: "amount" | "ratio";
+  current: number | null;
+  prev: number | null;
+  delta: number | null;
+  delta_pct: number | null;
+};
+
+type AxisTrend = {
+  mode: "QOQ" | string;
+  current_period: string;
+  prev_period: string;
+  prev_available: boolean;
+  kpis: TrendKpi[];
+};
+
 type AxisContract = {
   axis: string;
   title_tr: string;
   period_window?: { period?: string; start_date?: string; end_date?: string };
   items: AxisItem[];
   notes_tr?: string | null;
+  trend?: AxisTrend | null;
 };
 
 function sevColor(sev: string): string {
@@ -33,6 +52,21 @@ function sevColor(sev: string): string {
     default:
       return "bg-slate-600 text-white";
   }
+}
+
+function fmtTL(v: number | null): string {
+  if (v === null || !isFinite(v)) return "—";
+  return new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", maximumFractionDigits: 2 }).format(v);
+}
+
+function fmtNum(v: number | null, digits = 2): string {
+  if (v === null || !isFinite(v)) return "—";
+  return new Intl.NumberFormat("tr-TR", { maximumFractionDigits: digits }).format(v);
+}
+
+function fmtPct(v: number | null): string {
+  if (v === null || !isFinite(v)) return "—";
+  return new Intl.NumberFormat("tr-TR", { style: "percent", maximumFractionDigits: 1 }).format(v);
 }
 
 export default function AxisDPanelClient(props: { smmm: string; client: string; period: string }) {
@@ -71,11 +105,12 @@ export default function AxisDPanelClient(props: { smmm: string; client: string; 
 
   const notesText = useMemo(() => {
     const raw = (data?.notes_tr || "").trim();
-    // backend bazen "\\n" gönderiyor; UI'da gerçek satır sonu olsun
     return raw.replace(/\\n/g, "\n").trim();
   }, [data?.notes_tr]);
 
   const periodText = data?.period_window?.period || props.period;
+
+  const trend = data?.trend || null;
 
   return (
     <div className="rounded-2xl border p-4">
@@ -83,34 +118,71 @@ export default function AxisDPanelClient(props: { smmm: string; client: string; 
         <div>
           <div className="text-base font-semibold">Eksen D — Mizan İncelemesi (Kritik Eksen)</div>
           <div className="text-xs text-slate-600">
-            100 Kasa, 131/331, 3xx/4xx krediler, kur farkı/finansman, stok/BS vb. trend + tutarlılık + evrak ihtiyacı.
+            100 Kasa, 131/331, 3xx/4xx krediler, kur farkı/finansman, stok vb. tutarlılık + belgelendirme ekseni.
           </div>
           <div className="mt-1 text-xs text-slate-500">
             Dönem: <span className="font-medium text-slate-700">{periodText}</span>
           </div>
         </div>
 
-        <button
-          className="rounded-lg border px-3 py-2 text-sm hover:bg-slate-50 disabled:opacity-60"
-          onClick={load}
-          disabled={loading}
-        >
+        <button className="rounded-lg border px-3 py-2 text-sm hover:bg-slate-50 disabled:opacity-60" onClick={load} disabled={loading}>
           {loading ? "Yükleniyor..." : "Yenile"}
         </button>
       </div>
 
-      {!err && notesText ? (
-        <div className="mt-3 rounded-xl bg-slate-50 p-3 text-xs text-slate-700 whitespace-pre-line">
-          {notesText}
+      {/* QoQ Trend Band */}
+      {!err && trend?.mode === "QOQ" && trend?.kpis?.length ? (
+        <div className="mt-3 rounded-xl bg-slate-50 p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="text-xs font-semibold text-slate-700">
+              Çeyrek Trend (QoQ): {trend.current_period} ↔ {trend.prev_period}
+            </div>
+            <div className="text-[11px] text-slate-600">
+              Önceki çeyrek: {trend.prev_available ? "var" : "yok / okunamadı"}
+            </div>
+          </div>
+
+          <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3">
+            {trend.kpis.map((k) => {
+              const up = (k.delta ?? 0) > 0;
+              const down = (k.delta ?? 0) < 0;
+              const arrow = up ? "↑" : down ? "↓" : "→";
+
+              const curTxt = k.kind === "ratio" ? fmtNum(k.current, 2) : fmtTL(k.current);
+              const prevTxt = k.kind === "ratio" ? fmtNum(k.prev, 2) : fmtTL(k.prev);
+              const deltaTxt = k.kind === "ratio" ? fmtNum(k.delta, 2) : fmtTL(k.delta);
+
+              return (
+                <div key={k.key} className="rounded-lg border bg-white p-2">
+                  <div className="text-[11px] font-semibold text-slate-700">{k.title_tr}</div>
+                  <div className="mt-1 flex items-end justify-between gap-2">
+                    <div>
+                      <div className="text-sm font-semibold text-slate-900">{curTxt}</div>
+                      <div className="text-[11px] text-slate-500">Önceki: {prevTxt}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-[11px] font-semibold text-slate-700">
+                        {arrow} {deltaTxt}
+                      </div>
+                      <div className="text-[11px] text-slate-500">{k.kind === "ratio" ? "—" : fmtPct(k.delta_pct)}</div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
+      ) : null}
+
+      {/* Notes */}
+      {!err && notesText ? (
+        <div className="mt-3 rounded-xl bg-slate-50 p-3 text-xs text-slate-700 whitespace-pre-line">{notesText}</div>
       ) : null}
 
       {err ? (
         <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-slate-700">
           <div className="font-semibold">Not</div>
-          <div className="mt-1">
-            Axis-D contract alınamadı. Genelde backend çalışmıyor, proxy route hatalı veya contract endpoint’i 500 dönüyor.
-          </div>
+          <div className="mt-1">Axis-D contract alınamadı. Genelde backend çalışmıyor, proxy route hatalı veya endpoint 500 dönüyor.</div>
           <div className="mt-2 text-xs text-slate-600">Hata: {err}</div>
         </div>
       ) : null}
@@ -124,9 +196,7 @@ export default function AxisDPanelClient(props: { smmm: string; client: string; 
                   {it.account_prefix ? `${it.account_prefix} — ` : ""}
                   {it.title_tr}
                 </div>
-                <span className={`rounded-full px-3 py-1 text-xs font-semibold ${sevColor(it.severity)}`}>
-                  {it.severity}
-                </span>
+                <span className={`rounded-full px-3 py-1 text-xs font-semibold ${sevColor(it.severity)}`}>{it.severity}</span>
               </div>
 
               {it.finding_tr ? <div className="mt-1 text-sm text-slate-700">{it.finding_tr}</div> : null}
@@ -156,7 +226,7 @@ export default function AxisDPanelClient(props: { smmm: string; client: string; 
           ))}
         </div>
       ) : !err && data ? (
-        <div className="mt-3 text-sm text-slate-600">Axis-D contract geldi ama henüz item yok (veya boş dönüyor).</div>
+        <div className="mt-3 text-sm text-slate-600">Axis-D contract geldi ama item yok (veya boş dönüyor).</div>
       ) : null}
     </div>
   );

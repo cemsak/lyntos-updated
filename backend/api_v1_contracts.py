@@ -159,186 +159,217 @@ def dossier_pdf_head(client: str | None = None, period: str | None = None):
 from fastapi import HTTPException, Query
 from typing import Optional, List, Dict, Any
 
-
-
-
-
 @router.get("/contracts/axis/{axis}")
-def get_contract_axis(
+def get_axis_contract(
     axis: str,
     smmm: str = Query(...),
     client: str = Query(...),
     period: str = Query(...),
 ):
     """
-    Sprint-4.1: Axis-D — mizan satırlarından gerçek üretim + tutarlılık bayrakları.
+    Axis contracts (v50):
+      - D: Mizan incelemesi + QoQ trend (çeyrek karşılaştırma)
     """
-    ax = (axis or "").upper()
-    if ax != "D":
-        raise HTTPException(status_code=404, detail=f"Axis not found: {axis}")
+    axis = (axis or "").upper()
 
-    from data_engine.loader import load_all_for_client_period
-    from risk_model.v1_engine import compute_mizan_metrics
-
-    def _get_mizan_list(payload):
-        if payload is None:
-            return []
-        if isinstance(payload, dict):
-            for k in ("mizan_list", "mizan", "mizan_rows", "mizan_data"):
-                v = payload.get(k)
-                if isinstance(v, list):
-                    return v
-        if isinstance(payload, (list, tuple)):
-            for v in payload:
-                if isinstance(v, list) and v and isinstance(v[0], dict):
-                    if ("hesap_kodu" in v[0]) or ("bakiye_borc" in v[0]) or ("bakiye_alacak" in v[0]):
-                        return v
-        return []
-
-    # loader imza fallback'leri
-    try:
-        payload = load_all_for_client_period(base_dir="data", smmm_id=smmm, client_id=client, period=period)
-    except TypeError:
+    def prev_quarter(q: str) -> str:
         try:
-            payload = load_all_for_client_period("data", smmm, client, period)
-        except TypeError:
-            payload = load_all_for_client_period(smmm, client, period)
+            y, qq = q.split("-Q")
+            y = int(y)
+            n = int(qq)
+            if n == 1:
+                return f"{y-1}-Q4"
+            return f"{y}-Q{n-1}"
+        except Exception:
+            return q
 
-    mizan_list = _get_mizan_list(payload)
-    mizan_metrics = compute_mizan_metrics(mizan_list)
-
-    def _safe_float(x):
+    def safe_float(x):
         try:
-            if x is None: return 0.0
+            if x is None:
+                return 0.0
             return float(x)
         except Exception:
             return 0.0
 
-    def _row_code(row):
-        return str(row.get("hesap_kodu") or row.get("account_code") or row.get("code") or "").strip()
+    def mizan_net(row):
+        return safe_float(row.get("bakiye_borc")) - safe_float(row.get("bakiye_alacak"))
 
-    def _row_name(row):
-        nm = row.get("hesap_adi") or row.get("account_name") or row.get("name")
-        return str(nm).strip() if isinstance(nm, str) else ""
-
-    def _net(row):
-        borc = _safe_float(row.get("bakiye_borc"))
-        alacak = _safe_float(row.get("bakiye_alacak"))
-        return borc - alacak
-
-    def _sum_prefix(prefixes, use_abs=True):
+    def sum_prefix(mizan_list, prefixes):
         total = 0.0
-        details = []
-        name_map = mizan_metrics.get("account_name_map", {}) if isinstance(mizan_metrics, dict) else {}
         for r in mizan_list:
-            code = _row_code(r)
+            code = str(r.get("hesap_kodu") or "").strip()
             if not code:
                 continue
-            if any(code.startswith(pfx) for pfx in prefixes):
-                n = _net(r)
-                total += abs(n) if use_abs else n
-                if len(details) < 8:
-                    nm = _row_name(r) or (name_map.get(code, "") if isinstance(name_map, dict) else "")
-                    details.append({"account_code": code, "account_name": nm, "net": n})
-        return float(total), details
+            if any(code.startswith(px) for px in prefixes):
+                total += mizan_net(r)
+        return total
 
-    def _sev(amount_abs, med, high):
-        if amount_abs >= high: return "HIGH"
-        if amount_abs >= med: return "MEDIUM"
+    def abs_sum_prefix(mizan_list, prefixes):
+        return abs(sum_prefix(mizan_list, prefixes))
+
+    def sev_from_amount(abs_amount: float, low=1e5, med=1e6, high=5e6):
+        if abs_amount >= high:
+            return "HIGH"
+        if abs_amount >= med:
+            return "MEDIUM"
+        if abs_amount >= low:
+            return "LOW"
         return "LOW"
 
-    kasa_abs, _ = _sum_prefix(["100"], use_abs=True)
-    ortak_abs, _ = _sum_prefix(["131", "331"], use_abs=True)
-    kredi_abs, _ = _sum_prefix(["3", "4"], use_abs=True)
-    finans_abs, _ = _sum_prefix(["646", "656", "780"], use_abs=True)
-    stok_abs, _ = _sum_prefix(["15"], use_abs=True)
+    # D dışındaki eksenler: minimal stub
+    if axis != "D":
+        return {
+            "axis": axis,
+            "title_tr": f"Eksen {axis}",
+            "period_window": {"period": period},
+            "notes_tr": "Bu eksen henüz uygulanmadı.",
+            "items": [],
+        }
 
-    assets_net = float(mizan_metrics.get("assets_net", 0.0) or 0.0)
-    liab_net = float(mizan_metrics.get("liabilities_equity_net", 0.0) or 0.0)
-    delta_bs = assets_net - liab_net
-    delta_bs_abs = abs(delta_bs)
+    # Data load (current + prev quarter)
+    try:
+        from data_engine.loader import load_all_for_client_period
+        from risk_model.v1_engine import compute_mizan_metrics
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Import error: {e}")
 
-    short_liab = abs(float(mizan_metrics.get("short_term_liabilities", 0.0) or 0.0))
-    current_assets = float(mizan_metrics.get("total_current_assets", 0.0) or 0.0)
-    liquidity_ratio = (current_assets / short_liab) if short_liab > 1e-9 else None
+    base_dir = "data"
+    payload = load_all_for_client_period(base_dir=base_dir, smmm_id=smmm, client_id=client, period=period)
 
-    equity_total = float(mizan_metrics.get("equity_total", 0.0) or 0.0)
+    mizan_list = None
+    for k in ("mizan_list", "mizan", "mizan_rows"):
+        v = payload.get(k)
+        if isinstance(v, list):
+            mizan_list = v
+            break
+    if mizan_list is None:
+        mizan_list = []
 
-    flags = []
-    if delta_bs_abs > 1.0:
-        tol = max(5_000.0, 0.002 * max(abs(assets_net), abs(liab_net), 1.0))
-        if delta_bs_abs > tol:
-            flags.append(f"Bilanço denge farkı yüksek: Δ={delta_bs:,.2f} TL (tolerans ~{tol:,.2f} TL)")
+    cur_metrics = compute_mizan_metrics(mizan_list)
+
+    prev_p = prev_quarter(period)
+    prev_available = False
+    prev_metrics = None
+    prev_error = None
+
+    if prev_p != period:
+        try:
+            payload_prev = load_all_for_client_period(base_dir=base_dir, smmm_id=smmm, client_id=client, period=prev_p)
+            prev_mizan = None
+            for k in ("mizan_list", "mizan", "mizan_rows"):
+                v = payload_prev.get(k)
+                if isinstance(v, list):
+                    prev_mizan = v
+                    break
+            prev_metrics = compute_mizan_metrics(prev_mizan or [])
+            prev_available = True
+        except Exception as e:
+            prev_error = str(e)
+            prev_available = False
+
+    # Flags & summary (current)
+    assets_net = safe_float(cur_metrics.get("assets_net"))
+    liab_eq_net = safe_float(cur_metrics.get("liabilities_equity_net"))
+    equity_total = safe_float(cur_metrics.get("equity_total"))
+    current_assets = safe_float(cur_metrics.get("total_current_assets"))
+    st_liab = safe_float(cur_metrics.get("short_term_liabilities"))
+    cash_bank = safe_float(cur_metrics.get("cash_bank"))
+
+    balance_gap = abs(assets_net - liab_eq_net)
+    tol = max(1000.0, abs(assets_net) * 0.001)
+    liq_ratio = (current_assets / st_liab) if st_liab > 0 else None
+    equity_negative = equity_total < 0
+    balance_bad = balance_gap > tol
+
+    notes_lines = []
+    notes_lines.append("Tutarlılık / Radar Bayrakları:")
+    notes_lines.append(f"- Bilanço denge farkı {'yüksek' if balance_bad else 'normal'}: Δ={balance_gap:,.2f} TL (tolerans ~{tol:,.2f} TL)")
+    notes_lines.append(f"- Özkaynak {'negatif' if equity_negative else 'pozitif'} görünüyor: {equity_total:,.2f} TL")
+    notes_lines.append(f"Özet: Dönen varlık={current_assets:,.2f} TL, KV borç={st_liab:,.2f} TL")
+    if liq_ratio is None:
+        notes_lines.append("Likidite oranı (dönen/KV) = hesaplanamadı (KV borç 0).")
+    else:
+        notes_lines.append(f"Likidite oranı (dönen/KV) ≈ {liq_ratio:.2f}")
+    if not prev_available:
+        if prev_error:
+            notes_lines.append(f"Trend notu: Önceki çeyrek ({prev_p}) verisi okunamadı ({prev_error}).")
         else:
-            flags.append(f"Bilanço denge farkı küçük: Δ={delta_bs:,.2f} TL (tolerans içinde)")
-    if liquidity_ratio is not None:
-        if liquidity_ratio < 0.9:
-            flags.append(f"Likidite düşük: Dönen varlık / KV borç ≈ {liquidity_ratio:.2f}")
-        elif liquidity_ratio > 3.5:
-            flags.append(f"Likidite çok yüksek: Dönen varlık / KV borç ≈ {liquidity_ratio:.2f} (sınıflama kontrolü)")
-    if equity_total < 0:
-        flags.append(f"Özkaynak negatif görünüyor: {equity_total:,.2f} TL")
+            notes_lines.append(f"Trend notu: Önceki çeyrek ({prev_p}) verisi bulunamadı.")
+
+    notes_tr = "\n".join(notes_lines)
+
+    # Trend (QoQ)
+    def kpi(key, title, cur, prev, is_ratio=False):
+        if prev is None:
+            return {"key": key, "title_tr": title, "current": cur, "prev": None, "delta": None, "delta_pct": None, "kind": "ratio" if is_ratio else "amount"}
+        delta = cur - prev
+        delta_pct = None
+        if (not is_ratio) and prev != 0:
+            delta_pct = delta / prev
+        return {"key": key, "title_tr": title, "current": cur, "prev": prev, "delta": delta, "delta_pct": delta_pct, "kind": "ratio" if is_ratio else "amount"}
+
+    prev_current_assets = safe_float(prev_metrics.get("total_current_assets")) if prev_metrics else None
+    prev_st_liab = safe_float(prev_metrics.get("short_term_liabilities")) if prev_metrics else None
+    prev_equity = safe_float(prev_metrics.get("equity_total")) if prev_metrics else None
+    prev_cash_bank = safe_float(prev_metrics.get("cash_bank")) if prev_metrics else None
+    prev_assets_net = safe_float(prev_metrics.get("assets_net")) if prev_metrics else None
+    prev_liab_eq_net = safe_float(prev_metrics.get("liabilities_equity_net")) if prev_metrics else None
+    prev_gap = abs(prev_assets_net - prev_liab_eq_net) if prev_metrics else None
+    prev_liq_ratio = (prev_current_assets / prev_st_liab) if (prev_metrics and prev_st_liab and prev_st_liab > 0) else None
+
+    trend = {
+        "mode": "QOQ",
+        "current_period": period,
+        "prev_period": prev_p,
+        "prev_available": prev_available,
+        "kpis": [
+            kpi("cash_bank", "Kasa+Banka (Net)", cash_bank, prev_cash_bank),
+            kpi("total_current_assets", "Dönen Varlık (Toplam)", current_assets, prev_current_assets),
+            kpi("short_term_liabilities", "Kısa Vadeli Borç", st_liab, prev_st_liab),
+            kpi("liquidity_ratio", "Likidite Oranı (Dönen/KV)", liq_ratio, prev_liq_ratio, is_ratio=True),
+            kpi("equity_total", "Özkaynak", equity_total, prev_equity),
+            kpi("balance_gap", "Bilanço Denge Farkı (Δ)", balance_gap, prev_gap),
+        ],
+    }
+
+    # Items (current)
+    kasa_abs = abs_sum_prefix(mizan_list, ["100"])
+    ortak_abs = abs_sum_prefix(mizan_list, ["131", "331"])
+    borc_abs = abs_sum_prefix(mizan_list, ["3", "4"])
+    stok_abs = abs_sum_prefix(mizan_list, ["15", "150", "153"])
+    fin_abs = abs_sum_prefix(mizan_list, ["646", "656", "780", "781", "782", "783"])
 
     items = [
-        {
-            "id": "D-100",
-            "account_prefix": "100",
-            "title_tr": "Kasa (100)",
-            "severity": _sev(kasa_abs, med=50_000, high=250_000),
-            "finding_tr": f"Kasa mutlak toplam (mizan net): {kasa_abs:,.2f} TL",
-            "required_docs": [{"code": "CASH_COUNT", "title_tr": "Kasa sayım tutanağı (aylık)"}],
-            "actions_tr": ["Kasa sayımını ay bazında dosyala.", "Kasa hareketlerini belge ile bağla."],
-        },
-        {
-            "id": "D-131-331",
-            "account_prefix": "131/331",
-            "title_tr": "Ortaklar Cari (131/331 vb.)",
-            "severity": _sev(ortak_abs, med=100_000, high=500_000),
-            "finding_tr": f"Ortaklar cari mutlak toplam (mizan net): {ortak_abs:,.2f} TL",
-            "required_docs": [{"code": "PARTNER_LEDGER", "title_tr": "Ortak cari detay dökümü + karar/sözleşme"}],
-            "actions_tr": ["Kişi bazında dekont+açıklama ile belgeleyin.", "Dayanak karar/sözleşme ekleyin."],
-        },
-        {
-            "id": "D-3XX-4XX",
-            "account_prefix": "3xx/4xx",
-            "title_tr": "Yabancı Kaynaklar (3/4 sınıfı)",
-            "severity": _sev(kredi_abs, med=250_000, high=1_500_000),
-            "finding_tr": f"3/4 sınıfı mutlak toplam (mizan net): {kredi_abs:,.2f} TL",
-            "required_docs": [{"code": "DEBT_SUPPORT", "title_tr": "Borç mutabakatı / banka yazıları"}],
-            "actions_tr": ["Kredi planı+banka yazısı dosyalayın.", "Cari mutabakat ekleyin."],
-        },
-        {
-            "id": "D-FX-FIN",
-            "account_prefix": "646/656/780",
-            "title_tr": "Kur Farkı / Finansman / Faiz",
-            "severity": _sev(finans_abs, med=50_000, high=250_000),
-            "finding_tr": f"Kur/finansman/faiz mutlak toplam (mizan net): {finans_abs:,.2f} TL",
-            "required_docs": [{"code": "FX_SUPPORT", "title_tr": "Kur farkı hesaplama + dekontlar"}],
-            "actions_tr": ["Kur farkı dayanaklarını dosyalayın.", "Faizi borç kalemleriyle bağlayın."],
-        },
-        {
-            "id": "D-STOCK",
-            "account_prefix": "15x",
-            "title_tr": "Stok (15x)",
-            "severity": _sev(stok_abs, med=100_000, high=750_000),
-            "finding_tr": f"Stok mutlak toplam (mizan net): {stok_abs:,.2f} TL",
-            "required_docs": [{"code": "STOCK_COUNT", "title_tr": "Stok sayım tutanağı + envanter"}],
-            "actions_tr": ["Dönem sonu stok sayımını belgeleyin.", "Fatura/irsaliye ile bağlayın."],
-        },
+        {"id": "D-100", "account_prefix": "100", "title_tr": "Kasa (100)", "severity": "MEDIUM" if kasa_abs >= 100000 else "LOW",
+         "finding_tr": f"Kasa mutlak toplam (mizan net): {kasa_abs:,.2f} TL",
+         "required_docs": [{"code": "CASH_COUNT", "title_tr": "Kasa sayım tutanağı (aylık/çeyreklik)"}],
+         "actions_tr": ["Kasa sayımını dosyala.", "Kasa hareketlerini belge ile bağla."]},
+        {"id": "D-131-331", "account_prefix": "131/331", "title_tr": "Ortaklar Cari (131/331 vb.)", "severity": "MEDIUM" if ortak_abs >= 250000 else "LOW",
+         "finding_tr": f"Ortaklar cari mutlak toplam (mizan net): {ortak_abs:,.2f} TL",
+         "required_docs": [{"code": "PARTNER_LEDGER", "title_tr": "Ortak cari detay dökümü + karar/sözleşme"}],
+         "actions_tr": ["Kişi bazında dekont+açıklama ile belgeleyin.", "Dayanak karar/sözleşme ekleyin."]},
+        {"id": "D-3XX-4XX", "account_prefix": "3xx/4xx", "title_tr": "Yabancı Kaynaklar (3/4 sınıfı)",
+         "severity": "HIGH" if borc_abs >= 5000000 else ("MEDIUM" if borc_abs >= 1000000 else "LOW"),
+         "finding_tr": f"3/4 sınıfı mutlak toplam (mizan net): {borc_abs:,.2f} TL",
+         "required_docs": [{"code": "DEBT_SUPPORT", "title_tr": "Borç mutabakatı / banka yazıları"}],
+         "actions_tr": ["Kredi planı + banka yazıları ile mutabakat.", "Vade/kur/faiz riskini çeyrek bazında raporla."]},
+        {"id": "D-FIN", "account_prefix": "646/656/78x", "title_tr": "Kur Farkı / Finansman (646/656/78x)",
+         "severity": sev_from_amount(fin_abs, low=200000, med=1000000, high=3000000),
+         "finding_tr": f"Kur/finansman kalemleri mutlak toplam: {fin_abs:,.2f} TL",
+         "required_docs": [{"code": "FIN_SUPPORT", "title_tr": "Kredi sözleşmeleri + kur farkı/komisyon dökümleri"}],
+         "actions_tr": ["Kredi/komisyon/kur farkı kayıtlarını dayanaklarıyla bağlayın.", "Yüksek sapmalarda açıklama notu ekleyin."]},
+        {"id": "D-STOK", "account_prefix": "15x", "title_tr": "Stok (15x) / Dönen yapı",
+         "severity": sev_from_amount(stok_abs, low=250000, med=1500000, high=5000000),
+         "finding_tr": f"Stok mutlak toplam (mizan net): {stok_abs:,.2f} TL",
+         "required_docs": [{"code": "INVENTORY_COUNT", "title_tr": "Stok sayım tutanağı / envanter"}],
+         "actions_tr": ["Stok sayımı ve envanteri çeyrek kapanışına bağlayın.", "Stok değerleme yöntemini notlayın."]},
     ]
-
-    notes = []
-    if flags:
-        notes.append("Tutarlılık / Radar Bayrakları:")
-        notes.extend([f"- {f}" for f in flags])
-    notes.append(f"Özet: Dönen varlık={current_assets:,.2f} TL, KV borç={short_liab:,.2f} TL")
-    if liquidity_ratio is not None:
-        notes.append(f"Likidite oranı (dönen/KV) ≈ {liquidity_ratio:.2f}")
 
     return {
         "axis": "D",
         "title_tr": "Mizan İncelemesi (Kritik Eksen)",
         "period_window": {"period": period},
-        "notes_tr": "\\n".join(notes),
+        "trend": trend,
+        "notes_tr": notes_tr,
         "items": items,
     }
