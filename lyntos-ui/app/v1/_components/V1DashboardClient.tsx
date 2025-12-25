@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import AxisDPanelClient from "./AxisDPanelClient";
 
 type Severity = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL" | string;
 
@@ -316,6 +317,8 @@ export default function V1DashboardClient(props: { contract: PortfolioContract; 
           </div>
         ) : null}
       </div>
+
+      <AxisDPanelClient smmm={props.ctx.smmm} client={props.ctx.client} period={props.ctx.period} />
 
       {missingTodo.length ? (
         <div className="rounded-2xl border p-4">
