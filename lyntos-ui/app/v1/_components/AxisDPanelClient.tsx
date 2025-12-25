@@ -9,6 +9,7 @@ type AxisItem = {
   severity: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL" | string;
   finding_tr?: string | null;
   actions_tr?: string[] | null;
+  top_accounts?: { account_code: string; account_name?: string | null; net: number }[] | null;
   required_docs?: { code: string; title_tr?: string | null }[] | null;
 };
 
@@ -201,7 +202,44 @@ export default function AxisDPanelClient(props: { smmm: string; client: string; 
 
               {it.finding_tr ? <div className="mt-1 text-sm text-slate-700">{it.finding_tr}</div> : null}
 
-              {it.required_docs?.length ? (
+              
+              <details className="mt-2 rounded-lg border bg-white p-2">
+                <summary className="cursor-pointer text-xs font-semibold text-slate-700">Detay</summary>
+
+                {it.top_accounts?.length ? (
+                  <div className="mt-2 text-xs text-slate-700">
+                    <div className="font-semibold">Top Hesaplar (mizan)</div>
+                    <div className="mt-1 overflow-x-auto">
+                      <table className="w-full text-left text-[11px]">
+                        <thead>
+                          <tr className="text-slate-500">
+                            <th className="py-1 pr-2">Hesap</th>
+                            <th className="py-1 pr-2">Ad</th>
+                            <th className="py-1 text-right">Net</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {it.top_accounts.map((a, i) => (
+                            <tr key={i} className="border-t">
+                              <td className="py-1 pr-2 font-medium">{a.account_code}</td>
+                              <td className="py-1 pr-2">{a.account_name || "—"}</td>
+                              <td className="py-1 text-right">{fmtTL(a.net)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-2 text-[11px] text-slate-500">Top hesap kırılımı yok (mizan satırları eksik olabilir).</div>
+                )}
+
+                <div className="mt-2 text-[11px] text-slate-600">
+                  Not: Bu ekran “inceleme ekseni”dir; kesin hüküm değildir. Belge-iz mantığıyla hızlı doğrulama sağlar.
+                </div>
+              </details>
+
+{it.required_docs?.length ? (
                 <div className="mt-2 text-xs text-slate-700">
                   <div className="font-semibold">Gerekli Evrak</div>
                   <ul className="list-disc pl-5">
