@@ -106,8 +106,15 @@ export default function AxisDPanelClient(props: { smmm: string; client: string; 
 
   const notesText = useMemo(() => {
     const raw = (data?.notes_tr || "").trim();
-    return raw.replace(/\\n/g, "\n").trim();
+    if (!raw) return "";
+    // Backend bazen \n string’i gönderebilir, bazen gerçek newline; ikisini de normalize ediyoruz.
+    const normalized = raw.replace(/\\n/g, "\n");
+    const lines = normalized
+      .split(/\r?\n/)
+      .filter((l) => !l.trim().startsWith("Trend notu:"));
+    return lines.join("\n").trim();
   }, [data?.notes_tr]);
+
 
   const periodText = data?.period_window?.period || props.period;
 
@@ -176,6 +183,12 @@ export default function AxisDPanelClient(props: { smmm: string; client: string; 
       ) : null}
 
       {/* Notes */}
+      {!err && data?.trend?.prev_available === false && (data?.trend as any)?.reason_tr ? (
+        <div className="mt-3 rounded-xl bg-amber-50 p-3 text-xs text-amber-900">
+          {(data?.trend as any).reason_tr}
+        </div>
+      ) : null}
+
       {!err && notesText ? (
         <div className="mt-3 rounded-xl bg-slate-50 p-3 text-xs text-slate-700 whitespace-pre-line">{notesText}</div>
       ) : null}
