@@ -323,8 +323,8 @@ export default function V1DashboardClient(props: { contract: PortfolioContract; 
           <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
             <div className="text-sm font-semibold">Uyarılar</div>
             <ul className="list-disc pl-5 text-sm text-slate-700">
-              {(dq.warnings || []).map((w, i) => <li key={`dq-${i}`}>{w}</li>)}
-              {(c.warnings || []).map((w, i) => <li key={`w-${i}`}>{w}</li>)}
+              {Array.from(new Set([...(dq.warnings || []), ...(c.warnings || [])])).map((w, i) => <li key={`w-${i}`}>{w}</li>)}
+              
             </ul>
           </div>
         ) : null}
