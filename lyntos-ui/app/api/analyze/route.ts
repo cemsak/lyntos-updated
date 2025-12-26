@@ -9,7 +9,6 @@ export async function GET(req: NextRequest) {
   const period =
     u.searchParams.get("donem") || u.searchParams.get("period") || "2025-Q3";
 
-  const payload: any;
 
   const base = (process.env.BACKEND_URL ?? "http://127.0.0.1:8010").replace(/\/+$/, "");
   const qs = `?firma=${encodeURIComponent(entity)}&donem=${encodeURIComponent(period)}`;
@@ -18,7 +17,7 @@ export async function GET(req: NextRequest) {
     res = await fetch(`${base}/analyze${qs}`, { cache: "no-store" });
   if (!res.ok)
     return NextResponse.json({ error: "backend_unreachable" }, { status: 502 });
-  payload = await res.json();
+  const payload: any = await res.json();
 
   const out: any = {
     summary: payload?.summary || `${entity} | Dönem: ${period}`,

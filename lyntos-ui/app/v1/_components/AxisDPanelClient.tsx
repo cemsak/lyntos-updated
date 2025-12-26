@@ -230,9 +230,9 @@ export default function AxisDPanelClient(props: { smmm: string; client: string; 
       ) : null}
 
       {/* Notes */}
-      {!err && data?.trend?.prev_available === false && (data?.trend as any)?.reason_tr ? (
+      {!err && trend?.prev_available === false && trend?.reason_tr ? (
         <div className="mt-3 rounded-xl bg-amber-50 p-3 text-xs text-amber-900">
-          {(data?.trend as any).reason_tr}
+          {trend.reason_tr}
         </div>
       ) : null}
 
