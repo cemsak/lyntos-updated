@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import AxisDPanelClient from "./AxisDPanelClient";
 
 type Severity = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL" | string;
@@ -132,7 +132,19 @@ function topSignal(r: RiskSummary): { code: string; score?: number; weight?: num
 
 export default function V1DashboardClient(props: { contract: PortfolioContract; ctx: Ctx }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [busy, setBusy] = useState<null | "refresh">(null);
+
+  const pushPeriod = (nextPeriod: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("smmm", props.ctx.smmm);
+    params.set("client", props.ctx.client);
+    params.set("period", nextPeriod);
+    router.push(`/v1?${params.toString()}`);
+    router.refresh();
+  };
+
   const [severityFilter, setSeverityFilter] = useState<"ALL" | "CRITICAL" | "HIGH" | "MEDIUM" | "LOW">("ALL");
   const [q, setQ] = useState<string>("");
 
@@ -260,7 +272,7 @@ export default function V1DashboardClient(props: { contract: PortfolioContract; 
           <div>
             <div className="text-lg font-semibold">LYNTOS /v1 — SMMM Operasyon Konsolu</div>
             <div className="text-sm text-slate-600">
-              Period: <span className="font-medium">{period}</span> | Client: <span className="font-medium">{props.ctx.client}</span> | SMMM: <span className="font-medium">{props.ctx.smmm}</span>
+              Dönem: <select className="ml-2 rounded-lg border px-2 py-1 text-sm" value={props.ctx.period} onChange={(e) => pushPeriod(e.target.value)}><option value="2025-Q1">2025-Q1</option><option value="2025-Q2">2025-Q2</option><option value="2025-Q3">2025-Q3</option></select> | Client: <span className="font-medium">{props.ctx.client}</span> | SMMM: <span className="font-medium">{props.ctx.smmm}</span>
             </div>
           </div>
 
