@@ -85,6 +85,7 @@ function fmtPct(v: number | null): string {
 export default function AxisDPanelClient(props: { smmm: string; client: string; period: string }) {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [errStatus, setErrStatus] = useState<number | null>(null);
   const [data, setData] = useState<AxisContract | null>(null);
 
   const url = useMemo(() => {
@@ -99,6 +100,7 @@ export default function AxisDPanelClient(props: { smmm: string; client: string; 
   const load = useCallback(async () => {
     setLoading(true);
     setErr(null);
+    setErrStatus(null);
     try {
       const res = await fetch(url, { cache: "no-store" });
       const txt = await res.text();
@@ -112,13 +114,16 @@ export default function AxisDPanelClient(props: { smmm: string; client: string; 
         }
         setData(null);
         setErr(msg);
+        setErrStatus(res.status);
         return;
       }
 
       setData(JSON.parse(txt));
+      setErrStatus(null);
     } catch (e: any) {
       setData(null);
       setErr(e?.message || "Axis-D load error");
+      setErrStatus(null);
     } finally {
       setLoading(false);
     }
@@ -146,14 +151,54 @@ export default function AxisDPanelClient(props: { smmm: string; client: string; 
 
   const [selectedAccount, setSelectedAccount] = useState<SelectedTopAccount | null>(null);
 
+  const [copyFeedback, setCopyFeedback] = useState<{ ok: boolean; msg: string } | null>(null);
+
+  const flashCopyFeedback = useCallback((ok: boolean, msg: string) => {
+    setCopyFeedback({ ok, msg });
+    window.setTimeout(() => setCopyFeedback(null), 2000);
+  }, []);
+
+  const fallbackCopy = useCallback((text: string): boolean => {
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed";
+      ta.style.left = "-9999px";
+      ta.style.top = "0";
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      return ok;
+    } catch {
+      return false;
+    }
+  }, []);
+
+
   const closeAccount = useCallback(() => setSelectedAccount(null), []);
 
   const copyAccountCode = useCallback(async (code: string) => {
+    const v = (code || "").trim();
+    if (!v) return;
+
+    let ok = false;
+
     try {
-      await navigator.clipboard.writeText(code);
-    } catch (e) {
+      if (navigator.clipboard && (window as any).isSecureContext) {
+        await navigator.clipboard.writeText(v);
+        ok = true;
+      } else {
+        ok = fallbackCopy(v);
+      }
+    } catch {
+      ok = fallbackCopy(v);
     }
-  }, []);
+
+    flashCopyFeedback(ok, ok ? "Kopyalandı." : "Kopyalanamadı. Hesap kodunu seçip manuel kopyalayın.");
+  }, [fallbackCopy, flashCopyFeedback]);
 
   useEffect(() => {
     if (!selectedAccount) return;
@@ -165,7 +210,7 @@ export default function AxisDPanelClient(props: { smmm: string; client: string; 
   }, [selectedAccount, closeAccount]);
 
 
-  const isMissingMizan = !!err && err.includes("Mizan dosyası bulunamadı");
+  const isMissingMizan = errStatus === 404 || (!!err && err.includes("Mizan dosyası bulunamadı"));
 
   return (
     <div className="rounded-2xl border p-4">
@@ -243,7 +288,7 @@ export default function AxisDPanelClient(props: { smmm: string; client: string; 
       {err ? (
         <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-slate-700">
           <div className="font-semibold">{isMissingMizan ? "Veri Eksik" : "Not"}</div>
-          <div className="mt-1">{isMissingMizan ? "Bu dönem için mizan verisi bulunamadı. Q1/Q3 gerçek veri gelince QoQ trend otomatik çalışacaktır." : "Axis-D contract alınamadı. Proxy route veya backend endpoint hata dönüyor."}</div>
+          <div className="mt-1">{isMissingMizan ? "Bu dönem için mizan verisi bulunamadı (404). Bu panel mizan dosyası olmadan üretilemez. Veri geldiğinde otomatik düzelecek." : "Axis-D yüklenemedi. Yenile deneyin; devam ederse backend/proxy loglarına bakın."}</div>
           <div className="mt-2 text-xs text-slate-600">Hata: {err}</div>
         </div>
       ) : null}
@@ -327,7 +372,7 @@ export default function AxisDPanelClient(props: { smmm: string; client: string; 
                     </div>
                   </div>
                 ) : (
-                  <div className="mt-2 text-[11px] text-slate-500">Top hesap kırılımı yok (mizan satırları eksik olabilir).</div>
+                  <div className="mt-2 text-[11px] text-slate-500">Top hesap kırılımı üretilemedi. Muhtemel neden: mizan detayı/formatı yetersiz veya hesap kodları beklenen şekilde parse edilemedi. Aksiyon: ilgili dönem mizan dosyasını doğrula, gerekiyorsa yeniden yükle.</div>
                 )}
 
                 <div className="mt-2 text-[11px] text-slate-600">
@@ -419,6 +464,12 @@ export default function AxisDPanelClient(props: { smmm: string; client: string; 
                     onClick={() => void copyAccountCode(selectedAccount.account_code)}
                   >
                     Hesap kodunu kopyala
+                  {copyFeedback ? (
+                    <div className={`text-[11px] ${copyFeedback.ok ? "text-emerald-700" : "text-amber-700"}`}>
+                      {copyFeedback.msg}
+                    </div>
+                  ) : null}
+
                   </button>
                   <button className="rounded-lg border px-3 py-2 text-xs hover:bg-slate-50" onClick={closeAccount}>
                     Kapat
