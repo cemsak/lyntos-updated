@@ -486,7 +486,13 @@ def get_axis_contract(
     axis = (axis or "").upper()
 
     if axis == "D":
-        # v54: fully mizan-only, avoids beyanname/banka dependencies
-        return build_axis_d_contract_mizan_only(BASE, smmm, client, period)
+        try:
+            return build_axis_d_contract_mizan_only(BASE, smmm, client, period)
+        except FileNotFoundError as e:
+            raise HTTPException(status_code=404, detail=str(e))
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Axis D contract failed: {e}")
 
 # v61: trimmed legacy dead code after delegation to build_axis_d_contract_mizan_only
