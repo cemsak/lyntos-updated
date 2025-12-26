@@ -19,6 +19,155 @@ OUT_DIR = BASE / "out"
 
 PERIOD_RE = re.compile(r"^\d{4}-Q[1-4]$")
 
+
+# --- Sprint-3 KPI helpers (backend is source of truth) ---
+
+def _clamp(n: float, lo: float, hi: float) -> float:
+    try:
+        return max(lo, min(hi, float(n)))
+    except Exception:
+        return lo
+
+def _sev_rank(sev: str) -> int:
+    s = (sev or "").upper()
+    if s == "CRITICAL": return 4
+    if s == "HIGH": return 3
+    if s == "MEDIUM": return 2
+    if s == "LOW": return 1
+    return 0
+
+def _sev_multiplier(sev: str) -> float:
+    s = (sev or "").upper()
+    if s == "CRITICAL": return 2.0
+    if s == "HIGH": return 1.5
+    if s == "MEDIUM": return 1.2
+    if s == "LOW": return 1.0
+    return 1.0
+
+def _compute_risk_score(r: dict) -> int:
+    sigs = r.get("kurgan_criteria_signals") or []
+    usable = [s for s in sigs if isinstance(s, dict) and isinstance(s.get("score"), (int, float))]
+    if not usable:
+        return 0
+
+    has_weights = any(isinstance(s.get("weight"), (int, float)) for s in usable)
+    if has_weights:
+        sum_w = 0.0
+        sum_sc = 0.0
+        for s in usable:
+            w = s.get("weight")
+            sc = s.get("score")
+            w = float(w) if isinstance(w, (int, float)) else 0.0
+            sc = float(sc) if isinstance(sc, (int, float)) else 0.0
+            w = _clamp(w, 0.0, 1.0)
+            sc = _clamp(sc, 0.0, 100.0)
+            if w > 0:
+                sum_w += w
+                sum_sc += sc * w
+        if sum_w > 0:
+            return int(_clamp(round(sum_sc / sum_w), 0, 100))
+
+    avg = sum(_clamp(float(s.get("score") or 0), 0, 100) for s in usable) / float(len(usable))
+    return int(_clamp(round(avg), 0, 100))
+
+def _missing_todo_unique_count(risks_sorted: list[dict]) -> int:
+    # UI mantığına paralel: missing_refs -> unique (code|title)
+    uniq = set()
+    for x in risks_sorted:
+        r = x.get("r") or {}
+        sigs = r.get("kurgan_criteria_signals") or []
+        for s in sigs:
+            if not isinstance(s, dict):
+                continue
+            for mr in (s.get("missing_refs") or []):
+                if not isinstance(mr, dict):
+                    continue
+                code = (mr.get("code") or "").strip()
+                title = (mr.get("title_tr") or code).strip()
+                if code or title:
+                    uniq.add(f"{code}|{title}")
+    return len(uniq)
+
+def _enrich_portfolio_with_kpis(c: dict) -> None:
+    dq = c.get("data_quality") or {}
+    if not isinstance(dq, dict):
+        dq = {}
+        c.setdefault("warnings", []).append("bad_contract:data_quality_not_object")
+
+    total = int(dq.get("bank_rows_total") or 0)
+    inp = int(dq.get("bank_rows_in_period") or 0)
+    outp = int(dq.get("bank_rows_out_of_period") or 0)
+
+    dq_score = 0
+    if total > 0:
+        dq_score = int(_clamp(round((inp / total) * 100), 0, 100))
+    else:
+        c.setdefault("warnings", []).append("missing_dq:bank_rows_total")
+
+    risks = c.get("risks") or []
+    if not isinstance(risks, list):
+        risks = []
+        c.setdefault("warnings", []).append("bad_contract:risks_not_array")
+
+    risks_with = []
+    for r in risks:
+        if not isinstance(r, dict):
+            continue
+        risks_with.append({"r": r, "riskScore": _compute_risk_score(r)})
+
+    risks_sorted = sorted(
+        risks_with,
+        key=lambda x: (_sev_rank(str((x.get("r") or {}).get("severity"))), int(x.get("riskScore") or 0)),
+        reverse=True,
+    )
+
+    missing_todo_cnt = _missing_todo_unique_count(risks_sorted)
+
+    # kurgan risk score (severity-weighted)
+    if not risks_sorted:
+        kurgan_risk = 0
+    else:
+        sum_w = 0.0
+        sum_sc = 0.0
+        for x in risks_sorted:
+            r = x.get("r") or {}
+            w = _sev_multiplier(str(r.get("severity") or ""))
+            sum_w += w
+            sum_sc += float(x.get("riskScore") or 0) * w
+        kurgan_risk = int(_clamp(round(sum_sc / sum_w), 0, 100)) if sum_w > 0 else 0
+
+    # vergi uyum
+    risk_penalty = int(round(kurgan_risk * 0.75))
+    dq_penalty = int(round((100 - dq_score) * 0.25))
+    vergi_uyum = int(_clamp(100 - risk_penalty - dq_penalty, 0, 100))
+
+    # radar risk
+    out_ratio = _clamp(outp / total, 0.0, 1.0) if total > 0 else 0.0
+    heavy = sum(1 for x in risks_sorted if _sev_rank(str((x.get("r") or {}).get("severity"))) >= 3)  # HIGH+
+    heavy_ratio = (heavy / len(risks_sorted)) if risks_sorted else 0.0
+    todo_norm = _clamp(missing_todo_cnt / 10.0, 0.0, 1.0)
+    radar_risk = int(_clamp(round((out_ratio * 0.60 + heavy_ratio * 0.30 + todo_norm * 0.10) * 100), 0, 100))
+
+    c["kpis"] = {
+        "kurgan_risk_score": kurgan_risk,
+        "vergi_uyum_puani": vergi_uyum,
+        "radar_risk_score": radar_risk,
+        "dq_in_period_pct": dq_score,
+    }
+    c["kpis_meta"] = {
+        "version": "s3_kpis_v1",
+        "components": {
+            "dq": {"bank_rows_total": total, "bank_rows_in_period": inp, "bank_rows_out_of_period": outp},
+            "risks": {"count": len(risks_sorted), "heavy_high_plus": heavy, "missing_todo_unique": missing_todo_cnt},
+        },
+        "formula": {
+            "dqScore": "round(in_period/total*100)",
+            "kurganRiskScore": "severity-weighted avg(riskScore)",
+            "vergiUyum": "100 - round(kurgan*0.75) - round((100-dq)*0.25)",
+            "radarRisk": "round((outRatio*0.60 + heavyRatio*0.30 + todoNorm*0.10)*100)",
+        },
+    }
+
 def _read_json(p: Path):
     if not p.exists():
         raise HTTPException(status_code=404, detail=f"Not found: {p.name}")
@@ -32,9 +181,48 @@ def health():
     return {"ok": True, "service": "lyntos-backend", "api": "v1"}
 
 @router.get("/contracts/portfolio")
-def contracts_portfolio():
-    return JSONResponse(_read_json(CONTRACTS_DIR / "portfolio_customer_summary.json"))
+def contracts_portfolio(
+    smmm: str | None = Query(None),
+    client: str | None = Query(None),
+    period: str | None = Query(None, description="örn: 2025-Q2"),
+    smmm_id: str | None = Query(None),
+    client_id: str | None = Query(None),
+):
+    """
+    Sprint-3: KPI'lar backend contract'tan üretilecek (tek kaynak gerçek).
+    Geriye dönük uyumluluk:
+      - smmm_id/client_id parametreleri de kabul edilir.
+    Not: Parametre verilmezse de contract döner (UI kırılmasın), fakat warnings'e ctx eksikliği eklenir.
+    """
+    c = _read_json(CONTRACTS_DIR / "portfolio_customer_summary.json")
 
+    # ctx normalize (multi-tenant forward)
+    smmm_n = smmm or smmm_id
+    client_n = client or client_id
+    period_n = period
+
+    # contract üstüne bağlamı yaz (opsiyonel)
+    if smmm_n:
+        c["smmm_id"] = smmm_n
+    if client_n:
+        c["client_id"] = client_n
+    if period_n:
+        c.setdefault("period_window", {})
+        if isinstance(c["period_window"], dict):
+            c["period_window"]["period"] = period_n
+
+    # ensure warnings list
+    if "warnings" not in c or not isinstance(c.get("warnings"), list):
+        c["warnings"] = []
+    if not smmm_n or not client_n or not period_n:
+        c["warnings"].append("missing_ctx_params:smmm/client/period")
+
+    try:
+        _enrich_portfolio_with_kpis(c)
+    except Exception as e:
+        c["warnings"].append(f"kpi_enrich_failed:{e}")
+
+    return JSONResponse(c)
 @router.get("/contracts/mbr")
 def contracts_mbr():
     return JSONResponse(_read_json(CONTRACTS_DIR / "mbr_view.json"))
