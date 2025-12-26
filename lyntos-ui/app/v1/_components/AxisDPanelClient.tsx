@@ -2,6 +2,17 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 
+type AxisTopAccount = { account_code: string; account_name?: string | null; net: number };
+type SelectedTopAccount = {
+  item_id: string;
+  item_title_tr: string;
+  account_code: string;
+  account_name?: string | null;
+  net: number;
+  rank: number;
+  group_total_abs: number;
+};
+
 type AxisItem = {
   id: string;
   account_prefix?: string;
@@ -9,7 +20,7 @@ type AxisItem = {
   severity: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL" | string;
   finding_tr?: string | null;
   actions_tr?: string[] | null;
-  top_accounts?: { account_code: string; account_name?: string | null; net: number }[] | null;
+  top_accounts?: AxisTopAccount[] | null;
   required_docs?: { code: string; title_tr?: string | null }[] | null;
 };
 
@@ -28,6 +39,7 @@ type AxisTrend = {
   current_period: string;
   prev_period: string;
   prev_available: boolean;
+  reason_tr?: string | null;
   kpis: TrendKpi[];
 };
 
@@ -131,6 +143,27 @@ export default function AxisDPanelClient(props: { smmm: string; client: string; 
   const periodText = data?.period_window?.period || props.period;
 
   const trend = data?.trend || null;
+
+  const [selectedAccount, setSelectedAccount] = useState<SelectedTopAccount | null>(null);
+
+  const closeAccount = useCallback(() => setSelectedAccount(null), []);
+
+  const copyAccountCode = useCallback(async (code: string) => {
+    try {
+      await navigator.clipboard.writeText(code);
+    } catch (e) {
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!selectedAccount) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeAccount();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selectedAccount, closeAccount]);
+
 
   const isMissingMizan = !!err && err.includes("Mizan dosyası bulunamadı");
 
@@ -236,6 +269,7 @@ export default function AxisDPanelClient(props: { smmm: string; client: string; 
                 {it.top_accounts?.length ? (
                   <div className="mt-2 text-xs text-slate-700">
                     <div className="font-semibold">Top Hesaplar (mizan)</div>
+                    <div className="mt-1 text-[11px] text-slate-500">Satıra tıkla: hızlı hesap detayı açılır.</div>
                     <div className="mt-1 overflow-x-auto">
                       <table className="w-full text-left text-[11px]">
                         <thead>
@@ -247,7 +281,42 @@ export default function AxisDPanelClient(props: { smmm: string; client: string; 
                         </thead>
                         <tbody>
                           {it.top_accounts.map((a, i) => (
-                            <tr key={i} className="border-t">
+                            <tr
+                              key={i}
+                              className="border-t cursor-pointer hover:bg-slate-50"
+                              onClick={() => {
+                                const top = it.top_accounts || [];
+                                const totalAbs = top.reduce((acc, r) => acc + Math.abs(Number((r as any).net) || 0), 0);
+                                setSelectedAccount({
+                                  item_id: it.id,
+                                  item_title_tr: it.title_tr,
+                                  account_code: a.account_code,
+                                  account_name: a.account_name,
+                                  net: a.net,
+                                  rank: i + 1,
+                                  group_total_abs: totalAbs,
+                                });
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                  e.preventDefault();
+                                  const top = it.top_accounts || [];
+                                  const totalAbs = top.reduce((acc, r) => acc + Math.abs(Number((r as any).net) || 0), 0);
+                                  setSelectedAccount({
+                                    item_id: it.id,
+                                    item_title_tr: it.title_tr,
+                                    account_code: a.account_code,
+                                    account_name: a.account_name,
+                                    net: a.net,
+                                    rank: i + 1,
+                                    group_total_abs: totalAbs,
+                                  });
+                                }
+                              }}
+                              tabIndex={0}
+                              role="button"
+                              aria-label={`Hesap detayı: ${a.account_code}`}
+                            >
                               <td className="py-1 pr-2 font-medium">{a.account_code}</td>
                               <td className="py-1 pr-2">{a.account_name || "—"}</td>
                               <td className="py-1 text-right">{fmtTL(a.net)}</td>
@@ -293,6 +362,71 @@ export default function AxisDPanelClient(props: { smmm: string; client: string; 
       ) : !err && data ? (
         <div className="mt-3 text-sm text-slate-600">Axis-D contract geldi ama item yok (veya boş dönüyor).</div>
       ) : null}
+
+          {selectedAccount ? (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"
+              role="dialog"
+              aria-modal="true"
+              onClick={(e) => {
+                if (e.currentTarget === e.target) closeAccount();
+              }}
+            >
+              <div className="w-full max-w-lg rounded-2xl bg-white p-4 shadow-lg">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-semibold text-slate-900">
+                      {selectedAccount.account_code} — {selectedAccount.account_name || "—"}
+                    </div>
+                    <div className="mt-1 text-[11px] text-slate-600">
+                      Kural: {selectedAccount.item_title_tr} ({selectedAccount.item_id})
+                    </div>
+                  </div>
+                  <button className="rounded-lg border px-3 py-2 text-xs hover:bg-slate-50" onClick={closeAccount}>
+                    Kapat
+                  </button>
+                </div>
+
+                <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
+                  <div className="rounded-xl bg-slate-50 p-3">
+                    <div className="text-[11px] font-semibold text-slate-700">Net</div>
+                    <div className="mt-1 text-sm font-semibold text-slate-900">{fmtTL(selectedAccount.net)}</div>
+                  </div>
+                  <div className="rounded-xl bg-slate-50 p-3">
+                    <div className="text-[11px] font-semibold text-slate-700">Sıra / Pay</div>
+                    <div className="mt-1 text-sm font-semibold text-slate-900">#{selectedAccount.rank}</div>
+                    <div className="mt-1 text-[11px] text-slate-600">
+                      Pay:{" "}
+                      {selectedAccount.group_total_abs > 0
+                        ? fmtPct(Math.abs(selectedAccount.net) / selectedAccount.group_total_abs)
+                        : "—"}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-3 text-xs text-slate-700">
+                  <div className="font-semibold">SMMM için hızlı kontrol</div>
+                  <ul className="mt-1 list-disc pl-5">
+                    <li>Bu hesap kodu için mizan satırını (ve alt hesap kırılımını) doğrula.</li>
+                    <li>Bu kalemle ilişkili evrakı “Gerekli Evrak” listesinden dosyala.</li>
+                    <li>Hareket detayı (yevmiye/banka) bu sprintte yok; sonraki sprintte “hesap hareketi” ekranına bağlayacağız.</li>
+                  </ul>
+                </div>
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white hover:opacity-90"
+                    onClick={() => void copyAccountCode(selectedAccount.account_code)}
+                  >
+                    Hesap kodunu kopyala
+                  </button>
+                  <button className="rounded-lg border px-3 py-2 text-xs hover:bg-slate-50" onClick={closeAccount}>
+                    Kapat
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
     </div>
   );
 }
