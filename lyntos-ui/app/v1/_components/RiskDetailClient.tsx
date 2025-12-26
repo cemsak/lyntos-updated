@@ -2,49 +2,6 @@
 
 import React, { useEffect, useState } from "react";
 
-
-function _warningKey(w: any): string {
-  if (w == null) return "";
-  if (typeof w === "string") return w.trim();
-  if (typeof w === "number" || typeof w === "boolean") return String(w);
-  if (typeof w === "object") {
-    const o: any = w;
-    const parts = [
-      o.code,
-      o.id,
-      o.key,
-      o.field,
-      o.path,
-      o.message,
-      o.message_tr,
-      o.text_tr,
-      o.text,
-      o.detail,
-      o.reason_tr
-    ].filter(Boolean);
-    if (parts.length) return String(parts.join("|")).trim();
-    try {
-      return JSON.stringify(o);
-    } catch {
-      return String(o);
-    }
-  }
-  return String(w).trim();
-}
-
-function dedupeWarnings<T>(items: T[]): T[] {
-  const seen = new Set<string>();
-  const out: T[] = [];
-  for (const it of items) {
-    const k = _warningKey(it);
-    if (!k) continue;
-    if (seen.has(k)) continue;
-    seen.add(k);
-    out.push(it);
-  }
-  return out;
-}
-
 type Severity = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL" | string;
 
 function sevColor(sev: Severity): string {
@@ -209,5 +166,4 @@ export default function RiskDetailClient(props: { code: string; smmm: string; cl
     </div>
   );
 
-const warnings = dedupeWarnings([...(dq?.warnings ?? []), ...((contract as any)?.warnings ?? [])]);
 }
