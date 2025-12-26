@@ -90,7 +90,19 @@ export default function AxisDPanelClient(props: { smmm: string; client: string; 
     try {
       const res = await fetch(url, { cache: "no-store" });
       const txt = await res.text();
-      if (!res.ok) throw new Error(`${res.status} ${txt.slice(0, 200)}`);
+
+      if (!res.ok) {
+        let msg = `HTTP ${res.status}`;
+        try {
+          const j = JSON.parse(txt);
+          if (j && typeof j.detail === "string" && j.detail.trim()) msg = j.detail;
+        } catch (e) {
+        }
+        setData(null);
+        setErr(msg);
+        return;
+      }
+
       setData(JSON.parse(txt));
     } catch (e: any) {
       setData(null);
@@ -119,6 +131,8 @@ export default function AxisDPanelClient(props: { smmm: string; client: string; 
   const periodText = data?.period_window?.period || props.period;
 
   const trend = data?.trend || null;
+
+  const isMissingMizan = !!err && err.includes("Mizan dosyası bulunamadı");
 
   return (
     <div className="rounded-2xl border p-4">
@@ -195,8 +209,8 @@ export default function AxisDPanelClient(props: { smmm: string; client: string; 
 
       {err ? (
         <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-slate-700">
-          <div className="font-semibold">Not</div>
-          <div className="mt-1">Axis-D contract alınamadı. Genelde backend çalışmıyor, proxy route hatalı veya endpoint 500 dönüyor.</div>
+          <div className="font-semibold">{isMissingMizan ? "Veri Eksik" : "Not"}</div>
+          <div className="mt-1">{isMissingMizan ? "Bu dönem için mizan verisi bulunamadı. Q1/Q3 gerçek veri gelince QoQ trend otomatik çalışacaktır." : "Axis-D contract alınamadı. Proxy route veya backend endpoint hata dönüyor."}</div>
           <div className="mt-2 text-xs text-slate-600">Hata: {err}</div>
         </div>
       ) : null}
