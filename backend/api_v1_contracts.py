@@ -166,6 +166,8 @@ def _axisd_find_mizan_csv(base_dir: str, smmm_id: str, client_id: str, period: s
     ]
     for fp in cand:
         try:
+            if "__SMOKETEST_" in fp:
+                continue
             if os.path.exists(fp) and os.path.getsize(fp) > 0:
                 return fp
         except Exception:
@@ -313,7 +315,7 @@ def _axisd_kpi_delta(cur: Optional[float], prev: Optional[float]) -> Tuple[Optio
 def build_axis_d_contract_mizan_only(base_dir: Path, smmm_id: str, client_id: str, period: str) -> Dict[str, Any]:
     cur_fp = _axisd_find_mizan_path(base_dir, smmm_id, client_id, period)
     if not cur_fp or not cur_fp.exists():
-        raise FileNotFoundError(f"Mizan dosyası bulunamadı: data/luca/{smmm_id}/{client_id}/{period}")
+        raise HTTPException(status_code=404, detail=f"Mizan dosyası bulunamadı: data/luca/{smmm_id}/{client_id}/{period}")
 
     cur_rows = _axisd_read_mizan_rows(cur_fp)
 
@@ -331,14 +333,7 @@ def build_axis_d_contract_mizan_only(base_dir: Path, smmm_id: str, client_id: st
 
     # prev
     prev_p = _axisd_prev_quarter(period)
-    reason_tr = None  # v58b ensure defined
     prev_available = False
-    # v58b smoketest guard: ignore __SMOKETEST_* folders
-    if prev_available:
-        _ppath = str(_prev_period)
-        if '__SMOKETEST' in _ppath:
-            prev_available = False
-            reason_tr = 'Önceki çeyrek verisi smoketest kopyası olarak işaretli: ' + _ppath
     reason_tr: Optional[str] = None
     prev_vals: Dict[str, Optional[float]] = {
         "cash_bank": None,
