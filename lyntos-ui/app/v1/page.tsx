@@ -19,8 +19,13 @@ function backendBase(): string {
   );
 }
 
-async function getPortfolioContract() {
-  const url = `${backendBase()}/api/v1/contracts/portfolio`;
+async function getPortfolioContract(ctx: { smmm: string; client: string; period: string }) {
+  const qp = new URLSearchParams({
+    smmm: ctx.smmm,
+    client: ctx.client,
+    period: ctx.period,
+  });
+  const url = `${backendBase()}/api/v1/contracts/portfolio?${qp.toString()}`;
   const res = await fetch(url, { cache: "no-store" });
   const txt = await res.text();
   if (!res.ok) {
@@ -28,6 +33,7 @@ async function getPortfolioContract() {
   }
   return JSON.parse(txt);
 }
+
 
 export default async function V1Page({
   searchParams,
@@ -42,7 +48,7 @@ export default async function V1Page({
     period: pick(sp, "period", "2025-Q2"),
   };
 
-  const contract = await getPortfolioContract();
+  const contract = await getPortfolioContract(ctx);
 
   return (
     <div className="mx-auto max-w-6xl p-4">

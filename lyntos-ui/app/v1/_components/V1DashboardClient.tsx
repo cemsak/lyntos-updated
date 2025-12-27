@@ -44,6 +44,16 @@ type PortfolioContract = {
   };
   warnings?: string[] | null;
   risks?: RiskSummary[];
+  kpis?: {
+    kurgan_risk_score?: number | null;
+    vergi_uyum_puani?: number | null;
+    radar_risk_score?: number | null;
+    dq_in_period_pct?: number | null;
+  };
+  kpis_meta?: {
+    version?: string | null;
+    components?: any;
+  };
 };
 
 type Ctx = { smmm: string; client: string; period: string };
@@ -239,6 +249,20 @@ export default function V1DashboardClient(props: { contract: PortfolioContract; 
 
     return clamp(Math.round((outRatio * 0.60 + heavyRatio * 0.30 + todoNorm * 0.10) * 100), 0, 100);
   }, [dq.bank_rows_total, dq.bank_rows_out_of_period, risksSorted, missingTodo.length]);
+  
+  // --- Sprint-3: KPI render (backend is source of truth; UI falls back for migration) ---
+  const kurganBase = (typeof c.kpis?.kurgan_risk_score === "number" && isFinite(c.kpis.kurgan_risk_score))
+    ? c.kpis.kurgan_risk_score
+    : kurganRiskScore;
+  const dqBase = (typeof c.kpis?.dq_in_period_pct === "number" && isFinite(c.kpis.dq_in_period_pct))
+    ? c.kpis.dq_in_period_pct
+    : dqScore;
+  const vergiUyumBase = (typeof c.kpis?.vergi_uyum_puani === "number" && isFinite(c.kpis.vergi_uyum_puani))
+    ? c.kpis.vergi_uyum_puani
+    : clamp(100 - Math.round(kurganBase * 0.75) - Math.round((100 - dqBase) * 0.25), 0, 100);
+  const radarBase = (typeof c.kpis?.radar_risk_score === "number" && isFinite(c.kpis.radar_risk_score))
+    ? c.kpis.radar_risk_score
+    : radarRisk;
 
   async function doRefresh() {
     setBusy("refresh");
@@ -296,25 +320,25 @@ export default function V1DashboardClient(props: { contract: PortfolioContract; 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <div className="rounded-2xl bg-slate-50 p-3">
             <div className="text-xs text-slate-500">Kurgan Risk Skoru</div>
-            <div className="text-2xl font-semibold">{kurganRiskScore}</div>
+            <div className="text-2xl font-semibold">{kurganBase}</div>
             <div className="text-xs text-slate-600">signal score/weight bazlı</div>
           </div>
 
           <div className="rounded-2xl bg-slate-50 p-3">
             <div className="text-xs text-slate-500">Vergi Uyum Puanı</div>
-            <div className="text-2xl font-semibold">{vergiUyum}</div>
+            <div className="text-2xl font-semibold">{vergiUyumBase}</div>
             <div className="text-xs text-slate-600">risk + data quality</div>
           </div>
 
           <div className="rounded-2xl bg-slate-50 p-3">
             <div className="text-xs text-slate-500">Radar Risk Skoru</div>
-            <div className="text-2xl font-semibold">{radarRisk}</div>
+            <div className="text-2xl font-semibold">{radarBase}</div>
             <div className="text-xs text-slate-600">bank out-of-period + HIGH yoğunluğu</div>
           </div>
 
           <div className="rounded-2xl bg-slate-50 p-3">
             <div className="text-xs text-slate-500">Data Quality (Bank in-period %)</div>
-            <div className="text-2xl font-semibold">{dqScore}%</div>
+            <div className="text-2xl font-semibold">{dqBase}%</div>
             <div className="text-xs text-slate-600">in: {num(dq.bank_rows_in_period)} / total: {num(dq.bank_rows_total)}</div>
           </div>
         </div>
