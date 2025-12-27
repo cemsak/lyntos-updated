@@ -650,9 +650,33 @@ def build_axis_d_contract_mizan_only(base_dir: Path, smmm_id: str, client_id: st
         },
     ]
 
+    # --- Sprint-4: Axis D item schema normalization (stable render) ---
+    AXIS_D_ITEM_FIELDS = [
+        'id','account_prefix','title_tr','severity','finding_tr',
+        'top_accounts','required_docs','actions_tr','evidence_refs','missing_docs'
+    ]
+    for it in items:
+        if not isinstance(it, dict):
+            continue
+        # defaults (UI stable; backend is source of truth)
+        if it.get('severity') is None:
+            it['severity'] = 'LOW'
+        if it.get('finding_tr') is None:
+            it['finding_tr'] = ''
+        it.setdefault('top_accounts', [])
+        it.setdefault('required_docs', [])
+        it.setdefault('actions_tr', [])
+        it.setdefault('evidence_refs', [])
+        it.setdefault('missing_docs', [])
+        # normalize None -> []
+        for k in ('top_accounts','required_docs','actions_tr','evidence_refs','missing_docs'):
+            if it.get(k) is None:
+                it[k] = []
+
     return {
         "axis": "D",
         "title_tr": "Mizan İncelemesi (Kritik Eksen)",
+        "schema": {"version": "axis_d_s4_v1", "item_fields": AXIS_D_ITEM_FIELDS},
         "period_window": {"period": period},
         "trend": trend,
         "notes_tr": "\n".join(notes_lines),
