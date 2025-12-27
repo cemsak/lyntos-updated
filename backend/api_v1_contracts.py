@@ -713,11 +713,74 @@ def build_axis_d_contract_mizan_only(base_dir: Path, smmm_id: str, client_id: st
         more = f" (+{len(missing_codes)-6})" if len(missing_codes) > 6 else ""
         tail_102 = f" Eksik ekstre: {shown}{more}."
 
+    # --- Sprint-4: 102 evidence (out-of-period files + POS) ---
+    def _axisd_expected_months(period: str):
+        # period format: YYYY-QN
+        try:
+            q = int((period or '').split('-Q')[-1])
+        except Exception:
+            return []
+        if q == 1: return [1,2,3]
+        if q == 2: return [4,5,6]
+        if q == 3: return [7,8,9]
+        if q == 4: return [10,11,12]
+        return []
+
+    def _axisd_months_from_name(name: str):
+        n = (name or '').lower()
+        months = set()
+        # '7. AY' / '7 AY'
+        for m in range(1,13):
+            if re.search(rf'(?<!\d){m}(?!\d)\s*\.?\s*ay\b', n):
+                months.add(m)
+        # '4-5-6' / '4-5'
+        for a,b,c in re.findall(r'(?<!\d)(1[0-2]|0?[1-9])\s*-\s*(1[0-2]|0?[1-9])(?:\s*-\s*(1[0-2]|0?[1-9]))?(?!\d)', n):
+            months.add(int(a))
+            months.add(int(b))
+            if c:
+                months.add(int(c))
+        return sorted(months)
+
+    exp_months = _axisd_expected_months(period)
+    out_of_period_files_102 = []
+    if exp_months:
+        for f in bank_files:
+            ms = _axisd_months_from_name(f)
+            if ms and any(m not in exp_months for m in ms):
+                out_of_period_files_102.append(f)
+
+    # POS subaccounts (by mizan account_name)
+    pos_codes_102 = []
+    for r in _axisd_top_accounts(cur_rows, ["102"], 80):
+        nm = str((r or {}).get("account_name") or "").lower()
+        if "pos" in nm:
+            code = str((r or {}).get("account_code") or "").strip()
+            if code and code not in pos_codes_102:
+                pos_codes_102.append(code)
+
+    oop_note = ""
+    if out_of_period_files_102:
+        samp = ", ".join(out_of_period_files_102[:3])
+        more = f" (+{len(out_of_period_files_102)-3})" if len(out_of_period_files_102) > 3 else ""
+        oop_note = f" Çeyrek dışı dosya: {len(out_of_period_files_102)} (örnek: {samp}{more})."
+
+    pos_note = ""
+    if pos_codes_102:
+        shown = ", ".join(pos_codes_102[:4])
+        more = f" (+{len(pos_codes_102)-4})" if len(pos_codes_102) > 4 else ""
+        pos_note = f" POS alt hesap(lar): {shown}{more}."
+
+    evidence_102 = []
+    if out_of_period_files_102:
+        evidence_102.append({"kind": "bank_out_of_period_files", "files": out_of_period_files_102[:30], "expected_months": exp_months})
+    if pos_codes_102:
+        evidence_102.append({"kind": "pos_subaccounts", "codes": pos_codes_102})
+
     finding_102 = (
         f"102 banka alt hesapları: {len(sub_102_codes)}; "
         f"ekstre dosyaları: {len(bank_files)}; "
         f"eşleşen: {len(matched_codes)}."
-        + tail_102
+        + tail_102 + oop_note + pos_note
     )
     items = [
 
@@ -824,9 +887,10 @@ def build_axis_d_contract_mizan_only(base_dir: Path, smmm_id: str, client_id: st
             "actions_tr": [
                 "Mizan 102.xx alt hesaplarını banka/IBAN bazında doğrula; her alt hesap için en az bir ekstre dosyası olmalı.",
                 "Dosya ad standardı: '102.xx BANKA AY.csv' (örn: '102.04 HALKBANK 4-5-6.csv').",
+                "Çeyrek dışı (seçili dönem dışı) satır içeren ekstre dosyalarını ayır; sistem bu satırları metriklere dahil etmez.",
                 "Eksik görünen alt hesaplar için ilgili bankadan dönem ekstrelerini iste; POS hesaplarını ayrıca teyit et.",
             ],
-            "evidence_refs": [],
+            "evidence_refs": evidence_102,
             "missing_docs": missing_docs_102,
         },
     ]
