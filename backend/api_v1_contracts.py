@@ -448,10 +448,23 @@ def _axisd_read_mizan_rows(csv_path: Path) -> List[Dict[str, Any]]:
 
     return rows
 
+
+def _axisd_norm_code(v: Any) -> str:
+    """
+    Normalize account_code for prefix matching.
+    Handles formats like: "600.01", "'60001", "600-01", "600 01".
+    Returns digits-only when available; otherwise returns stripped string.
+    """
+    s = str(v or "").strip().replace("\u200e","").replace("\u200f","")
+    if s.startswith("'"):
+        s = s[1:].strip()
+    digits = "".join(ch for ch in s if ch.isdigit())
+    return digits or s
+
 def _axisd_sum_prefix(rows: List[Dict[str, Any]], prefixes: List[str]) -> float:
     total = 0.0
     for r in rows:
-        code = str(r.get("account_code") or "")
+        code = _axisd_norm_code(r.get("account_code"))
         if any(code.startswith(p) for p in prefixes):
             total += float(r.get("net") or 0.0)
     return total
@@ -459,7 +472,7 @@ def _axisd_sum_prefix(rows: List[Dict[str, Any]], prefixes: List[str]) -> float:
 def _axisd_top_accounts(rows: List[Dict[str, Any]], prefixes: List[str], n: int = 8) -> List[Dict[str, Any]]:
     bucket = []
     for r in rows:
-        code = str(r.get("account_code") or "")
+        code = _axisd_norm_code(r.get("account_code"))
         if any(code.startswith(p) for p in prefixes):
             bucket.append(r)
     bucket.sort(key=lambda x: abs(float(x.get("net") or 0.0)), reverse=True)
@@ -596,6 +609,15 @@ def build_axis_d_contract_mizan_only(base_dir: Path, smmm_id: str, client_id: st
         f"Özet: Dönen varlık={total_current_assets:,.2f} TL, KV borç={short_term_liabilities:,.2f} TL",
         f"Likidite oranı (dönen/KV) ≈ {liquidity_ratio:.2f}" if liquidity_ratio is not None else "Likidite oranı (dönen/KV) ≈ N/A",
     ]
+    # --- Sprint-4: top_accounts fallbacks (stable drilldown; disclose fallback) ---
+    ta_600 = _axisd_top_accounts(cur_rows, ["600","601","602"], 12)
+    ta_600_fb = ta_600 or _axisd_top_accounts(cur_rows, ["6"], 12)
+    ta_600_note = "" if ta_600 else " (Not: 600/601/602 bulunamadı; 6xx gelir hesapları gösteriliyor.)"
+
+    ta_fin = _axisd_top_accounts(cur_rows, ["646","656","780","781"], 12)
+    ta_fin_fb = ta_fin or _axisd_top_accounts(cur_rows, ["65","78"], 12)
+    ta_fin_note = "" if ta_fin else " (Not: 646/656/780/781 bulunamadı; 65x/78x finansman hesapları gösteriliyor.)"
+
 
     items = [
         {
@@ -653,8 +675,8 @@ def build_axis_d_contract_mizan_only(base_dir: Path, smmm_id: str, client_id: st
             "account_prefix": "600/601/602",
             "title_tr": "Satış Hesapları (600/601/602)",
             "severity": "MEDIUM",
-            "finding_tr": f"Satış hesapları net toplam (mizan): {_axisd_sum_prefix(cur_rows, ['600','601','602']):,.2f} TL",
-            "top_accounts": _axisd_top_accounts(cur_rows, ["600","601","602"], 12),
+            "finding_tr": f"Satış hesapları net toplam (mizan): {_axisd_sum_prefix(cur_rows, ['600','601','602']):,.2f} TL" + ta_600_note,
+            "top_accounts": ta_600_fb,
             "required_docs": [
                 {"code": "EINV_SALES", "title_tr": "E-Fatura/E-Arşiv satış listesi (dönem)"},
                 {"code": "VAT_RETURN", "title_tr": "KDV beyannamesi ve ekleri (aylık)"},
@@ -671,8 +693,8 @@ def build_axis_d_contract_mizan_only(base_dir: Path, smmm_id: str, client_id: st
             "account_prefix": "646/656/780",
             "title_tr": "Kur Farkı / Faiz / Finansman (646/656/780)",
             "severity": "MEDIUM",
-            "finding_tr": f"Finansman/kur farkı net toplam (mizan): {_axisd_sum_prefix(cur_rows, ['646','656','780','781']):,.2f} TL",
-            "top_accounts": _axisd_top_accounts(cur_rows, ["646","656","780","781"], 12),
+            "finding_tr": f"Finansman/kur farkı net toplam (mizan): {_axisd_sum_prefix(cur_rows, ['646','656','780','781']):,.2f} TL" + ta_fin_note,
+            "top_accounts": ta_fin_fb,
             "required_docs": [
                 {"code": "LOAN_AGR", "title_tr": "Kredi sözleşmeleri + geri ödeme planı"},
                 {"code": "BANK_STMT", "title_tr": "Banka ekstreleri + dekontlar (dönem)"},
