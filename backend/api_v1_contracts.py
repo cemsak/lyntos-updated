@@ -680,7 +680,47 @@ def build_axis_d_contract_mizan_only(base_dir: Path, smmm_id: str, client_id: st
     ta_fin_note = "" if ta_fin else " (Not: 646/656/780/781 bulunamadı; 65x/78x finansman hesapları gösteriliyor.)"
 
 
+    
+    # --- Sprint-4: 102 subaccount ↔ bank statements linkage (deterministic) ---
+    bank_dir = base_dir / "data" / "banka" / smmm_id / client_id / period / "_raw"
+    bank_files = sorted([p.name for p in bank_dir.glob("*.csv")]) if bank_dir.exists() else []
+
+    ta_102 = _axisd_top_accounts(cur_rows, ["102"], 12)
+    sub_102_codes = sorted({
+        str((r or {}).get("account_code") or "").strip()
+        for r in _axisd_top_accounts(cur_rows, ["102"], 60)
+        if "." in str((r or {}).get("account_code") or "")
+    })
+
+    matched_codes = []
+    missing_codes = []
+    for code in sub_102_codes:
+        hits = [f for f in bank_files if f.startswith(code)]
+        if hits:
+            matched_codes.append(code)
+        else:
+            missing_codes.append(code)
+
+    sev_102 = "HIGH" if missing_codes else "LOW"
+    missing_docs_102 = [
+        {"code": f"BANK_STMT_{c}", "title_tr": f"{c} için banka ekstresi (dönem)"}
+        for c in missing_codes[:20]
+    ]
+
+    tail_102 = ""
+    if missing_codes:
+        shown = ", ".join(missing_codes[:6])
+        more = f" (+{len(missing_codes)-6})" if len(missing_codes) > 6 else ""
+        tail_102 = f" Eksik ekstre: {shown}{more}."
+
+    finding_102 = (
+        f"102 banka alt hesapları: {len(sub_102_codes)}; "
+        f"ekstre dosyaları: {len(bank_files)}; "
+        f"eşleşen: {len(matched_codes)}."
+        + tail_102
+    )
     items = [
+
         {
             "id": "D-100",
             "account_prefix": "100",
@@ -768,6 +808,27 @@ def build_axis_d_contract_mizan_only(base_dir: Path, smmm_id: str, client_id: st
             ],
         },
 
+
+        {
+            "id": "D-102-LINK",
+            "account_prefix": "102.xx",
+            "title_tr": "102 Banka Alt Hesap ↔ Ekstre Eşleştirme",
+            "severity": sev_102,
+            "finding_tr": finding_102,
+            "top_accounts": ta_102,
+            "required_docs": [
+                {"code": "BANK_STMT", "title_tr": "Banka ekstreleri (tüm 102 alt hesaplar, dönem)"},
+                {"code": "IBAN_LIST", "title_tr": "IBAN/hesap listesi (banka bazında)"},
+                {"code": "POS_STMT", "title_tr": "POS/virtual POS ekstreleri (varsa)"},
+            ],
+            "actions_tr": [
+                "Mizan 102.xx alt hesaplarını banka/IBAN bazında doğrula; her alt hesap için en az bir ekstre dosyası olmalı.",
+                "Dosya ad standardı: '102.xx BANKA AY.csv' (örn: '102.04 HALKBANK 4-5-6.csv').",
+                "Eksik görünen alt hesaplar için ilgili bankadan dönem ekstrelerini iste; POS hesaplarını ayrıca teyit et.",
+            ],
+            "evidence_refs": [],
+            "missing_docs": missing_docs_102,
+        },
     ]
 
     # --- Sprint-4: Axis D item schema normalization (stable render) ---
