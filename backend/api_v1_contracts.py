@@ -648,6 +648,43 @@ def build_axis_d_contract_mizan_only(base_dir: Path, smmm_id: str, client_id: st
             "required_docs": [{"code": "STOCK_COUNT", "title_tr": "Stok sayım tutanağı (çeyreklik)"}],
             "actions_tr": ["Stok sayımını çeyreklik yap ve dosyala.", "Stok hareketlerini fatura/irsaliye ile bağla."],
         },
+        {
+            "id": "D-600-602",
+            "account_prefix": "600/601/602",
+            "title_tr": "Satış Hesapları (600/601/602)",
+            "severity": "MEDIUM",
+            "finding_tr": f"Satış hesapları net toplam (mizan): {_axisd_sum_prefix(cur_rows, ['600','601','602']):,.2f} TL",
+            "top_accounts": _axisd_top_accounts(cur_rows, ["600","601","602"], 12),
+            "required_docs": [
+                {"code": "EINV_SALES", "title_tr": "E-Fatura/E-Arşiv satış listesi (dönem)"},
+                {"code": "VAT_RETURN", "title_tr": "KDV beyannamesi ve ekleri (aylık)"},
+                {"code": "AR_AP_LEDGER", "title_tr": "Cari hesap ekstresi (120/320)"},
+            ],
+            "actions_tr": [
+                "600/601/602 toplamını ay bazında çıkar ve büyük sapmaları işaretle.",
+                "E-fatura satış listesi toplamı ile mizandaki toplamı karşılaştır; fark varsa gerekçelendir.",
+                "Aykırı/yüksek tutarlı satışları örnekleme ile fatura ve teslim/ifa dayanağına bağla.",
+            ],
+        },
+        {
+            "id": "D-FIN-FX",
+            "account_prefix": "646/656/780",
+            "title_tr": "Kur Farkı / Faiz / Finansman (646/656/780)",
+            "severity": "MEDIUM",
+            "finding_tr": f"Finansman/kur farkı net toplam (mizan): {_axisd_sum_prefix(cur_rows, ['646','656','780','781']):,.2f} TL",
+            "top_accounts": _axisd_top_accounts(cur_rows, ["646","656","780","781"], 12),
+            "required_docs": [
+                {"code": "LOAN_AGR", "title_tr": "Kredi sözleşmeleri + geri ödeme planı"},
+                {"code": "BANK_STMT", "title_tr": "Banka ekstreleri + dekontlar (dönem)"},
+                {"code": "FX_REVAL", "title_tr": "Kur değerleme hesaplama dökümü (varsa)"},
+            ],
+            "actions_tr": [
+                "646/656/780 (ve varsa 781) hesaplarında ay bazında dağılımı çıkar.",
+                "Kredi anapara/faiz/komisyon ödemelerini banka dekontları ile bağla.",
+                "Kur farkı kayıtlarının değerleme yöntemini ve dayanağını dosyala.",
+            ],
+        },
+
     ]
 
     # --- Sprint-4: Axis D item schema normalization (stable render) ---
