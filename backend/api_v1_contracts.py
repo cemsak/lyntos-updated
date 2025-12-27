@@ -394,7 +394,13 @@ def _axisd_parse_float(x: Any) -> Optional[float]:
 
 def _axisd_read_mizan_rows(csv_path: Path) -> List[Dict[str, Any]]:
     raw = csv_path.read_text(encoding="utf-8", errors="replace")
-    sample = raw[:4096]
+    # Keep line order; many LUCA exports have a title row like: "MİZAN;;;;;;"
+    lines = [ln for ln in raw.splitlines() if ln is not None]
+    if not lines:
+        return []
+
+    sample = "\n".join(lines[:80])[:4096]
+
     # delimiter sniff
     delim = ";"
     try:
@@ -403,31 +409,85 @@ def _axisd_read_mizan_rows(csv_path: Path) -> List[Dict[str, Any]]:
     except Exception:
         pass
 
-    reader = csv.DictReader(raw.splitlines(), delimiter=delim)
-    if not reader.fieldnames:
-        return []
+    def norm_line(x: str) -> str:
+        return (x or "").strip().lower().replace("\ufeff", "")
+
+    def looks_like_header(ln: str) -> bool:
+        n = norm_line(ln)
+        if not n:
+            return False
+        # LUCA / Excel header candidates
+        if "hesap" in n and ("kod" in n or "kodu" in n or "account" in n):
+            return True
+        if ("borc" in n or "borç" in n or "debit" in n) and ("alacak" in n or "credit" in n):
+            return True
+        if ("bakiye" in n or "balance" in n or "net" in n) and ("hesap" in n):
+            return True
+        return False
+
+    # Find the real header row (skip title row like "MİZAN")
+    header_idx = None
+    for idx, ln in enumerate(lines[:120]):
+        if looks_like_header(ln):
+            header_idx = idx
+            break
+
+    # Fallback: if first non-empty line is "mizan", try the next non-empty line
+    if header_idx is None:
+        for idx, ln in enumerate(lines[:10]):
+            n = norm_line(ln)
+            if not n:
+                continue
+            if n.startswith("mizan"):
+                # find next non-empty line
+                for k in range(idx + 1, min(idx + 6, len(lines))):
+                    if norm_line(lines[k]):
+                        header_idx = k
+                        break
+                break
+
+    if header_idx is None:
+        # As a last resort, keep original behavior (may still return empty)
+        reader = csv.DictReader(lines, delimiter=delim)
+        if not reader.fieldnames:
+            return []
+        fieldnames = list(reader.fieldnames)
+        data_lines = lines[1:]
+    else:
+        header_cells = lines[header_idx].split(delim)
+        fieldnames = []
+        for k, h in enumerate(header_cells):
+            h = (h or "").strip()
+            fieldnames.append(h if h else f"col_{k}")
+        data_lines = lines[header_idx + 1 :]
+
+    # Build reader with explicit fieldnames to avoid bad first-row headers
+    reader = csv.DictReader(data_lines, fieldnames=fieldnames, delimiter=delim)
 
     # normalize headers
     def norm(h: str) -> str:
         return (h or "").strip().lower().replace("\ufeff", "")
 
-    headers = {norm(h): h for h in reader.fieldnames}
+    headers = {norm(h): h for h in fieldnames}
 
     def pick(*cands: str) -> Optional[str]:
         for c in cands:
+            c = c.lower()
             for nh, orig_h in headers.items():
                 if c in nh:
                     return orig_h
         return None
 
-    col_code = pick("hesap kod", "account code", "hesap_kod", "kod")
-    col_name = pick("hesap ad", "account name", "ad", "name")
-    col_debit = pick("borc", "debit")
-    col_credit = pick("alacak", "credit")
-    col_net = pick("bakiye", "net", "balance")
+    # Wider header matching (Sprint-4)
+    col_code = pick("hesap kod", "hesap kodu", "hesapkodu", "hesap_kodu", "account code", "accountcode", "account_code", "hesap no", "hesapno", "kod", "code", "account")
+    col_name = pick("hesap ad", "hesap adı", "hesapadi", "hesap_adi", "account name", "accountname", "ad", "açıklama", "aciklama", "description", "name")
+    col_debit = pick("borc", "borç", "debit", "dr")
+    col_credit = pick("alacak", "credit", "cr")
+    col_net = pick("bakiye", "net", "balance", "tutar", "amount")
 
     rows: List[Dict[str, Any]] = []
     for r in reader:
+        # If we couldn't pick columns, skip (will return empty; better than wrong)
         code = (r.get(col_code) if col_code else None) or ""
         code = str(code).strip()
         if not code:
@@ -449,11 +509,12 @@ def _axisd_read_mizan_rows(csv_path: Path) -> List[Dict[str, Any]]:
     return rows
 
 
+
 def _axisd_norm_code(v: Any) -> str:
     """
     Normalize account_code for prefix matching.
-    Handles formats like: "600.01", "'60001", "600-01", "600 01".
-    Returns digits-only when available; otherwise returns stripped string.
+    Handles: "600.01", "'60001", "600-01", "600 01"
+    Returns digits-only when available; otherwise stripped string.
     """
     s = str(v or "").strip().replace("\u200e","").replace("\u200f","")
     if s.startswith("'"):
