@@ -17,6 +17,7 @@ type AxisItem = {
   id: string;
   account_prefix?: string;
   title_tr: string;
+  inflation?: InflationBlock | null;
   severity: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL" | string;
   finding_tr?: string | null;
   actions_tr?: string[] | null;
@@ -42,6 +43,28 @@ type AxisTrend = {
   reason_tr?: string | null;
   kpis: TrendKpi[];
 };
+// === LYNTOS_S5_INFLATION_PANEL_V1_TYPES ===
+type InflationDocRef = { code: string; path?: string | null; title_tr?: string | null };
+
+type InflationComputed = {
+  method?: string | null;
+  inputs?: Record<string, any> | null;
+  net_698_effect?: number | null;
+  close_to?: number | string | null; // 648/658 beklenir
+  source?: string | null;
+  stats?: Record<string, any> | null;
+};
+
+type InflationBlock = {
+  status: "missing_data" | "computed" | "error" | string;
+  summary_tr?: string | null;
+  actions_tr?: string[] | null;
+  missing_docs?: InflationDocRef[] | null;
+  compute_errors?: string[] | null;
+  computed?: InflationComputed | null;
+};
+// === LYNTOS_S5_INFLATION_PANEL_V1_TYPES_END ===
+
 
 type AxisContract = {
   axis: string;
@@ -148,6 +171,7 @@ export default function AxisDPanelClient(props: { smmm: string; client: string; 
   const periodText = data?.period_window?.period || props.period;
 
   const trend = data?.trend || null;
+  const inflation = (data as any)?.inflation || null;
 
   const [selectedAccount, setSelectedAccount] = useState<SelectedTopAccount | null>(null);
 
@@ -271,6 +295,109 @@ export default function AxisDPanelClient(props: { smmm: string; client: string; 
               );
             })}
           </div>
+        </div>
+      ) : null}
+
+      {/* Enflasyon Muhasebesi (Sprint-5) */}
+      {!err && inflation ? (
+        <div className="mt-3 rounded-xl border bg-white p-3">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <div className="text-sm font-semibold text-slate-900">Enflasyon Muhasebesi</div>
+              <div className="mt-1 text-[11px] text-slate-600">
+                698 akışı: parasal olmayan kıymet düzeltme farkları 698’de izlenir; kapanışta 648/658’e devredilerek 698 kapanır.
+              </div>
+            </div>
+            <span className="rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white">
+              {inflation.status}
+            </span>
+          </div>
+
+          {inflation.summary_tr ? (
+            <div className="mt-2 text-xs text-slate-700">{inflation.summary_tr}</div>
+          ) : null}
+
+          {inflation.status === "computed" && inflation.computed ? (
+            <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-3">
+              <div className="rounded-xl bg-slate-50 p-3">
+                <div className="text-[11px] font-semibold text-slate-700">Net 698 Etkisi</div>
+                <div className="mt-1 text-sm font-semibold text-slate-900">
+                  {fmtTL(typeof inflation.computed.net_698_effect === "number" ? inflation.computed.net_698_effect : null)}
+                </div>
+                <div className="mt-1 text-[11px] text-slate-600">Yöntem: {inflation.computed.method || "—"}</div>
+              </div>
+
+              <div className="rounded-xl bg-slate-50 p-3">
+                <div className="text-[11px] font-semibold text-slate-700">Beklenen Kapanış</div>
+                <div className="mt-1 text-sm font-semibold text-slate-900">
+                  {(() => {
+                  const raw: any = (inflation.computed as any)?.close_to;
+                  const num = typeof raw === "number" ? raw : Number.parseInt(String(raw ?? ""), 10);
+                  const label = num === 648 ? "Gelir (648)" : num === 658 ? "Gider (658)" : null;
+                  if (num === 648 || num === 658) return label || String(num);
+                  if (raw === null || raw === undefined || raw === "") return "—";
+                  return String(raw);
+                })()}
+                </div>
+                <div className="mt-1 text-[11px] text-slate-600">Not: 648/658 yönü backend karar ağacından gelir.</div>
+              </div>
+
+              <div className="rounded-xl bg-slate-50 p-3">
+                <div className="text-[11px] font-semibold text-slate-700">Input</div>
+                <div className="mt-1 text-[11px] text-slate-700">
+                  {inflation.computed.inputs ? (
+                    <pre className="whitespace-pre-wrap break-words">{JSON.stringify(inflation.computed.inputs, null, 2)}</pre>
+                  ) : (
+                    <span className="text-slate-500">—</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {inflation.status === "missing_data" ? (
+            <div className="mt-3">
+              {Array.isArray(inflation.missing_docs) && inflation.missing_docs.length ? (
+                <div className="rounded-xl bg-amber-50 p-3 text-xs text-amber-950">
+                  <div className="font-semibold">Eksik Belgeler</div>
+                  <ul className="mt-1 list-disc pl-5">
+                    {inflation.missing_docs.map((d, i) => (
+                      <li key={i}>
+                        <span className="font-semibold">{d.code}</span>
+                        {d.path ? <span className="text-amber-900"> — {d.path}</span> : null}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+
+              {Array.isArray(inflation.actions_tr) && inflation.actions_tr.length ? (
+                <div className="mt-2 rounded-xl bg-slate-50 p-3 text-xs text-slate-700">
+                  <div className="font-semibold">Aksiyon</div>
+                  <ul className="mt-1 list-disc pl-5">
+                    {inflation.actions_tr.map((a, i) => (
+                      <li key={i}>{a}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          {inflation.status === "error" ? (
+            <div className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-900">
+              <div className="font-semibold">Hata</div>
+              {Array.isArray(inflation.compute_errors) && inflation.compute_errors.length ? (
+                <ul className="mt-1 list-disc pl-5">
+                  {inflation.compute_errors.map((e, i) => (
+                    <li key={i}>{e}</li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="mt-1">Backend hata üretti. warnings/loglara bak.</div>
+              )}
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -481,3 +608,5 @@ export default function AxisDPanelClient(props: { smmm: string; client: string; 
     </div>
   );
 }
+
+// LYNTOS_S5_INFLATION_PANEL_V1
