@@ -224,6 +224,7 @@ def contracts_portfolio(
 
     return JSONResponse(c)
 
+
 @router.get("/contracts/dossier/manifest")
 def contracts_dossier_manifest(
     smmm: str = Query(...),
@@ -234,10 +235,9 @@ def contracts_dossier_manifest(
     Ödül standardı: kanıt üretimi için 'manifest' contract.
     Kaynaklar:
       - portfolio contract (ctx + kpis dahil)
-      - axis D contract (required_docs + actions_tr + missing_docs + evidence_refs)
-    Not: Bu endpoint ZIP/PDF üretmez; sadece deterministik checklist/manifest döner.
+      - axis D contract (items.required_docs/missing_docs/evidence_refs/actions_tr)
+      - axis D inflation bloğu (Sprint-5)
     """
-    # Portfolio (with KPI enrich)
     c = _read_json(CONTRACTS_DIR / "portfolio_customer_summary.json")
     c["smmm_id"] = smmm
     c["client_id"] = client
@@ -251,11 +251,11 @@ def contracts_dossier_manifest(
     except Exception as e:
         c["warnings"].append(f"kpi_enrich_failed:{e}")
 
-    # Axis D
     axis_d = build_axis_d_contract_mizan_only(BASE, smmm, client, period)
     items = axis_d.get("items") or []
+    infl = axis_d.get("inflation") or {}
 
-    def uniq_docs(field: str):
+    def uniq_docs_from_items(field: str):
         out = []
         seen = set()
         for it in items:
@@ -263,16 +263,29 @@ def contracts_dossier_manifest(
                 if not isinstance(d, dict):
                     continue
                 code = str(d.get("code") or "").strip()
-                if not code:
-                    continue
-                if code in seen:
+                if not code or code in seen:
                     continue
                 seen.add(code)
                 out.append(d)
         return out
 
-    required_docs = uniq_docs("required_docs")
-    missing_docs = uniq_docs("missing_docs")
+    required_docs = uniq_docs_from_items("required_docs")
+    missing_docs = uniq_docs_from_items("missing_docs")
+
+    def merge_docs(dst: list, more: list):
+        seen = set(str((d or {}).get("code") or "").strip() for d in dst if isinstance(d, dict))
+        for d in more:
+            if not isinstance(d, dict):
+                continue
+            code = str(d.get("code") or "").strip()
+            if not code or code in seen:
+                continue
+            seen.add(code)
+            dst.append(d)
+
+    if isinstance(infl, dict):
+        merge_docs(required_docs, infl.get("required_docs") or [])
+        merge_docs(missing_docs, infl.get("missing_docs") or [])
 
     sections = [
         {
@@ -301,14 +314,12 @@ def contracts_dossier_manifest(
         "smmm_id": smmm,
         "client_id": client,
         "period_window": {"period": period},
+        "inflation": infl if isinstance(infl, dict) else None,
         "portfolio_kpis": c.get("kpis"),
         "portfolio_kpis_meta": c.get("kpis_meta"),
         "sections": sections,
-        "checklist": {
-            "required_docs": required_docs,
-            "missing_docs": missing_docs,
-        },
-        "warnings": (c.get("warnings") or []) + (axis_d.get("warnings") or []),
+        "checklist": {"required_docs": required_docs, "missing_docs": missing_docs},
+        "warnings": (c.get("warnings") or []) + ((axis_d.get("warnings") or []) if isinstance(axis_d, dict) else []),
     }
     return JSONResponse(resp)
 
@@ -663,6 +674,13 @@ def _axisd_kpi_delta(cur: Optional[float], prev: Optional[float]) -> Tuple[Optio
         return delta, None
     return delta, delta / abs(prev)
 
+
+# Axis-D item fields (UI stable render contract)
+AXIS_D_ITEM_FIELDS = [
+    "id","account_prefix","title_tr","severity","finding_tr",
+    "top_accounts","required_docs","actions_tr","evidence_refs","missing_docs",
+]
+
 def build_axis_d_contract_mizan_only(base_dir: Path, smmm_id: str, client_id: str, period: str) -> Dict[str, Any]:
     cur_fp = _axisd_find_mizan_path(base_dir, smmm_id, client_id, period)
     if not cur_fp or not cur_fp.exists():
@@ -1012,10 +1030,6 @@ def build_axis_d_contract_mizan_only(base_dir: Path, smmm_id: str, client_id: st
     ]
 
     # --- Sprint-4: Axis D item schema normalization (stable render) ---
-    AXIS_D_ITEM_FIELDS = [
-        'id','account_prefix','title_tr','severity','finding_tr',
-        'top_accounts','required_docs','actions_tr','evidence_refs','missing_docs'
-    ]
     for it in items:
         if not isinstance(it, dict):
             continue
@@ -1034,15 +1048,19 @@ def build_axis_d_contract_mizan_only(base_dir: Path, smmm_id: str, client_id: st
             if it.get(k) is None:
                 it[k] = []
 
+    inflation = _build_inflation_block(base_dir=base_dir, smmm_id=smmm_id, client_id=client_id, period=period, mizan_rows=cur_rows)
+
     return {
         "axis": "D",
         "title_tr": "Mizan İncelemesi (Kritik Eksen)",
         "schema": {"version": "axis_d_s4_v2", "item_fields": AXIS_D_ITEM_FIELDS},
         "period_window": {"period": period},
+        "inflation": inflation,
         "trend": trend,
         "notes_tr": "\n".join(notes_lines),
         "items": items,
     }
+
 
 
 @router.get("/contracts/axis/{axis}")
@@ -1066,6 +1084,532 @@ def get_axis_contract(
         except HTTPException:
             raise
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Axis D contract failed: {e}")
+            msg = f"axis_d_failed:{type(e).__name__}:{e}"
+            payload = {
+                "axis": "D",
+                "title_tr": "Eksen D",
+                "schema": {"version": "axis_d_failsoft_min_v1", "item_fields": AXIS_D_ITEM_FIELDS},
+                "period_window": {"period": period},
+                "trend": {"mode": "QOQ", "current_period": period, "prev_period": None, "value": None, "reason": "axis_d_failed"},
+                "notes_tr": "",
+                "items": [],
+                "inflation": {
+                    "status": "error",
+                    "summary_tr": "Axis-D üretimi başarısız. Detay warnings alanında.",
+                    "mapping": None,
+                    "affected_accounts": [],
+                    "required_docs": [],
+                    "missing_docs": [],
+                    "actions_tr": ["Backend hata: warnings alanını incele"],
+                    "evidence_refs": [],
+                },
+                "warnings": [msg],
+            }
+            return JSONResponse(payload, status_code=200)
 
 # v61: trimmed legacy dead code after delegation to build_axis_d_contract_mizan_only
+
+
+# === LYNTOS_S5_INFLATION_BLOCK_BEGIN ===
+
+# === LYNTOS_S5_INFLATION_ENHANCE_BEGIN ===
+INFLATION_DOC_CATALOG = {
+    "CPI_SERIES": {
+        "title_tr": "TÜFE Endeks Serisi",
+        "purpose_tr": "Düzeltme katsayılarının hesaplanması için dönem bazlı TÜFE (endeks) verisi.",
+        "min_columns": "date_or_period,cpi_index",
+        "optional": False,
+    },
+    "ADJUSTMENT_WORKPAPER": {
+        "title_tr": "Enflasyon Düzeltmesi Çalışma Kağıdı",
+        "purpose_tr": "Hesap bazında base_amount + (factor veya base_cpi+current_cpi) ile düzeltme farklarının deterministik hesaplanması.",
+        "min_columns": "account_code,base_amount,(factor OR base_cpi,current_cpi)",
+        "optional": False,
+    },
+    "FIXED_ASSET_REGISTER": {
+        "title_tr": "Sabit Kıymet Envanteri / Amortisman Listesi",
+        "purpose_tr": "Parasal olmayan kıymetlerin edinim tarihi/maliyeti üzerinden düzeltme dayanağı (denetim kalitesi).",
+        "min_columns": "asset_id,acq_date,cost,accum_depr(optional)",
+        "optional": True,
+    },
+    "STOCK_MOVEMENTS": {
+        "title_tr": "Stok Hareketleri / Maliyet Dökümü",
+        "purpose_tr": "Stokların parasal olmayan karakteri için hareket/maliyet dayanağı (denetim kalitesi).",
+        "min_columns": "date,sku,qty,cost",
+        "optional": True,
+    },
+    "EQUITY_BREAKDOWN": {
+        "title_tr": "Özkaynak Kırılımı / Sermaye Hareketleri",
+        "purpose_tr": "Özkaynak kalemlerinde düzeltme mantığının dayanağı (denetim kalitesi).",
+        "min_columns": "account_code,description,amount,change_date(optional)",
+        "optional": True,
+    },
+}
+
+def _s5_norm_ac(v) -> str:
+    s = str(v or "").strip()
+    s = "".join(ch for ch in s if ch.isdigit() or ch == ".")
+    return s.strip(".")
+
+def _inflation_enhance_payload(required_docs, missing_docs, actions_tr, mizan_rows):
+    req2 = []
+    for d in (required_docs or []):
+        code = (d or {}).get("code")
+        info = INFLATION_DOC_CATALOG.get(code, {})
+        d2 = dict(d or {})
+        if info:
+            d2.setdefault("title_tr", info.get("title_tr"))
+            d2.setdefault("purpose_tr", info.get("purpose_tr"))
+            d2.setdefault("min_columns", info.get("min_columns"))
+            d2.setdefault("optional", bool(info.get("optional")))
+        req2.append(d2)
+
+    miss2 = []
+    for d in (missing_docs or []):
+        code = (d or {}).get("code")
+        info = INFLATION_DOC_CATALOG.get(code, {})
+        d2 = dict(d or {})
+        if info:
+            d2.setdefault("title_tr", info.get("title_tr"))
+            d2.setdefault("purpose_tr", info.get("purpose_tr"))
+            d2.setdefault("min_columns", info.get("min_columns"))
+            d2.setdefault("optional", bool(info.get("optional")))
+        d2.setdefault("reason", "missing_file")
+        miss2.append(d2)
+
+    has_698 = has_648 = has_658 = False
+    for r in (mizan_rows or []):
+        ac = _s5_norm_ac((r or {}).get("account_code") or (r or {}).get("code") or (r or {}).get("hesap_kodu"))
+        if not ac:
+            continue
+        if ac.startswith("698"):
+            has_698 = True
+        elif ac.startswith("648"):
+            has_648 = True
+        elif ac.startswith("658"):
+            has_658 = True
+
+    new_actions = []
+    new_actions.append(
+        "698 Enflasyon Düzeltme Hesabı akışı: parasal olmayan kıymet düzeltme farkları 698’de izlenir; dönem kapanışında 648/658’e devredilerek kapatılır."
+    )
+    if has_698 or has_648 or has_658:
+        flags = []
+        if has_698: flags.append("698")
+        if has_648: flags.append("648")
+        if has_658: flags.append("658")
+        new_actions.append(
+            "Mizan sinyali: " + ",".join(flags) + " hesabı mevcut. Kapanış kontrolü: 698 bakiyesi/haraketi 648/658’e doğru devredilmiş mi?"
+        )
+
+    for d in miss2:
+        code = d.get("code")
+        path = d.get("expected_path") or d.get("path") or ""
+        title = d.get("title_tr") or code
+        purpose = d.get("purpose_tr") or ""
+        cols = d.get("min_columns") or ""
+        line = f"{title} ({code}) yükle: {path}" if title != code else f"{code} yükle: {path}"
+        if purpose:
+            line += f" | Amaç: {purpose}"
+        if cols:
+            line += f" | Minimum kolonlar: {cols}"
+        new_actions.append(line)
+
+    new_actions.append("Workpaper şema: account_code/base_amount + (factor veya base_cpi+current_cpi).")
+    new_actions.append("Not: FIXED_ASSET_REGISTER / STOCK_MOVEMENTS / EQUITY_BREAKDOWN denetim kalitesini artırır; yoksa hesaplama yapılmaz, sadece eksik veri raporlanır.")
+
+    return req2, miss2, new_actions
+
+# === LYNTOS_S5_INFLATION_ENHANCE_END ===
+
+def _build_inflation_block(*, base_dir: Path, smmm_id: str, client_id: str, period: str, mizan_rows=None) -> dict:
+    """Sprint-5 MVP: Enflasyon Muhasebesi contract bloğu.
+
+    Prensipler:
+    - Dummy hesap yok.
+    - Minimum veri yoksa: missing_docs + required_docs + actions_tr.
+    - Minimum veri varsa: adjustment_workpaper üzerinden deterministik net etki -> 698 ve 648/658 kapanış yönü.
+    """
+    import csv
+    from pathlib import Path
+
+    def _safe_float(x):
+        try:
+            if x is None:
+                return 0.0
+            s = str(x).strip()
+            if not s:
+                return 0.0
+            s = s.replace("\u00a0", " ").replace(" ", "")
+            # TR format: 1.234.567,89 -> 1234567.89
+            if s.count(",") == 1 and s.count(".") >= 1:
+                s = s.replace(".", "").replace(",", ".")
+            elif s.count(",") == 1 and s.count(".") == 0:
+                s = s.replace(",", ".")
+            else:
+                if s.count(".") == 1 and s.count(",") >= 1:
+                    s = s.replace(",", "")
+            return float(s)
+        except Exception:
+            return 0.0
+
+    data_root = Path(base_dir) / "data"
+    mizan_path = data_root / "luca" / smmm_id / client_id / period / "_raw" / "mizan_base.csv"
+
+    inf_raw = data_root / "enflasyon" / smmm_id / client_id / period / "_raw"
+    doc_paths = {
+        "CPI_SERIES": inf_raw / "cpi_series.csv",
+        "ADJUSTMENT_WORKPAPER": inf_raw / "adjustment_workpaper.csv",
+        "FIXED_ASSET_REGISTER": inf_raw / "fixed_asset_register.csv",
+        "STOCK_MOVEMENTS": inf_raw / "stock_movements.csv",
+        "EQUITY_BREAKDOWN": inf_raw / "equity_breakdown.csv",
+    }
+
+    required_docs = [
+        {"code": "CPI_SERIES", "title_tr": "TÜFE endeks serisi / katsayı tablosu", "expected_path": str(doc_paths["CPI_SERIES"])},
+        {"code": "ADJUSTMENT_WORKPAPER", "title_tr": "Enflasyon düzeltmesi çalışma kağıdı (hesap bazlı)", "expected_path": str(doc_paths["ADJUSTMENT_WORKPAPER"])},
+        {"code": "FIXED_ASSET_REGISTER", "title_tr": "Sabit kıymet kayıtları (edinim tarihleri/amortisman)", "expected_path": str(doc_paths["FIXED_ASSET_REGISTER"])},
+        {"code": "STOCK_MOVEMENTS", "title_tr": "Stok hareketleri / maliyet detayları", "expected_path": str(doc_paths["STOCK_MOVEMENTS"])},
+        {"code": "EQUITY_BREAKDOWN", "title_tr": "Özkaynak kırılımı ve sermaye hareketleri", "expected_path": str(doc_paths["EQUITY_BREAKDOWN"])},
+    ]
+
+    evidence_refs = []
+    missing_docs = []
+
+    if not mizan_path.exists():
+        missing_docs.append({"code": "MIZAN_BASE", "title_tr": "Mizan (mizan_base.csv) bulunamadı", "expected_path": str(mizan_path)})
+        return {
+            "status": "error",
+            "summary_tr": "Mizan bulunamadı: " + str(mizan_path),
+            "flow_698_648_658": {
+                "account_698_role_tr": "698, parasal olmayan kıymet düzeltme farklarını toplar; net bakiyeyi 648/658'e devrederek kapanır.",
+                "account_648_role_tr": "648, net olumlu farkların izlendiği hesaptır (698'den aktarım).",
+                "account_658_role_tr": "658, net olumsuz farkların izlendiği hesaptır (698'den aktarım).",
+                "close_rule_tr": "Net olumlu -> 648, net olumsuz -> 658",
+                "mizan_observed_balances": {"698": 0.0, "648": 0.0, "658": 0.0},
+                "computed_net_698_effect": None,
+                "computed_would_close_to": None,
+            },
+            "mapping": None,
+            "affected_accounts": [],
+            "required_docs": required_docs,
+            "missing_docs": missing_docs,
+            "actions_tr": ["mizan_base.csv dosyasını beklenen path altında doğrula/ekle: " + str(mizan_path)],
+            "evidence_refs": [{"kind": "file", "path": str(mizan_path), "note_tr": "Mizan beklenen lokasyonda yok."}],
+        }
+
+    evidence_refs.append({"kind": "file", "path": str(mizan_path), "note_tr": "Mizan kaynağı"})
+
+    rows = mizan_rows or []
+
+    def norm_code(v):
+        s = str(v or "").strip()
+        if s.startswith("'"):
+            s = s[1:].strip()
+        digits = "".join(ch for ch in s if ch.isdigit())
+        return digits or s
+
+    def sum_prefix(prefixes):
+        tot = 0.0
+        for r in rows:
+            code = norm_code((r or {}).get("account_code"))
+            if any(code.startswith(p) for p in prefixes):
+                tot += float((r or {}).get("net") or 0.0)
+        return tot
+
+    flow = {"698": sum_prefix(["698"]), "648": sum_prefix(["648"]), "658": sum_prefix(["658"])}
+    observed_postings = any(abs(flow[k]) > 1e-6 for k in ("698", "648", "658"))
+
+    # MVP sınıflama (Tekdüzen grup mantığına dayalı; daha sonra refine edilecek)
+    monetary_roots = ("10","11","12","13","14","30","31","32","33","34","35","36","37","38","39")
+    non_monetary_roots = ("15","16","17","18","19","22","24","25","26","27","28","29","50","51","52","54","55","56","57","58","59")
+
+    def classify(code: str) -> str:
+        c = norm_code(code)
+        c2 = c[:2]
+        if c.startswith(("648","658","698")):
+            return "inflation_flow_accounts"
+        if c2 in non_monetary_roots:
+            return "non_monetary"
+        if c2 in monetary_roots:
+            return "monetary"
+        return "unknown"
+
+    totals = {"monetary": 0.0, "non_monetary": 0.0, "unknown": 0.0}
+    non_monetary_bucket = []
+
+    for r in rows:
+        code = (r or {}).get("account_code")
+        bal = float((r or {}).get("net") or 0.0)
+        cls = classify(str(code or ""))
+        if cls == "monetary":
+            totals["monetary"] += bal
+        elif cls == "non_monetary":
+            totals["non_monetary"] += bal
+            rr = dict(r or {})
+            rr["classification"] = cls
+            non_monetary_bucket.append(rr)
+        else:
+            totals["unknown"] += bal
+
+    non_monetary_bucket.sort(key=lambda x: abs(float(x.get("net") or 0.0)), reverse=True)
+    affected_accounts = []
+    for x in non_monetary_bucket[:15]:
+        affected_accounts.append({
+            "account_code": x.get("account_code"),
+            "account_name": x.get("account_name"),
+            "net": float(x.get("net") or 0.0),
+            "classification": x.get("classification"),
+        })
+
+    present = set()
+    for d in required_docs:
+        p = Path(d.get("expected_path") or "")
+        if p.exists():
+            present.add(d["code"])
+            evidence_refs.append({"kind": "file", "path": str(p), "note_tr": d["code"] + " bulundu"})
+        else:
+            missing_docs.append({"code": d["code"], "title_tr": d.get("title_tr"), "expected_path": d.get("expected_path")})
+
+    computed = None
+    compute_errors = []
+
+    # S5_INFLATION_COMPUTE_GATING_V2
+    def _validate_cpi_series(path: Path) -> dict:
+        """MVP: CPI file must be parseable and contain at least 1 numeric CPI value."""
+        import csv
+        try:
+            if not path.exists():
+                return {"ok": False, "reason": "cpi_missing"}
+            # delimiter guess from header
+            with path.open('r', encoding='utf-8') as f0:
+                header = f0.readline()
+            delim = ';' if header.count(';') > header.count(',') else ','
+            with path.open('r', encoding='utf-8') as f:
+                dr = csv.DictReader(f, delimiter=delim)
+                hdr = [h.strip() for h in (dr.fieldnames or [])]
+                rows = list(dr)
+            if not hdr:
+                return {"ok": False, "reason": "cpi_no_header"}
+            cpi_col = None
+            for h in hdr:
+                hl = (h or '').lower()
+                if ('cpi' in hl) or ('tufe' in hl) or ('tüfe' in hl) or ('endeks' in hl) or ('index' in hl):
+                    cpi_col = h
+                    break
+            if cpi_col is None:
+                cpi_col = hdr[-1]
+            cnt = 0
+            sample = None
+            for r in rows:
+                v = (r or {}).get(cpi_col)
+                num = _safe_float(v)
+                if abs(num) > 1e-12:
+                    cnt += 1
+                    if sample is None:
+                        sample = num
+            if cnt <= 0:
+                return {"ok": False, "reason": "cpi_no_numeric_rows", "columns": hdr}
+            return {"ok": True, "numeric_rows": cnt, "cpi_col": cpi_col, "sample": sample, "delimiter": delim}
+        except Exception as e:
+            return {"ok": False, "reason": "cpi_parse_error", "error": str(e)}
+
+
+    def try_compute_from_workpaper(wp_path: Path) -> dict:
+    # S5_INFLATION_METHOD_FIX_V1
+        req_a = {"account_code","base_amount","factor"}
+        req_b = {"account_code","base_amount","base_cpi","current_cpi"}
+        with wp_path.open("r", encoding="utf-8") as f:
+            dr = csv.DictReader(f)
+            hdr = set([h.strip() for h in (dr.fieldnames or [])])
+            if req_a.issubset(hdr):
+                mode = "factor"
+            elif req_b.issubset(hdr):
+                mode = "cpi"
+            else:
+                return {"ok": False, "reason": "Workpaper kolonları yetersiz.", "found_cols": sorted(hdr)}
+
+            method = "factor" if mode == "factor" else "cpi_pair"
+            net_698 = 0.0
+            usable_rows = 0
+            skipped_rows = 0
+            zero_factor_rows = 0
+            for r in dr:
+                ac = str(r.get("account_code") or "").strip()
+                if not ac:
+                    continue
+                base = _safe_float(r.get("base_amount"))
+                if mode == "factor":
+                    factor = _safe_float(r.get("factor"))
+                    if abs(factor) < 1e-12:
+                        zero_factor_rows += 1
+                        continue
+                else:
+                    b = _safe_float(r.get("base_cpi"))
+                    c = _safe_float(r.get("current_cpi"))
+                    if abs(b) < 1e-12:
+                        skipped_rows += 1
+                        continue
+                    factor = c / b
+
+                usable_rows += 1
+                adj = base * factor
+                delta = adj - base
+
+                first = norm_code(ac)[:1]
+                # Basit yön: Aktif artışı (+) 698 alacak etkisi, pasif artışı (+) 698 borç etkisi
+                if first in ("1","2"):
+                    net_698 += delta
+                elif first in ("3","4","5"):
+                    net_698 -= delta
+
+            if usable_rows <= 0:
+                return {
+                    "ok": False,
+                    "reason": "workpaper_no_usable_rows",
+                    "stats": {"usable_rows": usable_rows, "skipped_rows": skipped_rows, "zero_factor_rows": zero_factor_rows},
+                }
+            close_to = "648" if net_698 > 0 else ("658" if net_698 < 0 else None)
+            close_to = int(close_to) if isinstance(close_to, str) and close_to.isdigit() else close_to
+            return {"ok": True, "method": method, "net_698_effect": net_698, "would_close_to": close_to}
+
+
+    if ("CPI_SERIES" in present) and ("ADJUSTMENT_WORKPAPER" in present):
+        cpi_path = Path([d for d in required_docs if d["code"] == "CPI_SERIES"][0]["expected_path"])
+        cpi_v = _validate_cpi_series(cpi_path)
+        if not cpi_v.get("ok"):
+            compute_errors.append("cpi_invalid:" + str(cpi_v.get("reason") or "unknown"))
+        else:
+            evidence_refs.append({"kind": "file", "path": str(cpi_path), "note_tr": "CPI_SERIES doğrulandı (" + str(cpi_v.get("numeric_rows")) + " satır)"})
+            wp = Path([d for d in required_docs if d["code"] == "ADJUSTMENT_WORKPAPER"][0]["expected_path"])
+            res = try_compute_from_workpaper(wp)
+            if res.get("ok"):
+                computed = res
+            else:
+                compute_errors.append(res.get("reason") or "workpaper_compute_failed")
+
+    if computed:
+        status = "computed"
+        summary = "Enflasyon Muhasebesi (MVP) hesaplandı: net 698 etkisi üretildi."
+        actions = [
+            "Çalışma kağıdı kolon standardını koru.",
+            "698 net etkisini defter kayıtlarıyla (varsa 698/648/658) mutabakatla doğrula.",
+        ]
+    else:
+        if observed_postings:
+            status = "observed_postings"
+            summary = "Mizanda 698/648/658 bakiye/hareket gözlendi. Workpaper+TÜFE olmadan 'computed' denmez."
+        else:
+            status = "missing_data"
+            summary = "Minimum veri seti eksik. LYNTOS dummy hesap üretmez; eksik dokümanlar ve aksiyon planı sunar."
+
+        actions = [
+            "698 Enflasyon Düzeltme Hesabı akışı: parasal olmayan kıymet düzeltme farkları 698’de izlenir; dönem kapanışında 648/658’e devredilerek kapatılır.",
+            "CPI_SERIES yükle: " + str(doc_paths["CPI_SERIES"]),
+            "ADJUSTMENT_WORKPAPER yükle: " + str(doc_paths["ADJUSTMENT_WORKPAPER"]),
+            "Workpaper şema: account_code/base_amount + (factor veya base_cpi+current_cpi).",
+
+            "Denetim kalitesi için (opsiyonel): fixed_asset_register / stock_movements / equity_breakdown ekle.",
+        ]
+        # S5_INFLATION_ACTIONS_698_V1
+        if observed_postings:
+            try:
+                actions.insert(1, 'Mizan sinyali: 698/648/658 hesabı mevcut. Kapanış kontrolü: 698 bakiyesi/hareketi 648/658’e devredilmiş mi?')
+            except Exception:
+                pass
+        if compute_errors:
+            actions.append("Not: Hesaplama doğrulaması başarısız: " + "; ".join([e for e in compute_errors if e]))
+
+    mapping = {
+        "rule_tr": "MVP sınıflama: parasal (10-14,30-39), parasal olmayan (15-19,22,24-29,50-59).",
+        "totals": totals,
+        "monetary_roots": list(monetary_roots),
+        "non_monetary_roots": list(non_monetary_roots),
+    }
+
+    # LYNTOS_S5_INFLATION_ENHANCE_CALL
+    actions_tr = list(locals().get('actions_tr') or [])
+    try:
+        required_docs, missing_docs, actions_tr = _inflation_enhance_payload(required_docs, missing_docs, actions_tr, mizan_rows)
+    except Exception as e:
+        actions_tr = list(actions_tr or [])
+        actions_tr.insert(0, 'Enflasyon çıktı zenginleştirme hatası: ' + type(e).__name__ + ': ' + str(e))
+        # keep base payload intact (no crash)
+    # S5_INFLATION_698_ENRICH_V1
+    try:
+        # 698 -> 648/658 closing flow (guidance only; no dummy calc)
+        actions_tr = list(actions_tr or [])
+        actions_tr.insert(0, "698 Enflasyon Düzeltme Hesabı akışı: parasal olmayan kıymet düzeltme farkları 698’de izlenir; dönem kapanışında 648/658’e devredilerek kapatılır.")
+        # Mizan signal check for 698/648/658
+        has_698 = has_648 = has_658 = False
+        for r in (mizan_rows or []):
+            ac = str((r or {}).get('account_code') or (r or {}).get('code') or (r or {}).get('hesap_kodu') or '').strip()
+            ac = ''.join(ch for ch in ac if ch.isdigit() or ch == '.').strip('.')
+            if not ac:
+                continue
+            if ac.startswith('698'): has_698 = True
+            elif ac.startswith('648'): has_648 = True
+            elif ac.startswith('658'): has_658 = True
+        if has_698 or has_648 or has_658:
+            flags = []
+            if has_698: flags.append('698')
+            if has_648: flags.append('648')
+            if has_658: flags.append('658')
+            actions_tr.insert(1, "Mizan sinyali: " + ','.join(flags) + " hesabı mevcut. Kapanış kontrolü: 698 bakiyesi/haraketi 648/658’e devredilmiş mi?")
+    except Exception:
+        # fail-safe; never break contract
+        pass
+
+    return {
+        "status": status,
+        "summary_tr": summary,
+        # S5_INFLATION_OUTPUT_SCHEMA_V1
+        "compute_errors": (compute_errors if compute_errors else None),
+        "computed": (
+            {
+                "source": "workpaper",
+                "net_698_effect": (computed.get("net_698_effect") if isinstance(computed, dict) else None),
+                "close_to": ((computed.get("close_to") or computed.get("would_close_to")) if isinstance(computed, dict) else None),
+                "stats": (computed.get("stats") if isinstance(computed, dict) else None),
+                "method": (computed.get("method") if isinstance(computed, dict) else None),
+                "inputs": (
+                    {
+                        "cpi_series_path": str(Path([d for d in required_docs if d["code"]=="CPI_SERIES"][0]["expected_path"])) if ("CPI_SERIES" in present) else None,
+                        "workpaper_path": str(Path([d for d in required_docs if d["code"]=="ADJUSTMENT_WORKPAPER"][0]["expected_path"])) if ("ADJUSTMENT_WORKPAPER" in present) else None,
+                    } if computed else None
+                ),
+                "closing_check": (
+                    {
+                        "expected_close_to": ((computed.get("close_to") or computed.get("would_close_to")) if isinstance(computed, dict) else None),
+                        "mizan_has_698": bool(observed_postings and ("698" in observed_postings)),
+                        "mizan_has_648": bool(observed_postings and ("648" in observed_postings)),
+                        "mizan_has_658": bool(observed_postings and ("658" in observed_postings)),
+                        "notes_tr": [
+                            "Kontrol: Enflasyon düzeltme farkı 698’de birikmeli; dönem kapanışında 648/658’e devredilerek 698 kapanmalı.",
+                            ("Beklenen kapanış yönü: " + str((computed.get("close_to") or computed.get("would_close_to")))) if computed else "Beklenen kapanış yönü: N/A",
+                            ("Mizan gözlemi (698/648/658): " + ",".join(sorted(list(observed_postings.keys())))) if observed_postings else "Mizan gözlemi: 698/648/658 sinyali yok",
+                        ],
+                    } if computed else None
+                ),
+                # S5_INFLATION_CLOSING_CHECK_V1
+            } if computed else None
+        ),
+        "flow_698_648_658": {
+            "account_698_role_tr": "698, parasal olmayan kıymet düzeltme farklarını toplar; net bakiyeyi 648/658'e devrederek kapanır.",
+            "account_648_role_tr": "648, net olumlu farkların izlendiği hesaptır (698'den aktarım).",
+            "account_658_role_tr": "658, net olumsuz farkların izlendiği hesaptır (698'den aktarım).",
+            "mizan_observed_balances": flow,
+            "computed_net_698_effect": (computed.get("net_698_effect") if computed else None),
+            "computed_would_close_to": (computed.get("would_close_to") if computed else None),
+        },
+        "mapping": mapping,
+        "affected_accounts": affected_accounts,
+        "required_docs": required_docs,
+        "missing_docs": missing_docs,
+        "actions_tr": actions,
+        "evidence_refs": evidence_refs,
+    }
+
+# === LYNTOS_S5_INFLATION_BLOCK_END ===
+
+# LYNTOS_S5_CLOSE_TO_NORMALIZE_V2
