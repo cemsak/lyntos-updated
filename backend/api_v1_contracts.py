@@ -675,9 +675,14 @@ def build_axis_d_contract_mizan_only(base_dir: Path, smmm_id: str, client_id: st
     ta_600_fb = ta_600 or _axisd_top_accounts(cur_rows, ["6"], 12)
     ta_600_note = "" if ta_600 else " (Not: 600/601/602 bulunamadı; 6xx gelir hesapları gösteriliyor.)"
 
-    ta_fin = _axisd_top_accounts(cur_rows, ["646","656","780","781"], 12)
+    # --- Sprint-4: FIN/FX split (Tekdüzen) top_accounts fallbacks ---
+    ta_fx = _axisd_top_accounts(cur_rows, ["646","656"], 12)
+    ta_fx_fb = ta_fx or _axisd_top_accounts(cur_rows, ["64"], 12)
+    ta_fx_note = "" if ta_fx else " (Not: 646/656 bulunamadı; 64x grubu gösteriliyor.)"
+
+    ta_fin = _axisd_top_accounts(cur_rows, ["660","661","780","781"], 12)
     ta_fin_fb = ta_fin or _axisd_top_accounts(cur_rows, ["66","78"], 12)
-    ta_fin_note = "" if ta_fin else " (Not: 646/656/780/781 bulunamadı; 66x/78x finansman hesapları gösteriliyor.)"
+    ta_fin_note = "" if ta_fin else " (Not: 660/661/780/781 bulunamadı; 66x/78x grupları gösteriliyor.)"
 
 
     
@@ -853,22 +858,44 @@ def build_axis_d_contract_mizan_only(base_dir: Path, smmm_id: str, client_id: st
             ],
         },
         {
-            "id": "D-FIN-FX",
-            "account_prefix": "646/656/780",
-            "title_tr": "Kur Farkı / Faiz / Finansman (646/656/780)",
+            "id": "D-FX-646-656",
+            "account_prefix": "646/656",
+            "title_tr": "Kur Farkı (646/656)",
             "severity": "MEDIUM",
-            "finding_tr": f"Finansman/kur farkı net toplam (mizan): {_axisd_sum_prefix(cur_rows, ['646','656','780','781']):,.2f} TL" + ta_fin_note,
+            "finding_tr": f"Kur farkı net toplam (mizan): {_axisd_sum_prefix(cur_rows, ['646','656']):,.2f} TL" + ta_fx_note,
+            "top_accounts": ta_fx_fb,
+            "required_docs": [
+                {"code": "FX_REVAL", "title_tr": "Kur değerleme hesaplama dökümü (varsa)"},
+                {"code": "BANK_STMT_FX", "title_tr": "Dövizli/döviz endeksli banka ekstreleri + dekontlar (dönem)"},
+                {"code": "FC_POS", "title_tr": "Döviz pozisyonu listesi (kasa/banka/cari/kredi) (varsa)"},
+            ],
+            "actions_tr": [
+                "646/656 hesaplarını ay bazında çıkar; ani sıçramaları işaretle.",
+                "Kur farkı kayıtlarının değerleme yöntemini ve dayanağını dosyala.",
+                "Dövizli kaynakları (banka/kredi/cari) kur farkı hareketleriyle bağla.",
+            ],
+            "evidence_refs": [],
+            "missing_docs": [],
+        },
+        {
+            "id": "D-FIN-660-661-780-781",
+            "account_prefix": "660/661/780/781",
+            "title_tr": "Finansman Giderleri (660/661/780/781)",
+            "severity": "MEDIUM",
+            "finding_tr": f"Finansman gideri net toplam (mizan): {_axisd_sum_prefix(cur_rows, ['660','661','780','781']):,.2f} TL" + ta_fin_note,
             "top_accounts": ta_fin_fb,
             "required_docs": [
                 {"code": "LOAN_AGR", "title_tr": "Kredi sözleşmeleri + geri ödeme planı"},
                 {"code": "BANK_STMT", "title_tr": "Banka ekstreleri + dekontlar (dönem)"},
-                {"code": "FX_REVAL", "title_tr": "Kur değerleme hesaplama dökümü (varsa)"},
+                {"code": "INT_SCHED", "title_tr": "Faiz/komisyon/tahakkuk planı (varsa)"},
             ],
             "actions_tr": [
-                "646/656/780 (ve varsa 781) hesaplarında ay bazında dağılımı çıkar.",
-                "Kredi anapara/faiz/komisyon ödemelerini banka dekontları ile bağla.",
-                "Kur farkı kayıtlarının değerleme yöntemini ve dayanağını dosyala.",
+                "660/661 ve 780/781 hesaplarını ay bazında çıkar; dönemsel sıçramaları işaretle.",
+                "Faiz/komisyon ödemelerini dekontlarla bağla; tahakkuk farklarını açıkla.",
+                "781 kullanılıyorsa 780↔781 kapanış/mutabakat kontrolünü dosyala.",
             ],
+            "evidence_refs": [],
+            "missing_docs": [],
         },
 
 
@@ -921,7 +948,7 @@ def build_axis_d_contract_mizan_only(base_dir: Path, smmm_id: str, client_id: st
     return {
         "axis": "D",
         "title_tr": "Mizan İncelemesi (Kritik Eksen)",
-        "schema": {"version": "axis_d_s4_v1", "item_fields": AXIS_D_ITEM_FIELDS},
+        "schema": {"version": "axis_d_s4_v2", "item_fields": AXIS_D_ITEM_FIELDS},
         "period_window": {"period": period},
         "trend": trend,
         "notes_tr": "\n".join(notes_lines),
