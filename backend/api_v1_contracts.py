@@ -223,6 +223,95 @@ def contracts_portfolio(
         c["warnings"].append(f"kpi_enrich_failed:{e}")
 
     return JSONResponse(c)
+
+@router.get("/contracts/dossier/manifest")
+def contracts_dossier_manifest(
+    smmm: str = Query(...),
+    client: str = Query(...),
+    period: str = Query(..., description="örn: 2025-Q2"),
+):
+    """
+    Ödül standardı: kanıt üretimi için 'manifest' contract.
+    Kaynaklar:
+      - portfolio contract (ctx + kpis dahil)
+      - axis D contract (required_docs + actions_tr + missing_docs + evidence_refs)
+    Not: Bu endpoint ZIP/PDF üretmez; sadece deterministik checklist/manifest döner.
+    """
+    # Portfolio (with KPI enrich)
+    c = _read_json(CONTRACTS_DIR / "portfolio_customer_summary.json")
+    c["smmm_id"] = smmm
+    c["client_id"] = client
+    c.setdefault("period_window", {})
+    if isinstance(c["period_window"], dict):
+        c["period_window"]["period"] = period
+    if "warnings" not in c or not isinstance(c.get("warnings"), list):
+        c["warnings"] = []
+    try:
+        _enrich_portfolio_with_kpis(c)
+    except Exception as e:
+        c["warnings"].append(f"kpi_enrich_failed:{e}")
+
+    # Axis D
+    axis_d = build_axis_d_contract_mizan_only(BASE, smmm, client, period)
+    items = axis_d.get("items") or []
+
+    def uniq_docs(field: str):
+        out = []
+        seen = set()
+        for it in items:
+            for d in (it or {}).get(field) or []:
+                if not isinstance(d, dict):
+                    continue
+                code = str(d.get("code") or "").strip()
+                if not code:
+                    continue
+                if code in seen:
+                    continue
+                seen.add(code)
+                out.append(d)
+        return out
+
+    required_docs = uniq_docs("required_docs")
+    missing_docs = uniq_docs("missing_docs")
+
+    sections = [
+        {
+            "id": "AXIS_D",
+            "title_tr": axis_d.get("title_tr") or "Eksen D",
+            "schema_version": ((axis_d.get("schema") or {}).get("version") if isinstance(axis_d.get("schema"), dict) else None),
+            "items": [
+                {
+                    "id": (it or {}).get("id"),
+                    "title_tr": (it or {}).get("title_tr"),
+                    "severity": (it or {}).get("severity"),
+                    "finding_tr": (it or {}).get("finding_tr"),
+                    "required_docs": (it or {}).get("required_docs") or [],
+                    "actions_tr": (it or {}).get("actions_tr") or [],
+                    "missing_docs": (it or {}).get("missing_docs") or [],
+                    "evidence_refs": (it or {}).get("evidence_refs") or [],
+                }
+                for it in items
+                if isinstance(it, dict)
+            ],
+        }
+    ]
+
+    resp = {
+        "kind": "dossier_manifest",
+        "smmm_id": smmm,
+        "client_id": client,
+        "period_window": {"period": period},
+        "portfolio_kpis": c.get("kpis"),
+        "portfolio_kpis_meta": c.get("kpis_meta"),
+        "sections": sections,
+        "checklist": {
+            "required_docs": required_docs,
+            "missing_docs": missing_docs,
+        },
+        "warnings": (c.get("warnings") or []) + (axis_d.get("warnings") or []),
+    }
+    return JSONResponse(resp)
+
 @router.get("/contracts/mbr")
 def contracts_mbr():
     return JSONResponse(_read_json(CONTRACTS_DIR / "mbr_view.json"))
