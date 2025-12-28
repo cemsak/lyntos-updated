@@ -676,8 +676,8 @@ def build_axis_d_contract_mizan_only(base_dir: Path, smmm_id: str, client_id: st
     ta_600_note = "" if ta_600 else " (Not: 600/601/602 bulunamadı; 6xx gelir hesapları gösteriliyor.)"
 
     ta_fin = _axisd_top_accounts(cur_rows, ["646","656","780","781"], 12)
-    ta_fin_fb = ta_fin or _axisd_top_accounts(cur_rows, ["65","78"], 12)
-    ta_fin_note = "" if ta_fin else " (Not: 646/656/780/781 bulunamadı; 65x/78x finansman hesapları gösteriliyor.)"
+    ta_fin_fb = ta_fin or _axisd_top_accounts(cur_rows, ["66","78"], 12)
+    ta_fin_note = "" if ta_fin else " (Not: 646/656/780/781 bulunamadı; 66x/78x finansman hesapları gösteriliyor.)"
 
 
     
