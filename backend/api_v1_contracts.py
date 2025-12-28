@@ -1613,3 +1613,267 @@ def _build_inflation_block(*, base_dir: Path, smmm_id: str, client_id: str, peri
 # === LYNTOS_S5_INFLATION_BLOCK_END ===
 
 # LYNTOS_S5_CLOSE_TO_NORMALIZE_V2
+
+# === LYNTOS_S5_INFLATION_AWARD_HARDENING_V1 ===
+def _inflation__detect_paths(args, kwargs):
+    # best-effort extraction of workpaper/cpi paths from args/kwargs
+    wp = kwargs.get("workpaper_path") or kwargs.get("workpaper") or kwargs.get("wp_path")
+    cpi = kwargs.get("cpi_series_path") or kwargs.get("cpi_path") or kwargs.get("cpi")
+    # fallback: scan args for csv-like paths
+    if wp is None or cpi is None:
+        for a in args:
+            s = str(a) if a is not None else ""
+            if wp is None and s.endswith(".csv") and ("workpaper" in s or "adjustment" in s):
+                wp = a
+            if cpi is None and s.endswith(".csv") and ("cpi" in s or "tufe" in s or "series" in s):
+                cpi = a
+    return wp, cpi
+
+def _inflation__read_header(csv_path):
+    try:
+        import csv
+        from pathlib import Path
+        p = Path(str(csv_path))
+        if not p.exists():
+            return []
+        with p.open("r", encoding="utf-8-sig", newline="") as f:
+            r = csv.reader(f)
+            row0 = next(r, None) or []
+        # normalize
+        return [c.strip() for c in row0 if isinstance(c, str)]
+    except Exception:
+        return []
+
+def _inflation__infer_method_from_header(cols):
+    c = {x.lower() for x in cols}
+    if "factor" in c:
+        return "factor"
+    if ("base_cpi" in c and "current_cpi" in c) or ("base_index" in c and "current_index" in c):
+        return "cpi_ratio"
+    return None
+
+
+def _inflation__evidence_summary_tr(computed: dict) -> str:
+    try:
+        method = (computed.get("method") or "unknown")
+        net = computed.get("net_698_effect")
+        close_to = computed.get("close_to")
+        src = computed.get("source") or "workpaper"
+        # keep short and audit-friendly
+        return f"Enflasyon düzeltmesi ({src}) yöntem={method}, net_698={net}, kapanış={close_to}."
+    except Exception:
+        return "Enflasyon düzeltmesi: özet üretilemedi."
+
+def _inflation__harden_computed(computed, wp_path=None, cpi_path=None):
+    if not isinstance(computed, dict):
+        return computed
+
+    # inputs: always a dict with known paths
+    inputs = computed.get("inputs")
+    if not isinstance(inputs, dict):
+        inputs = {}
+    if wp_path is not None:
+        inputs.setdefault("workpaper_path", str(wp_path))
+    if cpi_path is not None:
+        inputs.setdefault("cpi_series_path", str(cpi_path))
+    computed["inputs"] = inputs
+
+    # stats: always dict
+    if not isinstance(computed.get("stats"), dict):
+        computed["stats"] = {}
+
+    # method: never None/empty
+    m = computed.get("method")
+    if m is None or (isinstance(m, str) and m.strip() == ""):
+        cols = _inflation__read_header(wp_path) if wp_path else []
+        inferred = _inflation__infer_method_from_header(cols) if cols else None
+        computed["method"] = inferred or "unknown"
+        if cols:
+            computed["stats"].setdefault("workpaper_header_cols", cols)
+
+    # net_698_effect: normalize to float if possible
+    net = computed.get("net_698_effect")
+    try:
+        netf = float(net) if net is not None else None
+    except Exception:
+        netf = None
+    computed["net_698_effect"] = netf
+
+    # close_to: normalize numeric-string -> int
+    close_to = computed.get("close_to")
+    if isinstance(close_to, str) and close_to.isdigit():
+        computed["close_to"] = int(close_to)
+        close_to = computed["close_to"]
+
+    # net == 0 => close_to must be None (nötr)
+    if isinstance(netf, float) and abs(netf) < 1e-9:
+        computed["close_to"] = None
+        computed["stats"]["net_698_is_zero"] = True
+        computed["stats"]["neutral_hint_tr"] = "Net etki 0; kapanış yönü oluşmadı (648/658 nötr)."
+
+    # if method is unknown or header missing required cols => surface explicit missing columns
+    cols = _inflation__read_header(wp_path) if wp_path else []
+    if cols:
+        low = {x.lower() for x in cols}
+        missing = []
+        # minimum required
+        if "account_code" not in low:
+            missing.append("account_code")
+        if "base_amount" not in low:
+            missing.append("base_amount")
+        # method-specific
+        method2 = computed.get("method") or ""
+        if method2 == "factor":
+            if "factor" not in low:
+                missing.append("factor")
+        elif method2 == "cpi_ratio":
+            # accept either base_cpi/current_cpi or base_index/current_index
+            if not (("base_cpi" in low and "current_cpi" in low) or ("base_index" in low and "current_index" in low)):
+                missing.extend(["base_cpi+current_cpi (or base_index+current_index)"])
+        else:
+            # unknown: we require at least one method path
+            if "factor" not in low and not (("base_cpi" in low and "current_cpi" in low) or ("base_index" in low and "current_index" in low)):
+                missing.append("factor OR (base_cpi+current_cpi)")
+
+        if missing:
+            computed["stats"]["workpaper_missing_columns"] = missing
+
+    return computed
+
+def _inflation__harden_result(res, wp_path=None, cpi_path=None):
+    # Handles either:
+    # - computed dict
+    # - inflation block dict containing {"status":..,"computed":{...},"compute_errors":[...]}
+    # - tuples (computed, errors, ...)
+    if isinstance(res, tuple) and res:
+        first = res[0]
+        if isinstance(first, dict):
+            first2 = _inflation__harden_computed(first, wp_path, cpi_path)
+            return (first2,) + res[1:]
+        return res
+
+    if not isinstance(res, dict):
+        return res
+
+    # inflation block style
+    if isinstance(res.get("computed"), dict):
+        res["computed"] = _inflation__harden_computed(res["computed"], wp_path, cpi_path)
+
+        # compute_errors must be list (if missing columns present)
+        ce = res.get("compute_errors")
+        if ce is None:
+            ce = []
+        if not isinstance(ce, list):
+            ce = [str(ce)]
+        missing_cols = (res["computed"].get("stats") or {}).get("workpaper_missing_columns") if isinstance(res["computed"].get("stats"), dict) else None
+        if missing_cols:
+            ce.append("workpaper_missing_columns:" + ",".join([str(x) for x in missing_cols]))
+            # if schema is broken, status cannot be computed
+            if res.get("status") == "computed":
+                res["status"] = "error"
+        res["compute_errors"] = ce or None
+        return res
+
+    # plain computed dict style
+    return _inflation__harden_computed(res, wp_path, cpi_path)
+
+def _inflation__wrap_try_compute_from_workpaper():
+    # Only wrap if the function exists in module globals
+    g = globals()
+    if "try_compute_from_workpaper" not in g:
+        return False
+    orig = g.get("try_compute_from_workpaper")
+    if not callable(orig):
+        return False
+
+    # already wrapped?
+    if getattr(orig, "__name__", "") == "try_compute_from_workpaper" and getattr(orig, "__doc__", "") and "AWARD_HARDENING" in (orig.__doc__ or ""):
+        return True
+
+    def try_compute_from_workpaper(*args, **kwargs):
+        """AWARD_HARDENING_WRAPPER"""
+        wp, cpi = _inflation__detect_paths(args, kwargs)
+        res = orig(*args, **kwargs)
+        return _inflation__harden_result(res, wp, cpi)
+
+    g["try_compute_from_workpaper"] = try_compute_from_workpaper
+    return True
+
+_wrapped = _inflation__wrap_try_compute_from_workpaper()
+# === LYNTOS_S5_INFLATION_AWARD_HARDENING_V1_END ===
+
+# LYNTOS_S5_INFLATION_AWARD_HARDENING_V1
+
+# LYNTOS_S5_INFLATION_AWARD_HARDENING_V2
+
+# === LYNTOS_S5_INFLATION_EVIDENCE_POSTPROCESS_V4 ===
+def _axisd__attach_inflation_evidence(contract):
+    """Attach inflation.evidence_summary_tr deterministically after contract build."""
+    try:
+        if not isinstance(contract, dict):
+            return contract
+
+        inf = contract.get("inflation")
+        if not isinstance(inf, dict):
+            return contract
+
+        comp = inf.get("computed")
+        if not isinstance(comp, dict):
+            return contract
+
+        # Evidence summary (award-grade single line)
+        try:
+            fn = globals().get("_inflation__evidence_summary_tr")
+            summary = fn(comp) if callable(fn) else None
+        except Exception:
+            summary = None
+
+        if summary and not inf.get("evidence_summary_tr"):
+            inf["evidence_summary_tr"] = summary
+
+        # Neutral guidance if net_698_effect == 0
+        try:
+            st = comp.get("stats") or {}
+            if isinstance(st, dict) and st.get("net_698_is_zero") is True:
+                acts = inf.get("actions_tr")
+                if acts is None:
+                    acts = []
+                if not isinstance(acts, list):
+                    acts = [str(acts)]
+                msg = "Net etki 0; kapanış yönü yok (648/658 nötr)."
+                if msg not in acts:
+                    acts.insert(0, msg)
+                inf["actions_tr"] = acts
+        except Exception:
+            pass
+
+        contract["inflation"] = inf
+        return contract
+    except Exception:
+        return contract
+
+def _axisd__wrap_builder(name: str) -> bool:
+    g = globals()
+    fn = g.get(name)
+    if not callable(fn):
+        return False
+
+    # avoid double wrap
+    if getattr(fn, "__name__", "") == f"{name}__wrapped_inflation_evidence":
+        return True
+
+    def wrapped(*args, **kwargs):
+        c = fn(*args, **kwargs)
+        return _axisd__attach_inflation_evidence(c)
+
+    wrapped.__name__ = f"{name}__wrapped_inflation_evidence"
+    g[name] = wrapped
+    return True
+
+# Wrap common builder names (only if they exist)
+_axisd__wrap_builder("build_axis_d_contract_mizan_only")
+_axisd__wrap_builder("build_axis_d_contract")
+_axisd__wrap_builder("build_axis_contract_mizan_only")
+# === LYNTOS_S5_INFLATION_EVIDENCE_POSTPROCESS_V4_END ===
+
+# LYNTOS_S5_INFLATION_EVIDENCE_POSTPROCESS_V4
