@@ -296,6 +296,19 @@ def contracts_portfolio(
     except Exception as e:
         c["warnings"].append("inflation_kpi_enrich_failed:" + str(e))
 
+    # BEGIN S6_INFLATION_KPI_DEFAULTS
+    try:
+        k = c.setdefault('kpis', {})
+        if isinstance(k, dict):
+            # Guarantee non-None status for UI/productization
+            if k.get('inflation_status') is None:
+                k['inflation_status'] = 'absent'
+            k.setdefault('inflation_net_698_effect', None)
+            k.setdefault('inflation_close_to', None)
+    except Exception:
+        pass
+    # END S6_INFLATION_KPI_DEFAULTS
+
     return JSONResponse(c)
 
 
