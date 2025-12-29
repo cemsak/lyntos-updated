@@ -1422,6 +1422,7 @@ def _build_inflation_block(*, base_dir: Path, smmm_id: str, client_id: str, peri
                         break
         return tot
 
+    # BEGIN S7_MIZAN_SIGNAL_BLOCK
     flow = {"698": sum_prefix(["698"]), "648": sum_prefix(["648"]), "658": sum_prefix(["658"])}
     mizan_movements = {
         "698": {"borc": sum_prefix_field(["698"], ["borc","debit","borc_toplam","borc_toplami"]), "alacak": sum_prefix_field(["698"], ["alacak","credit","alacak_toplam","alacak_toplami"])},
@@ -1430,15 +1431,27 @@ def _build_inflation_block(*, base_dir: Path, smmm_id: str, client_id: str, peri
     }
 
     tol = 1e-6
+    present_prefixes = set()
+    for r in rows:
+        rr = (r or {})
+        code = norm_code(rr.get('account_code') or rr.get('code') or rr.get('hesap_kodu'))
+        cs = str(code or '')
+        for p in ('698','648','658'):
+            if cs.startswith(p):
+                present_prefixes.add(p)
+                break
+
     observed_postings = {}
-    for k in ("698","648","658"):
+    for k in ('698','648','658'):
         net = float(flow.get(k) or 0.0)
         mv = (mizan_movements.get(k) or {})
-        b = float(mv.get("borc") or 0.0)
-        a = float(mv.get("alacak") or 0.0)
-        if (abs(net) > tol) or (abs(b) > tol) or (abs(a) > tol):
+        b = float(mv.get('borc') or 0.0)
+        a = float(mv.get('alacak') or 0.0)
+        if (k in present_prefixes) or (abs(net) > tol) or (abs(b) > tol) or (abs(a) > tol):
             # keep value as net for backwards-compat
             observed_postings[k] = net
+    # END S7_MIZAN_SIGNAL_BLOCK
+
     # BEGIN S7_INFLATION_AUDIT_698_648_658
     def _audit_698_648_658(flow: dict, computed: dict, observed_postings: dict) -> dict:
         try:
