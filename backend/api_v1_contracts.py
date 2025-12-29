@@ -1454,85 +1454,81 @@ def _build_inflation_block(*, base_dir: Path, smmm_id: str, client_id: str, peri
 
     # BEGIN S7_INFLATION_AUDIT_698_648_658
     def _audit_698_648_658(flow: dict, computed: dict, observed_postings: dict) -> dict:
+        checks = []
+        actions = []
+        expected_close_to = None
         try:
-            tol = 1e-6
-            exp = computed.get("close_to") or computed.get("would_close_to")
-            try:
-                exp_i = int(exp) if isinstance(exp, str) and exp.isdigit() else exp
-            except Exception:
-                exp_i = exp
-
-            v698 = float(flow.get("698") or 0.0)
-            v648 = float(flow.get("648") or 0.0)
-            v658 = float(flow.get("658") or 0.0)
-
-            checks = []
-            actions = []
-            status = "ok"
-
-            if not observed_postings:
+            if isinstance(computed, dict):
+                expected_close_to = computed.get('close_to')
+            exp = str(expected_close_to) if expected_close_to in (648, 658, '648', '658') else None
+            has_698 = isinstance(observed_postings, dict) and ('698' in observed_postings)
+            has_648 = isinstance(observed_postings, dict) and ('648' in observed_postings)
+            has_658 = isinstance(observed_postings, dict) and ('658' in observed_postings)
+            any_has = bool(has_698 or has_648 or has_658)
+            if not any_has:
                 checks.append({
-                    "code": "HAS_POSTINGS",
-                    "status": "info",
-                    "note_tr": "Mizanda 698/648/658 sinyali yok (otomatik kapanış doğrulaması yapılamaz).",
+                    'id': 'S7-MIZAN-698-648-658-PRESENCE',
+                    'ok': False,
+                    'severity': 'info',
+                    'title_tr': 'Mizanda 698/648/658 sinyali bulunamadı',
+                    'detail_tr': 'Seçili dönemin mizanda 698/648/658 hesapları yer almıyor. Bu nedenle kapanış kaydı denetimi kanıt yetersizliği nedeniyle yapılamadı.'
                 })
-                actions.append("Mizanda 698/648/658 hareket/bakiye yoksa: enflasyon fişi kayıtlarını ve dönem kapanışını kontrol edin.")
-                return {"status": "insufficient_data", "expected_close_to": exp_i, "checks": checks, "actions_tr": actions}
-
-            checks.append({
-                "code": "HAS_POSTINGS",
-                "status": "pass",
-                "observed": sorted(list(observed_postings.keys())),
-                "note_tr": "Mizanda 698/648/658 sinyali var.",
-            })
-
-            dir_ok = None
-            if exp_i == 648:
-                dir_ok = (v648 < -tol)
-                checks.append({
-                    "code": "DIRECTION",
-                    "status": "pass" if dir_ok else "warn",
-                    "expected_close_to": 648,
-                    "mizan_net_648": v648,
-                    "note_tr": "648 beklenir (net negatif olmalı).",
-                })
-            elif exp_i == 658:
-                dir_ok = (v658 > tol)
-                checks.append({
-                    "code": "DIRECTION",
-                    "status": "pass" if dir_ok else "warn",
-                    "expected_close_to": 658,
-                    "mizan_net_658": v658,
-                    "note_tr": "658 beklenir (net pozitif olmalı).",
-                })
+                actions.append('Bu dönem mizan satırlarında 698/648/658 bulunamadı: Enflasyon kapanış fişi (698 → 648/658) ve ilgili yevmiye dökümünü talep ediniz.')
+                actions.append('Kapanış farklı alt hesaplarda yapılıyorsa, tekdüzen hesap planı mapping’ine 698/648/658 alt kırılımlarını ekleyiniz.')
+                return {
+                    'status': 'insufficient_data',
+                    'error': None,
+                    'expected_close_to': expected_close_to,
+                    'checks': checks,
+                    'actions_tr': actions,
+                    'observed': {'has_698': has_698, 'has_648': has_648, 'has_658': has_658}
+                }
+            if exp is not None:
+                has_exp = (exp in observed_postings)
+                if not has_exp:
+                    checks.append({
+                        'id': 'S7-CLOSE-TO-CONSISTENCY',
+                        'ok': False,
+                        'severity': 'warn',
+                        'title_tr': 'Kapanış yönü mizanda doğrulanamadı',
+                        'detail_tr': 'Workpaper kapanış yönünü %s olarak öneriyor; ancak mizanda bu hesap için sinyal bulunamadı.' % exp
+                    })
+                    actions.append('Workpaper kapanış yönü (%s) ile mizan kayıtlarını karşılaştırınız; kapanış fişinin doğru hesaba işlendiğini doğrulayınız.' % exp)
+                    status = 'warn'
+                else:
+                    checks.append({
+                        'id': 'S7-CLOSE-TO-CONSISTENCY',
+                        'ok': True,
+                        'severity': 'ok',
+                        'title_tr': 'Kapanış yönü mizanda doğrulandı',
+                        'detail_tr': 'Workpaper kapanış yönü (%s) ile mizan sinyali uyumlu.' % exp
+                    })
+                    status = 'ok'
             else:
                 checks.append({
-                    "code": "DIRECTION",
-                    "status": "info",
-                    "expected_close_to": exp_i,
-                    "note_tr": "Beklenen kapanış yönü belirlenemedi (net_698_effect = 0 olabilir).",
+                    'id': 'S7-CLOSE-TO-UNKNOWN',
+                    'ok': True,
+                    'severity': 'info',
+                    'title_tr': 'Kapanış yönü belirlenemedi',
+                    'detail_tr': 'Workpaper kapanış yönü alanı bulunamadı; yalnızca mizan sinyali varlığı raporlandı.'
                 })
-
-            if dir_ok is False:
-                status = "warn"
-                actions.append("Beklenen kapanış yönü ile mizan net yönü tutarsız; 698->648/658 fişini ve mizan net hesaplamasını doğrula.")
-
-            if abs(v698) <= tol:
-                checks.append({"code": "CLOSEOUT_698", "status": "pass", "mizan_net_698": v698, "note_tr": "698 net ~ 0 (kapanmış olabilir)."})
-            else:
-                checks.append({"code": "CLOSEOUT_698", "status": "warn", "mizan_net_698": v698, "note_tr": "698 net sıfır değil (kapanış fişi eksik/yarım olabilir)."})
-                status = "warn"
-                actions.append("698 kapanmamış görünüyor; dönem kapanış fişini (698->648/658) kontrol et.")
-
+                status = 'info'
             return {
-                "status": status,
-                "expected_close_to": exp_i,
-                "mizan_flow": {"698": v698, "648": v648, "658": v658},
-                "checks": checks,
-                "actions_tr": actions,
+                'status': status,
+                'error': None,
+                'expected_close_to': expected_close_to,
+                'checks': checks,
+                'actions_tr': actions,
+                'observed': {'has_698': has_698, 'has_648': has_648, 'has_658': has_658}
             }
         except Exception as e:
-            return {"status": "error", "error": type(e).__name__ + ": " + str(e)}
+            return {
+                'status': 'error',
+                'error': type(e).__name__ + ': ' + str(e),
+                'expected_close_to': expected_close_to,
+                'checks': checks,
+                'actions_tr': actions
+            }
     # END S7_INFLATION_AUDIT_698_648_658
 
 
