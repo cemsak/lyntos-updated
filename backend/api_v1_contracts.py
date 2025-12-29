@@ -181,12 +181,33 @@ def _compute_inflation_compliance_score(*, inflation_status: str, validation_sum
         return out
     base = 80
     vs_overall = ((validation_summary or {}).get('overall') or '').upper()
+    # BEGIN S9_SCORE_ACTIONS
+    warn_paths = (validation_summary or {}).get('warn_paths') or []
+    missing_paths = (validation_summary or {}).get('missing_paths') or []
+    if not isinstance(warn_paths, list):
+        warn_paths = []
+    if not isinstance(missing_paths, list):
+        missing_paths = []
     if vs_overall == 'WARN':
         base -= 10
     if vs_overall == 'MISSING':
         base -= 25
     audit = (closing_check or {}).get('audit_698_648_658') or {}
     astatus = (audit.get('status') or '').lower()
+    extra_actions = []
+    if vs_overall == 'WARN' or vs_overall == 'MISSING':
+        extra_actions.append("Dataset Health: enflasyon kanıt paketi eksik. _raw girdileri yükleyin (FAR/stok/özkaynak).")
+        sample = (missing_paths if len(missing_paths) > 0 else warn_paths)[:3]
+        if len(sample) > 0:
+            extra_actions.append("Örnek yol(lar): " + "; ".join([str(x) for x in sample]))
+    if astatus == 'insufficient_data':
+        extra_actions.append("Mizan sinyali yok (698/648/658). Kapanış fişi/kayıt dökümü talep edin veya mizan detayını doğrulayın.")
+    if 'actions_tr' not in out or not isinstance(out.get('actions_tr'), list):
+        out['actions_tr'] = []
+    for a in extra_actions:
+        if a and a not in out['actions_tr']:
+            out['actions_tr'].append(a)
+    # END S9_SCORE_ACTIONS
     if astatus == 'insufficient_data':
         base -= 10
     elif astatus == 'ok':
