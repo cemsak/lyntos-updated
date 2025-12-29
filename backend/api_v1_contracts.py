@@ -168,6 +168,75 @@ def _enrich_portfolio_with_kpis(c: dict) -> None:
         },
     }
 
+
+# BEGIN S6_PORTFOLIO_INFLATION_KPIS
+def _enrich_portfolio_with_inflation_kpis(c: dict, *, base_dir: Path, smmm_id, client_id, period) -> None:
+    """Sprint-6: portfolio contract'a Axis-D inflation blokundan KPI özetleri ekler.
+    Fail-soft: hiçbir durumda response'ı kırmaz.
+    Dummy yok: veri yoksa status/aksiyon/reason taşır.
+    """
+    try:
+        if not isinstance(c, dict):
+            return
+        kpis = c.setdefault('kpis', {})
+        if not isinstance(kpis, dict):
+            return
+        if not smmm_id or not client_id or not period:
+            if 'inflation_status' not in kpis:
+                kpis['inflation_status'] = 'absent'
+            kpis.setdefault('inflation_net_698_effect', None)
+            kpis.setdefault('inflation_close_to', None)
+            return
+        infl = {}
+        try:
+            axis_d = build_axis_d_contract_mizan_only(base_dir, smmm_id, client_id, period)
+            if isinstance(axis_d, dict) and isinstance(axis_d.get('inflation'), dict):
+                infl = axis_d.get('inflation') or {}
+        except Exception as e:
+            infl = {
+                'status': 'error',
+                'reason_tr': 'Axis-D çağrısı başarısız: ' + type(e).__name__ + ': ' + str(e),
+                'actions_tr': ['Axis-D üretimini incele: period/mizan path ve backend warnings'],
+                'required_docs': [],
+                'missing_docs': [],
+                'computed': None,
+            }
+        status = infl.get('status') or 'absent'
+        computed = infl.get('computed') if isinstance(infl.get('computed'), dict) else None
+        net_698 = computed.get('net_698_effect') if computed else None
+        close_to = None
+        if computed:
+            close_to = computed.get('close_to')
+            if close_to is None:
+                close_to = computed.get('would_close_to')
+        kpis['inflation_status'] = status
+        kpis['inflation_net_698_effect'] = net_698
+        kpis['inflation_close_to'] = close_to
+        km = c.setdefault('kpis_meta', {})
+        if isinstance(km, dict):
+            mods = km.setdefault('modules', {})
+            if isinstance(mods, dict):
+                mods.setdefault('inflation', {
+                    'label_tr': 'Enflasyon Muhasebesi',
+                    'desc_tr': '698 net etkisi ve kapanış yönü (648/658) durumu',
+                })
+        if status in ('missing_data', 'error', 'observed_postings'):
+            reasons = c.setdefault('kpis_reasons', {})
+            if isinstance(reasons, dict):
+                md = infl.get('missing_data') if isinstance(infl.get('missing_data'), dict) else {}
+                req = md.get('required_docs') if isinstance(md.get('required_docs'), list) else (infl.get('required_docs') if isinstance(infl.get('required_docs'), list) else None)
+                miss = md.get('missing_docs') if isinstance(md.get('missing_docs'), list) else (infl.get('missing_docs') if isinstance(infl.get('missing_docs'), list) else None)
+                acts = md.get('actions_tr') if isinstance(md.get('actions_tr'), list) else (infl.get('actions_tr') if isinstance(infl.get('actions_tr'), list) else None)
+                reasons['inflation'] = {
+                    'reason_tr': infl.get('reason_tr'),
+                    'actions_tr': acts,
+                    'required_docs': req,
+                    'missing_docs': miss,
+                }
+    except Exception:
+        return
+# END S6_PORTFOLIO_INFLATION_KPIS
+
 def _read_json(p: Path):
     if not p.exists():
         raise HTTPException(status_code=404, detail=f"Not found: {p.name}")
@@ -221,6 +290,11 @@ def contracts_portfolio(
         _enrich_portfolio_with_kpis(c)
     except Exception as e:
         c["warnings"].append(f"kpi_enrich_failed:{e}")
+
+    try:
+        _enrich_portfolio_with_inflation_kpis(c, base_dir=BASE, smmm_id=smmm_n, client_id=client_n, period=period_n)
+    except Exception as e:
+        c["warnings"].append("inflation_kpi_enrich_failed:" + str(e))
 
     return JSONResponse(c)
 
