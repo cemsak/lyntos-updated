@@ -485,20 +485,81 @@ export default function V1DashboardClient(props: { contract: PortfolioContract; 
             overall === "MISSING" ? "Dataset kritik eksik: mizan/dosya yok." :
             overall === "error" ? (vs.error ? ("Validator error: " + vs.error) : "Validator error.") :
             "Dataset durumu bilinmiyor.";
-          const preview = (missingPaths.length ? missingPaths : warnPaths).slice(0, 3);
+          const preview = (missingPaths.length ? missingPaths : warnPaths).slice(0, 3);                    // BEGIN S8_DATASET_HEALTH_OPS
+                    const [vsOpen, setVsOpen] = useState(false);
+                    const hasAny = (warnN + missN) > 0;
+                    const primaryList = (missingPaths.length ? missingPaths : warnPaths);
+                    const primaryLabel = (missingPaths.length ? 'Missing paths' : 'Warn paths');
+                    const actionLine =
+                      overall === 'WARN' ? 'Eksik/opsiyonel girdiler var: enflasyon kanıt paketini tamamlayınız.' :
+                      overall === 'MISSING' ? 'Kritik eksik veri: mizan/dosya yolu tamamlanmadan analiz güvenilir olmaz.' :
+                      overall === 'error' ? 'Validator hata verdi: logs/warnings kontrol ediniz.' : '';
+                    const copyPayload = {
+                      overall,
+                      missing_paths: missingPaths,
+                      warn_paths: warnPaths,
+                      items: Array.isArray(vs.items) ? vs.items : [],
+                      error: (vs as any).error ?? null,
+                    };
+                    const onCopy = async () => {
+                      try {
+                        const txt = JSON.stringify(copyPayload, null, 2);
+                        await navigator.clipboard.writeText(txt);
+                      } catch {
+                        // ignore
+                      }
+                    };
+                    // END S8_DATASET_HEALTH_OPS
+
+
           return (
             <div className="rounded-lg border p-3">
               <div className="flex items-center justify-between gap-2">
                 <div className="text-sm font-semibold">Dataset Health</div>
-                <span className={`rounded-full px-2 py-0.5 text-xs ${chip}`}>{overall}</span>
+                <div className="flex items-center gap-2">
+                  <span className={`rounded-full px-2 py-0.5 text-xs ${chip}`}>{overall}</span>
+                  <button
+                    type="button"
+                    className="rounded border px-2 py-0.5 text-xs"
+                    onClick={onCopy}
+                    title="validation_summary JSON kopyala"
+                  >
+                    Detayı Kopyala
+                  </button>
+                  {hasAny ? (
+                    <button
+                      type="button"
+                      className="rounded border px-2 py-0.5 text-xs"
+                      onClick={() => setVsOpen(!vsOpen)}
+                      title="warn/missing path listesini göster"
+                    >
+                      {vsOpen ? 'Gizle' : 'Göster'}
+                    </button>
+                  ) : null}
+                </div>
               </div>
               <div className="mt-1 text-xs text-slate-600">{detail}</div>
+              {actionLine ? <div className="mt-1 text-xs text-slate-700">{actionLine}</div> : null}
               {(warnN || missN) ? (
                 <div className="mt-2 text-xs text-slate-700">
                   <div>Warnings: {warnN} • Missing: {missN}</div>
-                  {preview.map((p: string, i: number) => (
-                    <div key={`vs-p-${i}`} className="truncate">{p}</div>
-                  ))}
+                  {vsOpen ? (
+                    <div className="mt-1">
+                      <div className="text-xs font-semibold">{primaryLabel}</div>
+                      {primaryList.slice(0, 25).map((p: string, i: number) => (
+                        <div key={`vs-p-${i}`} className="truncate">{p}</div>
+                      ))}
+                      {(primaryList.length > 25) ? (
+                        <div className="text-xs text-slate-600">+{primaryList.length - 25} daha…</div>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <div className="mt-1">
+                      {preview.map((p: string, i: number) => (
+                        <div key={`vs-p-${i}`} className="truncate">{p}</div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ) : null}
             </div>
