@@ -361,7 +361,7 @@ export default function AxisDPanelClient(props: { smmm: string; client: string; 
                 <div className="rounded-xl bg-amber-50 p-3 text-xs text-amber-950">
                   <div className="font-semibold">Eksik Belgeler</div>
                   <ul className="mt-1 list-disc pl-5">
-                    {inflation.missing_docs.map((d, i) => (
+                    {inflation.missing_docs.map((d: any, i: number) => (
                       <li key={i}>
                         <span className="font-semibold">{d.code}</span>
                         {d.path ? <span className="text-amber-900"> — {d.path}</span> : null}
@@ -375,7 +375,7 @@ export default function AxisDPanelClient(props: { smmm: string; client: string; 
                 <div className="mt-2 rounded-xl bg-slate-50 p-3 text-xs text-slate-700">
                   <div className="font-semibold">Aksiyon</div>
                   <ul className="mt-1 list-disc pl-5">
-                    {inflation.actions_tr.map((a, i) => (
+                    {inflation.actions_tr.map((a: any, i: number) => (
                       <li key={i}>{a}</li>
                     ))}
                   </ul>
@@ -389,7 +389,7 @@ export default function AxisDPanelClient(props: { smmm: string; client: string; 
               <div className="font-semibold">Hata</div>
               {Array.isArray(inflation.compute_errors) && inflation.compute_errors.length ? (
                 <ul className="mt-1 list-disc pl-5">
-                  {inflation.compute_errors.map((e, i) => (
+                  {inflation.compute_errors.map((e: any, i: number) => (
                     <li key={i}>{e}</li>
                   ))}
                 </ul>
@@ -452,7 +452,7 @@ export default function AxisDPanelClient(props: { smmm: string; client: string; 
                           </tr>
                         </thead>
                         <tbody>
-                          {it.top_accounts.map((a, i) => (
+                          {it.top_accounts.map((a: any, i: number) => (
                             <tr
                               key={i}
                               className="border-t cursor-pointer hover:bg-slate-50"
@@ -511,7 +511,7 @@ export default function AxisDPanelClient(props: { smmm: string; client: string; 
                 <div className="mt-2 text-xs text-slate-700">
                   <div className="font-semibold">Gerekli Evrak</div>
                   <ul className="list-disc pl-5">
-                    {it.required_docs.map((d, i) => (
+                    {it.required_docs.map((d: any, i: number) => (
                       <li key={i}>{d.title_tr || d.code}</li>
                     ))}
                   </ul>
@@ -522,7 +522,7 @@ export default function AxisDPanelClient(props: { smmm: string; client: string; 
                 <div className="mt-2 text-xs text-slate-700">
                   <div className="font-semibold">SMMM Aksiyon</div>
                   <ul className="list-disc pl-5">
-                    {it.actions_tr.map((a, i) => (
+                    {it.actions_tr.map((a: any, i: number) => (
                       <li key={i}>{a}</li>
                     ))}
                   </ul>
