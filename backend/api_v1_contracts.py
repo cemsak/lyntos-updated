@@ -1460,7 +1460,18 @@ def _build_inflation_block(*, base_dir: Path, smmm_id: str, client_id: str, peri
         try:
             if isinstance(computed, dict):
                 expected_close_to = computed.get('close_to')
-            exp = str(expected_close_to) if expected_close_to in (648, 658, '648', '658') else None
+            exp = None
+            if isinstance(computed, dict):
+                exp = computed.get("close_to") or computed.get("would_close_to")
+                if exp is None:
+                    exp = computed.get("expected_close_to")
+                if exp is None:
+                    cc = computed.get("closing_check")
+                    if isinstance(cc, dict):
+                        exp = cc.get("expected_close_to")
+            if expected_close_to is None and exp is not None:
+                expected_close_to = exp
+
             has_698 = isinstance(observed_postings, dict) and ('698' in observed_postings)
             has_648 = isinstance(observed_postings, dict) and ('648' in observed_postings)
             has_658 = isinstance(observed_postings, dict) and ('658' in observed_postings)
