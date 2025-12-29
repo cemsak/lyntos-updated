@@ -354,7 +354,23 @@ export default function V1DashboardClient(props: { contract: PortfolioContract; 
           </div>
 
                     {/* BEGIN S6_INFLATION_KPI_CARD */}
-          <div className="rounded-2xl bg-slate-50 p-3">
+          <div
+            className="rounded-2xl bg-slate-50 p-3 cursor-pointer"
+            role="link"
+            tabIndex={0}
+            onClick={(e) => {
+              const t = e.target as HTMLElement;
+              if (t && t.closest && t.closest('a')) return;
+              window.location.href = `/v1?smmm=${encodeURIComponent(props.ctx.smmm)}&client=${encodeURIComponent(props.ctx.client)}&period=${encodeURIComponent(props.ctx.period)}#axis-d`;
+            }}
+            onKeyDown={(e) => {
+              const t = e.target as HTMLElement;
+              if (t && t.closest && t.closest('a')) return;
+              if (e.key === 'Enter' || e.key === ' ') {
+                window.location.href = `/v1?smmm=${encodeURIComponent(props.ctx.smmm)}&client=${encodeURIComponent(props.ctx.client)}&period=${encodeURIComponent(props.ctx.period)}#axis-d`;
+              }
+            }}
+          >
             <div className="flex items-center justify-between gap-2">
               <div className="text-xs text-slate-500">Enflasyon Muhasebesi</div>
               {(() => {
@@ -364,6 +380,22 @@ export default function V1DashboardClient(props: { contract: PortfolioContract; 
                 return <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${cls}`}>{badge}</span>;
               })()}
             </div>
+            {/* BEGIN S6_INFLATION_WARNINGS_CHIP */}
+            {(() => {
+              const dqAny = (props as any).dq;
+              const ws = ((dqAny?.warnings?.length ? dqAny.warnings : (c?.warnings || [])) as string[]);
+              const n = Array.isArray(ws) ? ws.length : 0;
+              if (!n) return null;
+              const tail = ws.slice(-2).join(' | ');
+              return (
+                <div className="mt-2 text-[11px] text-slate-600">
+                  <span className="inline-flex items-center rounded-full border px-2 py-1">Warnings: <span className="ml-1 font-semibold">{n}</span></span>
+                  <div className="mt-1 truncate" title={tail}>{tail}</div>
+                </div>
+              );
+            })()}
+            {/* END S6_INFLATION_WARNINGS_CHIP */}
+
 
             {(() => {
               const s = (c.kpis?.inflation_status ?? "absent").toString();
