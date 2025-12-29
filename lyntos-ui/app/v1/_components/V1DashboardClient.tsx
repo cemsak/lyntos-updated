@@ -41,6 +41,14 @@ type PortfolioContract = {
     bank_rows_out_of_period?: number;
     sources_present?: string[];
     warnings?: string[];
+  kpis_reasons?: {
+    inflation?: {
+      reason_tr?: string | null;
+      actions_tr?: string[] | null;
+      required_docs?: any[] | null;
+      missing_docs?: any[] | null;
+    };
+  };
   };
   warnings?: string[] | null;
   risks?: RiskSummary[];
@@ -49,6 +57,9 @@ type PortfolioContract = {
     vergi_uyum_puani?: number | null;
     radar_risk_score?: number | null;
     dq_in_period_pct?: number | null;
+    inflation_status?: string | null;
+    inflation_net_698_effect?: number | null;
+    inflation_close_to?: number | null;
   };
   kpis_meta?: {
     version?: string | null;
@@ -317,7 +328,7 @@ export default function V1DashboardClient(props: { contract: PortfolioContract; 
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
           <div className="rounded-2xl bg-slate-50 p-3">
             <div className="text-xs text-slate-500">Kurgan Risk Skoru</div>
             <div className="text-2xl font-semibold">{kurganBase}</div>
@@ -341,6 +352,60 @@ export default function V1DashboardClient(props: { contract: PortfolioContract; 
             <div className="text-2xl font-semibold">{dqBase}%</div>
             <div className="text-xs text-slate-600">in: {num(dq.bank_rows_in_period)} / total: {num(dq.bank_rows_total)}</div>
           </div>
+
+                    {/* BEGIN S6_INFLATION_KPI_CARD */}
+          <div className="rounded-2xl bg-slate-50 p-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-xs text-slate-500">Enflasyon Muhasebesi</div>
+              {(() => {
+                const s = (c.kpis?.inflation_status ?? "absent").toString();
+                const badge = s === "computed" ? "COMPUTED" : s === "missing_data" ? "MISSING" : s === "error" ? "ERROR" : s === "observed_postings" ? "POSTINGS" : "ABSENT";
+                const cls = s === "computed" ? "bg-emerald-600 text-white" : s === "missing_data" ? "bg-amber-500 text-white" : s === "error" ? "bg-red-600 text-white" : "bg-slate-600 text-white";
+                return <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${cls}`}>{badge}</span>;
+              })()}
+            </div>
+
+            {(() => {
+              const s = (c.kpis?.inflation_status ?? "absent").toString();
+              const rr = (c as any).kpis_reasons?.inflation;
+              const actions = (rr?.actions_tr || []) as string[];
+              const reqN = Array.isArray(rr?.required_docs) ? rr?.required_docs?.length : null;
+              const missN = Array.isArray(rr?.missing_docs) ? rr?.missing_docs?.length : null;
+
+              if (s === "computed") {
+                return (
+                  <>
+                    <div className="mt-2 text-2xl font-semibold">{num(c.kpis?.inflation_net_698_effect)}</div>
+                    <div className="text-xs text-slate-600">Net 698 etkisi | Kapanış: {c.kpis?.inflation_close_to ?? "-"}</div>
+                  </>
+                );
+              }
+
+              return (
+                <>
+                  <div className="mt-2 text-2xl font-semibold">-</div>
+                  <div className="text-xs text-slate-600">Durum: {s}</div>
+                  {rr?.reason_tr ? <div className="mt-1 text-xs text-slate-700"><span className="font-semibold">Gerekçe:</span> {rr.reason_tr}</div> : null}
+                  {(actions && actions.length) ? (
+                    <ul className="mt-1 list-disc pl-5 text-xs text-slate-700">
+                      {actions.slice(0, 4).map((a: string, i: number) => <li key={`infl-a-${i}`}>{a}</li>)}
+                    </ul>
+                  ) : null}
+                  {(reqN !== null || missN !== null) ? (
+                    <div className="mt-1 text-xs text-slate-600">
+                      {reqN !== null ? <span>Required: <span className="font-semibold">{reqN}</span></span> : null}
+                      {(reqN !== null && missN !== null) ? <span> | </span> : null}
+                      {missN !== null ? <span>Missing: <span className="font-semibold">{missN}</span></span> : null}
+                    </div>
+                  ) : null}
+                </>
+              );
+            })()}
+
+            <div className="mt-2 text-xs underline"><a href="#axis-d">Axis-D detayı</a></div>
+          </div>
+          {/* END S6_INFLATION_KPI_CARD */}
+
         </div>
 
         {(dq.warnings?.length || c.warnings?.length) ? (
@@ -354,7 +419,9 @@ export default function V1DashboardClient(props: { contract: PortfolioContract; 
         ) : null}
       </div>
 
-      <AxisDPanelClient smmm={props.ctx.smmm} client={props.ctx.client} period={props.ctx.period} />
+      <div id="axis-d">
+              <AxisDPanelClient smmm={props.ctx.smmm} client={props.ctx.client} period={props.ctx.period} />
+      </div>
 
       {missingTodo.length ? (
         <div className="rounded-2xl border p-4">
