@@ -170,6 +170,33 @@ def _enrich_portfolio_with_kpis(c: dict) -> None:
 
 
 
+
+# BEGIN S9_INFLATION_COMPLIANCE_SCORE
+def _compute_inflation_compliance_score(*, inflation_status: str, validation_summary: dict | None, closing_check: dict | None, actions_tr: list[str] | None) -> dict:
+    """Return {score, band, reason_tr, actions_tr}. Score only when computed+evidence."""
+    out = {'score': None, 'band': None, 'reason_tr': None, 'actions_tr': actions_tr or []}
+    st = (inflation_status or 'absent').strip().lower()
+    if st != 'computed':
+        out['reason_tr'] = 'Enflasyon skoru üretilemedi: hesap/kanıt eksik veya computed değil.'
+        return out
+    base = 80
+    vs_overall = ((validation_summary or {}).get('overall') or '').upper()
+    if vs_overall == 'WARN':
+        base -= 10
+    if vs_overall == 'MISSING':
+        base -= 25
+    audit = (closing_check or {}).get('audit_698_648_658') or {}
+    astatus = (audit.get('status') or '').lower()
+    if astatus == 'insufficient_data':
+        base -= 10
+    elif astatus == 'ok':
+        base += 10
+    score = max(0, min(100, int(round(base))))
+    out['score'] = score
+    out['band'] = 'A' if score >= 90 else ('B' if score >= 80 else ('C' if score >= 70 else 'D'))
+    out['reason_tr'] = 'Enflasyon uyum skoru kanıt durumuna göre hesaplandı.'
+    return out
+# END S9_INFLATION_COMPLIANCE_SCORE
 # BEGIN S8_PORTFOLIO_VALIDATION_SUMMARY
 def _build_validation_summary(*, base_dir: Path, smmm_id: str, client_id: str, period: str) -> dict:
     """Fail-soft, light-weight dataset validation summary for portfolio."""
@@ -320,6 +347,29 @@ def contracts_portfolio(
 
     try:
         _enrich_portfolio_with_inflation_kpis(c, base_dir=BASE, smmm_id=smmm_n, client_id=client_n, period=period_n)
+        # BEGIN S9_ATTACH_INFLATION_SCORE
+        try:
+            kpis = c.get('kpis') or {}
+            c['kpis'] = kpis
+            rr = (c.get('kpis_reasons') or {}).get('inflation') or {}
+            infl_status = (kpis.get('inflation_status') or 'absent')
+            vs = c.get('validation_summary') if isinstance(c.get('validation_summary'), dict) else None
+            # closing_check comes from Axis-D inflation block; use portfolio's cached axis if available
+            axis_d = c.get('axis_d') if isinstance(c.get('axis_d'), dict) else None
+            infl = (axis_d or {}).get('inflation') if isinstance(axis_d, dict) else None
+            closing_check = (infl or {}).get('computed', {}).get('closing_check') if isinstance(infl, dict) else None
+            actions = rr.get('actions_tr') if isinstance(rr, dict) else None
+            sc = _compute_inflation_compliance_score(inflation_status=str(infl_status), validation_summary=vs, closing_check=closing_check, actions_tr=actions)
+            kpis['inflation_compliance_score'] = sc.get('score')
+            kpis['inflation_compliance_band'] = sc.get('band')
+            c.setdefault('kpis_reasons', {})
+            c['kpis_reasons'].setdefault('inflation', {})
+            c['kpis_reasons']['inflation']['score_reason_tr'] = sc.get('reason_tr')
+            c['kpis_reasons']['inflation']['score_actions_tr'] = sc.get('actions_tr')
+        except Exception as e:
+            c.setdefault('warnings', [])
+            c['warnings'].append('inflation_score_failed:' + str(e))
+        # END S9_ATTACH_INFLATION_SCORE
     except Exception as e:
         c["warnings"].append("inflation_kpi_enrich_failed:" + str(e))
 
