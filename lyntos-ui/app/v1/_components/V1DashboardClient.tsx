@@ -434,7 +434,10 @@ export default function V1DashboardClient(props: { contract: PortfolioContract; 
               );
             })()}
 
-              <div className="mt-2 flex gap-3 text-xs underline">\n    <a href="#axis-d">Axis-D (sayfada)</a>\n    <a href={`/v1?smmm=${encodeURIComponent(props.ctx.smmm)}&client=${encodeURIComponent(props.ctx.client)}&period=${encodeURIComponent(props.ctx.period)}#axis-d`}>Axis-D (link)</a>\n  </div>
+              <div className="mt-2 flex flex-wrap gap-3 text-xs underline">
+  <a href="#axis-d">Axis-D (sayfada)</a>
+  <a href={`/v1?smmm=${encodeURIComponent(props.ctx.smmm)}&client=${encodeURIComponent(props.ctx.client)}&period=${encodeURIComponent(props.ctx.period)}#axis-d`}>Axis-D (link)</a>
+</div>
           </div>
           {/* END S6_INFLATION_KPI_CARD */}
 
