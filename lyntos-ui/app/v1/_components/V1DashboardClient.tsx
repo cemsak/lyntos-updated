@@ -31,6 +31,20 @@ type RiskSummary = {
   summary_tr?: string | null;
   kurgan_criteria_signals?: CriteriaSignal[];
 };
+type ValidationSummaryItem = {
+  key?: string | null;
+  status?: string | null;
+  detail?: string | null;
+};
+
+type ValidationSummary = {
+  overall?: string | null;
+  missing_paths?: string[];
+  warn_paths?: string[];
+  items?: ValidationSummaryItem[];
+  error?: string | null;
+};
+
 
 type PortfolioContract = {
   kind: string;
@@ -64,8 +78,9 @@ type PortfolioContract = {
   kpis_meta?: {
     version?: string | null;
     components?: any;
-  };
-};
+  };  validation_summary?: ValidationSummary | null;
+}
+;
 
 type Ctx = { smmm: string; client: string; period: string };
 
@@ -443,7 +458,49 @@ export default function V1DashboardClient(props: { contract: PortfolioContract; 
 
         </div>
 
-        {(dq.warnings?.length || c.warnings?.length) ? (
+                {/* BEGIN S8_DATASET_HEALTH */}
+        {(() => {
+          const vs = c.validation_summary as (ValidationSummary | null | undefined);
+          if (!vs) return null;
+          const overall = (vs.overall ?? "unknown").toString();
+          const warnPaths = (Array.isArray(vs.warn_paths) ? vs.warn_paths : []) as string[];
+          const missingPaths = (Array.isArray(vs.missing_paths) ? vs.missing_paths : []) as string[];
+          const warnN = warnPaths.length;
+          const missN = missingPaths.length;
+          const chip =
+            overall === "OK" ? "bg-emerald-600 text-white" :
+            overall === "WARN" ? "bg-amber-500 text-white" :
+            overall === "MISSING" ? "bg-red-600 text-white" :
+            overall === "error" ? "bg-red-700 text-white" :
+            "bg-slate-500 text-white";
+          const detail =
+            overall === "OK" ? "Dataset doğrulama OK." :
+            overall === "WARN" ? "Dataset kısmi: eksik/opsiyonel girdiler var." :
+            overall === "MISSING" ? "Dataset kritik eksik: mizan/dosya yok." :
+            overall === "error" ? (vs.error ? ("Validator error: " + vs.error) : "Validator error.") :
+            "Dataset durumu bilinmiyor.";
+          const preview = (missingPaths.length ? missingPaths : warnPaths).slice(0, 3);
+          return (
+            <div className="rounded-lg border p-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="text-sm font-semibold">Dataset Health</div>
+                <span className={`rounded-full px-2 py-0.5 text-xs ${chip}`}>{overall}</span>
+              </div>
+              <div className="mt-1 text-xs text-slate-600">{detail}</div>
+              {(warnN || missN) ? (
+                <div className="mt-2 text-xs text-slate-700">
+                  <div>Warnings: {warnN} • Missing: {missN}</div>
+                  {preview.map((p: string, i: number) => (
+                    <div key={`vs-p-${i}`} className="truncate">{p}</div>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          );
+        })()}
+        {/* END S8_DATASET_HEALTH */}
+
+{(dq.warnings?.length || c.warnings?.length) ? (
           <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
             <div className="text-sm font-semibold">Uyarılar</div>
             <ul className="list-disc pl-5 text-sm text-slate-700">
