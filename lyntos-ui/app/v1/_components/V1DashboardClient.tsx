@@ -78,6 +78,8 @@ type PortfolioContract = {
     inflation_status?: string | null;
     inflation_net_698_effect?: number | null;
     inflation_close_to?: number | null;
+    inflation_compliance_score?: number | null;
+    inflation_compliance_band?: string | null;
   };
 
   kpis_meta?: {
@@ -394,7 +396,28 @@ export default function V1DashboardClient(props: { contract: PortfolioContract; 
           >
             <div className="flex items-center justify-between gap-2">
               <div className="text-xs text-slate-500">Enflasyon Muhasebesi</div>
-              {(() => {
+              
+        {/* BEGIN S9_INFLATION_COMPLIANCE_UI */}
+        {(() => {
+          const score = c.kpis?.inflation_compliance_score;
+          const band = (c.kpis?.inflation_compliance_band ?? null) as string | null;
+          const r = c.kpis_reasons?.inflation as any;
+          const reason = (r?.score_reason_tr ?? null) as string | null;
+          if (score == null && !reason) return null;
+          return (
+            <div className="rounded-lg border p-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="text-sm font-semibold">Inflation Compliance</div>
+                <div className="text-sm font-semibold">
+                  {score == null ? 'N/A' : `${score}${band ? ` (${band})` : ''}`}
+                </div>
+              </div>
+              {reason ? <div className="mt-1 text-xs text-slate-700">{reason}</div> : null}
+            </div>
+          );
+        })()}
+        {/* END S9_INFLATION_COMPLIANCE_UI */}
+{(() => {
                 const s = (c.kpis?.inflation_status ?? "absent").toString();
                 const badge = s === "computed" ? "COMPUTED" : s === "missing_data" ? "MISSING" : s === "error" ? "ERROR" : s === "observed_postings" ? "POSTINGS" : "ABSENT";
                 const cls = s === "computed" ? "bg-emerald-600 text-white" : s === "missing_data" ? "bg-amber-500 text-white" : s === "error" ? "bg-red-600 text-white" : "bg-slate-600 text-white";
