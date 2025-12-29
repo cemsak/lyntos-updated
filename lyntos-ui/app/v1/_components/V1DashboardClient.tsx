@@ -49,12 +49,15 @@ type ValidationSummary = {
 type PortfolioContract = {
   kind: string;
   period_window?: { period: string; start_date: string; end_date: string };
+
   data_quality?: {
     bank_rows_total?: number;
     bank_rows_in_period?: number;
     bank_rows_out_of_period?: number;
     sources_present?: string[];
     warnings?: string[];
+  };
+
   kpis_reasons?: {
     inflation?: {
       reason_tr?: string | null;
@@ -63,9 +66,10 @@ type PortfolioContract = {
       missing_docs?: any[] | null;
     };
   };
-  };
+
   warnings?: string[] | null;
   risks?: RiskSummary[];
+
   kpis?: {
     kurgan_risk_score?: number | null;
     vergi_uyum_puani?: number | null;
@@ -75,12 +79,14 @@ type PortfolioContract = {
     inflation_net_698_effect?: number | null;
     inflation_close_to?: number | null;
   };
+
   kpis_meta?: {
     version?: string | null;
     components?: any;
-  };  validation_summary?: ValidationSummary | null;
-}
-;
+  };
+
+  validation_summary?: ValidationSummary | null;
+};
 
 type Ctx = { smmm: string; client: string; period: string };
 
