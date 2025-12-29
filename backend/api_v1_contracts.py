@@ -1405,7 +1405,91 @@ def _build_inflation_block(*, base_dir: Path, smmm_id: str, client_id: str, peri
         return tot
 
     flow = {"698": sum_prefix(["698"]), "648": sum_prefix(["648"]), "658": sum_prefix(["658"])}
-    observed_postings = any(abs(flow[k]) > 1e-6 for k in ("698", "648", "658"))
+    observed_postings = {k: float(flow.get(k) or 0.0) for k in ("698", "648", "658") if abs(float(flow.get(k) or 0.0)) > 1e-6}
+
+    # BEGIN S7_INFLATION_AUDIT_698_648_658
+    def _audit_698_648_658(flow: dict, computed: dict, observed_postings: dict) -> dict:
+        try:
+            tol = 1e-6
+            exp = computed.get("close_to") or computed.get("would_close_to")
+            try:
+                exp_i = int(exp) if isinstance(exp, str) and exp.isdigit() else exp
+            except Exception:
+                exp_i = exp
+
+            v698 = float(flow.get("698") or 0.0)
+            v648 = float(flow.get("648") or 0.0)
+            v658 = float(flow.get("658") or 0.0)
+
+            checks = []
+            actions = []
+            status = "ok"
+
+            if not observed_postings:
+                checks.append({
+                    "code": "HAS_POSTINGS",
+                    "status": "info",
+                    "note_tr": "Mizanda 698/648/658 sinyali yok (otomatik kapanış doğrulaması yapılamaz).",
+                })
+                actions.append("Mizanda 698/648/658 hareket/bakiye yoksa: enflasyon fişi kayıtlarını ve dönem kapanışını kontrol edin.")
+                return {"status": "insufficient_data", "expected_close_to": exp_i, "checks": checks, "actions_tr": actions}
+
+            checks.append({
+                "code": "HAS_POSTINGS",
+                "status": "pass",
+                "observed": sorted(list(observed_postings.keys())),
+                "note_tr": "Mizanda 698/648/658 sinyali var.",
+            })
+
+            dir_ok = None
+            if exp_i == 648:
+                dir_ok = (v648 < -tol)
+                checks.append({
+                    "code": "DIRECTION",
+                    "status": "pass" if dir_ok else "warn",
+                    "expected_close_to": 648,
+                    "mizan_net_648": v648,
+                    "note_tr": "648 beklenir (net negatif olmalı).",
+                })
+            elif exp_i == 658:
+                dir_ok = (v658 > tol)
+                checks.append({
+                    "code": "DIRECTION",
+                    "status": "pass" if dir_ok else "warn",
+                    "expected_close_to": 658,
+                    "mizan_net_658": v658,
+                    "note_tr": "658 beklenir (net pozitif olmalı).",
+                })
+            else:
+                checks.append({
+                    "code": "DIRECTION",
+                    "status": "info",
+                    "expected_close_to": exp_i,
+                    "note_tr": "Beklenen kapanış yönü belirlenemedi (net_698_effect = 0 olabilir).",
+                })
+
+            if dir_ok is False:
+                status = "warn"
+                actions.append("Beklenen kapanış yönü ile mizan net yönü tutarsız; 698->648/658 fişini ve mizan net hesaplamasını doğrula.")
+
+            if abs(v698) <= tol:
+                checks.append({"code": "CLOSEOUT_698", "status": "pass", "mizan_net_698": v698, "note_tr": "698 net ~ 0 (kapanmış olabilir)."})
+            else:
+                checks.append({"code": "CLOSEOUT_698", "status": "warn", "mizan_net_698": v698, "note_tr": "698 net sıfır değil (kapanış fişi eksik/yarım olabilir)."})
+                status = "warn"
+                actions.append("698 kapanmamış görünüyor; dönem kapanış fişini (698->648/658) kontrol et.")
+
+            return {
+                "status": status,
+                "expected_close_to": exp_i,
+                "mizan_flow": {"698": v698, "648": v648, "658": v658},
+                "checks": checks,
+                "actions_tr": actions,
+            }
+        except Exception as e:
+            return {"status": "error", "error": type(e).__name__ + ": " + str(e)}
+    # END S7_INFLATION_AUDIT_698_648_658
+
 
     # MVP sınıflama (Tekdüzen grup mantığına dayalı; daha sonra refine edilecek)
     monetary_roots = ("10","11","12","13","14","30","31","32","33","34","35","36","37","38","39")
@@ -1668,17 +1752,19 @@ def _build_inflation_block(*, base_dir: Path, smmm_id: str, client_id: str, peri
                 "closing_check": (
                     {
                         "expected_close_to": ((computed.get("close_to") or computed.get("would_close_to")) if isinstance(computed, dict) else None),
-                        "mizan_has_698": bool(observed_postings and ("698" in observed_postings)),
-                        "mizan_has_648": bool(observed_postings and ("648" in observed_postings)),
-                        "mizan_has_658": bool(observed_postings and ("658" in observed_postings)),
+                        "mizan_has_698": bool(("698" in (observed_postings or {}))),
+                        "mizan_has_648": bool(("648" in (observed_postings or {}))),
+                        "mizan_has_658": bool(("658" in (observed_postings or {}))),
                         "notes_tr": [
                             "Kontrol: Enflasyon düzeltme farkı 698’de birikmeli; dönem kapanışında 648/658’e devredilerek 698 kapanmalı.",
                             ("Beklenen kapanış yönü: " + str((computed.get("close_to") or computed.get("would_close_to")))) if computed else "Beklenen kapanış yönü: N/A",
                             ("Mizan gözlemi (698/648/658): " + ",".join(sorted(list(observed_postings.keys())))) if observed_postings else "Mizan gözlemi: 698/648/658 sinyali yok",
                         ],
+                        "audit_698_648_658": (_audit_698_648_658(flow, computed, (observed_postings or {})) if computed else None),
                     } if computed else None
                 ),
                 # S5_INFLATION_CLOSING_CHECK_V1
+                # S7_INFLATION_AUDIT_698_648_658
             } if computed else None
         ),
         "flow_698_648_658": {
