@@ -1404,9 +1404,41 @@ def _build_inflation_block(*, base_dir: Path, smmm_id: str, client_id: str, peri
                 tot += float((r or {}).get("net") or 0.0)
         return tot
 
-    flow = {"698": sum_prefix(["698"]), "648": sum_prefix(["648"]), "658": sum_prefix(["658"])}
-    observed_postings = {k: float(flow.get(k) or 0.0) for k in ("698", "648", "658") if abs(float(flow.get(k) or 0.0)) > 1e-6}
+    def _safe_float(v) -> float:
+        try:
+            return float(v)
+        except Exception:
+            return 0.0
 
+    def sum_prefix_field(prefixes, keys) -> float:
+        tot = 0.0
+        for r in rows:
+            rr = (r or {})
+            code = norm_code(rr.get("account_code") or rr.get("code") or rr.get("hesap_kodu"))
+            if any(code.startswith(p) for p in prefixes):
+                for k in keys:
+                    if k in rr:
+                        tot += _safe_float(rr.get(k))
+                        break
+        return tot
+
+    flow = {"698": sum_prefix(["698"]), "648": sum_prefix(["648"]), "658": sum_prefix(["658"])}
+    mizan_movements = {
+        "698": {"borc": sum_prefix_field(["698"], ["borc","debit","borc_toplam","borc_toplami"]), "alacak": sum_prefix_field(["698"], ["alacak","credit","alacak_toplam","alacak_toplami"])},
+        "648": {"borc": sum_prefix_field(["648"], ["borc","debit","borc_toplam","borc_toplami"]), "alacak": sum_prefix_field(["648"], ["alacak","credit","alacak_toplam","alacak_toplami"])},
+        "658": {"borc": sum_prefix_field(["658"], ["borc","debit","borc_toplam","borc_toplami"]), "alacak": sum_prefix_field(["658"], ["alacak","credit","alacak_toplam","alacak_toplami"])},
+    }
+
+    tol = 1e-6
+    observed_postings = {}
+    for k in ("698","648","658"):
+        net = float(flow.get(k) or 0.0)
+        mv = (mizan_movements.get(k) or {})
+        b = float(mv.get("borc") or 0.0)
+        a = float(mv.get("alacak") or 0.0)
+        if (abs(net) > tol) or (abs(b) > tol) or (abs(a) > tol):
+            # keep value as net for backwards-compat
+            observed_postings[k] = net
     # BEGIN S7_INFLATION_AUDIT_698_648_658
     def _audit_698_648_658(flow: dict, computed: dict, observed_postings: dict) -> dict:
         try:
@@ -1772,6 +1804,7 @@ def _build_inflation_block(*, base_dir: Path, smmm_id: str, client_id: str, peri
             "account_648_role_tr": "648, net olumlu farkların izlendiği hesaptır (698'den aktarım).",
             "account_658_role_tr": "658, net olumsuz farkların izlendiği hesaptır (698'den aktarım).",
             "mizan_observed_balances": flow,
+            "mizan_observed_movements": mizan_movements,
             "computed_net_698_effect": (computed.get("net_698_effect") if computed else None),
             "computed_would_close_to": (computed.get("would_close_to") if computed else None),
         },
