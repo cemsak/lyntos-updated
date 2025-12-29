@@ -169,6 +169,33 @@ def _enrich_portfolio_with_kpis(c: dict) -> None:
     }
 
 
+
+# BEGIN S8_PORTFOLIO_VALIDATION_SUMMARY
+def _build_validation_summary(*, base_dir: Path, smmm_id: str, client_id: str, period: str) -> dict:
+    """Fail-soft, light-weight dataset validation summary for portfolio."""
+    out = {
+        'overall': 'unknown',
+        'missing_paths': [],
+        'warn_paths': [],
+        'items': [],
+    }
+    try:
+        # Local import to avoid hard dependency at module import time
+        from scripts.validate_period_dataset import validate_one  # type: ignore
+        rep = validate_one(base_dir, smmm_id, client_id, period, False, True)
+        out['overall'] = getattr(rep, 'overall', 'unknown')
+        out['missing_paths'] = list(getattr(rep, 'missing_paths', []) or [])
+        out['warn_paths'] = list(getattr(rep, 'warn_paths', []) or [])
+        items = []
+        for it in (getattr(rep, 'items', []) or []):
+            items.append({'key': getattr(it, 'key', None), 'status': getattr(it, 'status', None), 'detail': getattr(it, 'detail', None)})
+        out['items'] = items
+        return out
+    except Exception as e:
+        out['overall'] = 'error'
+        out['error'] = type(e).__name__ + ': ' + str(e)
+        return out
+# END S8_PORTFOLIO_VALIDATION_SUMMARY
 # BEGIN S6_PORTFOLIO_INFLATION_KPIS
 def _enrich_portfolio_with_inflation_kpis(c: dict, *, base_dir: Path, smmm_id, client_id, period) -> None:
     """Sprint-6: portfolio contract'a Axis-D inflation blokundan KPI özetleri ekler.
@@ -308,6 +335,15 @@ def contracts_portfolio(
     except Exception:
         pass
     # END S6_INFLATION_KPI_DEFAULTS
+
+    # BEGIN S8_ATTACH_VALIDATION_SUMMARY
+    try:
+        if 'validation_summary' not in c:
+            c['validation_summary'] = _build_validation_summary(base_dir=BASE, smmm_id=smmm_n, client_id=client_n, period=period_n)
+    except Exception as e:
+        c.setdefault('warnings', [])
+        c['warnings'].append('validation_summary_failed:' + str(e))
+    # END S8_ATTACH_VALIDATION_SUMMARY
 
     return JSONResponse(c)
 
