@@ -341,6 +341,110 @@ def health():
 
 
 # LYNTOS_S10_ANALYSIS_HELPERS_BEGIN
+# LYNTOS_S10_ANALYSIS_HARDENERS_BEGIN
+def _s10_norm_list(x):
+    if x is None:
+        return []
+    if isinstance(x, list):
+        return x
+    return [x]
+
+def _s10_norm_str(x):
+    if x is None:
+        return None
+    if isinstance(x, str):
+        return x
+    return str(x)
+
+def _s10_norm_float(x, default=0.0):
+    try:
+        if x is None:
+            return float(default)
+        return float(x)
+    except Exception:
+        return float(default)
+
+def _s10_generated_at():
+    fn = globals().get('_s10_now_z')
+    if callable(fn):
+        try:
+            return fn()
+        except Exception:
+            pass
+    # fallback
+    import time as _t
+    tt = _t.gmtime()
+    return (
+        str(tt.tm_year).zfill(4) + '-' + str(tt.tm_mon).zfill(2) + '-' + str(tt.tm_mday).zfill(2)
+        + 'T' + str(tt.tm_hour).zfill(2) + ':' + str(tt.tm_min).zfill(2) + ':' + str(tt.tm_sec).zfill(2) + 'Z'
+    )
+
+def _s10_harden_expert(d):
+    # Expert: deterministik çıktıyı schema açısından kilitle
+    if not isinstance(d, dict):
+        d = {}
+    if 'version' not in d:
+        d['version'] = 'v1'
+    if 'generated_at' not in d:
+        d['generated_at'] = _s10_generated_at()
+    if 'summary_tr' not in d or not isinstance(d.get('summary_tr'), str):
+        d['summary_tr'] = 'Uzman analizi deterministiktir; kanıt yoksa iddia üretmez (fail-soft).'
+
+    d['legal_basis'] = _s10_norm_list(d.get('legal_basis'))
+    d['evidence_refs'] = _s10_norm_list(d.get('evidence_refs'))
+
+    checks = d.get('checks')
+    if not isinstance(checks, list):
+        checks = []
+    hardened = []
+    for c in checks:
+        if not isinstance(c, dict):
+            continue
+        hc = {}
+        hc['id'] = _s10_norm_str(c.get('id')) or 'S10-CHECK'
+        hc['title_tr'] = _s10_norm_str(c.get('title_tr')) or 'Kontrol'
+        hc['status'] = _s10_norm_str(c.get('status')) or 'unknown'
+        hc['reason_tr'] = _s10_norm_str(c.get('reason_tr'))
+        hc['actions_tr'] = _s10_norm_list(c.get('actions_tr'))
+        hc['required_docs'] = _s10_norm_list(c.get('required_docs'))
+        hc['missing_docs'] = _s10_norm_list(c.get('missing_docs'))
+        hc['evidence_refs'] = _s10_norm_list(c.get('evidence_refs'))
+        hardened.append(hc)
+    d['checks'] = hardened
+    return d
+
+def _s10_harden_ai(d):
+    # AI: yardımcı; override yok; zorunlu alanlar kilitli
+    if not isinstance(d, dict):
+        d = {}
+    if 'version' not in d:
+        d['version'] = 'v1'
+    if 'generated_at' not in d:
+        d['generated_at'] = _s10_generated_at()
+    if 'summary_tr' not in d or not isinstance(d.get('summary_tr'), str):
+        d['summary_tr'] = 'AI Analizi yardımcıdır; uzman analizini override etmez. Kanıt olmadan kesin hüküm vermez.'
+    d['confidence'] = _s10_norm_float(d.get('confidence'), default=0.0)
+    if 'disclaimer_tr' not in d or not isinstance(d.get('disclaimer_tr'), str):
+        d['disclaimer_tr'] = 'UYARI: AI bloğu yalnız öneri üretir; nihai görüş expert bloktadır.'
+    d['evidence_refs'] = _s10_norm_list(d.get('evidence_refs'))
+    items = d.get('items')
+    if not isinstance(items, list):
+        items = []
+    hardened = []
+    for it in items:
+        if not isinstance(it, dict):
+            continue
+        hi = {}
+        hi['id'] = _s10_norm_str(it.get('id')) or 'AI-ITEM'
+        hi['title_tr'] = _s10_norm_str(it.get('title_tr')) or 'Öneri'
+        hi['confidence'] = _s10_norm_float(it.get('confidence'), default=d['confidence'])
+        hi['rationale_tr'] = _s10_norm_str(it.get('rationale_tr')) or 'Öneri gerekçesi mevcut değil.'
+        hi['actions_tr'] = _s10_norm_list(it.get('actions_tr'))
+        hi['evidence_refs'] = _s10_norm_list(it.get('evidence_refs'))
+        hardened.append(hi)
+    d['items'] = hardened
+    return d
+# LYNTOS_S10_ANALYSIS_HARDENERS_END
 def _s10_now_z():
     import time
     t = time.gmtime()
@@ -615,9 +719,9 @@ def contracts_portfolio(
         an = c.get('analysis')
         if isinstance(an, dict):
             if 'expert' not in an:
-                an['expert'] = _s10_portfolio_expert_block(c)
+                an['expert'] = _s10_harden_expert(_s10_portfolio_expert_block(c))
             if 'ai' not in an:
-                an['ai'] = _s10_portfolio_ai_block(c, an.get('expert'))
+                an['ai'] = _s10_harden_ai(_s10_portfolio_ai_block(c, an.get('expert')))
             c['analysis'] = an
     except Exception as e:
         try:
