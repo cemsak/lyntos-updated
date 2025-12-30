@@ -14,6 +14,63 @@ function sevColor(sev: Severity): string {
   }
 }
 
+
+// BEGIN S10_RISK_ANALYSIS_TYPES
+type LegalBasisRef = {
+  doc_id: string;
+  date?: string | null;
+  title?: string | null;
+  url?: string | null;
+};
+
+type EvidenceRef = {
+  doc_id?: string | null;
+  source?: string | null;
+  path?: string | null;
+  period?: string | null;
+  account?: string | null;
+  note?: string | null;
+};
+
+type ExpertCheck = {
+  id: string;
+  title_tr: string;
+  status?: string | null;
+  severity?: string | null;
+  detail_tr?: string | null;
+  evidence_refs?: EvidenceRef[] | null;
+};
+
+type ExpertAnalysisV1 = {
+  version: string;
+  generated_at: string;
+  summary_tr: string;
+  legal_basis: LegalBasisRef[];
+  evidence_refs: EvidenceRef[];
+  checks: ExpertCheck[];
+};
+
+type AiItem = {
+  id: string;
+  title_tr: string;
+  rationale_tr?: string | null;
+  action_tr?: string | null;
+  evidence_refs?: EvidenceRef[] | null;
+};
+
+type AiAnalysisV1 = {
+  confidence: number;
+  disclaimer_tr: string;
+  evidence_refs: EvidenceRef[];
+  items: AiItem[];
+};
+
+type RiskAnalysis = {
+  expert?: ExpertAnalysisV1 | null;
+  ai?: AiAnalysisV1 | null;
+};
+// END S10_RISK_ANALYSIS_TYPES
+
 export default function RiskDetailClient(props: { code: string; smmm: string; client: string; period: string }) {
   const [data, setData] = useState<any>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -24,7 +81,13 @@ export default function RiskDetailClient(props: { code: string; smmm: string; cl
       setErr(null);
       setData(null);
       try {
-        const res = await fetch(`/api/v1/contracts/risks/${encodeURIComponent(props.code)}`, { cache: "no-store" });
+        const qs = new URLSearchParams({
+          smmm: props.smmm,
+          client: props.client,
+          period: props.period,
+        }).toString();
+        const url = `/api/v1/contracts/risks/${encodeURIComponent(props.code)}?${qs}`;
+        const res = await fetch(url, { cache: "no-store" });
         const txt = await res.text();
         if (!res.ok) throw new Error(`${res.status} ${txt}`);
         const json = JSON.parse(txt);
@@ -35,9 +98,8 @@ export default function RiskDetailClient(props: { code: string; smmm: string; cl
     }
     run();
     return () => { alive = false; };
-  }, [props.code]);
-
-  if (err) {
+  }, [props.code, props.smmm, props.client, props.period]);
+if (err) {
     return (
       <div className="rounded-xl border p-4">
         <div className="text-lg font-semibold">Risk {props.code}</div>
@@ -158,6 +220,152 @@ export default function RiskDetailClient(props: { code: string; smmm: string; cl
           </ol>
         </div>
       ) : null}
+
+            {/* BEGIN S10_RISK_ANALYSIS_UI */}
+      {(() => {
+        // Accept risk analysis from either top-level `data.analysis` or nested `risk.analysis`.
+        const top = (data as any)?.analysis;
+        const nested = (r as any)?.analysis;
+
+        const pickObj = (x: any) => {
+          if (!x || typeof x !== "object") return null;
+          if (Array.isArray(x)) return null;
+          const hasEA = Object.prototype.hasOwnProperty.call(x, "expert") || Object.prototype.hasOwnProperty.call(x, "ai");
+          return hasEA ? x : null;
+        };
+
+        const a = pickObj(top) || pickObj(nested);
+        if (!a) return null;
+
+        const expert = (a.expert || null) as ExpertAnalysisV1 | null;
+        const ai = (a.ai || null) as AiAnalysisV1 | null;
+
+        const confRaw = ai && typeof ai.confidence === "number" ? ai.confidence : null;
+        const confPct =
+          confRaw === null ? null : confRaw <= 1 ? Math.round(confRaw * 100) : Math.round(confRaw);
+
+        return (
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="rounded-xl border p-4">
+              <div className="flex items-center justify-between gap-2">
+                <div className="text-base font-semibold">Uzman Analizi (VDK/YMM)</div>
+                {expert ? (
+                  <div className="text-xs text-slate-500">{expert.version} • {expert.generated_at}</div>
+                ) : (
+                  <div className="text-xs text-slate-500">Yok</div>
+                )}
+              </div>
+
+              {expert ? (
+                <div className="mt-2 space-y-3">
+                  <div className="text-sm whitespace-pre-line text-slate-800">{expert.summary_tr}</div>
+
+                  <div>
+                    <div className="text-xs font-semibold text-slate-700">Mevzuat Dayanağı</div>
+                    {(expert.legal_basis || []).length ? (
+                      <ul className="mt-1 list-disc pl-5 text-xs text-slate-700">
+                        {(expert.legal_basis || []).map((lb, i) => (
+                          <li key={(lb && lb.doc_id) ? lb.doc_id : String(i)}>
+                            <span className="font-medium">{lb.doc_id}</span>
+                            {lb.date ? <span> • {lb.date}</span> : null}
+                            {lb.title ? <span> • {lb.title}</span> : null}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <div className="mt-1 text-xs text-slate-500">Dayanak listesi boş.</div>
+                    )}
+                  </div>
+
+                  <div>
+                    <div className="text-xs font-semibold text-slate-700">Kontroller</div>
+                    {(expert.checks || []).length ? (
+                      <div className="mt-2 space-y-2">
+                        {(expert.checks || []).map((chk) => (
+                          <div key={chk.id} className="rounded-lg bg-slate-50 p-3">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <div className="text-sm font-semibold">{chk.title_tr}</div>
+                              <div className="text-xs text-slate-600">
+                                {(chk.status || "unknown").toString()}
+                                {chk.severity ? <span> • {chk.severity}</span> : null}
+                              </div>
+                            </div>
+                            {chk.detail_tr ? (
+                              <div className="mt-1 whitespace-pre-line text-xs text-slate-700">{chk.detail_tr}</div>
+                            ) : null}
+                            <div className="mt-1 text-xs text-slate-500">
+                              Kanıt: {Array.isArray(chk.evidence_refs) ? chk.evidence_refs.length : 0}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="mt-1 text-xs text-slate-500">Kontrol listesi boş (fail-soft).</div>
+                    )}
+                  </div>
+
+                  <div className="text-xs text-slate-500">
+                    Toplam kanıt referansı: {(expert.evidence_refs || []).length} adet
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-2 text-sm text-slate-600">
+                  Bu risk için uzman analizi henüz üretilmedi (fail-soft).
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-xl border p-4">
+              <div className="flex items-center justify-between gap-2">
+                <div className="text-base font-semibold">AI Analizi (yardımcı)</div>
+                {ai ? (
+                  <div className="text-xs text-slate-500">
+                    Confidence: {confPct === null ? "-" : String(confPct) + "%"}
+                  </div>
+                ) : (
+                  <div className="text-xs text-slate-500">Yok</div>
+                )}
+              </div>
+
+              {ai ? (
+                <div className="mt-2 space-y-3">
+                  <div className="text-xs whitespace-pre-line text-slate-700">{ai.disclaimer_tr}</div>
+
+                  {(ai.items || []).length ? (
+                    <div className="space-y-2">
+                      {(ai.items || []).map((it) => (
+                        <div key={it.id} className="rounded-lg bg-slate-50 p-3">
+                          <div className="text-sm font-semibold">{it.title_tr}</div>
+                          {it.rationale_tr ? <div className="mt-1 text-xs text-slate-700">{it.rationale_tr}</div> : null}
+                          {it.action_tr ? <div className="mt-1 text-xs text-slate-700">Aksiyon: {it.action_tr}</div> : null}
+                          <div className="mt-1 text-xs text-slate-500">
+                            Kanıt: {Array.isArray(it.evidence_refs) ? it.evidence_refs.length : 0}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-slate-600">AI öneri listesi boş (fail-soft).</div>
+                  )}
+
+                  <div className="text-xs text-slate-500">
+                    Toplam kanıt referansı: {(ai.evidence_refs || []).length} adet
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-2 text-sm text-slate-600">
+                  Bu risk için AI analizi henüz üretilmedi (fail-soft).
+                </div>
+              )}
+            </div>
+
+            <div className="md:col-span-2 text-xs text-slate-500">
+              Kaynak: risk contract içindeki <span className="font-mono">analysis</span> (top-level veya <span className="font-mono">risk.analysis</span>).
+            </div>
+          </div>
+        );
+      })()}
+      {/* END S10_RISK_ANALYSIS_UI */}
 
       <details className="rounded-xl border p-4">
         <summary className="cursor-pointer text-sm font-semibold">Ham contract (risk)</summary>
