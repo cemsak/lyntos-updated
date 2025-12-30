@@ -731,7 +731,7 @@ export default function V1DashboardClient(props: { contract: PortfolioContract; 
                   <div className="text-sm font-semibold">Uzman Analizi (VDK/YMM)</div>
                   {expert ? (
                     <div className="text-xs text-slate-500">
-                      v{expert.version} • {expert.generated_at}
+                      {expert.version} • {expert.generated_at}
                     </div>
                   ) : (
                     <div className="text-xs text-slate-500">Yok</div>
