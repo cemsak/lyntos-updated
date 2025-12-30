@@ -13,6 +13,18 @@ type MissingRef = {
   how_to_fix_tr?: string | null;
 };
 
+type AnalysisBlock = {
+  id?: string | null;
+  type: string;
+  title_tr?: string | null;
+  severity?: Severity | null;
+  summary_tr?: string | null;
+  bullets_tr?: string[] | null;
+  evidence_refs?: any[] | null;
+  missing_refs?: MissingRef[] | null;
+};
+
+
 type CriteriaSignal = {
   code: string;
   status: string;
@@ -38,12 +50,68 @@ type ValidationSummaryItem = {
 };
 
 type ValidationSummary = {
+  analysis?: AnalysisBlock[] | null;
   overall?: string | null;
   missing_paths?: string[];
   warn_paths?: string[];
   items?: ValidationSummaryItem[];
   error?: string | null;
 };
+
+type LegalBasisRef = {
+  doc_id: string;
+  date?: string | null;
+  title?: string | null;
+  url?: string | null;
+};
+
+type EvidenceRef = {
+  doc_id?: string | null;
+  source?: string | null;
+  path?: string | null;
+  period?: string | null;
+  account?: string | null;
+  note?: string | null;
+};
+
+type ExpertCheck = {
+  id: string;
+  title_tr: string;
+  status?: string | null;
+  severity?: string | null;
+  detail_tr?: string | null;
+  evidence_refs?: EvidenceRef[] | null;
+};
+
+type ExpertAnalysisV1 = {
+  version: string;
+  generated_at: string;
+  summary_tr: string;
+  legal_basis: LegalBasisRef[];
+  evidence_refs: EvidenceRef[];
+  checks: ExpertCheck[];
+};
+
+type AiItem = {
+  id: string;
+  title_tr: string;
+  rationale_tr?: string | null;
+  action_tr?: string | null;
+  evidence_refs?: EvidenceRef[] | null;
+};
+
+type AiAnalysisV1 = {
+  confidence: number;
+  disclaimer_tr: string;
+  evidence_refs: EvidenceRef[];
+  items: AiItem[];
+};
+
+type PortfolioAnalysis = {
+  expert?: ExpertAnalysisV1 | null;
+  ai?: AiAnalysisV1 | null;
+};
+
 
 
 type PortfolioContract = {
@@ -86,6 +154,9 @@ type PortfolioContract = {
     version?: string | null;
     components?: any;
   };
+
+
+  analysis?: PortfolioAnalysis | null;
 
   validation_summary?: ValidationSummary | null;
 };
@@ -130,6 +201,25 @@ function num(n: any): string {
   if (typeof n !== "number" || !isFinite(n)) return "-";
   return n.toLocaleString("tr-TR");
 }
+
+const S10_ANALYSIS_TYPES = [
+  "ALL",
+  "RISK_OVERVIEW",
+  "DATA_QUALITY",
+  "INFLATION",
+  "ACTIONS",
+  "OTHER",
+] as const;
+
+const S10_ANALYSIS_PANELS: Record<string, { title_tr: string }> = {
+  ALL: { title_tr: "Analiz (Tümü)" },
+  RISK_OVERVIEW: { title_tr: "Risk Genel Bakış" },
+  DATA_QUALITY: { title_tr: "Veri Kalitesi Analizi" },
+  INFLATION: { title_tr: "Enflasyon Muhasebesi Analizi" },
+  ACTIONS: { title_tr: "Önerilen Aksiyonlar" },
+  OTHER: { title_tr: "Diğer" },
+};
+
 
 function computeRiskScore(r: RiskSummary): number {
   const sigs = r.kurgan_criteria_signals || [];
@@ -191,6 +281,38 @@ export default function V1DashboardClient(props: { contract: PortfolioContract; 
 
   const [severityFilter, setSeverityFilter] = useState<"ALL" | "CRITICAL" | "HIGH" | "MEDIUM" | "LOW">("ALL");
   const [q, setQ] = useState<string>("");
+
+  // --- S10: Dashboard Analysis (self-contained, fail-soft) ---
+  const [analysisOpen, setAnalysisOpen] = useState<boolean>(false);
+  const [analysisTypeFilter, setAnalysisTypeFilter] = useState<string>("ALL");
+
+    const analysisBlocks = useMemo(() => {
+    // Accept either top-level contract.analysis or nested validation_summary.analysis
+    const cc = (props as any)?.contract as any;
+    const top = cc?.analysis;
+    const nested = cc?.validation_summary?.analysis;
+    const raw = (Array.isArray(top) ? top : (Array.isArray(nested) ? nested : [])) as any[];
+    return raw.filter((x) => x && typeof x === "object");
+  }, [props.contract]);
+
+  const analysisTypes = useMemo(() => {
+    const set = new Set<string>();
+    for (const b of analysisBlocks as any[]) {
+      const t = (b?.type ?? "OTHER").toString();
+      set.add(t);
+    }
+    const dynamic = Array.from(set).sort((a, b) => a.localeCompare(b));
+    // Keep ALL always first; keep the static list as a hint for consistency.
+    const base = (S10_ANALYSIS_TYPES as readonly string[]).filter((x) => x !== "ALL");
+    const merged = ["ALL", ...Array.from(new Set([...base, ...dynamic]))];
+    return merged;
+  }, [analysisBlocks]);
+
+  const analysisFiltered = useMemo(() => {
+    const t = (analysisTypeFilter ?? "ALL").toString();
+    if (t === "ALL") return analysisBlocks as any[];
+    return (analysisBlocks as any[]).filter((b) => (b?.type ?? "OTHER").toString() === t);
+  }, [analysisBlocks, analysisTypeFilter]);
 
   const c = props.contract;
   const period = c.period_window?.period || props.ctx.period;
@@ -589,6 +711,267 @@ export default function V1DashboardClient(props: { contract: PortfolioContract; 
           );
         })()}
         {/* END S8_DATASET_HEALTH */}
+
+        {/* BEGIN S10_PORTFOLIO_ANALYSIS_UI */}
+        {(() => {
+          const a = (c as any).analysis as PortfolioAnalysis | null | undefined;
+          if (!a || typeof a !== "object") return null;
+
+          const expert = (a.expert || null) as ExpertAnalysisV1 | null;
+          const ai = (a.ai || null) as AiAnalysisV1 | null;
+
+          const confRaw = ai && typeof ai.confidence === "number" ? ai.confidence : null;
+          const confPct =
+            confRaw === null ? null : confRaw <= 1 ? Math.round(confRaw * 100) : Math.round(confRaw);
+
+          return (
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <div className="rounded-lg border border-slate-200 bg-white p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-sm font-semibold">Uzman Analizi (VDK/YMM)</div>
+                  {expert ? (
+                    <div className="text-xs text-slate-500">
+                      v{expert.version} • {expert.generated_at}
+                    </div>
+                  ) : (
+                    <div className="text-xs text-slate-500">Yok</div>
+                  )}
+                </div>
+
+                {expert ? (
+                  <div className="mt-2 space-y-3">
+                    <div className="text-sm whitespace-pre-line text-slate-800">{expert.summary_tr}</div>
+
+                    <div>
+                      <div className="text-xs font-semibold text-slate-700">Mevzuat Dayanağı</div>
+                      {(expert.legal_basis || []).length ? (
+                        <ul className="mt-1 list-disc pl-5 text-xs text-slate-700">
+                          {(expert.legal_basis || []).map((lb, i) => (
+                            <li key={lb.doc_id || String(i)}>
+                              <span className="font-medium">{lb.doc_id}</span>
+                              {lb.date ? <span> • {lb.date}</span> : null}
+                              {lb.title ? <span> • {lb.title}</span> : null}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <div className="mt-1 text-xs text-slate-500">Dayanak listesi boş.</div>
+                      )}
+                    </div>
+
+                    <div>
+                      <div className="text-xs font-semibold text-slate-700">Kontroller</div>
+                      {(expert.checks || []).length ? (
+                        <div className="mt-1 space-y-2">
+                          {(expert.checks || []).map((chk) => (
+                            <div key={chk.id} className="rounded-md border border-slate-100 bg-slate-50 p-2">
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="text-xs font-medium text-slate-800">{chk.title_tr}</div>
+                                <div className="text-[11px] text-slate-600">
+                                  {(chk.status || chk.severity || "OK").toString()}
+                                </div>
+                              </div>
+                              {chk.detail_tr ? (
+                                <div className="mt-1 whitespace-pre-line text-xs text-slate-700">{chk.detail_tr}</div>
+                              ) : null}
+                              {Array.isArray(chk.evidence_refs) && chk.evidence_refs.length ? (
+                                <div className="mt-1 text-[11px] text-slate-500">
+                                  Kanıt: {chk.evidence_refs.length} referans
+                                </div>
+                              ) : null}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="mt-1 text-xs text-slate-500">Kontrol listesi boş.</div>
+                      )}
+                    </div>
+
+                    <div className="text-[11px] text-slate-500">
+                      Kanıt referansı: {(expert.evidence_refs || []).length} adet
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-2 text-sm text-slate-600">
+                    Bu dönem için uzman analizi henüz üretilmedi (fail-soft).
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded-lg border border-slate-200 bg-white p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-sm font-semibold">AI Analizi (Yardımcı)</div>
+                  {ai ? (
+                    <div className="text-xs text-slate-500">
+                      {confPct === null ? "confidence: -" : "confidence: " + String(confPct) + "%"}
+                    </div>
+                  ) : (
+                    <div className="text-xs text-slate-500">Yok</div>
+                  )}
+                </div>
+
+                {ai ? (
+                  <div className="mt-2 space-y-3">
+                    <div className="text-xs whitespace-pre-line text-slate-700">{ai.disclaimer_tr}</div>
+
+                    {(ai.items || []).length ? (
+                      <div className="space-y-2">
+                        {(ai.items || []).map((it) => (
+                          <div key={it.id} className="rounded-md border border-slate-100 bg-slate-50 p-2">
+                            <div className="text-xs font-medium text-slate-800">{it.title_tr}</div>
+                            {it.rationale_tr ? (
+                              <div className="mt-1 whitespace-pre-line text-xs text-slate-700">{it.rationale_tr}</div>
+                            ) : null}
+                            {it.action_tr ? (
+                              <div className="mt-1 whitespace-pre-line text-xs text-slate-700">
+                                <span className="font-semibold">Öneri:</span> {it.action_tr}
+                              </div>
+                            ) : null}
+                            {Array.isArray(it.evidence_refs) && it.evidence_refs.length ? (
+                              <div className="mt-1 text-[11px] text-slate-500">
+                                Kanıt: {it.evidence_refs.length} referans
+                              </div>
+                            ) : null}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-sm text-slate-600">AI öneri listesi boş (fail-soft).</div>
+                    )}
+
+                    <div className="text-[11px] text-slate-500">
+                      Kanıt referansı: {(ai.evidence_refs || []).length} adet
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-2 text-sm text-slate-600">
+                    AI analizi henüz üretilmedi (fail-soft).
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+        {/* END S10_PORTFOLIO_ANALYSIS_UI */}
+
+
+        {/* BEGIN S10_DASHBOARD_ANALYSIS */}
+        {analysisBlocks.length ? (
+          <div className="rounded-2xl border p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <div className="text-base font-semibold">
+                  {S10_ANALYSIS_PANELS.ALL?.title_tr || "Analiz"}
+                </div>
+                <div className="text-xs text-slate-600">
+                  Contract üzerinden gelen analiz blokları (S10). Kaynak: contract.analysis veya contract.validation_summary.analysis
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="text-xs text-slate-600">
+                  Tip
+                  <select
+                    className="ml-2 rounded-lg border px-2 py-2 text-sm"
+                    value={analysisTypeFilter}
+                    onChange={(e) => setAnalysisTypeFilter(e.target.value)}
+                  >
+                    {analysisTypes.map((t) => (
+                      <option key={`s10-at-${t}`} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <button
+                  type="button"
+                  className="rounded border px-2 py-1 text-xs"
+                  onClick={() => setAnalysisOpen(!analysisOpen)}
+                >
+                  {analysisOpen ? "Gizle" : "Göster"}
+                </button>
+              </div>
+            </div>
+
+            {!analysisOpen ? (
+              <div className="mt-3 text-xs text-slate-600">
+                Toplam blok: <span className="font-semibold">{analysisBlocks.length}</span>
+                {analysisTypeFilter !== "ALL" ? (
+                  <>
+                    {" "}• Filtreli: <span className="font-semibold">{analysisFiltered.length}</span>
+                  </>
+                ) : null}
+              </div>
+            ) : (
+              <div className="mt-3 space-y-3">
+                {analysisFiltered.map((a: any, idx: number) => {
+                  const sev = (a?.severity ?? null) as any;
+                  const title = (a?.title_tr ?? null) as string | null;
+                  const typ = (a?.type ?? "OTHER").toString();
+                  const panelTitle =
+                    title ||
+                    S10_ANALYSIS_PANELS[typ]?.title_tr ||
+                    (typ === "ALL" ? "Analiz" : typ);
+
+                  const bullets = (Array.isArray(a?.bullets_tr) ? a.bullets_tr : []) as string[];
+                  const miss = (Array.isArray(a?.missing_refs) ? a.missing_refs : []) as any[];
+                  const evN = Array.isArray(a?.evidence_refs) ? a.evidence_refs.length : 0;
+
+                  return (
+                    <div key={(a?.id ?? `${typ}-${idx}`).toString()} className="rounded-xl bg-slate-50 p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="font-semibold">{panelTitle}</div>
+                        {sev ? (
+                          <span className={`rounded-full px-3 py-1 text-xs font-semibold ${sevColor(sev)}`}>
+                            {sev}
+                          </span>
+                        ) : (
+                          <span className="rounded-full bg-slate-600 px-3 py-1 text-xs font-semibold text-white">
+                            {typ}
+                          </span>
+                        )}
+                      </div>
+
+                      {a?.summary_tr ? (
+                        <div className="mt-1 text-sm text-slate-700">{a.summary_tr}</div>
+                      ) : null}
+
+                      {bullets.length ? (
+                        <ul className="mt-2 list-disc pl-5 text-sm text-slate-700">
+                          {bullets.slice(0, 10).map((b: string, i: number) => (
+                            <li key={`s10-b-${idx}-${i}`}>{b}</li>
+                          ))}
+                        </ul>
+                      ) : null}
+
+                      {miss.length ? (
+                        <div className="mt-2">
+                          <div className="text-xs font-semibold text-slate-700">Eksik Kanıt / Evrak</div>
+                          <ul className="mt-1 list-disc pl-5 text-xs text-slate-700">
+                            {miss.slice(0, 12).map((m: any, i: number) => (
+                              <li key={`s10-m-${idx}-${i}`}>
+                                <span className="font-medium">{m?.title_tr || m?.code || "-"}</span>
+                                {m?.how_to_fix_tr ? (
+                                  <span className="text-slate-600"> — {m.how_to_fix_tr}</span>
+                                ) : null}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : null}
+
+                      {evN ? (
+                        <div className="mt-2 text-xs text-slate-600">Evidence refs: {evN}</div>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ) : null}
+        {/* END S10_DASHBOARD_ANALYSIS */}
 
 {(dq.warnings?.length || c.warnings?.length) ? (
           <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
