@@ -11,6 +11,21 @@ import sys
 import time
 import re
 
+def _iso_utc() -> str:
+    import time as _t
+    return _t.strftime('%Y-%m-%dT%H:%M:%SZ', _t.gmtime())
+
+def _ensure_schema_meta(obj: dict, *, name: str, version: str) -> None:
+    if not isinstance(obj, dict):
+        return
+    sc = obj.get('schema')
+    if not isinstance(sc, dict):
+        sc = {}
+        obj['schema'] = sc
+    sc.setdefault('name', name)
+    sc.setdefault('version', version)
+    sc.setdefault('generated_at', _iso_utc())
+
 router = APIRouter(prefix="/api/v1", tags=["v1"])
 
 BASE = Path(__file__).resolve().parent
@@ -324,6 +339,172 @@ def _read_json(p: Path):
 def health():
     return {"ok": True, "service": "lyntos-backend", "api": "v1"}
 
+
+# LYNTOS_S10_ANALYSIS_HELPERS_BEGIN
+def _s10_now_z():
+    import time
+    t = time.gmtime()
+    return (
+        str(t.tm_year).zfill(4) + '-' + str(t.tm_mon).zfill(2) + '-' + str(t.tm_mday).zfill(2)
+        + 'T' + str(t.tm_hour).zfill(2) + ':' + str(t.tm_min).zfill(2) + ':' + str(t.tm_sec).zfill(2) + 'Z'
+    )
+
+def _s10_portfolio_expert_block(c):
+    try:
+        warnings = c.get('warnings') or []
+        if not isinstance(warnings, list):
+            warnings = [str(warnings)]
+
+        kpis = c.get('kpis') or {}
+        if not isinstance(kpis, dict):
+            kpis = {}
+
+        kpis_reasons = c.get('kpis_reasons') or {}
+        if not isinstance(kpis_reasons, dict):
+            kpis_reasons = {}
+
+        infl_reason = kpis_reasons.get('inflation') or {}
+        if not isinstance(infl_reason, dict):
+            infl_reason = {}
+
+        infl_status = kpis.get('inflation_status')
+        if infl_status is None:
+            infl_status = 'unknown'
+        if not isinstance(infl_status, str):
+            infl_status = str(infl_status)
+
+        reason_tr = infl_reason.get('reason_tr')
+        if not isinstance(reason_tr, str):
+            reason_tr = None
+
+        actions_tr = infl_reason.get('actions_tr')
+        if actions_tr is None:
+            actions_tr = []
+        if not isinstance(actions_tr, list):
+            actions_tr = [str(actions_tr)]
+
+        required_docs = infl_reason.get('required_docs')
+        if required_docs is None:
+            required_docs = []
+        if not isinstance(required_docs, list):
+            required_docs = [required_docs]
+
+        missing_docs = infl_reason.get('missing_docs')
+        if missing_docs is None:
+            missing_docs = []
+        if not isinstance(missing_docs, list):
+            missing_docs = [missing_docs]
+
+        evidence_refs = []
+        axis_d = c.get('axis_d')
+        if isinstance(axis_d, dict):
+            infl = axis_d.get('inflation')
+            if isinstance(infl, dict):
+                er = infl.get('evidence_refs')
+                if isinstance(er, list):
+                    evidence_refs = er
+
+        ctx_missing = False
+        for w in warnings:
+            if isinstance(w, str) and 'CTX:missing_ctx_params' in w:
+                ctx_missing = True
+                break
+
+        checks = []
+        checks.append({
+            'id': 'S10-CTX',
+            'title_tr': 'Bağlam Parametreleri (SMMM/Mükellef/Dönem)',
+            'status': 'missing' if ctx_missing else 'ok',
+            'reason_tr': 'smmm/client/period parametreleri eksik.' if ctx_missing else None,
+            'actions_tr': ['UI/çağrı seviyesinde smmm, client, period parametrelerini gönder.'] if ctx_missing else [],
+            'required_docs': [],
+            'missing_docs': [],
+            'evidence_refs': [],
+        })
+
+        checks.append({
+            'id': 'S10-INFL',
+            'title_tr': 'Enflasyon Muhasebesi (698/648/658) Uzman Özeti',
+            'status': infl_status,
+            'reason_tr': reason_tr,
+            'actions_tr': actions_tr,
+            'required_docs': required_docs,
+            'missing_docs': missing_docs,
+            'evidence_refs': evidence_refs,
+        })
+
+        parts = []
+        if ctx_missing:
+            parts.append('Bağlam eksik; değerlendirme sınırlı.')
+        parts.append('Uzman blok deterministiktir; kanıt yoksa iddia üretmez (fail-soft).')
+        if infl_status != 'computed':
+            parts.append('Enflasyon modülü computed değil; reason/actions ve eksik evrak listesini izleyin.')
+
+        return {
+            'version': 'v1',
+            'generated_at': _s10_now_z(),
+            'summary_tr': ' '.join([p for p in parts if isinstance(p, str) and p.strip()]),
+            'legal_basis': [],
+            'evidence_refs': [],
+            'checks': checks,
+        }
+    except Exception as e:
+        return {
+            'version': 'v1',
+            'generated_at': _s10_now_z(),
+            'summary_tr': 'Uzman analizi üretilemedi; fail-soft: ' + str(e),
+            'legal_basis': [],
+            'evidence_refs': [],
+            'checks': [],
+        }
+
+def _s10_portfolio_ai_block(c, expert_block):
+    try:
+        kpis = c.get('kpis') or {}
+        if not isinstance(kpis, dict):
+            kpis = {}
+
+        infl_status = kpis.get('inflation_status')
+        if infl_status is None:
+            infl_status = 'unknown'
+        if not isinstance(infl_status, str):
+            infl_status = str(infl_status)
+
+        items = []
+        if infl_status != 'computed':
+            items.append({
+                'id': 'AI-INFL-01',
+                'title_tr': 'Enflasyon modülünü computed seviyesine taşı',
+                'confidence': 0.35,
+                'rationale_tr': 'computed değilken skor/uyum iddiası kurulmamalı; önce eksikleri kapat.',
+                'actions_tr': [
+                    'Portfolio kpis_reasons.inflation içindeki actions_tr maddelerini uygula.',
+                    'validation_summary required/missing listesini tamamla ve dossier üret.',
+                ],
+                'evidence_refs': [],
+            })
+
+        return {
+            'version': 'v1',
+            'generated_at': _s10_now_z(),
+            'summary_tr': 'AI Analizi yardımcıdır; uzman analizini override etmez. Kanıt olmadan kesin hüküm vermez.',
+            'confidence': 0.35,
+            'disclaimer_tr': 'UYARI: AI bloğu yalnız öneri üretir; nihai görüş expert bloktadır.',
+            'evidence_refs': [],
+            'items': items,
+        }
+    except Exception as e:
+        return {
+            'version': 'v1',
+            'generated_at': _s10_now_z(),
+            'summary_tr': 'AI analizi üretilemedi; fail-soft: ' + str(e),
+            'confidence': 0.0,
+            'disclaimer_tr': 'UYARI: AI bloğu devre dışı; expert bloğu esas alın.',
+            'evidence_refs': [],
+            'items': [],
+        }
+# LYNTOS_S10_ANALYSIS_HELPERS_END
+
 @router.get("/contracts/portfolio")
 def contracts_portfolio(
     smmm: str | None = Query(None),
@@ -359,7 +540,7 @@ def contracts_portfolio(
     if "warnings" not in c or not isinstance(c.get("warnings"), list):
         c["warnings"] = []
     if not smmm_n or not client_n or not period_n:
-        c["warnings"].append("missing_ctx_params:smmm/client/period")
+        c["warnings"].append("CTX:missing_ctx_params:smmm/client/period")
 
     try:
         _enrich_portfolio_with_kpis(c)
@@ -389,10 +570,10 @@ def contracts_portfolio(
             c['kpis_reasons']['inflation']['score_actions_tr'] = sc.get('actions_tr')
         except Exception as e:
             c.setdefault('warnings', [])
-            c['warnings'].append('inflation_score_failed:' + str(e))
+            c['warnings'].append('SCORE:inflation_score_failed:' + str(e))
         # END S9_ATTACH_INFLATION_SCORE
     except Exception as e:
-        c["warnings"].append("inflation_kpi_enrich_failed:" + str(e))
+        c["warnings"].append("INFL:inflation_kpi_enrich_failed:" + str(e))
 
     # BEGIN S6_INFLATION_KPI_DEFAULTS
     try:
@@ -416,6 +597,36 @@ def contracts_portfolio(
         c['warnings'].append('validation_summary_failed:' + str(e))
     # END S8_ATTACH_VALIDATION_SUMMARY
 
+    # BEGIN S9_SCHEMA_META_PORTFOLIO
+    try:
+        _ensure_schema_meta(c, name='portfolio', version='v1.0')
+    except Exception as e:
+        try:
+            if not isinstance(c.get('warnings'), list):
+                c['warnings'] = []
+            c['warnings'].append('SCHEMA:schema_meta_failed:' + str(e))
+        except Exception:
+            pass
+    # END S9_SCHEMA_META_PORTFOLIO
+    # BEGIN S10_PORTFOLIO_ANALYSIS
+    try:
+        if not isinstance(c.get('analysis'), dict):
+            c['analysis'] = {}
+        an = c.get('analysis')
+        if isinstance(an, dict):
+            if 'expert' not in an:
+                an['expert'] = _s10_portfolio_expert_block(c)
+            if 'ai' not in an:
+                an['ai'] = _s10_portfolio_ai_block(c, an.get('expert'))
+            c['analysis'] = an
+    except Exception as e:
+        try:
+            if 'warnings' not in c or not isinstance(c.get('warnings'), list):
+                c['warnings'] = []
+            c['warnings'].append('S10:analysis_attach_failed:' + str(e))
+        except Exception:
+            pass
+    # END S10_PORTFOLIO_ANALYSIS
     return JSONResponse(c)
 
 
@@ -515,6 +726,9 @@ def contracts_dossier_manifest(
         "checklist": {"required_docs": required_docs, "missing_docs": missing_docs},
         "warnings": (c.get("warnings") or []) + ((axis_d.get("warnings") or []) if isinstance(axis_d, dict) else []),
     }
+    # BEGIN S9_SCHEMA_META_DOSSIER_MANIFEST
+    _ensure_schema_meta(resp, name='dossier_manifest', version='v1.0')
+    # END S9_SCHEMA_META_DOSSIER_MANIFEST
     return JSONResponse(resp)
 
 @router.get("/contracts/mbr")
@@ -1247,7 +1461,12 @@ def build_axis_d_contract_mizan_only(base_dir: Path, smmm_id: str, client_id: st
     return {
         "axis": "D",
         "title_tr": "Mizan İncelemesi (Kritik Eksen)",
-        "schema": {"version": "axis_d_s4_v2", "item_fields": AXIS_D_ITEM_FIELDS},
+        "schema": {
+          "name": "axis_d",
+          "version": "v1.0",
+          "generated_at": _iso_utc(),
+          "item_fields": AXIS_D_ITEM_FIELDS,
+        },
         "period_window": {"period": period},
         "inflation": inflation,
         "trend": trend,
