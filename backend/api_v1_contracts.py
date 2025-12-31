@@ -841,7 +841,17 @@ def contracts_mbr():
 
 @router.get("/contracts/risks/{code}")
 def contracts_risk(code: str):
-    p = CONTRACTS_DIR / f"risk_detail_{code}.json"
+    import re as _re
+    c = str(code or '').strip()
+    if not _re.fullmatch(r'[A-Za-z0-9_-]{1,40}', c):
+        raise HTTPException(status_code=400, detail='Invalid risk code')
+    p1 = CONTRACTS_DIR / f"risk_detail_{c}.json"
+    p2 = CONTRACTS_DIR / "risks" / f"risk_detail_{c}.json"
+    if p1.exists():
+        return JSONResponse(_read_json(p1))
+    if p2.exists():
+        return JSONResponse(_read_json(p2))
+    return JSONResponse(_read_json(p1))
     return JSONResponse(_read_json(p))
 
 

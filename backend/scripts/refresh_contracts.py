@@ -6,6 +6,121 @@ from pathlib import Path
 from datetime import datetime
 
 
+# BEGIN S10_RISKDETAIL_ANALYSIS_ATTACH
+def _s10_now_z() -> str:
+    try:
+        from datetime import datetime, timezone
+        return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z')
+    except Exception:
+        from datetime import datetime
+        return datetime.utcnow().replace(microsecond=0).isoformat() + 'Z'
+
+def _s10_harden_analysis_schema(a: dict, ctx: dict) -> dict:
+    # schema-locked, fail-soft: always returns {expert:{...}, ai:{...}}
+    if not isinstance(a, dict):
+        a = {}
+    expert = a.get('expert') if isinstance(a.get('expert'), dict) else {}
+    ai = a.get('ai') if isinstance(a.get('ai'), dict) else {}
+
+    ts = _s10_now_z()
+    if not isinstance(expert.get('version'), str) or not expert.get('version'):
+        expert['version'] = 'v1'
+    if not isinstance(expert.get('generated_at'), str) or not expert.get('generated_at'):
+        expert['generated_at'] = ts
+    if not isinstance(expert.get('summary_tr'), str) or not expert.get('summary_tr'):
+        expert['summary_tr'] = 'Uzman blok deterministiktir; kanıt yoksa iddia üretmez (fail-soft).'
+    if not isinstance(expert.get('legal_basis'), list):
+        expert['legal_basis'] = []
+    if not isinstance(expert.get('evidence_refs'), list):
+        expert['evidence_refs'] = []
+    if not isinstance(expert.get('checks'), list):
+        expert['checks'] = []
+
+    if not isinstance(ai.get('confidence'), (int, float)):
+        ai['confidence'] = 0.35
+    if not isinstance(ai.get('disclaimer_tr'), str) or not ai.get('disclaimer_tr'):
+        ai['disclaimer_tr'] = 'UYARI: AI bloğu yalnız öneri üretir; nihai görüş expert bloktadır.'
+    if not isinstance(ai.get('evidence_refs'), list):
+        ai['evidence_refs'] = []
+    if not isinstance(ai.get('items'), list):
+        ai['items'] = []
+
+    # Minimal deterministic checks if empty
+    if not expert['checks']:
+        smmm = str(ctx.get('smmm') or '').strip()
+        client = str(ctx.get('client') or '').strip()
+        period = str(ctx.get('period') or '').strip()
+        expert['checks'] = [
+            {
+                'id': 'CTX',
+                'title_tr': 'Bağlam Parametreleri (SMMM/Mükellef/Dönem)',
+                'status': 'ok' if (smmm and client and period) else 'missing',
+                'severity': 'LOW',
+                'detail_tr': ('smmm=' + smmm + ' | client=' + client + ' | period=' + period) if (smmm and client and period) else 'Eksik bağlam parametresi; UI fail-soft çalışır ancak doğrulama zayıflar.',
+                'evidence_refs': [],
+            }
+        ]
+
+    return {'expert': expert, 'ai': ai}
+
+def _s10_attach_analysis_to_risk_contracts(contracts_dir: Path, smmm: str, client: str, period: str) -> None:
+    import json
+    risks_dir = contracts_dir / 'risks'
+    files = []
+    files.extend(sorted(contracts_dir.glob('risk_detail_*.json')))
+    if risks_dir.exists():
+        files.extend(sorted(risks_dir.glob('risk_detail_*.json')))
+    if not files:
+        print('WARN: S10 attach: no risk_detail_*.json under', contracts_dir)
+        return
+
+    changed = 0
+    ctx = {'smmm': smmm, 'client': client, 'period': period}
+    for p in files:
+        try:
+            d = json.loads(p.read_text(encoding='utf-8'))
+        except Exception as e:
+            print('WARN: S10 attach: bad json ->', p.name, e)
+            continue
+        if not isinstance(d, dict):
+            continue
+
+        # schema meta (award-ready, not breaking)
+        sc = d.get('schema') if isinstance(d.get('schema'), dict) else {}
+        if not sc.get('name'):
+            sc['name'] = 'risk_detail'
+        if not sc.get('version'):
+            sc['version'] = 'v1.0'
+        if not sc.get('generated_at'):
+            sc['generated_at'] = _s10_now_z()
+        d['schema'] = sc
+
+        a0 = d.get('analysis') if isinstance(d.get('analysis'), dict) else {}
+        a1 = _s10_harden_analysis_schema(a0, ctx)
+
+        # light evidence seed (only if empty): use first data_quality warning
+        try:
+            exp = a1.get('expert') or {}
+            if isinstance(exp, dict) and isinstance(exp.get('evidence_refs'), list) and not exp['evidence_refs']:
+                dq = d.get('data_quality') if isinstance(d.get('data_quality'), dict) else {}
+                warns = dq.get('warnings') if isinstance(dq.get('warnings'), list) else []
+                if warns and isinstance(warns[0], str) and warns[0].strip():
+                    exp['evidence_refs'] = [{'source': 'DATA_QUALITY', 'note_tr': warns[0].strip()}]
+                    a1['expert'] = exp
+        except Exception:
+            pass
+
+        if d.get('analysis') != a1:
+            d['analysis'] = a1
+            try:
+                p.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding='utf-8')
+                changed += 1
+            except Exception as e:
+                print('WARN: S10 attach: cannot write ->', p.name, e)
+
+    print('OK: S10 risk detail analysis attached ->', changed)
+# END S10_RISKDETAIL_ANALYSIS_ATTACH
+
 def run(cmd, cwd=None):
     print(">>", " ".join(cmd))
     r = subprocess.run(cmd, cwd=cwd)
@@ -42,6 +157,8 @@ def sanity_contracts(contracts_dir: Path, require_signals: bool = True) -> None:
 
     if code:
         rd = contracts_dir / "risks" / f"risk_detail_{code}.json"
+        if not rd.exists():
+            rd = contracts_dir / f"risk_detail_{code}.json"
         if not rd.exists():
             raise SystemExit(f"ERROR: risk detail contract missing -> {rd}")
         rdd = json.loads(rd.read_text(encoding="utf-8"))
@@ -160,6 +277,7 @@ def main():
 
     contracts_dir = base / args.contracts_dir
     run([sys.executable, "scripts/export_frontend_contracts.py", str(risk_json), str(contracts_dir)])
+    _s10_attach_analysis_to_risk_contracts(contracts_dir, args.smmm, args.client, args.period)
     print("OK: contracts exported ->", contracts_dir)
 
     sanity_contracts(contracts_dir, require_signals=True)
