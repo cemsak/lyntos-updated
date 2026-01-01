@@ -34,3 +34,4 @@ backend/__pycache__/
 # generated contract exports (keep schemas/examples tracked, ignore generated outputs)
 backend/docs/contracts/portfolio.json
 backend/docs/contracts/risks/
+.DS_Store
