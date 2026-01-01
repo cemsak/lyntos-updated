@@ -119,5 +119,40 @@
         }
       ]
     }
-  ]
+  ],
+  "schema": {
+    "name": "risk_detail",
+    "version": "v1.0",
+    "generated_at": "2025-12-31T04:02:49Z"
+  },
+  "analysis": {
+    "expert": {
+      "version": "v1",
+      "generated_at": "2025-12-31T04:02:49Z",
+      "summary_tr": "Uzman blok deterministiktir; kanıt yoksa iddia üretmez (fail-soft).",
+      "legal_basis": [],
+      "evidence_refs": [
+        {
+          "source": "DATA_QUALITY",
+          "note_tr": "Banka verilerinde seçili çeyrek dışı satırlar bulundu; metriklere dahil edilmedi."
+        }
+      ],
+      "checks": [
+        {
+          "id": "CTX",
+          "title_tr": "Bağlam Parametreleri (SMMM/Mükellef/Dönem)",
+          "status": "ok",
+          "severity": "LOW",
+          "detail_tr": "smmm=HKOZKAN | client=OZKAN_KIRTASIYE | period=2025-Q2",
+          "evidence_refs": []
+        }
+      ]
+    },
+    "ai": {
+      "confidence": 0.35,
+      "disclaimer_tr": "UYARI: AI bloğu yalnız öneri üretir; nihai görüş expert bloktadır.",
+      "evidence_refs": [],
+      "items": []
+    }
+  }
 }

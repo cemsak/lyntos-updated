@@ -1,0 +1,28 @@
+{
+  "schema": {
+    "name": "regwatch",
+    "version": "v1.0",
+    "generated_at": "2025-12-31T04:28:04Z"
+  },
+  "status": "BOOTSTRAPPED",
+  "sources": [
+    {
+      "source_id": "resmigazete",
+      "title_tr": "Resmî Gazete",
+      "kind": "html",
+      "url": "https://www.resmigazete.gov.tr/",
+      "enabled": true
+    },
+    {
+      "source_id": "gib_duyurular",
+      "title_tr": "GİB Duyurular",
+      "kind": "html",
+      "url": "https://www.gib.gov.tr/",
+      "enabled": true
+    }
+  ],
+  "documents": [],
+  "changes": [],
+  "impact_map": [],
+  "notes_tr": "RegWatch iskeleti oluşturuldu. Bu adımda crawling/diff yok; yalnız kaynak listesi ve contract standardı var."
+}
