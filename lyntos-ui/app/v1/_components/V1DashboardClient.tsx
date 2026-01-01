@@ -252,7 +252,7 @@ function topSignal(r: RiskSummary): { code: string; score?: number; weight?: num
   if (!usable.length) return null;
 
   const scored = usable
-    .map(s => {
+    .map((s: any) => {
       const sc = clamp(s.score as number, 0, 100);
       const w = (typeof s.weight === "number" && isFinite(s.weight)) ? clamp(s.weight, 0, 1) : 0;
       const impact = (w > 0) ? sc * w : sc;
@@ -281,6 +281,46 @@ export default function V1DashboardClient(props: { contract: PortfolioContract; 
 
   const [severityFilter, setSeverityFilter] = useState<"ALL" | "CRITICAL" | "HIGH" | "MEDIUM" | "LOW">("ALL");
   const [q, setQ] = useState<string>("");
+
+  // --- REGWATCH S2: Mevzuat Radar (self-contained, fail-soft) ---
+  type RegwatchSource = {
+    source_id: string;
+    title_tr: string;
+    kind: string;
+    url: string;
+    enabled?: boolean;
+  };
+
+  type RegwatchContract = {
+    schema?: { name?: string; version?: string; generated_at?: string };
+    status?: string;
+    sources?: RegwatchSource[];
+    documents?: any[];
+    changes?: any[];
+    impact_map?: any[];
+    notes_tr?: string;
+  };
+
+  const [regwatchDays, setRegwatchDays] = useState<7 | 30>(7);
+  const regwatch = useMemo(() => {
+    const cc: any = (props as any)?.contract as any;
+    const rw = (cc?.regwatch || cc?.regwatch_contract || null) as RegwatchContract | null;
+    return rw;
+  }, [props.contract]);
+
+  const regwatchSources = useMemo(() => {
+    const rw = regwatch;
+    const arr = rw && Array.isArray(rw.sources) ? rw.sources : [];
+    return arr.filter((x) => x && typeof x === 'object' && typeof (x as any).title_tr === 'string');
+  }, [regwatch]);
+
+  const regwatchHasUpdates = useMemo(() => {
+    const rw = regwatch;
+    const docs = rw && Array.isArray(rw.documents) ? rw.documents : [];
+    const ch = rw && Array.isArray(rw.changes) ? rw.changes : [];
+    return docs.length > 0 || ch.length > 0;
+  }, [regwatch]);
+
 
   // --- S10: Dashboard Analysis (self-contained, fail-soft) ---
   const [analysisOpen, setAnalysisOpen] = useState<boolean>(false);
@@ -314,8 +354,20 @@ export default function V1DashboardClient(props: { contract: PortfolioContract; 
     return (analysisBlocks as any[]).filter((b) => (b?.type ?? "OTHER").toString() === t);
   }, [analysisBlocks, analysisTypeFilter]);
 
-  const c = props.contract;
-  const period = c.period_window?.period || props.ctx.period;
+  const rawContract = props.contract;
+  if (!rawContract) {
+    return (
+      <div className="mx-auto max-w-5xl p-6">
+        <div className="rounded-2xl border p-4">
+          <div className="text-sm font-semibold">Dashboard</div>
+          <div className="mt-2 text-sm text-slate-700">Contract yüklenemedi veya boş geldi (fail-soft).</div>
+          <div className="mt-1 text-xs text-slate-600">Refresh çalıştırın; devam ederse /api/v1/contracts/portfolio çıktısını kontrol edin.</div>
+        </div>
+      </div>
+    );
+  }
+  const c = rawContract as any;
+  const period = (c && c.period_window && c.period_window.period ? c.period_window.period : null) || props.ctx.period;
 
   const dq = c.data_quality || {};
   const dqScore = useMemo(() => {
@@ -326,7 +378,7 @@ export default function V1DashboardClient(props: { contract: PortfolioContract; 
   }, [dq.bank_rows_total, dq.bank_rows_in_period]);
 
   const risksWithScore = useMemo(() => {
-    return (c.risks || []).map(r => ({
+    return (c.risks || []).map((r: any) => ({
       r,
       riskScore: computeRiskScore(r),
       top: topSignal(r),
@@ -855,6 +907,63 @@ export default function V1DashboardClient(props: { contract: PortfolioContract; 
         {/* END S10_PORTFOLIO_ANALYSIS_UI */}
 
 
+        {/* BEGIN REGWATCH_UI_S2 */}
+        <details className="rounded-2xl border p-4">
+          <summary className="cursor-pointer select-none text-sm font-semibold">Mevzuat Radar</summary>
+          <div className="mt-3">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                className={`rounded-lg border px-3 py-1 text-xs ${regwatchDays === 7 ? "bg-slate-900 text-white" : "bg-white"}`}
+                onClick={() => setRegwatchDays(7)}
+              >
+                Son 7 gün
+              </button>
+              <button
+                type="button"
+                className={`rounded-lg border px-3 py-1 text-xs ${regwatchDays === 30 ? "bg-slate-900 text-white" : "bg-white"}`}
+                onClick={() => setRegwatchDays(30)}
+              >
+                Son 30 gün
+              </button>
+              <div className="ml-auto text-xs text-slate-600">
+                {regwatch?.schema?.version ? `v${regwatch.schema.version}` : ""} {regwatch?.schema?.generated_at ? `• ${regwatch.schema.generated_at}` : ""}
+              </div>
+            </div>
+
+            {!regwatch ? (
+              <div className="mt-3 text-sm text-slate-700">RegWatch contract henüz yüklenmedi (fail-soft). Refresh çalıştırınca gelir.</div>
+            ) : !regwatchHasUpdates ? (
+              <div className="mt-3">
+                <div className="text-sm text-slate-800">Güncelleme yok. Durum: <span className="font-semibold">{regwatch.status || "UNKNOWN"}</span></div>
+                {typeof regwatch.notes_tr === "string" && regwatch.notes_tr.trim() ? (
+                  <div className="mt-1 text-xs whitespace-pre-line text-slate-600">{regwatch.notes_tr}</div>
+                ) : null}
+              </div>
+            ) : (
+              <div className="mt-3 text-sm text-slate-800">Güncellemeler mevcut (bu sprintte diff/impact_map UI’sı genişletilecek).</div>
+            )}
+
+            <div className="mt-4">
+              <div className="text-xs font-semibold text-slate-700">Kaynaklar</div>
+              {regwatchSources.length ? (
+                <ul className="mt-2 space-y-1 text-xs text-slate-700">
+                  {regwatchSources.map((x, i) => (
+                    <li key={`${x.source_id}-${i}`} className="flex items-center justify-between gap-2">
+                      <span className="truncate">{x.title_tr}</span>
+                      <span className="text-slate-500">{x.enabled === false ? "kapalı" : "aktif"}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="mt-2 text-xs text-slate-600">Kaynak listesi boş (fail-soft).</div>
+              )}
+            </div>
+          </div>
+        </details>
+        {/* END REGWATCH_UI_S2 */}
+
+
         {/* BEGIN S10_DASHBOARD_ANALYSIS */}
         {analysisBlocks.length ? (
           <div className="rounded-2xl border p-4">
@@ -1120,7 +1229,7 @@ export default function V1DashboardClient(props: { contract: PortfolioContract; 
                   <div className="mt-2 rounded-xl bg-slate-50 p-3">
                     <div className="text-sm font-semibold">Eksik Kanıt / Evrak</div>
                     <ul className="list-disc pl-5 text-sm text-slate-700">
-                      {missing.map((m, i) => (
+                      {missing.map((m: MissingRef, i: number) => (
                         <li key={`${m.code}-${i}`}>
                           <span className="font-medium">{m.title_tr || m.code}</span>
                           {m.how_to_fix_tr ? <div className="text-xs text-slate-600">{m.how_to_fix_tr}</div> : null}
