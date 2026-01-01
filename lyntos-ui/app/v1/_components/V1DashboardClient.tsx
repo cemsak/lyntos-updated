@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import AxisDPanelClient from "./AxisDPanelClient";
 
@@ -12,6 +12,14 @@ type MissingRef = {
   severity?: Severity | null;
   how_to_fix_tr?: string | null;
 };
+
+type MissingTodoItem = {
+  title: string;
+  how: string;
+  sev: Severity;
+  from: string[];
+};
+
 
 type AnalysisBlock = {
   id?: string | null;
@@ -264,7 +272,7 @@ function topSignal(r: RiskSummary): { code: string; score?: number; weight?: num
   return { code: s.code, score: s.score ?? undefined, weight: s.weight ?? undefined, status: s.status };
 }
 
-export default function V1DashboardClient(props: { contract: PortfolioContract; ctx: Ctx }) {
+export default function V1DashboardClient(props: { contract?: PortfolioContract | null; ctx: Ctx }) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -281,6 +289,7 @@ export default function V1DashboardClient(props: { contract: PortfolioContract; 
 
   const [severityFilter, setSeverityFilter] = useState<"ALL" | "CRITICAL" | "HIGH" | "MEDIUM" | "LOW">("ALL");
   const [q, setQ] = useState<string>("");
+  const [vsOpen, setVsOpen] = useState<boolean>(false);
 
   // --- REGWATCH S2: Mevzuat Radar (self-contained, fail-soft) ---
   type RegwatchSource = {
@@ -354,14 +363,76 @@ export default function V1DashboardClient(props: { contract: PortfolioContract; 
     return (analysisBlocks as any[]).filter((b) => (b?.type ?? "OTHER").toString() === t);
   }, [analysisBlocks, analysisTypeFilter]);
 
-  const rawContract = props.contract;
+  const [rawContract, setRawContract] = useState<PortfolioContract | null>((props.contract as any) || null);
+  const [contractLoadErr, setContractLoadErr] = useState<string | null>(null);
+  const [contractLoadSeq, setContractLoadSeq] = useState<number>(0);
+
+  useEffect(() => {
+    setRawContract((props.contract as any) || null);
+  }, [props.contract]);
+
+  useEffect(() => {
+    let alive = true;
+    if (rawContract) return () => { alive = false; };
+
+    const qs = new URLSearchParams({
+      smmm: props.ctx.smmm,
+      client: props.ctx.client,
+      period: props.ctx.period,
+    }).toString();
+
+    (async () => {
+      try {
+        const res = await fetch(`/api/v1/contracts/portfolio?${qs}`, { cache: "no-store" });
+        const txt = await res.text();
+        if (!res.ok) throw new Error(`contracts/portfolio fetch failed: ${res.status} ${txt}`);
+        const j = JSON.parse(txt) as any;
+        if (!j || typeof j !== "object") {
+          const ct = res.headers.get("content-type") || "";
+          const raw = txt.slice(0, 240);
+          throw new Error(`contracts/portfolio invalid payload (non-object). parsed=${String(j)} ct=${ct} raw=${raw}`);
+        }
+        const schemaName = (j as any)?.schema?.name;
+        if (schemaName !== "portfolio") {
+          const ct = res.headers.get("content-type") || "";
+          const raw = txt.slice(0, 240);
+          const keys = j && typeof j === "object" ? Object.keys(j as any).slice(0, 24).join(",") : "";
+          throw new Error(`contracts/portfolio non-portfolio payload. schema.name=${String(schemaName)} ct=${ct} keys=[${keys}] raw=${raw}`);
+        }
+        if (alive) {
+          setRawContract(j as any);
+          setContractLoadErr(null);
+        }
+      } catch (e: any) {
+        if (alive) setContractLoadErr(e && e.message ? String(e.message) : String(e));
+      }
+    })();
+
+    return () => { alive = false; };
+  }, [rawContract, contractLoadSeq, props.ctx.smmm, props.ctx.client, props.ctx.period]);
+
   if (!rawContract) {
     return (
       <div className="mx-auto max-w-5xl p-6">
         <div className="rounded-2xl border p-4">
           <div className="text-sm font-semibold">Dashboard</div>
           <div className="mt-2 text-sm text-slate-700">Contract yüklenemedi veya boş geldi (fail-soft).</div>
-          <div className="mt-1 text-xs text-slate-600">Refresh çalıştırın; devam ederse /api/v1/contracts/portfolio çıktısını kontrol edin.</div>
+          {contractLoadErr ? (
+            <div className="mt-2 rounded-lg border border-rose-200 bg-rose-50 p-2 text-xs text-rose-800 whitespace-pre-line">
+              {contractLoadErr}
+            </div>
+          ) : (
+            <div className="mt-1 text-xs text-slate-600">Otomatik yükleme deneniyor: /api/v1/contracts/portfolio</div>
+          )}
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="rounded-lg border px-3 py-2 text-sm"
+              onClick={() => setContractLoadSeq((x: number) => x + 1)}
+            >
+              Tekrar yükle
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -683,7 +754,7 @@ export default function V1DashboardClient(props: { contract: PortfolioContract; 
             overall === "error" ? (vs.error ? ("Validator error: " + vs.error) : "Validator error.") :
             "Dataset durumu bilinmiyor.";
           const preview = (missingPaths.length ? missingPaths : warnPaths).slice(0, 3);                    // BEGIN S8_DATASET_HEALTH_OPS
-                    const [vsOpen, setVsOpen] = useState(false);
+                    
                     const hasAny = (warnN + missN) > 0;
                     const primaryList = (missingPaths.length ? missingPaths : warnPaths);
                     const primaryLabel = (missingPaths.length ? 'Missing paths' : 'Warn paths');
@@ -798,7 +869,7 @@ export default function V1DashboardClient(props: { contract: PortfolioContract; 
                       <div className="text-xs font-semibold text-slate-700">Mevzuat Dayanağı</div>
                       {(expert.legal_basis || []).length ? (
                         <ul className="mt-1 list-disc pl-5 text-xs text-slate-700">
-                          {(expert.legal_basis || []).map((lb, i) => (
+                          {(expert.legal_basis || []).map((lb: any, i: number) => (
                             <li key={lb.doc_id || String(i)}>
                               <span className="font-medium">{lb.doc_id}</span>
                               {lb.date ? <span> • {lb.date}</span> : null}
@@ -815,7 +886,7 @@ export default function V1DashboardClient(props: { contract: PortfolioContract; 
                       <div className="text-xs font-semibold text-slate-700">Kontroller</div>
                       {(expert.checks || []).length ? (
                         <div className="mt-1 space-y-2">
-                          {(expert.checks || []).map((chk) => (
+                          {(expert.checks || []).map((chk: any) => (
                             <div key={chk.id} className="rounded-md border border-slate-100 bg-slate-50 p-2">
                               <div className="flex items-start justify-between gap-2">
                                 <div className="text-xs font-medium text-slate-800">{chk.title_tr}</div>
@@ -868,7 +939,7 @@ export default function V1DashboardClient(props: { contract: PortfolioContract; 
 
                     {(ai.items || []).length ? (
                       <div className="space-y-2">
-                        {(ai.items || []).map((it) => (
+                        {(ai.items || []).map((it: any) => (
                           <div key={it.id} className="rounded-md border border-slate-100 bg-slate-50 p-2">
                             <div className="text-xs font-medium text-slate-800">{it.title_tr}</div>
                             {it.rationale_tr ? (
@@ -948,7 +1019,7 @@ export default function V1DashboardClient(props: { contract: PortfolioContract; 
               <div className="text-xs font-semibold text-slate-700">Kaynaklar</div>
               {regwatchSources.length ? (
                 <ul className="mt-2 space-y-1 text-xs text-slate-700">
-                  {regwatchSources.map((x, i) => (
+                  {regwatchSources.map((x: RegwatchSource, i: number) => (
                     <li key={`${x.source_id}-${i}`} className="flex items-center justify-between gap-2">
                       <span className="truncate">{x.title_tr}</span>
                       <span className="text-slate-500">{x.enabled === false ? "kapalı" : "aktif"}</span>
@@ -985,7 +1056,7 @@ export default function V1DashboardClient(props: { contract: PortfolioContract; 
                     value={analysisTypeFilter}
                     onChange={(e) => setAnalysisTypeFilter(e.target.value)}
                   >
-                    {analysisTypes.map((t) => (
+                    {analysisTypes.map((t: string) => (
                       <option key={`s10-at-${t}`} value={t}>
                         {t}
                       </option>
@@ -1086,7 +1157,7 @@ export default function V1DashboardClient(props: { contract: PortfolioContract; 
           <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
             <div className="text-sm font-semibold">Uyarılar</div>
             <ul className="list-disc pl-5 text-sm text-slate-700">
-              {Array.from(new Set([...(dq.warnings || []), ...(c.warnings || [])])).map((w, i) => <li key={`w-${i}`}>{w}</li>)}
+              {Array.from(new Set([...(dq.warnings || []), ...(c.warnings || [])])).map((w: string, i: number) => <li key={`w-${i}`}>{w}</li>)}
               
             </ul>
           </div>
@@ -1105,7 +1176,7 @@ export default function V1DashboardClient(props: { contract: PortfolioContract; 
               <button
                 className="rounded-lg border px-3 py-2 text-sm hover:bg-slate-50"
                 onClick={async () => {
-                  const lines = missingTodo.map((m) => {
+                  const lines = missingTodo.map((m: MissingTodoItem) => {
                     const from = m.from?.length ? ` (Risk: ${m.from.join(", ")})` : "";
                     const how = m.how ? ` — ${m.how}` : "";
                     return `- ${m.title}${how}${from}`;
@@ -1128,7 +1199,7 @@ export default function V1DashboardClient(props: { contract: PortfolioContract; 
           </div>
 
           <div className="mt-3 space-y-2">
-            {missingTodo.map((m, i) => (
+            {missingTodo.map((m: MissingTodoItem, i: number) => (
               <div key={i} className="rounded-xl bg-slate-50 p-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="font-semibold">{m.title}</div>
@@ -1185,7 +1256,7 @@ export default function V1DashboardClient(props: { contract: PortfolioContract; 
         </div>
 
         <div className="space-y-3">
-          {risksFiltered.map(({ r, riskScore, top }) => {
+          {risksFiltered.map(({ r, riskScore, top }: any) => {
             const firstSignal = r.kurgan_criteria_signals?.[0];
             const missing = firstSignal?.missing_refs || [];
             return (
