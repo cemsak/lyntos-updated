@@ -21,15 +21,27 @@ backend/data/
 **/*.bak
 **/*.bak_*
 **/*.bak.*
+**/*.BAK*
+**/*.BROKEN*
 **/*.old
 **/*.tmp
 backend/out/
 lyntos-ui/.next/
 lyntos-ui/node_modules/
+lyntos-ui/src/
+lyntos-ui/tsconfig.tsbuildinfo
 backend/.venv/
 backend/venv/
 backend/__pycache__/
 **/__pycache__/
+
+# Sensitive env backups
+.env.backup
+.env.bak
+.env.save
+backend/.env.backup
+backend/.env.bak
+backend/.env.save
 
 # generated contract exports (keep schemas/examples tracked, ignore generated outputs)
 backend/docs/contracts/portfolio.json
