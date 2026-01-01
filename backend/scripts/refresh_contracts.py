@@ -121,6 +121,59 @@ def _s10_attach_analysis_to_risk_contracts(contracts_dir: Path, smmm: str, clien
     print('OK: S10 risk detail analysis attached ->', changed)
 # END S10_RISKDETAIL_ANALYSIS_ATTACH
 
+# BEGIN REGWATCH_S1
+def _regwatch_s1_contract(contracts_dir: Path) -> dict:
+    # Fail-soft BOOTSTRAP: no crawling yet, only sources list.
+    base = contracts_dir / 'regwatch'
+    src_path = base / 'sources.json'
+    sources = []
+    if src_path.exists():
+        try:
+            sources = json.loads(src_path.read_text(encoding='utf-8'))
+        except Exception:
+            sources = []
+    if not isinstance(sources, list):
+        sources = []
+    return {
+        'schema': {
+            'name': 'regwatch',
+            'version': 'v1.0',
+            'generated_at': _s10_now_z() if '_s10_now_z' in globals() else '2025-12-31T04:14:31Z',
+        },
+        'status': 'BOOTSTRAPPED',
+        'sources': sources,
+        'documents': [],
+        'changes': [],
+        'impact_map': [],
+        'notes_tr': 'RegWatch iskeleti oluşturuldu. Bu adımda crawling/diff yok; yalnız kaynak listesi ve contract standardı var.',
+    }
+
+def _regwatch_s1_ensure_files(contracts_dir: Path) -> None:
+    base = contracts_dir / 'regwatch'
+    cache = base / 'cache'
+    base.mkdir(parents=True, exist_ok=True)
+    cache.mkdir(parents=True, exist_ok=True)
+    src = base / 'sources.json'
+    if not src.exists():
+        # resmi kaynaklar: başlangıç listesi (kullanıcı sonradan genişletebilir)
+        default_sources = [
+            {
+                'source_id': 'resmigazete',
+                'title_tr': 'Resmî Gazete',
+                'kind': 'html',
+                'url': 'https://www.resmigazete.gov.tr/',
+                'enabled': True,
+            },
+            {
+                'source_id': 'gib_duyurular',
+                'title_tr': 'GİB Duyurular',
+                'kind': 'html',
+                'url': 'https://www.gib.gov.tr/',
+                'enabled': True,
+            },
+        ]
+        src.write_text(json.dumps(default_sources, ensure_ascii=False, indent=2), encoding='utf-8')
+# END REGWATCH_S1
 def run(cmd, cwd=None):
     print(">>", " ".join(cmd))
     r = subprocess.run(cmd, cwd=cwd)
@@ -279,6 +332,13 @@ def main():
     run([sys.executable, "scripts/export_frontend_contracts.py", str(risk_json), str(contracts_dir)])
     _s10_attach_analysis_to_risk_contracts(contracts_dir, args.smmm, args.client, args.period)
     print("OK: contracts exported ->", contracts_dir)
+    # REGWATCH S1
+    _regwatch_s1_ensure_files(contracts_dir)
+    (contracts_dir / 'regwatch.json').write_text(
+        json.dumps(_regwatch_s1_contract(contracts_dir), ensure_ascii=False, indent=2),
+        encoding='utf-8'
+    )
+
 
     sanity_contracts(contracts_dir, require_signals=True)
 

@@ -625,6 +625,13 @@ def contracts_portfolio(
     """
     c = _read_json(CONTRACTS_DIR / "portfolio_customer_summary.json")
 
+    if (c is None) or (not isinstance(c, dict)):
+        p = CONTRACTS_DIR / "portfolio_customer_summary.json"
+        raise HTTPException(status_code=500, detail="PORTFOLIO_CONTRACT_INVALID path={} exists={}".format(str(p), str(p.exists())))
+    if (c is None) or (not isinstance(c, dict)):
+        raise HTTPException(status_code=500, detail="PORTFOLIO:invalid_contract_object (portfolio_customer_summary.json)")
+
+
     # ctx normalize (multi-tenant forward)
     smmm_n = smmm or smmm_id
     client_n = client or client_id
@@ -732,8 +739,6 @@ def contracts_portfolio(
             pass
     # END S10_PORTFOLIO_ANALYSIS
     return JSONResponse(c)
-
-
 @router.get("/contracts/dossier/manifest")
 def contracts_dossier_manifest(
     smmm: str = Query(...),
@@ -2543,3 +2548,23 @@ _axisd__wrap_builder("build_axis_contract_mizan_only")
 # === LYNTOS_S5_INFLATION_EVIDENCE_POSTPROCESS_V4_END ===
 
 # LYNTOS_S5_INFLATION_EVIDENCE_POSTPROCESS_V4
+
+# --- REGWATCH S1: contract endpoint (top-level, fail-soft) ---
+@router.get("/contracts/regwatch")
+def contracts_regwatch():
+    p1 = CONTRACTS_DIR / 'regwatch.json'
+    p2 = CONTRACTS_DIR / 'regwatch' / 'regwatch.json'
+    if p1.exists():
+        return JSONResponse(_read_json(p1))
+    if p2.exists():
+        return JSONResponse(_read_json(p2))
+    return JSONResponse({
+        'schema': {'name': 'regwatch', 'version': 'v1.0', 'generated_at': '2025-12-31T04:27:47Z'},
+        'status': 'MISSING',
+        'sources': [],
+        'documents': [],
+        'changes': [],
+        'impact_map': [],
+        'notes_tr': 'regwatch.json bulunamadı; refresh_contracts.py ile üretin.',
+    })
+
