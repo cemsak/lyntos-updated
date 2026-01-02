@@ -28,9 +28,10 @@ def _ensure_schema_meta(obj: dict, *, name: str, version: str) -> None:
 
 router = APIRouter(prefix="/api/v1", tags=["v1"])
 
-BASE = Path(__file__).resolve().parent
-CONTRACTS_DIR = BASE / "docs" / "contracts"
-OUT_DIR = BASE / "out"
+# Path fix: api/v1/contracts.py → backend/ (2 levels up)
+BACKEND_DIR = Path(__file__).resolve().parent.parent.parent
+CONTRACTS_DIR = BACKEND_DIR / "docs" / "contracts"
+OUT_DIR = BACKEND_DIR / "out"
 
 PERIOD_RE = re.compile(r"^\d{4}-Q[1-4]$")
 
