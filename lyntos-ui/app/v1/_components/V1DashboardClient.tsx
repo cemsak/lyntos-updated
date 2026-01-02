@@ -4,6 +4,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import AxisDPanelClient from "./AxisDPanelClient";
 import RegWatchPanel from "./RegWatchPanel";
+import ActionableTasksPanel from "./ActionableTasksPanel";
+import KurganRiskCard from "./KurganRiskCard";
 
 type Severity = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL" | string;
 
@@ -983,6 +985,24 @@ export default function V1DashboardClient(props: { contract?: PortfolioContract 
         <RegWatchPanel contract={regwatch} onRefresh={() => router.refresh()} />
         {/* END REGWATCH_UI_S2 */}
 
+        {/* BEGIN KURGAN_ACTIONABLE_TASKS */}
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="md:col-span-2">
+            <ActionableTasksPanel
+              smmmId={props.ctx.smmm}
+              clientId={props.ctx.client}
+              period={props.ctx.period}
+            />
+          </div>
+          <div>
+            <KurganRiskCard
+              smmmId={props.ctx.smmm}
+              clientId={props.ctx.client}
+              period={props.ctx.period}
+            />
+          </div>
+        </div>
+        {/* END KURGAN_ACTIONABLE_TASKS */}
 
         {/* BEGIN S10_DASHBOARD_ANALYSIS */}
         {analysisBlocks.length ? (
