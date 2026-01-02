@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { fetchJson } from "../_lib/fetchJson";
+import { fetchJson } from "@/lib/fetchJson";
 import { JsonView } from "../_components/JsonView";
 import { Section } from "../_components/Section";
 
