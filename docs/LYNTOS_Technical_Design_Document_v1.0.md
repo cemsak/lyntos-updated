@@ -1042,6 +1042,109 @@ export default function KVBridgePanel({ clientId, year }: Props) {
 
 ---
 
+## 🔒 Veri Kaynağı Güvenilirliği (SMMM Zorunluluğu)
+
+### Kaynak Hiyerarşisi Standardı
+
+LYNTOS, SMMM ürünü olarak sadece doğrulanabilir resmi kaynaklardan beslenir.
+
+**Tier 1 (Trust Score: 1.0) - Birincil Resmi Kaynaklar:**
+- Resmi Gazete (resmgazete.gov.tr)
+- GİB Resmi Sitesi (gib.gov.tr) - Tebliğ/Sirküler/Özelge
+- E-Mevzuat (mevzuat.gov.tr) - TBMM resmi
+- Danıştay İçtihatları (danistay.gov.tr)
+
+**Tier 2 (Trust Score: 0.9) - Doğrulanmış Kaynaklar:**
+- Sayıştay Raporları (sayistay.gov.tr)
+- Maliye Bakanlığı (hmb.gov.tr)
+
+**Tier 3 (Trust Score: 0.5) - Kullanıcı Yüklemeleri:**
+- User upload dosyaları (cross-check zorunlu)
+
+**YASAK Kaynaklar (Trust Score: 0.0):**
+- Muhasebe forumları
+- Blog yazıları
+- Özel danışmanlık siteleri
+- Wikipedia
+- AI çıktıları (kanıt olarak)
+
+### Kaynak Doğrulama Protokolü
+
+Her kanıt (`evidence_refs[]`) için zorunlu alanlar:
+```typescript
+interface Evidence {
+  doc_id: string;
+  source_type: "tier1" | "tier2" | "tier3";
+  source_name: string;        // "Resmi Gazete" | "GİB Tebliği" vb.
+  source_url?: string;        // Doğrulanabilir link
+  trust_score: number;        // 0.0 - 1.0
+  verification_date: string;  // ISO 8601
+  hash?: string;              // SHA-256 (değişiklik tespiti için)
+}
+```
+
+**Doğrulama Kuralları:**
+
+1. **Tier 1/2 kaynaklar**: Direkt kullanılabilir, ama hash kontrolü şart
+2. **Tier 3 kaynaklar**: İkinci kaynak + manuel doğrulama zorunlu
+3. **Trust Score < 0.8**: AI confidence otomatik düşürülür
+4. **Kaynak yoksa**: `reason_tr` + `required_docs[]` + `actions_tr[]` döndür
+
+### RegWatch Kaynak Kısıtlaması
+
+RegWatch **SADECE Tier 1 kaynaklardan** veri çeker:
+```python
+# backend/services/regwatch_service.py
+
+ALLOWED_REGWATCH_SOURCES = [
+    "resmi_gazete",
+    "gib_mevzuat",
+    "e_mevzuat",
+    "danistay"
+]
+
+# Diğer kaynaklar RegWatch'a GİREMEZ
+```
+
+**False Positive Yönetimi:**
+
+- False positive rate > 20% → Kaynak suspend + manual review
+- Her değişiklik `review_status: "pending"` ile başlar
+- SMMM onayı almadan `impact_map` oluşturulmaz
+
+### Cross-Validation (Çapraz Kontrol)
+
+Kullanıcı yüklemesi dosyalar için zorunlu:
+```python
+def cross_validate_user_upload(doc_id: str, doc_type: str) -> dict:
+    """
+    User upload'ı resmi kaynaklarla çapraz kontrol et.
+
+    Örnek: Kullanıcı beyanname yükledi
+    → e-Beyanname sisteminden çek
+    → Hash karşılaştır
+    → Uyuşmazlık varsa flag + manual review
+    """
+
+    official_version = fetch_from_official_source(doc_type)
+
+    if official_version:
+        user_hash = calculate_hash(doc_id)
+        official_hash = calculate_hash(official_version)
+
+        if user_hash != official_hash:
+            return {
+                "status": "mismatch",
+                "warning": "Resmi kaynak ile uyuşmuyor",
+                "action": "Manuel kontrol gerekli",
+                "trust_score": 0.3
+            }
+
+    return {"status": "ok", "trust_score": 0.7}
+```
+
+---
+
 ## 📄 Dossier Generation System
 
 ### Vizyon
