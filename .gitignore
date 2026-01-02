@@ -28,7 +28,6 @@ backend/data/
 backend/out/
 lyntos-ui/.next/
 lyntos-ui/node_modules/
-lyntos-ui/src/
 lyntos-ui/tsconfig.tsbuildinfo
 backend/.venv/
 backend/venv/
