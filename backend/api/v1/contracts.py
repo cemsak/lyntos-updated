@@ -660,7 +660,7 @@ def contracts_portfolio(
         c["warnings"].append(f"kpi_enrich_failed:{e}")
 
     try:
-        _enrich_portfolio_with_inflation_kpis(c, base_dir=BASE, smmm_id=smmm_n, client_id=client_n, period=period_n)
+        _enrich_portfolio_with_inflation_kpis(c, base_dir=BACKEND_DIR, smmm_id=smmm_n, client_id=client_n, period=period_n)
         # BEGIN S9_ATTACH_INFLATION_SCORE
         try:
             kpis = c.get('kpis') or {}
@@ -703,7 +703,7 @@ def contracts_portfolio(
     # BEGIN S8_ATTACH_VALIDATION_SUMMARY
     try:
         if 'validation_summary' not in c:
-            c['validation_summary'] = _build_validation_summary(base_dir=BASE, smmm_id=smmm_n, client_id=client_n, period=period_n)
+            c['validation_summary'] = _build_validation_summary(base_dir=BACKEND_DIR, smmm_id=smmm_n, client_id=client_n, period=period_n)
     except Exception as e:
         c.setdefault('warnings', [])
         c['warnings'].append('validation_summary_failed:' + str(e))
@@ -766,7 +766,7 @@ def contracts_dossier_manifest(
     except Exception as e:
         c["warnings"].append(f"kpi_enrich_failed:{e}")
 
-    axis_d = build_axis_d_contract_mizan_only(BASE, smmm, client, period)
+    axis_d = build_axis_d_contract_mizan_only(BACKEND_DIR, smmm, client, period)
     items = axis_d.get("items") or []
     infl = axis_d.get("inflation") or {}
 
@@ -883,14 +883,14 @@ def refresh(
 
     cmd = [
         sys.executable,
-        str(BASE / "scripts" / "refresh_contracts.py"),
+        str(BACKEND_DIR / "scripts" / "refresh_contracts.py"),
         "--smmm", smmm,
         "--client", client,
         "--period", period,
         "--contracts_dir", str(CONTRACTS_DIR),
     ]
     t0 = time.time()
-    p = subprocess.run(cmd, cwd=str(BASE), capture_output=True, text=True)
+    p = subprocess.run(cmd, cwd=str(BACKEND_DIR), capture_output=True, text=True)
     if p.returncode != 0:
         return JSONResponse(
             status_code=500,
@@ -1611,7 +1611,7 @@ def get_axis_contract(
 
     if axis == "D":
         try:
-            return build_axis_d_contract_mizan_only(BASE, smmm, client, period)
+            return build_axis_d_contract_mizan_only(BACKEND_DIR, smmm, client, period)
         except FileNotFoundError as e:
             raise HTTPException(status_code=404, detail=str(e))
         except HTTPException:
