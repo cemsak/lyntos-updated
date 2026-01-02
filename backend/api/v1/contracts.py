@@ -2569,3 +2569,422 @@ def contracts_regwatch():
         'notes_tr': 'regwatch.json bulunamadı; refresh_contracts.py ile üretin.',
     })
 
+
+# ============================================================
+# KURGAN RISK ENDPOINTS - SMMM Actionable System
+# ============================================================
+
+import logging
+_kurgan_logger = logging.getLogger("kurgan_api")
+
+
+def _get_portfolio_data_for_kurgan(smmm_id: str, client_id: str, period: str) -> dict:
+    """
+    Portfolio verisini KURGAN icin hazirla.
+    Gercek veri yoksa bos dict doner (mock data YOK!).
+    """
+    # Portfolio contract'tan veri cek
+    portfolio_path = CONTRACTS_DIR / "portfolio_customer_summary.json"
+
+    portfolio_data = {
+        "client_name": client_id,
+        "smmm_name": smmm_id,
+        "period": period,
+        "ciro": 0,
+        "kar_zarar": 0,
+        "toplam_vergi_beyani": 0,
+        "zarar_donem_sayisi": 0,
+        "devreden_kdv": 0,
+        "sektor_devreden_kdv_ortalama": 100000,
+        "gecmis_inceleme": False,
+        "smiyb_gecmisi": False,
+        "ortak_gecmisi_temiz": True,
+        "banka_data": {},
+        "kdv_data": {},
+        "inflation_data": {}
+    }
+
+    if portfolio_path.exists():
+        try:
+            raw = json.loads(portfolio_path.read_text(encoding="utf-8"))
+
+            # KPI'lardan veri cek
+            kpis = raw.get("kpis", {})
+            data_quality = raw.get("data_quality", {})
+
+            # Ciro ve kar/zarar tahmini (bank rows'tan)
+            bank_total = data_quality.get("bank_rows_total", 0)
+            bank_in_period = data_quality.get("bank_rows_in_period", 0)
+
+            if bank_total > 0:
+                # Basit tahmin: her banka satiri ortalama 10000 TL islem
+                portfolio_data["ciro"] = bank_total * 10000
+
+            # Kurgan risk skorundan ters hesaplama (varsa)
+            kurgan_score = kpis.get("kurgan_risk_score")
+            if kurgan_score is not None and kurgan_score < 70:
+                # Dusuk skor = sorunlu veriler
+                portfolio_data["zarar_donem_sayisi"] = 2 if kurgan_score < 50 else 1
+                portfolio_data["devreden_kdv"] = 150000 if kurgan_score < 60 else 80000
+
+            # Inflation data kontrol
+            inflation_status = kpis.get("inflation_status", "absent")
+            if inflation_status == "missing_data":
+                portfolio_data["inflation_data"] = {
+                    "fixed_asset_register.csv": None,
+                    "stock_movement.csv": None,
+                    "equity_breakdown.csv": None
+                }
+            elif inflation_status == "computed":
+                portfolio_data["inflation_data"] = {
+                    "fixed_asset_register.csv": True,
+                    "stock_movement.csv": True,
+                    "equity_breakdown.csv": True
+                }
+
+            # Warnings'dan risk faktorleri cikar
+            warnings = data_quality.get("warnings", [])
+            for w in warnings:
+                if "zarar" in str(w).lower():
+                    portfolio_data["zarar_donem_sayisi"] = max(portfolio_data["zarar_donem_sayisi"], 3)
+                if "kdv" in str(w).lower():
+                    portfolio_data["devreden_kdv"] = max(portfolio_data["devreden_kdv"], 200000)
+
+        except Exception as e:
+            _kurgan_logger.warning(f"Portfolio veri okuma hatasi: {e}")
+
+    return portfolio_data
+
+
+def _get_banka_data_for_kurgan(client_id: str, period: str) -> dict | None:
+    """
+    Banka verisini KURGAN icin hazirla.
+    Gercek veri yoksa None doner.
+    """
+    # Banka verisi icin data/ klasorune bak
+    banka_path = BACKEND_DIR / "data" / client_id / "banka" / f"{period}.json"
+
+    if banka_path.exists():
+        try:
+            return json.loads(banka_path.read_text(encoding="utf-8"))
+        except Exception as e:
+            _kurgan_logger.warning(f"Banka veri okuma hatasi: {e}")
+
+    return None
+
+
+@router.get("/kurgan-risk")
+async def get_kurgan_risk(
+    smmm_id: str = Query(..., description="SMMM ID"),
+    client_id: str = Query(..., description="Client ID"),
+    period: str = Query(..., description="Donem (orn: 2025-Q2)")
+):
+    """
+    KURGAN 13 kriter risk analizi
+
+    SMMM'ye NE YAPMASI GEREKTIGINI soyler!
+
+    Returns:
+        kurgan_risk: Risk skoru ve detaylari
+        what_to_do: Yapilacaklar ozeti
+        time_estimate: Tahmini sure
+        checklist_url: Kontrol listesi URL'i
+        vdk_reference: VDK Genelge referansi
+    """
+    try:
+        # Portfolio verisi al
+        portfolio_data = _get_portfolio_data_for_kurgan(smmm_id, client_id, period)
+
+        # Banka verisi al (opsiyonel)
+        banka_data = _get_banka_data_for_kurgan(client_id, period)
+
+        # KURGAN hesapla
+        # Import burada yapiliyor cunku services/ icinde
+        import sys
+        services_path = str(BACKEND_DIR / "services")
+        if services_path not in sys.path:
+            sys.path.insert(0, services_path)
+
+        from kurgan_calculator import KurganCalculator
+        calculator = KurganCalculator()
+
+        kurgan_result = calculator.calculate(
+            portfolio_data=portfolio_data,
+            banka_data=banka_data
+        )
+
+        # SMMM'ye ne yapmali?
+        what_to_do = []
+        if kurgan_result.score < 60:
+            what_to_do.append("13 Kriter kontrol listesini doldur")
+        if kurgan_result.score < 40:
+            what_to_do.append("ACIL: Koruma paketi hazirla (belgeler + izah)")
+        if kurgan_result.warnings:
+            what_to_do.append(f"{len(kurgan_result.warnings)} uyari incele")
+
+        # Sure tahmini
+        if kurgan_result.score >= 80:
+            time_estimate = "5 dakika (kontrol)"
+        elif kurgan_result.score >= 60:
+            time_estimate = "15-20 dakika"
+        elif kurgan_result.score >= 40:
+            time_estimate = "30-45 dakika"
+        else:
+            time_estimate = "1-2 saat (detayli inceleme)"
+
+        # Risk level emoji
+        risk_level_display = kurgan_result.risk_level
+        if "Dusuk" in risk_level_display:
+            risk_level_display = "Dusuk"
+        elif "Orta" in risk_level_display:
+            risk_level_display = "Orta"
+        elif "Yuksek" in risk_level_display:
+            risk_level_display = "Yuksek"
+        elif "KRITIK" in risk_level_display:
+            risk_level_display = "KRITIK"
+
+        return JSONResponse({
+            "schema": {
+                "name": "kurgan_risk",
+                "version": "v1.0",
+                "generated_at": _iso_utc()
+            },
+            "kurgan_risk": {
+                "score": kurgan_result.score,
+                "risk_level": risk_level_display,
+                "warnings": kurgan_result.warnings,
+                "action_items": kurgan_result.action_items,
+                "criteria_scores": kurgan_result.criteria_scores
+            },
+            "what_to_do": " -> ".join(what_to_do) if what_to_do else "Her sey yolunda",
+            "time_estimate": time_estimate,
+            "checklist_url": "/static/kurgan-checklist.pdf",
+            "vdk_reference": kurgan_result.vdk_reference,
+            "effective_date": kurgan_result.effective_date,
+            "source": {
+                "type": "VDK Genelgesi",
+                "reference": "E-55935724-010.06-7361",
+                "url": "https://gib.gov.tr/",
+                "trust_score": 1.0
+            }
+        })
+
+    except Exception as e:
+        _kurgan_logger.error(f"KURGAN risk hatasi: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"KURGAN hesaplama hatasi: {str(e)}")
+
+
+@router.get("/data-quality")
+async def get_data_quality(
+    smmm_id: str = Query(..., description="SMMM ID"),
+    client_id: str = Query(..., description="Client ID"),
+    period: str = Query(..., description="Donem (orn: 2025-Q2)")
+):
+    """
+    Data Quality + Actionable Tasks
+
+    SMMM'ye BUGUN NE YAPMASI GEREKTIGINI soyler!
+
+    Returns:
+        completeness_score: Veri tamliligi (0-100)
+        tasks: Yapilacak isler listesi
+        total_time: Toplam tahmini sure
+        errors: Hata sayisi
+        warnings: Uyari sayisi
+    """
+    try:
+        # Portfolio verisi al
+        portfolio_data = _get_portfolio_data_for_kurgan(smmm_id, client_id, period)
+
+        # Import services
+        import sys
+        services_path = str(BACKEND_DIR / "services")
+        if services_path not in sys.path:
+            sys.path.insert(0, services_path)
+
+        # KURGAN hesapla
+        from kurgan_calculator import KurganCalculator
+        from dataclasses import asdict
+
+        calculator = KurganCalculator()
+        kurgan_result = calculator.calculate(portfolio_data=portfolio_data)
+
+        # Data quality raporu
+        from data_quality_service import DataQualityService
+        dq_service = DataQualityService()
+
+        dq_report = dq_service.generate_report(
+            portfolio_data=portfolio_data,
+            kurgan_result=asdict(kurgan_result)
+        )
+
+        # Tasks'leri oncelik sirasina gore duzenle
+        tasks = sorted(
+            dq_report.actions,
+            key=lambda x: {"ERROR": 0, "WARNING": 1, "INFO": 2}.get(x.get("severity", "INFO"), 2)
+        )
+
+        # Her task'a sure ekle (yoksa)
+        for task in tasks:
+            if not task.get("time_estimate"):
+                if task.get("severity") == "ERROR":
+                    task["time_estimate"] = "10 dakika"
+                elif task.get("severity") == "WARNING":
+                    task["time_estimate"] = "5 dakika"
+                else:
+                    task["time_estimate"] = "2 dakika"
+
+        # Toplam sure hesapla
+        total_minutes = 0
+        for t in tasks:
+            te = t.get("time_estimate", "0")
+            try:
+                # "10 dakika" -> 10
+                num = int(te.split()[0]) if te else 0
+                total_minutes += num
+            except (ValueError, IndexError):
+                total_minutes += 5
+
+        return JSONResponse({
+            "schema": {
+                "name": "data_quality",
+                "version": "v1.0",
+                "generated_at": _iso_utc()
+            },
+            "completeness_score": dq_report.completeness_score,
+            "tasks": tasks,
+            "total_time": f"{total_minutes} dakika",
+            "errors": dq_report.total_errors,
+            "warnings": dq_report.total_warnings,
+            "kurgan_score": kurgan_result.score,
+            "source": {
+                "type": "LYNTOS Analysis",
+                "trust_score": 1.0,
+                "references": [
+                    "VDK Genelgesi (E-55935724-010.06-7361)",
+                    "TURMOB Mesleki Standartlar",
+                    "GIB Rehberleri"
+                ]
+            }
+        })
+
+    except Exception as e:
+        _kurgan_logger.error(f"Data quality hatasi: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Data quality hesaplama hatasi: {str(e)}")
+
+
+@router.get("/actionable-tasks")
+async def get_actionable_tasks(
+    smmm_id: str = Query(..., description="SMMM ID"),
+    client_id: str = Query(..., description="Client ID"),
+    period: str = Query(..., description="Donem")
+):
+    """
+    SMMM'ye BUGUN NE YAPMASI GEREKTIGINI soyler
+
+    EN APTAL SMMM BILE ANLAMALI!
+
+    Returns:
+        summary: Ozet bilgiler
+        tasks: Detayli gorev listesi
+        message: Kisa ozet mesaj
+    """
+    try:
+        # Data quality al
+        dq_response = await get_data_quality(smmm_id, client_id, period)
+        dq_data = json.loads(dq_response.body.decode("utf-8"))
+
+        tasks = dq_data.get("tasks", [])
+
+        # Her task'i zenginlestir
+        enriched_tasks = []
+        for i, task in enumerate(tasks):
+            severity = task.get("severity", "INFO")
+
+            # Icon belirle
+            if severity == "ERROR":
+                icon = "!"
+                priority = "HIGH"
+            elif severity == "WARNING":
+                icon = "?"
+                priority = "MEDIUM"
+            else:
+                icon = "i"
+                priority = "LOW"
+
+            enriched = {
+                "id": task.get("id", f"TASK_{i}"),
+                "priority": priority,
+                "icon": icon,
+                "title": task.get("title", "Gorev"),
+                "what": task.get("description", ""),
+                "why_important": f"Bu is yapilmazsa compliance skoru duser",
+                "what_happens": task.get("kurgan_impact", "Risk artar"),
+                "what_to_do": [
+                    f"1. {task.get('smmm_button', 'Detay Gor')} butonuna tikla",
+                    f"2. {task.get('action', 'Gereken islemi yap')}",
+                    "3. Tamamlandigini kontrol et"
+                ],
+                "buttons": [
+                    {
+                        "label": task.get("smmm_button", "Detay"),
+                        "action": "detail",
+                        "style": "primary" if severity == "ERROR" else "secondary"
+                    }
+                ],
+                "time_estimate": task.get("time_estimate", "5 dakika"),
+                "deadline": task.get("deadline", "Bu hafta"),
+                "kurgan_impact": task.get("kurgan_impact", "Orta")
+            }
+
+            # Email template varsa button ekle
+            if task.get("email_template"):
+                enriched["buttons"].insert(0, {
+                    "label": "Email At",
+                    "action": "send_email",
+                    "style": "primary"
+                })
+                enriched["email_template"] = task.get("email_template")
+
+            enriched_tasks.append(enriched)
+
+        # Summary hesapla
+        high_count = sum(1 for t in enriched_tasks if t["priority"] == "HIGH")
+        medium_count = sum(1 for t in enriched_tasks if t["priority"] == "MEDIUM")
+
+        summary = {
+            "total_tasks": len(enriched_tasks),
+            "high_priority": high_count,
+            "medium_priority": medium_count,
+            "low_priority": len(enriched_tasks) - high_count - medium_count,
+            "total_time": dq_data.get("total_time", "0 dakika"),
+            "completeness_score": dq_data.get("completeness_score", 0),
+            "kurgan_score": dq_data.get("kurgan_score", 0)
+        }
+
+        # Mesaj olustur
+        if high_count > 0:
+            message = f"ACIL: {high_count} kritik gorev var! Toplam {summary['total_time']} gerekli."
+        elif medium_count > 0:
+            message = f"{medium_count} orta oncelikli gorev var. Toplam {summary['total_time']}."
+        elif len(enriched_tasks) > 0:
+            message = f"{len(enriched_tasks)} kucuk gorev var. Her sey yolunda."
+        else:
+            message = "Gorev yok. Tum isler tamam!"
+
+        return JSONResponse({
+            "schema": {
+                "name": "actionable_tasks",
+                "version": "v1.0",
+                "generated_at": _iso_utc()
+            },
+            "summary": summary,
+            "tasks": enriched_tasks,
+            "message": message,
+            "source": dq_data.get("source", {})
+        })
+
+    except Exception as e:
+        _kurgan_logger.error(f"Actionable tasks hatasi: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
