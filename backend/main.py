@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.responses import FileResponse
-from api_v1_contracts import router as v1_router
+from api.v1.contracts import router as v1_router
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
