@@ -1,4 +1,4 @@
-import V1DashboardClient from "./_components/V1DashboardClient";
+import SimpleDashboard from "./_components/SimpleDashboard";
 
 export const dynamic = "force-dynamic";
 
@@ -9,31 +9,6 @@ function pick(sp: SearchParams, key: string, fallback: string): string {
   if (Array.isArray(v)) return v[0] || fallback;
   return (v as string) || fallback;
 }
-
-function backendBase(): string {
-  return (
-    process.env.LYNTOS_BACKEND_BASE ||
-    process.env.BACKEND_BASE_URL ||
-    process.env.NEXT_PUBLIC_BACKEND_BASE ||
-    "http://localhost:8000"
-  );
-}
-
-async function getPortfolioContract(ctx: { smmm: string; client: string; period: string }) {
-  const qp = new URLSearchParams({
-    smmm: ctx.smmm,
-    client: ctx.client,
-    period: ctx.period,
-  });
-  const url = `${backendBase()}/api/v1/contracts/portfolio?${qp.toString()}`;
-  const res = await fetch(url, { cache: "no-store" });
-  const txt = await res.text();
-  if (!res.ok) {
-    throw new Error(`portfolio contract failed: ${res.status} ${txt}`);
-  }
-  return JSON.parse(txt);
-}
-
 
 export default async function V1Page({
   searchParams,
@@ -48,11 +23,11 @@ export default async function V1Page({
     period: pick(sp, "period", "2025-Q2"),
   };
 
-  const contract = await getPortfolioContract(ctx);
-
   return (
-    <div className="mx-auto max-w-6xl p-4">
-      <V1DashboardClient contract={contract} ctx={ctx} />
-    </div>
+    <SimpleDashboard
+      smmmId={ctx.smmm}
+      clientId={ctx.client}
+      period={ctx.period}
+    />
   );
 }
