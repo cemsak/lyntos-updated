@@ -2988,3 +2988,135 @@ async def get_actionable_tasks(
         _kurgan_logger.error(f"Actionable tasks hatasi: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
+
+# ============================================================
+# KURUMLAR VERGISI ENDPOINTS
+# ============================================================
+
+@router.get("/corporate-tax")
+async def get_corporate_tax(
+    smmm_id: str = Query(..., description="SMMM ID"),
+    client_id: str = Query(..., description="Musteri ID"),
+    period: str = Query(..., description="Donem (YYYY-QN)")
+):
+    """
+    Kurumlar Vergisi beyani hesaplama
+
+    Kaynak: 5520 Sayili KVK
+
+    Returns:
+        {
+            "ticari_kar": {...},
+            "mali_kar": {...},
+            "matrah": float,
+            "hesaplanan_vergi": float,
+            "odenecek_vergi": float,
+            "kaynak": "5520 Sayili KVK",
+            "trust_score": 1.0
+        }
+    """
+    try:
+        portfolio = _get_portfolio_data_for_kurgan(smmm_id, client_id, period)
+
+        from services.corporate_tax_calculator import CorporateTaxCalculator
+        calculator = CorporateTaxCalculator()
+
+        beyan = calculator.calculate(portfolio)
+
+        return JSONResponse({
+            "schema": {
+                "name": "corporate_tax",
+                "version": "v1.0",
+                "generated_at": _iso_utc()
+            },
+            "ticari_kar": {
+                "donem_kari": beyan.ticari_kar.donem_kari,
+                "donem_zarari": beyan.ticari_kar.donem_zarari,
+                "net_donem_kari": beyan.ticari_kar.net_donem_kari
+            },
+            "mali_kar": {
+                "ticari_kar": beyan.mali_kar.ticari_kar,
+                "kkeg": beyan.mali_kar.kanunen_kabul_edilmeyen_giderler,
+                "istisna_kazanclar": beyan.mali_kar.istisna_kazanclar,
+                "gecmis_zarar": beyan.mali_kar.gecmis_donem_zararlari,
+                "mali_kar": beyan.mali_kar.mali_kar
+            },
+            "indirimler": {
+                "r_and_d": beyan.r_and_d_indirimi,
+                "yatirim": beyan.yatirim_indirimi,
+                "bagis": beyan.bagis_indirimi,
+                "sponsorluk": beyan.sponsorluk_indirimi
+            },
+            "matrah": beyan.kurumlar_vergisi_matrahi,
+            "vergi_orani": beyan.vergi_orani,
+            "hesaplanan_vergi": beyan.hesaplanan_vergi,
+            "mahsuplar": {
+                "gecici_vergi": beyan.gecici_vergi_mahsubu,
+                "yurtdisi_vergi": beyan.yurtdisi_vergi_mahsubu
+            },
+            "odenecek_vergi": beyan.odenecek_vergi,
+            "iade_edilecek_vergi": beyan.iade_edilecek_vergi,
+            "kaynak": beyan.kaynak,
+            "trust_score": beyan.trust_score
+        })
+
+    except Exception as e:
+        _kurgan_logger.error(f"Kurumlar Vergisi hatasi: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/corporate-tax-forecast")
+async def get_corporate_tax_forecast(
+    smmm_id: str = Query(..., description="SMMM ID"),
+    client_id: str = Query(..., description="Musteri ID"),
+    period: str = Query(..., description="Donem (YYYY-QN)"),
+    scenario: str = Query("base", description="Senaryo: optimistic, base, pessimistic")
+):
+    """
+    Gelecek donem vergi ongorusu (3 senaryo)
+
+    Returns:
+        {
+            "senaryo": "base",
+            "tahmini_ciro": float,
+            "tahmini_kar": float,
+            "tahmini_vergi": float,
+            "confidence": "medium"
+        }
+    """
+    try:
+        # Senaryo validasyonu
+        valid_scenarios = ["optimistic", "base", "pessimistic"]
+        if scenario not in valid_scenarios:
+            scenario = "base"
+
+        portfolio = _get_portfolio_data_for_kurgan(smmm_id, client_id, period)
+
+        from services.corporate_tax_calculator import CorporateTaxCalculator
+        calculator = CorporateTaxCalculator()
+
+        forecast = calculator.generate_forecast(portfolio, senaryo=scenario)
+
+        return JSONResponse({
+            "schema": {
+                "name": "corporate_tax_forecast",
+                "version": "v1.0",
+                "generated_at": _iso_utc()
+            },
+            "senaryo": forecast["senaryo"],
+            "tahmini_ciro": forecast["tahmini_ciro"],
+            "tahmini_kar": forecast["tahmini_kar"],
+            "tahmini_vergi": forecast["tahmini_vergi"],
+            "tahmini_net_kar": forecast["tahmini_net_kar"],
+            "buyume_oranlari": {
+                "ciro": forecast.get("ciro_buyume_orani", 0),
+                "kar": forecast.get("kar_buyume_orani", 0)
+            },
+            "confidence": forecast["confidence"],
+            "aciklama": forecast.get("aciklama", "")
+        })
+
+    except Exception as e:
+        _kurgan_logger.error(f"Vergi ongoru hatasi: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
