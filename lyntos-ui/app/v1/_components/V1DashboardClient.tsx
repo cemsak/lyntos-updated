@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import AxisDPanelClient from "./AxisDPanelClient";
+import RegWatchPanel from "./RegWatchPanel";
 
 type Severity = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL" | string;
 
@@ -979,59 +980,7 @@ export default function V1DashboardClient(props: { contract?: PortfolioContract 
 
 
         {/* BEGIN REGWATCH_UI_S2 */}
-        <details className="rounded-2xl border p-4">
-          <summary className="cursor-pointer select-none text-sm font-semibold">Mevzuat Radar</summary>
-          <div className="mt-3">
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                className={`rounded-lg border px-3 py-1 text-xs ${regwatchDays === 7 ? "bg-slate-900 text-white" : "bg-white"}`}
-                onClick={() => setRegwatchDays(7)}
-              >
-                Son 7 gün
-              </button>
-              <button
-                type="button"
-                className={`rounded-lg border px-3 py-1 text-xs ${regwatchDays === 30 ? "bg-slate-900 text-white" : "bg-white"}`}
-                onClick={() => setRegwatchDays(30)}
-              >
-                Son 30 gün
-              </button>
-              <div className="ml-auto text-xs text-slate-600">
-                {regwatch?.schema?.version ? `v${regwatch.schema.version}` : ""} {regwatch?.schema?.generated_at ? `• ${regwatch.schema.generated_at}` : ""}
-              </div>
-            </div>
-
-            {!regwatch ? (
-              <div className="mt-3 text-sm text-slate-700">RegWatch contract henüz yüklenmedi (fail-soft). Refresh çalıştırınca gelir.</div>
-            ) : !regwatchHasUpdates ? (
-              <div className="mt-3">
-                <div className="text-sm text-slate-800">Güncelleme yok. Durum: <span className="font-semibold">{regwatch.status || "UNKNOWN"}</span></div>
-                {typeof regwatch.notes_tr === "string" && regwatch.notes_tr.trim() ? (
-                  <div className="mt-1 text-xs whitespace-pre-line text-slate-600">{regwatch.notes_tr}</div>
-                ) : null}
-              </div>
-            ) : (
-              <div className="mt-3 text-sm text-slate-800">Güncellemeler mevcut (bu sprintte diff/impact_map UI’sı genişletilecek).</div>
-            )}
-
-            <div className="mt-4">
-              <div className="text-xs font-semibold text-slate-700">Kaynaklar</div>
-              {regwatchSources.length ? (
-                <ul className="mt-2 space-y-1 text-xs text-slate-700">
-                  {regwatchSources.map((x: RegwatchSource, i: number) => (
-                    <li key={`${x.source_id}-${i}`} className="flex items-center justify-between gap-2">
-                      <span className="truncate">{x.title_tr}</span>
-                      <span className="text-slate-500">{x.enabled === false ? "kapalı" : "aktif"}</span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <div className="mt-2 text-xs text-slate-600">Kaynak listesi boş (fail-soft).</div>
-              )}
-            </div>
-          </div>
-        </details>
+        <RegWatchPanel contract={regwatch} onRefresh={() => router.refresh()} />
         {/* END REGWATCH_UI_S2 */}
 
 
