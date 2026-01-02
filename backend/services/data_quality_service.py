@@ -138,6 +138,31 @@ class DataQualityService:
             "kurgan_impact": action.kurgan_impact
         }
 
+    # CSV teknik isim -> musteri dili cevirisi
+    CSV_TRANSLATIONS: Dict[str, Dict[str, str]] = {
+        "fixed_asset_register.csv": {
+            "tr": "Sabit Kiymet Listesi",
+            "desc": "Bina, makine, arac gibi demirbaslarin listesi",
+            "ornek": "Fabrika binasi, uretim makineleri, sirket araclari"
+        },
+        "stock_movement.csv": {
+            "tr": "Stok Hareket Tablosu",
+            "desc": "Ay basi/sonu stok miktarlari ve hareketleri",
+            "ornek": "01.04.2025 stok: 1000 adet, 30.06.2025 stok: 800 adet"
+        },
+        "equity_breakdown.csv": {
+            "tr": "Sermaye Detay Tablosu",
+            "desc": "Ortaklarin sermaye paylari ve degisimleri",
+            "ornek": "Ortak A: %60, Ortak B: %40"
+        }
+    }
+
+    def _calculate_deadline_date(self, days: int) -> str:
+        """Deadline tarihini hesapla"""
+        from datetime import datetime, timedelta
+        deadline = datetime.now() + timedelta(days=days)
+        return deadline.strftime("%d.%m.%Y")
+
     def _check_inflation_package(self, portfolio_data: Dict) -> List[Action]:
         """Enflasyon paketi eksikliklerini kontrol et"""
 
@@ -154,40 +179,64 @@ class DataQualityService:
             client_name = portfolio_data.get("client_name", "Musteri")
             period = portfolio_data.get("period", "2025-Q2")
             smmm_name = portfolio_data.get("smmm_name", "SMMM")
+            deadline_date = self._calculate_deadline_date(3)
 
-            csv_list = "\n".join([f"  - {csv}" for csv in missing_csvs])
+            # Musteri dilinde belge listesi olustur
+            belge_listesi = []
+            belge_kisa = []
+            for csv in missing_csvs:
+                info = self.CSV_TRANSLATIONS.get(csv, {"tr": csv, "desc": "", "ornek": ""})
+                belge_kisa.append(info["tr"])
+                belge_listesi.append(f"""
+{info['tr']}
+   Ne iceriyor: {info['desc']}
+   Ornek: {info['ornek']}
+""")
+
+            # MUSTERI DILINDE email body
+            email_body = f"""Sayin {client_name} Yetkilisi,
+
+{period} donemi icin ENFLASYON MUHASEBESI duzeltmesi yapmamiz gerekiyor.
+
+Bunun icin asagidaki bilgilere ihtiyacimiz var:
+{''.join(belge_listesi)}
+
+BU BILGILER OLMADAN:
+- Enflasyon duzeltmesi yapilamaz
+- Vergi beyaniniz eksik kalir
+- Ceza riski olusur
+
+SON TARIH: {deadline_date} (3 is gunu)
+
+EK DOSYALAR:
+- Excel sablonlari (bilgisayarinizda acip doldurun)
+- Doldurma kilavuzu (nasil dolduracaginiz anlatiliyor)
+
+NASIL GONDERECEKSINIZ?
+1. Ekteki Excel dosyalarini acin
+2. Kilavuza bakarak doldurun
+3. Bu email'e cevap verin, doldurdugunuz dosyalari ekleyin
+
+Herhangi bir sorunuz olursa aramaktan cekinmeyin.
+
+Saygilarimla,
+{smmm_name}
+Serbest Muhasebeci Mali Musavir
+"""
 
             actions.append(Action(
                 id="INFL_MISSING_CSV",
                 severity="ERROR",
-                title=f"Enflasyon Kanit Paketi: {len(missing_csvs)} CSV eksik",
-                description=f"Eksik dosyalar:\n{csv_list}",
-                action="Client'a email gonderin ve CSV'leri talep edin",
-                smmm_button="Email Sablonu Ac",
+                title=f"Enflasyon Belgesi Eksik: {len(missing_csvs)} belge",
+                description=f"Eksik: {', '.join(belge_kisa)}",
+                action="Musteriye anlasilir email gonderin",
+                smmm_button="Email Gonder",
                 email_template={
-                    "subject": f"[ACIL] Enflasyon Paketi Eksik CSV - {client_name} - {period}",
-                    "body": f"""Sayin {client_name} Yetkilisi,
-
-{period} donemi enflasyon muhasebesi duzeltmesi icin asagidaki CSV dosyalarina acil ihtiyacimiz bulunmaktadir:
-
-{chr(10).join([f'- {csv}' for csv in missing_csvs])}
-
-Bu dosyalar olmadan:
-- Enflasyon duzeltmesi yapilamaz
-- Compliance seviyesi (B) hedefine ulasilamaz
-- Vergi beyanlarinda eksiklik olusur
-
-Lutfen en gec 3 is gunu icerisinde temin ediniz.
-
-CSV sablonlarini ekte bulabilirsiniz.
-
-Saygilarimla,
-{smmm_name}
-SMMM
-""",
-                    "attachments": ["CSV_Sablonlari.zip"]
+                    "subject": f"[ONEMLI] Enflasyon Duzeltmesi Icin Belgeler - {client_name} - {period}",
+                    "body": email_body,
+                    "attachments": ["Excel_Sablonlari.zip", "Doldurma_Kilavuzu.pdf"]
                 },
-                deadline="3 is gunu",
+                deadline=f"3 is gunu ({deadline_date})",
                 kurgan_impact="Orta (Veri eksikligi -> risk artisi)"
             ))
 
