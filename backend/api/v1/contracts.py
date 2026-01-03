@@ -11,6 +11,8 @@ import sys
 import time
 import re
 
+from schemas.response_envelope import wrap_response
+
 def _iso_utc() -> str:
     import time as _t
     return _t.strftime('%Y-%m-%dT%H:%M:%SZ', _t.gmtime())
@@ -2743,12 +2745,7 @@ async def get_kurgan_risk(
         elif "KRITIK" in risk_level_display:
             risk_level_display = "KRITIK"
 
-        return JSONResponse({
-            "schema": {
-                "name": "kurgan_risk",
-                "version": "v1.0",
-                "generated_at": _iso_utc()
-            },
+        data = {
             "kurgan_risk": {
                 "score": kurgan_result.score,
                 "risk_level": risk_level_display,
@@ -2761,13 +2758,17 @@ async def get_kurgan_risk(
             "checklist_url": "/static/kurgan-checklist.pdf",
             "vdk_reference": kurgan_result.vdk_reference,
             "effective_date": kurgan_result.effective_date,
-            "source": {
-                "type": "VDK Genelgesi",
-                "reference": "E-55935724-010.06-7361",
-                "url": "https://gib.gov.tr/",
-                "trust_score": 1.0
-            }
-        })
+            "legal_basis_refs": ["SRC-0034"],
+            "trust_score": 1.0
+        }
+
+        return wrap_response(
+            endpoint_name="kurgan_risk",
+            smmm_id=smmm_id,
+            client_id=client_id,
+            period=period,
+            data=data
+        )
 
     except Exception as e:
         _kurgan_logger.error(f"KURGAN risk hatasi: {e}", exc_info=True)
@@ -2845,28 +2846,24 @@ async def get_data_quality(
             except (ValueError, IndexError):
                 total_minutes += 5
 
-        return JSONResponse({
-            "schema": {
-                "name": "data_quality",
-                "version": "v1.0",
-                "generated_at": _iso_utc()
-            },
+        data = {
             "completeness_score": dq_report.completeness_score,
             "tasks": tasks,
             "total_time": f"{total_minutes} dakika",
             "errors": dq_report.total_errors,
             "warnings": dq_report.total_warnings,
             "kurgan_score": kurgan_result.score,
-            "source": {
-                "type": "LYNTOS Analysis",
-                "trust_score": 1.0,
-                "references": [
-                    "VDK Genelgesi (E-55935724-010.06-7361)",
-                    "TURMOB Mesleki Standartlar",
-                    "GIB Rehberleri"
-                ]
-            }
-        })
+            "legal_basis_refs": ["SRC-0034", "SRC-0011"],
+            "trust_score": 1.0
+        }
+
+        return wrap_response(
+            endpoint_name="data_quality",
+            smmm_id=smmm_id,
+            client_id=client_id,
+            period=period,
+            data=data
+        )
 
     except Exception as e:
         _kurgan_logger.error(f"Data quality hatasi: {e}", exc_info=True)
@@ -2972,17 +2969,21 @@ async def get_actionable_tasks(
         else:
             message = "Gorev yok. Tum isler tamam!"
 
-        return JSONResponse({
-            "schema": {
-                "name": "actionable_tasks",
-                "version": "v1.0",
-                "generated_at": _iso_utc()
-            },
+        data = {
             "summary": summary,
             "tasks": enriched_tasks,
             "message": message,
-            "source": dq_data.get("source", {})
-        })
+            "legal_basis_refs": ["SRC-0034", "SRC-0011"],
+            "trust_score": 1.0
+        }
+
+        return wrap_response(
+            endpoint_name="actionable_tasks",
+            smmm_id=smmm_id,
+            client_id=client_id,
+            period=period,
+            data=data
+        )
 
     except Exception as e:
         _kurgan_logger.error(f"Actionable tasks hatasi: {e}", exc_info=True)
@@ -3023,12 +3024,7 @@ async def get_corporate_tax(
 
         beyan = calculator.calculate(portfolio)
 
-        return JSONResponse({
-            "schema": {
-                "name": "corporate_tax",
-                "version": "v1.0",
-                "generated_at": _iso_utc()
-            },
+        data = {
             "ticari_kar": {
                 "donem_kari": beyan.ticari_kar.donem_kari,
                 "donem_zarari": beyan.ticari_kar.donem_zarari,
@@ -3056,9 +3052,17 @@ async def get_corporate_tax(
             },
             "odenecek_vergi": beyan.odenecek_vergi,
             "iade_edilecek_vergi": beyan.iade_edilecek_vergi,
-            "kaynak": beyan.kaynak,
+            "legal_basis_refs": ["SRC-0001"],
             "trust_score": beyan.trust_score
-        })
+        }
+
+        return wrap_response(
+            endpoint_name="corporate_tax",
+            smmm_id=smmm_id,
+            client_id=client_id,
+            period=period,
+            data=data
+        )
 
     except Exception as e:
         _kurgan_logger.error(f"Kurumlar Vergisi hatasi: {e}", exc_info=True)
@@ -3097,12 +3101,7 @@ async def get_corporate_tax_forecast(
 
         forecast = calculator.generate_forecast(portfolio, senaryo=scenario)
 
-        return JSONResponse({
-            "schema": {
-                "name": "corporate_tax_forecast",
-                "version": "v1.0",
-                "generated_at": _iso_utc()
-            },
+        data = {
             "senaryo": forecast["senaryo"],
             "tahmini_ciro": forecast["tahmini_ciro"],
             "tahmini_kar": forecast["tahmini_kar"],
@@ -3113,8 +3112,17 @@ async def get_corporate_tax_forecast(
                 "kar": forecast.get("kar_buyume_orani", 0)
             },
             "confidence": forecast["confidence"],
-            "aciklama": forecast.get("aciklama", "")
-        })
+            "aciklama": forecast.get("aciklama", ""),
+            "legal_basis_refs": ["SRC-0001"]
+        }
+
+        return wrap_response(
+            endpoint_name="corporate_tax_forecast",
+            smmm_id=smmm_id,
+            client_id=client_id,
+            period=period,
+            data=data
+        )
 
     except Exception as e:
         _kurgan_logger.error(f"Vergi ongoru hatasi: {e}", exc_info=True)
@@ -3166,12 +3174,7 @@ async def get_quarterly_tax(
         # Yil sonu projeksiyon
         projection = calculator.project_year_end(profits, q1.calculated_tax + q2.payable)
 
-        return JSONResponse({
-            "schema": {
-                "name": "quarterly_tax",
-                "version": "v1.0",
-                "generated_at": _iso_utc()
-            },
+        data = {
             "Q1": {
                 "current_profit": q1.current_profit,
                 "annual_estimate": q1.annual_estimate,
@@ -3186,9 +3189,17 @@ async def get_quarterly_tax(
                 "payable": q2.payable
             },
             "year_end_projection": projection,
-            "legal_basis": "5520 KVK Md. 32",
+            "legal_basis_refs": ["SRC-0023"],
             "trust_score": 1.0
-        })
+        }
+
+        return wrap_response(
+            endpoint_name="quarterly_tax",
+            smmm_id=smmm_id,
+            client_id=client_id,
+            period=period,
+            data=data
+        )
 
     except Exception as e:
         _kurgan_logger.error(f"Gecici vergi hatasi: {e}", exc_info=True)
@@ -3240,12 +3251,7 @@ async def get_cross_check(
         warnings = len([c for c in checks if c.status == "warning"])
         ok = len([c for c in checks if c.status == "ok"])
 
-        return JSONResponse({
-            "schema": {
-                "name": "cross_check",
-                "version": "v1.0",
-                "generated_at": _iso_utc()
-            },
+        response_data = {
             "checks": [
                 {
                     "type": c.check_type,
@@ -3254,7 +3260,7 @@ async def get_cross_check(
                     "reason": c.reason_tr,
                     "evidence": c.evidence_refs,
                     "actions": c.actions,
-                    "legal_basis": c.legal_basis
+                    "legal_basis_refs": c.legal_basis_refs
                 }
                 for c in checks
             ],
@@ -3266,7 +3272,15 @@ async def get_cross_check(
                 "overall_status": "error" if errors > 0 else "warning" if warnings > 0 else "ok"
             },
             "trust_score": 1.0
-        })
+        }
+
+        return wrap_response(
+            endpoint_name="cross_check",
+            smmm_id=smmm_id,
+            client_id=client_id,
+            period=period,
+            data=response_data
+        )
 
     except Exception as e:
         _kurgan_logger.error(f"Capraz kontrol hatasi: {e}", exc_info=True)
@@ -3298,17 +3312,20 @@ async def get_regwatch_status():
         last_30 = engine.check_last_30_days()
         sources = engine.get_sources()
 
-        return JSONResponse({
-            "schema": {
-                "name": "regwatch_status",
-                "version": "v1.0",
-                "generated_at": _iso_utc()
-            },
+        data = {
             "last_7_days": last_7,
             "last_30_days": last_30,
             "sources": sources,
             "trust_score": 1.0
-        })
+        }
+
+        return wrap_response(
+            endpoint_name="regwatch_status",
+            smmm_id="SYSTEM",
+            client_id="SYSTEM",
+            period="N/A",
+            data=data
+        )
 
     except Exception as e:
         _kurgan_logger.error(f"RegWatch hatasi: {e}", exc_info=True)
