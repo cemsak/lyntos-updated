@@ -26,7 +26,7 @@ def _ensure_schema_meta(obj: dict, *, name: str, version: str) -> None:
     sc.setdefault('version', version)
     sc.setdefault('generated_at', _iso_utc())
 
-router = APIRouter(prefix="/api/v1", tags=["v1"])
+router = APIRouter(tags=["v1"])
 
 # Path fix: api/v1/contracts.py → backend/ (2 levels up)
 BACKEND_DIR = Path(__file__).resolve().parent.parent.parent
