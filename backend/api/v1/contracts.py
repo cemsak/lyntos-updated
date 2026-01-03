@@ -2673,7 +2673,7 @@ def _get_banka_data_for_kurgan(client_id: str, period: str) -> dict | None:
     return None
 
 
-@router.get("/kurgan-risk")
+@router.get("/contracts/kurgan-risk")
 async def get_kurgan_risk(
     smmm_id: str = Query(..., description="SMMM ID"),
     client_id: str = Query(..., description="Client ID"),
@@ -2774,7 +2774,7 @@ async def get_kurgan_risk(
         raise HTTPException(status_code=500, detail=f"KURGAN hesaplama hatasi: {str(e)}")
 
 
-@router.get("/data-quality")
+@router.get("/contracts/data-quality")
 async def get_data_quality(
     smmm_id: str = Query(..., description="SMMM ID"),
     client_id: str = Query(..., description="Client ID"),
@@ -2873,7 +2873,7 @@ async def get_data_quality(
         raise HTTPException(status_code=500, detail=f"Data quality hesaplama hatasi: {str(e)}")
 
 
-@router.get("/actionable-tasks")
+@router.get("/contracts/actionable-tasks")
 async def get_actionable_tasks(
     smmm_id: str = Query(..., description="SMMM ID"),
     client_id: str = Query(..., description="Client ID"),
@@ -2993,7 +2993,7 @@ async def get_actionable_tasks(
 # KURUMLAR VERGISI ENDPOINTS
 # ============================================================
 
-@router.get("/corporate-tax")
+@router.get("/contracts/corporate-tax")
 async def get_corporate_tax(
     smmm_id: str = Query(..., description="SMMM ID"),
     client_id: str = Query(..., description="Musteri ID"),
@@ -3065,7 +3065,7 @@ async def get_corporate_tax(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/corporate-tax-forecast")
+@router.get("/contracts/corporate-tax-forecast")
 async def get_corporate_tax_forecast(
     smmm_id: str = Query(..., description="SMMM ID"),
     client_id: str = Query(..., description="Musteri ID"),
@@ -3125,7 +3125,7 @@ async def get_corporate_tax_forecast(
 # GECICI VERGI ENDPOINTS
 # ════════════════════════════════════════════════════════════════
 
-@router.get("/quarterly-tax")
+@router.get("/contracts/quarterly-tax")
 async def get_quarterly_tax(
     smmm_id: str = Query(..., description="SMMM ID"),
     client_id: str = Query(..., description="Musteri ID"),
@@ -3199,7 +3199,7 @@ async def get_quarterly_tax(
 # CAPRAZ KONTROL ENDPOINTS
 # ════════════════════════════════════════════════════════════════
 
-@router.get("/cross-check")
+@router.get("/contracts/cross-check")
 async def get_cross_check(
     smmm_id: str = Query(..., description="SMMM ID"),
     client_id: str = Query(..., description="Musteri ID"),
@@ -3277,7 +3277,7 @@ async def get_cross_check(
 # REGWATCH ENDPOINTS
 # ════════════════════════════════════════════════════════════════
 
-@router.get("/regwatch-status")
+@router.get("/contracts/regwatch-status")
 async def get_regwatch_status():
     """
     RegWatch mevzuat izleme durumu
@@ -3319,7 +3319,7 @@ async def get_regwatch_status():
 # PDF EXPORT ENDPOINTS
 # ════════════════════════════════════════════════════════════════
 
-@router.get("/export-pdf")
+@router.get("/contracts/export-pdf")
 async def export_pdf(
     smmm_id: str = Query(..., description="SMMM ID"),
     client_id: str = Query(..., description="Musteri ID"),
