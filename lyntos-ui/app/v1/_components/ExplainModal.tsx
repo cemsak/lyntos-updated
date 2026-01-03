@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import SourceLink from './SourceLink';
 
 interface ExplainModalProps {
@@ -11,6 +12,11 @@ interface ExplainModalProps {
   evidence_refs: string[];
   trust_score: number;
   onClose: () => void;
+  // Evidence bundle download
+  ruleId?: string;
+  smmm?: string;
+  client?: string;
+  period?: string;
 }
 
 export default function ExplainModal({
@@ -21,10 +27,53 @@ export default function ExplainModal({
   legal_basis_refs,
   evidence_refs,
   trust_score,
-  onClose
+  onClose,
+  ruleId,
+  smmm = 'HKOZKAN',
+  client = 'OZKAN_KIRTASIYE',
+  period = '2025-Q2'
 }: ExplainModalProps) {
   // Determine if we have refs or legacy string
   const hasRefs = legal_basis_refs && legal_basis_refs.length > 0;
+
+  // Download state
+  const [downloading, setDownloading] = useState(false);
+
+  // Evidence bundle download handler
+  async function handleDownloadEvidence() {
+    if (!ruleId) {
+      alert('Rule ID belirtilmemis');
+      return;
+    }
+
+    setDownloading(true);
+
+    try {
+      const url = `/api/v1/evidence/bundle/${ruleId}?smmm_id=${encodeURIComponent(smmm)}&client_id=${encodeURIComponent(client)}&period=${encodeURIComponent(period)}`;
+
+      const res = await fetch(url);
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ detail: 'Bilinmeyen hata' }));
+        throw new Error(error.detail || 'Download failed');
+      }
+
+      const blob = await res.blob();
+
+      const a = document.createElement('a');
+      a.href = window.URL.createObjectURL(blob);
+      a.download = `${ruleId}_evidence_${client}_${period}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+
+      window.URL.revokeObjectURL(a.href);
+    } catch (error) {
+      console.error('Evidence download error:', error);
+      alert(`Kanit indirme hatasi: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`);
+    } finally {
+      setDownloading(false);
+    }
+  }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -112,6 +161,25 @@ export default function ExplainModal({
 
         {/* Footer */}
         <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-2">
+          {ruleId && evidence_refs.length > 0 && (
+            <button
+              onClick={handleDownloadEvidence}
+              disabled={downloading}
+              className="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {downloading ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  Indiriliyor...
+                </>
+              ) : (
+                'Kanitlari Indir (ZIP)'
+              )}
+            </button>
+          )}
           <button
             onClick={onClose}
             className="px-4 py-2 bg-gray-200 text-gray-700 text-sm rounded hover:bg-gray-300"
