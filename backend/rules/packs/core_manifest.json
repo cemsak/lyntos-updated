@@ -1,0 +1,270 @@
+{
+  "manifest_version": "1.0.0",
+  "pack_name": "lyntos-core-rulepack",
+  "pack_version": "1.0.0",
+  "generated_at": "2026-01-03T14:11:12.751917+00:00",
+  "pack_hash": "809b35dcbe25b81dd69b76316b0a65335209390716851516c8e9097b33d58abd",
+  "rule_count": 25,
+  "categories": [
+    "VDK_RISK",
+    "GVK",
+    "KV_BRIDGE",
+    "CROSS_CHECK",
+    "SGK",
+    "MIZAN",
+    "KDV",
+    "INFLATION"
+  ],
+  "rules": [
+    {
+      "rule_id": "R-001",
+      "name": "Kasa Risk Analizi",
+      "version": "1.0.0",
+      "category": "VDK_RISK",
+      "priority": "HIGH",
+      "legal_basis_refs": [
+        "SRC-0047"
+      ]
+    },
+    {
+      "rule_id": "R-002",
+      "name": "Banka Hesap Adedi Risk",
+      "version": "1.0.0",
+      "category": "VDK_RISK",
+      "priority": "MEDIUM",
+      "legal_basis_refs": [
+        "SRC-0046"
+      ]
+    },
+    {
+      "rule_id": "R-100",
+      "name": "Mizan vs KDV Beyani Kontrolu",
+      "version": "1.0.0",
+      "category": "CROSS_CHECK",
+      "priority": "HIGH",
+      "legal_basis_refs": [
+        "SRC-0045"
+      ]
+    },
+    {
+      "rule_id": "R-101",
+      "name": "Mizan vs E-Fatura Kontrolu",
+      "version": "1.0.0",
+      "category": "CROSS_CHECK",
+      "priority": "HIGH",
+      "legal_basis_refs": [
+        "SRC-0012"
+      ]
+    },
+    {
+      "rule_id": "R-102",
+      "name": "Mizan vs Banka Kontrolu",
+      "version": "1.0.0",
+      "category": "CROSS_CHECK",
+      "priority": "HIGH",
+      "legal_basis_refs": [
+        "SRC-0046"
+      ]
+    },
+    {
+      "rule_id": "R-131",
+      "name": "Ortaklar Cari Hesap Risk",
+      "version": "1.0.0",
+      "category": "VDK_RISK",
+      "priority": "HIGH",
+      "legal_basis_refs": [
+        "SRC-0034"
+      ]
+    },
+    {
+      "rule_id": "R-150",
+      "name": "Stok Devir Hizi Analizi",
+      "version": "1.0.0",
+      "category": "VDK_RISK",
+      "priority": "MEDIUM",
+      "legal_basis_refs": [
+        "SRC-0048"
+      ]
+    },
+    {
+      "rule_id": "R-191",
+      "name": "Indirilecek KDV Kontrolu",
+      "version": "1.0.0",
+      "category": "KDV",
+      "priority": "HIGH",
+      "legal_basis_refs": [
+        "SRC-0003"
+      ]
+    },
+    {
+      "rule_id": "R-320",
+      "name": "Borc Ozkaynak Orani",
+      "version": "1.0.0",
+      "category": "MIZAN",
+      "priority": "MEDIUM",
+      "legal_basis_refs": [
+        "SRC-0001"
+      ]
+    },
+    {
+      "rule_id": "R-400",
+      "name": "Sermaye Yeterlilik Kontrolu",
+      "version": "1.0.0",
+      "category": "KV_BRIDGE",
+      "priority": "HIGH",
+      "legal_basis_refs": [
+        "SRC-0001"
+      ]
+    },
+    {
+      "rule_id": "R-600",
+      "name": "Satis Trend Anomalisi",
+      "version": "1.0.0",
+      "category": "VDK_RISK",
+      "priority": "MEDIUM",
+      "legal_basis_refs": [
+        "SRC-0034"
+      ]
+    },
+    {
+      "rule_id": "R-646",
+      "name": "Vergi Provizyon Kontrolu",
+      "version": "1.0.0",
+      "category": "KV_BRIDGE",
+      "priority": "HIGH",
+      "legal_basis_refs": [
+        "SRC-0001"
+      ]
+    },
+    {
+      "rule_id": "R-679",
+      "name": "Diger Gelirler Analizi",
+      "version": "1.0.0",
+      "category": "VDK_RISK",
+      "priority": "MEDIUM",
+      "legal_basis_refs": [
+        "SRC-0034"
+      ]
+    },
+    {
+      "rule_id": "R-770",
+      "name": "Finansal Gelir Kontrolu",
+      "version": "1.0.0",
+      "category": "VDK_RISK",
+      "priority": "LOW",
+      "legal_basis_refs": [
+        "SRC-0001"
+      ]
+    },
+    {
+      "rule_id": "R-GV1",
+      "name": "Gecici Vergi Q1 Kontrolu",
+      "version": "1.0.0",
+      "category": "GVK",
+      "priority": "HIGH",
+      "legal_basis_refs": [
+        "SRC-0023"
+      ]
+    },
+    {
+      "rule_id": "R-GV2",
+      "name": "Gecici Vergi Q2 Kontrolu",
+      "version": "1.0.0",
+      "category": "GVK",
+      "priority": "HIGH",
+      "legal_basis_refs": [
+        "SRC-0023"
+      ]
+    },
+    {
+      "rule_id": "R-GV3",
+      "name": "Gecici Vergi Q3 Kontrolu",
+      "version": "1.0.0",
+      "category": "GVK",
+      "priority": "HIGH",
+      "legal_basis_refs": [
+        "SRC-0023"
+      ]
+    },
+    {
+      "rule_id": "R-KV1",
+      "name": "KKEG Para Cezasi Kontrolu",
+      "version": "1.0.0",
+      "category": "KV_BRIDGE",
+      "priority": "HIGH",
+      "legal_basis_refs": [
+        "SRC-0026"
+      ]
+    },
+    {
+      "rule_id": "R-KV2",
+      "name": "KKEG Ortulu Sermaye Kontrolu",
+      "version": "1.0.0",
+      "category": "KV_BRIDGE",
+      "priority": "HIGH",
+      "legal_basis_refs": [
+        "SRC-0001"
+      ]
+    },
+    {
+      "rule_id": "R-KV3",
+      "name": "Istirak Kazanci Istisnasi",
+      "version": "1.0.0",
+      "category": "KV_BRIDGE",
+      "priority": "MEDIUM",
+      "legal_basis_refs": [
+        "SRC-0025"
+      ]
+    },
+    {
+      "rule_id": "R-KV4",
+      "name": "Ar-Ge Indirimi Kontrolu",
+      "version": "1.0.0",
+      "category": "KV_BRIDGE",
+      "priority": "MEDIUM",
+      "legal_basis_refs": [
+        "SRC-0014"
+      ]
+    },
+    {
+      "rule_id": "R-KV5",
+      "name": "Gecmis Zarar Mahsubu",
+      "version": "1.0.0",
+      "category": "KV_BRIDGE",
+      "priority": "HIGH",
+      "legal_basis_refs": [
+        "SRC-0001"
+      ]
+    },
+    {
+      "rule_id": "R-SGK",
+      "name": "SGK Prim Provizyon Kontrolu",
+      "version": "1.0.0",
+      "category": "SGK",
+      "priority": "MEDIUM",
+      "legal_basis_refs": [
+        "SRC-0016"
+      ]
+    },
+    {
+      "rule_id": "R-TMS",
+      "name": "Enflasyon Duzeltme Kontrolu",
+      "version": "1.0.0",
+      "category": "INFLATION",
+      "priority": "HIGH",
+      "legal_basis_refs": [
+        "SRC-0006"
+      ]
+    },
+    {
+      "rule_id": "R-VUK",
+      "name": "Defter Beyan Tutarliligi",
+      "version": "1.0.0",
+      "category": "VDK_RISK",
+      "priority": "HIGH",
+      "legal_basis_refs": [
+        "SRC-0013"
+      ]
+    }
+  ]
+}

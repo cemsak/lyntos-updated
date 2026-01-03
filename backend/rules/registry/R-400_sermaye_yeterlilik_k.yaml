@@ -1,0 +1,48 @@
+rule_id: R-400
+name: "Sermaye Yeterlilik Kontrolu"
+version: "1.0.0"
+category: "KV_BRIDGE"
+priority: "HIGH"
+description: |
+  Odenmi sermayenin yasal sinirin uzerinde olup olmadigini kontrol eder.
+
+legal_basis_refs:
+  - SRC-0001
+
+inputs:
+  - name: odenmis_sermaye
+    type: decimal
+    required: true
+    description: "Odenmis sermaye" 
+  - name: yasal_sinir
+    type: decimal
+    required: true
+    description: "Yasal asgari sermaye" 
+
+algorithm: |
+  if odenmis_sermaye < yasal_sinir:
+    status = 'error'
+  else:
+    status = 'ok'
+
+thresholds:\n  error: 50000
+
+evidence_required:
+  - ticaret_sicil.pdf
+
+test_cases:
+  - name: "Yeterli"
+    inputs:
+      odenmis_sermaye: 100000
+      yasal_sinir: 50000
+    expected:
+      status: "ok"
+  - name: "Yetersiz"
+    inputs:
+      odenmis_sermaye: 40000
+      yasal_sinir: 50000
+    expected:
+      status: "error"
+
+created_at: "2026-01-01T00:00:00Z"
+updated_at: "2026-01-01T00:00:00Z"

@@ -1,0 +1,56 @@
+rule_id: R-101
+name: "Mizan vs E-Fatura Kontrolu"
+version: "1.0.0"
+category: "CROSS_CHECK"
+priority: "HIGH"
+description: |
+  Mizan 600 hesabi ile E-Fatura toplamini karsilastirir.
+  E-Fatura Teknik Kilavuzu
+
+legal_basis_refs:
+  - SRC-0012
+
+inputs:
+  - name: mizan_600
+    type: decimal
+    required: true
+    description: "Mizan 600 hesap bakiyesi"
+
+  - name: efatura_toplam
+    type: decimal
+    required: true
+    description: "E-Fatura toplam tutari"
+
+algorithm: |
+  fark = abs(mizan_600 - efatura_toplam)
+
+  if fark > 100 and fark > (mizan_600 * 0.05):
+    status = "warning"
+  else:
+    status = "ok"
+
+thresholds:
+  absolute: 100
+  percentage: 0.05
+
+evidence_required:
+  - mizan_600.csv
+  - efatura_raporu.pdf
+
+test_cases:
+  - name: "Uyumlu"
+    inputs:
+      mizan_600: 1000000
+      efatura_toplam: 1000000
+    expected:
+      status: "ok"
+
+  - name: "Fark var"
+    inputs:
+      mizan_600: 1000000
+      efatura_toplam: 900000
+    expected:
+      status: "warning"
+
+created_at: "2026-01-01T00:00:00Z"
+updated_at: "2026-01-01T00:00:00Z"

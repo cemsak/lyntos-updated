@@ -1,0 +1,128 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "RuleCard",
+  "description": "LYNTOS Rule Card Schema - VDK/KV/VUK Kural Tanimi",
+  "type": "object",
+  "required": [
+    "rule_id",
+    "name",
+    "version",
+    "category",
+    "legal_basis_refs",
+    "inputs",
+    "algorithm"
+  ],
+  "properties": {
+    "rule_id": {
+      "type": "string",
+      "pattern": "^R-[A-Z0-9-]+$",
+      "description": "Kural tanimlayicisi (ornegin R-001, R-KV1)"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 5,
+      "description": "Kural adi (Turkce)"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "description": "Semantik versiyon (ornegin 1.0.0)"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "VDK_RISK",
+        "KV_BRIDGE",
+        "CROSS_CHECK",
+        "INFLATION",
+        "MIZAN",
+        "KDV",
+        "GVK",
+        "SGK"
+      ],
+      "description": "Kural kategorisi"
+    },
+    "priority": {
+      "type": "string",
+      "enum": ["HIGH", "MEDIUM", "LOW"],
+      "default": "MEDIUM"
+    },
+    "description": {
+      "type": "string",
+      "description": "Kural aciklamasi"
+    },
+    "legal_basis_refs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^SRC-[0-9]{4}$"
+      },
+      "minItems": 1,
+      "description": "Source Registry ID'leri"
+    },
+    "inputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "type", "required"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Girdi degisken adi"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["decimal", "string", "date", "array", "boolean", "integer"],
+            "description": "Girdi veri tipi"
+          },
+          "required": {
+            "type": "boolean",
+            "description": "Zorunlu mu?"
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      },
+      "minItems": 1
+    },
+    "algorithm": {
+      "type": "string",
+      "minLength": 10,
+      "description": "Kural algoritmasi (pseudocode veya Python)"
+    },
+    "thresholds": {
+      "type": "object",
+      "description": "Esik degerleri (warning/error)"
+    },
+    "evidence_required": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Gerekli kanit dosyalari"
+    },
+    "test_cases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "inputs", "expected"],
+        "properties": {
+          "name": {"type": "string"},
+          "inputs": {"type": "object"},
+          "expected": {"type": "object"}
+        }
+      },
+      "minItems": 2,
+      "description": "Test senaryolari"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

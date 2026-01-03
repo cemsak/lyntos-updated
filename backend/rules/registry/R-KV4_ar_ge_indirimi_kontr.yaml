@@ -1,0 +1,49 @@
+rule_id: R-KV4
+name: "Ar-Ge Indirimi Kontrolu"
+version: "1.0.0"
+category: "KV_BRIDGE"
+priority: "MEDIUM"
+description: |
+  Ar-Ge indiriminin dogru hesaplanip hesaplanmadigini kontrol eder.
+
+legal_basis_refs:
+  - SRC-0014
+
+inputs:
+  - name: arge_harcama
+    type: decimal
+    required: true
+    description: "Ar-Ge harcamalari" 
+  - name: arge_indirimi
+    type: decimal
+    required: true
+    description: "Beyan edilen Ar-Ge indirimi" 
+
+algorithm: |
+  beklenen = arge_harcama * 1.00
+  if arge_indirimi > beklenen * 1.05:
+    status = 'warning'
+  else:
+    status = 'ok'
+
+thresholds:\n  warning: 1.05
+
+evidence_required:
+  - arge_belgesi.pdf
+
+test_cases:
+  - name: "Dogru"
+    inputs:
+      arge_harcama: 100000
+      arge_indirimi: 100000
+    expected:
+      status: "ok"
+  - name: "Fazla"
+    inputs:
+      arge_harcama: 100000
+      arge_indirimi: 120000
+    expected:
+      status: "warning"
+
+created_at: "2026-01-01T00:00:00Z"
+updated_at: "2026-01-01T00:00:00Z"

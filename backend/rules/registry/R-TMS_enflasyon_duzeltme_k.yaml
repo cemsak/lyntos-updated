@@ -1,0 +1,48 @@
+rule_id: R-TMS
+name: "Enflasyon Duzeltme Kontrolu"
+version: "1.0.0"
+category: "INFLATION"
+priority: "HIGH"
+description: |
+  Enflasyon duzeltmesi uygulanip uygulanmadigini kontrol eder.
+
+legal_basis_refs:
+  - SRC-0006
+
+inputs:
+  - name: yiufe_3yil
+    type: decimal
+    required: true
+    description: "3 yillik Yi-UFE artisi" 
+  - name: duzeltme_yapildi
+    type: boolean
+    required: true
+    description: "Duzeltme yapildi mi" 
+
+algorithm: |
+  if yiufe_3yil >= 1.0 and not duzeltme_yapildi:
+    status = 'error'
+  else:
+    status = 'ok'
+
+thresholds:\n  threshold: 1.0
+
+evidence_required:
+  - enflasyon_duzeltme_raporu.pdf
+
+test_cases:
+  - name: "Yapilmis"
+    inputs:
+      yiufe_3yil: 1.5
+      duzeltme_yapildi: True
+    expected:
+      status: "ok"
+  - name: "Yapilmamis"
+    inputs:
+      yiufe_3yil: 1.5
+      duzeltme_yapildi: False
+    expected:
+      status: "error"
+
+created_at: "2026-01-01T00:00:00Z"
+updated_at: "2026-01-01T00:00:00Z"

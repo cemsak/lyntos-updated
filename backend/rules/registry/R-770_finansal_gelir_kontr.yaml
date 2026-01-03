@@ -1,0 +1,49 @@
+rule_id: R-770
+name: "Finansal Gelir Kontrolu"
+version: "1.0.0"
+category: "VDK_RISK"
+priority: "LOW"
+description: |
+  Finansal gelirlerin uygunlugunu kontrol eder.
+
+legal_basis_refs:
+  - SRC-0001
+
+inputs:
+  - name: finansal_gelir
+    type: decimal
+    required: true
+    description: "770 Finansal gelirler" 
+  - name: ortalama_mevduat
+    type: decimal
+    required: true
+    description: "Ortalama mevduat" 
+
+algorithm: |
+  beklenen = ortalama_mevduat * 0.20
+  if finansal_gelir > beklenen * 1.5:
+    status = 'warning'
+  else:
+    status = 'ok'
+
+thresholds:\n  warning: 1.5
+
+evidence_required:
+  - banka_faiz_dekont.pdf
+
+test_cases:
+  - name: "Normal"
+    inputs:
+      finansal_gelir: 15000
+      ortalama_mevduat: 100000
+    expected:
+      status: "ok"
+  - name: "Yuksek"
+    inputs:
+      finansal_gelir: 50000
+      ortalama_mevduat: 100000
+    expected:
+      status: "warning"
+
+created_at: "2026-01-01T00:00:00Z"
+updated_at: "2026-01-01T00:00:00Z"

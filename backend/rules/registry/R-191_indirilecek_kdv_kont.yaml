@@ -1,0 +1,49 @@
+rule_id: R-191
+name: "Indirilecek KDV Kontrolu"
+version: "1.0.0"
+category: "KDV"
+priority: "HIGH"
+description: |
+  Indirilecek KDV'nin satislara oranini kontrol eder.
+
+legal_basis_refs:
+  - SRC-0003
+
+inputs:
+  - name: indirilecek_kdv
+    type: decimal
+    required: true
+    description: "191 Indirilecek KDV" 
+  - name: hesaplanan_kdv
+    type: decimal
+    required: true
+    description: "391 Hesaplanan KDV" 
+
+algorithm: |
+  oran = indirilecek_kdv / hesaplanan_kdv if hesaplanan_kdv > 0 else 0
+  if oran > 0.95:
+    status = 'warning'
+  else:
+    status = 'ok'
+
+thresholds:\n  warning: 0.95
+
+evidence_required:
+  - mizan_191.csv\n  - kdv_beyani.pdf
+
+test_cases:
+  - name: "Normal"
+    inputs:
+      indirilecek_kdv: 80000
+      hesaplanan_kdv: 100000
+    expected:
+      status: "ok"
+  - name: "Yuksek"
+    inputs:
+      indirilecek_kdv: 98000
+      hesaplanan_kdv: 100000
+    expected:
+      status: "warning"
+
+created_at: "2026-01-01T00:00:00Z"
+updated_at: "2026-01-01T00:00:00Z"

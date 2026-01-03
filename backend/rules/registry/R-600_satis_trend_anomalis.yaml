@@ -1,0 +1,49 @@
+rule_id: R-600
+name: "Satis Trend Anomalisi"
+version: "1.0.0"
+category: "VDK_RISK"
+priority: "MEDIUM"
+description: |
+  Satis trendinde ani dususleri tespit eder.
+
+legal_basis_refs:
+  - SRC-0034
+
+inputs:
+  - name: cari_donem_satis
+    type: decimal
+    required: true
+    description: "Cari donem satis" 
+  - name: onceki_donem_satis
+    type: decimal
+    required: true
+    description: "Onceki donem satis" 
+
+algorithm: |
+  degisim = (cari_donem_satis - onceki_donem_satis) / onceki_donem_satis if onceki_donem_satis > 0 else 0
+  if degisim < -0.30:
+    status = 'warning'
+  else:
+    status = 'ok'
+
+thresholds:\n  warning: -0.3
+
+evidence_required:
+  - satis_raporu.pdf
+
+test_cases:
+  - name: "Normal"
+    inputs:
+      cari_donem_satis: 900000
+      onceki_donem_satis: 1000000
+    expected:
+      status: "ok"
+  - name: "Ani dusus"
+    inputs:
+      cari_donem_satis: 600000
+      onceki_donem_satis: 1000000
+    expected:
+      status: "warning"
+
+created_at: "2026-01-01T00:00:00Z"
+updated_at: "2026-01-01T00:00:00Z"

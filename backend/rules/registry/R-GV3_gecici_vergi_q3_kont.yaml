@@ -1,0 +1,57 @@
+rule_id: R-GV3
+name: "Gecici Vergi Q3 Kontrolu"
+version: "1.0.0"
+category: "GVK"
+priority: "HIGH"
+description: |
+  Q3 gecici vergi hesaplamasini kontrol eder ((Q1+Q2+Q3) x 1.33).
+
+legal_basis_refs:
+  - SRC-0023
+
+inputs:
+  - name: toplam_kar
+    type: decimal
+    required: true
+    description: "9 aylik toplam kar" 
+  - name: onceki_odemeler
+    type: decimal
+    required: true
+    description: "Q1+Q2 odenen vergi" 
+  - name: beyan_edilen
+    type: decimal
+    required: true
+    description: "Q3 beyan edilen vergi" 
+
+algorithm: |
+  yillik_tahmin = toplam_kar * 1.33
+  hesaplanan = (yillik_tahmin * 0.25) - onceki_odemeler
+  fark = abs(beyan_edilen - hesaplanan)
+  if fark > abs(hesaplanan) * 0.05:
+    status = 'warning'
+  else:
+    status = 'ok'
+
+thresholds:\n  warning: 0.05
+
+evidence_required:
+  - gecici_vergi_beyani.pdf
+
+test_cases:
+  - name: "Dogru"
+    inputs:
+      toplam_kar: 300000
+      onceki_odemeler: 50000
+      beyan_edilen: 50000
+    expected:
+      status: "ok"
+  - name: "Farkli"
+    inputs:
+      toplam_kar: 300000
+      onceki_odemeler: 50000
+      beyan_edilen: 10000
+    expected:
+      status: "warning"
+
+created_at: "2026-01-01T00:00:00Z"
+updated_at: "2026-01-01T00:00:00Z"

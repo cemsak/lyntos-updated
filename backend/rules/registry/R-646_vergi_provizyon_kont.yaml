@@ -1,0 +1,49 @@
+rule_id: R-646
+name: "Vergi Provizyon Kontrolu"
+version: "1.0.0"
+category: "KV_BRIDGE"
+priority: "HIGH"
+description: |
+  Vergi karsiliginin hesaplanan vergiye uyumunu kontrol eder.
+
+legal_basis_refs:
+  - SRC-0001
+
+inputs:
+  - name: vergi_karsiligi
+    type: decimal
+    required: true
+    description: "370 Vergi karsiligi" 
+  - name: hesaplanan_vergi
+    type: decimal
+    required: true
+    description: "Hesaplanan KV" 
+
+algorithm: |
+  fark = abs(vergi_karsiligi - hesaplanan_vergi)
+  if fark > hesaplanan_vergi * 0.10:
+    status = 'warning'
+  else:
+    status = 'ok'
+
+thresholds:\n  warning: 0.1
+
+evidence_required:
+  - mizan_370.csv
+
+test_cases:
+  - name: "Uyumlu"
+    inputs:
+      vergi_karsiligi: 100000
+      hesaplanan_vergi: 105000
+    expected:
+      status: "ok"
+  - name: "Uyumsuz"
+    inputs:
+      vergi_karsiligi: 100000
+      hesaplanan_vergi: 150000
+    expected:
+      status: "warning"
+
+created_at: "2026-01-01T00:00:00Z"
+updated_at: "2026-01-01T00:00:00Z"

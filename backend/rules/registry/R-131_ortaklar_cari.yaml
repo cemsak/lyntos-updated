@@ -1,0 +1,57 @@
+rule_id: R-131
+name: "Ortaklar Cari Hesap Risk"
+version: "1.0.0"
+category: "VDK_RISK"
+priority: "HIGH"
+description: |
+  131 Ortaklar cari hesabinin ciroya oranini kontrol eder.
+  VDK 13 kriter
+
+legal_basis_refs:
+  - SRC-0034
+
+inputs:
+  - name: mizan_131
+    type: decimal
+    required: true
+    description: "131 Ortaklardan Alacaklar"
+
+  - name: ciro
+    type: decimal
+    required: true
+    description: "Donem cirosu"
+
+algorithm: |
+  oran = mizan_131 / ciro if ciro > 0 else 0
+
+  if oran > 0.10:
+    status = "warning"
+    reason = "Ortaklar cari orani yuksek"
+  else:
+    status = "ok"
+
+thresholds:
+  warning: 0.10
+  error: 0.20
+
+evidence_required:
+  - mizan_131.csv
+  - ortaklar_mutabakat.pdf
+
+test_cases:
+  - name: "Normal"
+    inputs:
+      mizan_131: 100000
+      ciro: 5000000
+    expected:
+      status: "ok"
+
+  - name: "Yuksek"
+    inputs:
+      mizan_131: 600000
+      ciro: 5000000
+    expected:
+      status: "warning"
+
+created_at: "2026-01-01T00:00:00Z"
+updated_at: "2026-01-01T00:00:00Z"

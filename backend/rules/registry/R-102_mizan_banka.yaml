@@ -1,0 +1,56 @@
+rule_id: R-102
+name: "Mizan vs Banka Kontrolu"
+version: "1.0.0"
+category: "CROSS_CHECK"
+priority: "HIGH"
+description: |
+  Mizan 102 hesabi ile banka ekstre bakiyesini karsilastirir.
+  VUK Madde 219 Banka mutabakati
+
+legal_basis_refs:
+  - SRC-0046
+
+inputs:
+  - name: mizan_102
+    type: decimal
+    required: true
+    description: "Mizan 102 hesap bakiyesi"
+
+  - name: banka_bakiye
+    type: decimal
+    required: true
+    description: "Banka ekstre bakiyesi"
+
+algorithm: |
+  fark = abs(mizan_102 - banka_bakiye)
+
+  if fark > 100 and fark > (mizan_102 * 0.05):
+    status = "warning"
+  else:
+    status = "ok"
+
+thresholds:
+  absolute: 100
+  percentage: 0.05
+
+evidence_required:
+  - mizan_102.csv
+  - banka_ekstresi.pdf
+
+test_cases:
+  - name: "Uyumlu"
+    inputs:
+      mizan_102: 500000
+      banka_bakiye: 500000
+    expected:
+      status: "ok"
+
+  - name: "Uyumsuz"
+    inputs:
+      mizan_102: 500000
+      banka_bakiye: 450000
+    expected:
+      status: "warning"
+
+created_at: "2026-01-01T00:00:00Z"
+updated_at: "2026-01-01T00:00:00Z"

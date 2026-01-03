@@ -1,0 +1,52 @@
+rule_id: R-150
+name: "Stok Devir Hizi Analizi"
+version: "1.0.0"
+category: "VDK_RISK"
+priority: "MEDIUM"
+description: |
+  Stok devir hizini sektör ortalamasiyla karsilastirir.
+
+legal_basis_refs:
+  - SRC-0048
+
+inputs:
+  - name: stok_bakiye
+    type: decimal
+    required: true
+    description: "Stok bakiyesi" 
+  - name: satis_maliyeti
+    type: decimal
+    required: true
+    description: "Satislarin maliyeti" 
+
+algorithm: |
+  devir = satis_maliyeti / stok_bakiye if stok_bakiye > 0 else 0
+  if devir < 2:
+    status = 'warning'
+  else:
+    status = 'ok'
+
+thresholds:
+  warning: 2
+  error: 1
+
+evidence_required:
+  - mizan_150.csv
+  - stok_raporu.pdf
+
+test_cases:
+  - name: "Normal"
+    inputs:
+      stok_bakiye: 100000
+      satis_maliyeti: 300000
+    expected:
+      status: "ok"
+  - name: "Dusuk"
+    inputs:
+      stok_bakiye: 200000
+      satis_maliyeti: 300000
+    expected:
+      status: "warning"
+
+created_at: "2026-01-01T00:00:00Z"
+updated_at: "2026-01-01T00:00:00Z"

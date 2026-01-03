@@ -1,0 +1,49 @@
+rule_id: R-679
+name: "Diger Gelirler Analizi"
+version: "1.0.0"
+category: "VDK_RISK"
+priority: "MEDIUM"
+description: |
+  Diger gelirlerin olagandisi yuksekligini tespit eder.
+
+legal_basis_refs:
+  - SRC-0034
+
+inputs:
+  - name: diger_gelirler
+    type: decimal
+    required: true
+    description: "679 Diger gelirler" 
+  - name: toplam_gelir
+    type: decimal
+    required: true
+    description: "Toplam gelir" 
+
+algorithm: |
+  oran = diger_gelirler / toplam_gelir if toplam_gelir > 0 else 0
+  if oran > 0.20:
+    status = 'warning'
+  else:
+    status = 'ok'
+
+thresholds:\n  warning: 0.2
+
+evidence_required:
+  - gelir_tablosu.pdf
+
+test_cases:
+  - name: "Normal"
+    inputs:
+      diger_gelirler: 100000
+      toplam_gelir: 1000000
+    expected:
+      status: "ok"
+  - name: "Yuksek"
+    inputs:
+      diger_gelirler: 300000
+      toplam_gelir: 1000000
+    expected:
+      status: "warning"
+
+created_at: "2026-01-01T00:00:00Z"
+updated_at: "2026-01-01T00:00:00Z"

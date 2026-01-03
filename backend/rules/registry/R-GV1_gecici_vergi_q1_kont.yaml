@@ -1,0 +1,51 @@
+rule_id: R-GV1
+name: "Gecici Vergi Q1 Kontrolu"
+version: "1.0.0"
+category: "GVK"
+priority: "HIGH"
+description: |
+  Q1 gecici vergi hesaplamasini kontrol eder (Kar x 4).
+
+legal_basis_refs:
+  - SRC-0023
+
+inputs:
+  - name: q1_kar
+    type: decimal
+    required: true
+    description: "Q1 kari" 
+  - name: beyan_edilen
+    type: decimal
+    required: true
+    description: "Beyan edilen gecici vergi" 
+
+algorithm: |
+  yillik_tahmin = q1_kar * 4
+  hesaplanan = yillik_tahmin * 0.25
+  fark = abs(beyan_edilen - hesaplanan)
+  if fark > hesaplanan * 0.05:
+    status = 'warning'
+  else:
+    status = 'ok'
+
+thresholds:\n  warning: 0.05
+
+evidence_required:
+  - gecici_vergi_beyani.pdf
+
+test_cases:
+  - name: "Dogru"
+    inputs:
+      q1_kar: 100000
+      beyan_edilen: 100000
+    expected:
+      status: "ok"
+  - name: "Farkli"
+    inputs:
+      q1_kar: 100000
+      beyan_edilen: 80000
+    expected:
+      status: "warning"
+
+created_at: "2026-01-01T00:00:00Z"
+updated_at: "2026-01-01T00:00:00Z"

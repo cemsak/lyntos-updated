@@ -1,0 +1,48 @@
+rule_id: R-KV3
+name: "Istirak Kazanci Istisnasi"
+version: "1.0.0"
+category: "KV_BRIDGE"
+priority: "MEDIUM"
+description: |
+  Istirak kazanclarinin istisna olarak beyan edilip edilmedigini kontrol eder.
+
+legal_basis_refs:
+  - SRC-0025
+
+inputs:
+  - name: istirak_kazanci
+    type: decimal
+    required: true
+    description: "Istiraklerden kar payi" 
+  - name: istisna_tutari
+    type: decimal
+    required: true
+    description: "Beyan edilen istisna" 
+
+algorithm: |
+  if istirak_kazanci > 0 and istisna_tutari < istirak_kazanci:
+    status = 'warning'
+  else:
+    status = 'ok'
+
+thresholds: {}
+
+evidence_required:
+  - kar_dagilim_karari.pdf
+
+test_cases:
+  - name: "Istisna uygulanmis"
+    inputs:
+      istirak_kazanci: 100000
+      istisna_tutari: 100000
+    expected:
+      status: "ok"
+  - name: "Eksik istisna"
+    inputs:
+      istirak_kazanci: 100000
+      istisna_tutari: 50000
+    expected:
+      status: "warning"
+
+created_at: "2026-01-01T00:00:00Z"
+updated_at: "2026-01-01T00:00:00Z"

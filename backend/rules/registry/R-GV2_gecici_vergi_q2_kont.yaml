@@ -1,0 +1,64 @@
+rule_id: R-GV2
+name: "Gecici Vergi Q2 Kontrolu"
+version: "1.0.0"
+category: "GVK"
+priority: "HIGH"
+description: |
+  Q2 gecici vergi hesaplamasini kontrol eder ((Q1+Q2) x 2).
+
+legal_basis_refs:
+  - SRC-0023
+
+inputs:
+  - name: q1_kar
+    type: decimal
+    required: true
+    description: "Q1 kari" 
+  - name: q2_kar
+    type: decimal
+    required: true
+    description: "Q2 kari" 
+  - name: q1_odeme
+    type: decimal
+    required: true
+    description: "Q1 odenen vergi" 
+  - name: beyan_edilen
+    type: decimal
+    required: true
+    description: "Q2 beyan edilen vergi" 
+
+algorithm: |
+  toplam = q1_kar + q2_kar
+  yillik_tahmin = toplam * 2
+  hesaplanan = (yillik_tahmin * 0.25) - q1_odeme
+  fark = abs(beyan_edilen - hesaplanan)
+  if fark > abs(hesaplanan) * 0.05:
+    status = 'warning'
+  else:
+    status = 'ok'
+
+thresholds:\n  warning: 0.05
+
+evidence_required:
+  - gecici_vergi_beyani.pdf
+
+test_cases:
+  - name: "Dogru"
+    inputs:
+      q1_kar: 100000
+      q2_kar: 110000
+      q1_odeme: 100000
+      beyan_edilen: 5000
+    expected:
+      status: "ok"
+  - name: "Farkli"
+    inputs:
+      q1_kar: 100000
+      q2_kar: 110000
+      q1_odeme: 100000
+      beyan_edilen: 50000
+    expected:
+      status: "warning"
+
+created_at: "2026-01-01T00:00:00Z"
+updated_at: "2026-01-01T00:00:00Z"

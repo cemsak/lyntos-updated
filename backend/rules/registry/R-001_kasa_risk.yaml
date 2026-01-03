@@ -1,0 +1,59 @@
+rule_id: R-001
+name: "Kasa Risk Analizi"
+version: "1.0.0"
+category: "VDK_RISK"
+priority: "HIGH"
+description: |
+  100 Kasa hesabinin ciroya gore oranini kontrol eder.
+  Esik: %2 (VUK Madde 229)
+
+legal_basis_refs:
+  - SRC-0047
+
+inputs:
+  - name: mizan_100
+    type: decimal
+    required: true
+    description: "100 Kasa bakiyesi"
+
+  - name: ciro
+    type: decimal
+    required: true
+    description: "Donem cirosu (600 hesap)"
+
+algorithm: |
+  oran = mizan_100 / ciro
+  esik = 0.02
+
+  if oran > esik:
+    status = "warning"
+    reason = f"Kasa tutari ciroya gore yuksek (%{oran*100:.1f})"
+  else:
+    status = "ok"
+    reason = "Kasa tutari normal"
+
+thresholds:
+  warning: 0.02
+  error: 0.05
+
+evidence_required:
+  - mizan_100.csv
+  - nakit_sayim_tutanagi.pdf
+
+test_cases:
+  - name: "Normal kasa"
+    inputs:
+      mizan_100: 50000
+      ciro: 5000000
+    expected:
+      status: "ok"
+
+  - name: "Yuksek kasa"
+    inputs:
+      mizan_100: 200000
+      ciro: 5000000
+    expected:
+      status: "warning"
+
+created_at: "2026-01-01T00:00:00Z"
+updated_at: "2026-01-01T00:00:00Z"

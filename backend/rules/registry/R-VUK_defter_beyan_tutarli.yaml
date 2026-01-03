@@ -1,0 +1,49 @@
+rule_id: R-VUK
+name: "Defter Beyan Tutarliligi"
+version: "1.0.0"
+category: "VDK_RISK"
+priority: "HIGH"
+description: |
+  E-Defter ve beyanname tutarliligini kontrol eder.
+
+legal_basis_refs:
+  - SRC-0013
+
+inputs:
+  - name: edefter_toplam
+    type: decimal
+    required: true
+    description: "E-Defter toplam" 
+  - name: beyan_toplam
+    type: decimal
+    required: true
+    description: "Beyanname toplam" 
+
+algorithm: |
+  fark = abs(edefter_toplam - beyan_toplam)
+  if fark > 100:
+    status = 'warning'
+  else:
+    status = 'ok'
+
+thresholds:\n  absolute: 100
+
+evidence_required:
+  - edefter_beratlar.pdf\n  - beyanname.pdf
+
+test_cases:
+  - name: "Tutarli"
+    inputs:
+      edefter_toplam: 1000000
+      beyan_toplam: 1000000
+    expected:
+      status: "ok"
+  - name: "Tutarsiz"
+    inputs:
+      edefter_toplam: 1000000
+      beyan_toplam: 1001000
+    expected:
+      status: "warning"
+
+created_at: "2026-01-01T00:00:00Z"
+updated_at: "2026-01-01T00:00:00Z"

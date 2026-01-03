@@ -1,0 +1,50 @@
+rule_id: R-KV2
+name: "KKEG Ortulu Sermaye Kontrolu"
+version: "1.0.0"
+category: "KV_BRIDGE"
+priority: "HIGH"
+description: |
+  Ortulu sermaye faiz giderlerinin KKEG olarak eklenip eklenmedigini kontrol eder.
+
+legal_basis_refs:
+  - SRC-0001
+
+inputs:
+  - name: ortak_borc
+    type: decimal
+    required: true
+    description: "Ortaklardan alinan borc" 
+  - name: ozkaynak
+    type: decimal
+    required: true
+    description: "Ozkaynak" 
+
+algorithm: |
+  oran = ortak_borc / ozkaynak if ozkaynak > 0 else 0
+  if oran > 3:
+    status = 'warning'
+    reason = 'Ortulu sermaye riski'
+  else:
+    status = 'ok'
+
+thresholds:\n  warning: 3
+
+evidence_required:
+  - ortak_borc_sozlesme.pdf
+
+test_cases:
+  - name: "Normal"
+    inputs:
+      ortak_borc: 100000
+      ozkaynak: 100000
+    expected:
+      status: "ok"
+  - name: "Ortulu sermaye"
+    inputs:
+      ortak_borc: 500000
+      ozkaynak: 100000
+    expected:
+      status: "warning"
+
+created_at: "2026-01-01T00:00:00Z"
+updated_at: "2026-01-01T00:00:00Z"

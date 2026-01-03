@@ -1,0 +1,48 @@
+rule_id: R-SGK
+name: "SGK Prim Provizyon Kontrolu"
+version: "1.0.0"
+category: "SGK"
+priority: "MEDIUM"
+description: |
+  SGK prim karsiliginin dogru ayrilip ayrilmadigini kontrol eder.
+
+legal_basis_refs:
+  - SRC-0016
+
+inputs:
+  - name: sgk_borcu
+    type: decimal
+    required: true
+    description: "SGK borc bakiyesi" 
+  - name: prim_karsiligi
+    type: decimal
+    required: true
+    description: "Ayrilan prim karsiligi" 
+
+algorithm: |
+  if sgk_borcu > 0 and prim_karsiligi < sgk_borcu * 0.9:
+    status = 'warning'
+  else:
+    status = 'ok'
+
+thresholds:\n  warning: 0.9
+
+evidence_required:
+  - sgk_borc_dokumu.pdf
+
+test_cases:
+  - name: "Yeterli"
+    inputs:
+      sgk_borcu: 100000
+      prim_karsiligi: 100000
+    expected:
+      status: "ok"
+  - name: "Yetersiz"
+    inputs:
+      sgk_borcu: 100000
+      prim_karsiligi: 50000
+    expected:
+      status: "warning"
+
+created_at: "2026-01-01T00:00:00Z"
+updated_at: "2026-01-01T00:00:00Z"
