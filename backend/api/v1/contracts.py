@@ -742,9 +742,9 @@ def contracts_portfolio(
     return JSONResponse(c)
 @router.get("/contracts/dossier/manifest")
 def contracts_dossier_manifest(
-    smmm: str = Query(...),
-    client: str = Query(...),
-    period: str = Query(..., description="örn: 2025-Q2"),
+    smmm: str = Query(default="HKOZKAN"),
+    client: str = Query(default="OZKAN_KIRTASIYE"),
+    period: str = Query(default="2025-Q2", description="Donem (YYYY-QN)"),
 ):
     """
     Ödül standardı: kanıt üretimi için 'manifest' contract.
@@ -863,9 +863,9 @@ def contracts_risk(code: str):
 
 @router.post("/refresh")
 def refresh(
-    smmm: str = Query(...),
-    client: str = Query(...),
-    period: str = Query(..., description="örn: 2025-Q2"),
+    smmm: str = Query(default="HKOZKAN"),
+    client: str = Query(default="OZKAN_KIRTASIYE"),
+    period: str = Query(default="2025-Q2", description="Donem (YYYY-QN)"),
 ):
     """
     Tek çağrıda:
@@ -1599,9 +1599,9 @@ def build_axis_d_contract_mizan_only(base_dir: Path, smmm_id: str, client_id: st
 @router.get("/contracts/axis/{axis}")
 def get_axis_contract(
     axis: str,
-    smmm: str = Query(...),
-    client: str = Query(...),
-    period: str = Query(...),
+    smmm: str = Query(default="HKOZKAN"),
+    client: str = Query(default="OZKAN_KIRTASIYE"),
+    period: str = Query(default="2025-Q2"),
 ):
     """
     Axis contracts (v50):
@@ -2675,9 +2675,9 @@ def _get_banka_data_for_kurgan(client_id: str, period: str) -> dict | None:
 
 @router.get("/contracts/kurgan-risk")
 async def get_kurgan_risk(
-    smmm_id: str = Query(..., description="SMMM ID"),
-    client_id: str = Query(..., description="Client ID"),
-    period: str = Query(..., description="Donem (orn: 2025-Q2)")
+    smmm_id: str = Query(default="HKOZKAN", description="SMMM ID"),
+    client_id: str = Query(default="OZKAN_KIRTASIYE", description="Musteri ID"),
+    period: str = Query(default="2025-Q2", description="Donem (YYYY-QN)")
 ):
     """
     KURGAN 13 kriter risk analizi
@@ -2776,9 +2776,9 @@ async def get_kurgan_risk(
 
 @router.get("/contracts/data-quality")
 async def get_data_quality(
-    smmm_id: str = Query(..., description="SMMM ID"),
-    client_id: str = Query(..., description="Client ID"),
-    period: str = Query(..., description="Donem (orn: 2025-Q2)")
+    smmm_id: str = Query(default="HKOZKAN", description="SMMM ID"),
+    client_id: str = Query(default="OZKAN_KIRTASIYE", description="Musteri ID"),
+    period: str = Query(default="2025-Q2", description="Donem (YYYY-QN)")
 ):
     """
     Data Quality + Actionable Tasks
@@ -2875,9 +2875,9 @@ async def get_data_quality(
 
 @router.get("/contracts/actionable-tasks")
 async def get_actionable_tasks(
-    smmm_id: str = Query(..., description="SMMM ID"),
-    client_id: str = Query(..., description="Client ID"),
-    period: str = Query(..., description="Donem")
+    smmm_id: str = Query(default="HKOZKAN", description="SMMM ID"),
+    client_id: str = Query(default="OZKAN_KIRTASIYE", description="Musteri ID"),
+    period: str = Query(default="2025-Q2", description="Donem (YYYY-QN)")
 ):
     """
     SMMM'ye BUGUN NE YAPMASI GEREKTIGINI soyler
@@ -2995,9 +2995,9 @@ async def get_actionable_tasks(
 
 @router.get("/contracts/corporate-tax")
 async def get_corporate_tax(
-    smmm_id: str = Query(..., description="SMMM ID"),
-    client_id: str = Query(..., description="Musteri ID"),
-    period: str = Query(..., description="Donem (YYYY-QN)")
+    smmm_id: str = Query(default="HKOZKAN", description="SMMM ID"),
+    client_id: str = Query(default="OZKAN_KIRTASIYE", description="Musteri ID"),
+    period: str = Query(default="2025-Q2", description="Donem (YYYY-QN)")
 ):
     """
     Kurumlar Vergisi beyani hesaplama
@@ -3067,9 +3067,9 @@ async def get_corporate_tax(
 
 @router.get("/contracts/corporate-tax-forecast")
 async def get_corporate_tax_forecast(
-    smmm_id: str = Query(..., description="SMMM ID"),
-    client_id: str = Query(..., description="Musteri ID"),
-    period: str = Query(..., description="Donem (YYYY-QN)"),
+    smmm_id: str = Query(default="HKOZKAN", description="SMMM ID"),
+    client_id: str = Query(default="OZKAN_KIRTASIYE", description="Musteri ID"),
+    period: str = Query(default="2025-Q2", description="Donem (YYYY-QN)"),
     scenario: str = Query("base", description="Senaryo: optimistic, base, pessimistic")
 ):
     """
@@ -3127,9 +3127,9 @@ async def get_corporate_tax_forecast(
 
 @router.get("/contracts/quarterly-tax")
 async def get_quarterly_tax(
-    smmm_id: str = Query(..., description="SMMM ID"),
-    client_id: str = Query(..., description="Musteri ID"),
-    period: str = Query(..., description="Donem (YYYY-QN)")
+    smmm_id: str = Query(default="HKOZKAN", description="SMMM ID"),
+    client_id: str = Query(default="OZKAN_KIRTASIYE", description="Musteri ID"),
+    period: str = Query(default="2025-Q2", description="Donem (YYYY-QN)")
 ):
     """
     Gecici vergi hesaplama
@@ -3201,9 +3201,9 @@ async def get_quarterly_tax(
 
 @router.get("/contracts/cross-check")
 async def get_cross_check(
-    smmm_id: str = Query(..., description="SMMM ID"),
-    client_id: str = Query(..., description="Musteri ID"),
-    period: str = Query(..., description="Donem (YYYY-QN)")
+    smmm_id: str = Query(default="HKOZKAN", description="SMMM ID"),
+    client_id: str = Query(default="OZKAN_KIRTASIYE", description="Musteri ID"),
+    period: str = Query(default="2025-Q2", description="Donem (YYYY-QN)")
 ):
     """
     Capraz kontrol matrisi
@@ -3321,9 +3321,9 @@ async def get_regwatch_status():
 
 @router.get("/contracts/export-pdf")
 async def export_pdf(
-    smmm_id: str = Query(..., description="SMMM ID"),
-    client_id: str = Query(..., description="Musteri ID"),
-    period: str = Query(..., description="Donem (YYYY-QN)")
+    smmm_id: str = Query(default="HKOZKAN", description="SMMM ID"),
+    client_id: str = Query(default="OZKAN_KIRTASIYE", description="Musteri ID"),
+    period: str = Query(default="2025-Q2", description="Donem (YYYY-QN)")
 ):
     """
     PDF rapor export
