@@ -3358,3 +3358,108 @@ async def export_pdf(
     except Exception as e:
         _kurgan_logger.error(f"PDF export hatasi: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# SOURCE REGISTRY ENDPOINTS
+# ════════════════════════════════════════════════════════════════════════════
+
+@router.get("/contracts/sources")
+async def list_sources(
+    kapsam: str = Query(default=None, description="Kapsam filtresi (KV, KDV, VUK, TMS, ...)"),
+    trust_class: str = Query(default=None, description="Trust class filtresi (A, B, C, D)")
+):
+    """
+    Tum yasal kaynaklari listele
+
+    Trust Classes:
+    - A: Resmi kaynak (Kanun, Teblig, Genelge)
+    - B: Yari-resmi (TURMOB Sirkuler)
+    - C: Yorumcu (Big4 Bulten)
+    - D: Diger
+    """
+    try:
+        from services.source_registry import source_registry
+
+        sources = source_registry.list_all(kapsam=kapsam, trust_class=trust_class)
+
+        return {
+            "schema": {
+                "name": "source_registry",
+                "version": "v1.0",
+                "generated_at": _iso_utc()
+            },
+            "data": {
+                "sources": [source_registry.to_dict(s) for s in sources],
+                "total": len(sources)
+            },
+            "trust_score": 1.0
+        }
+
+    except Exception as e:
+        _kurgan_logger.error(f"Source registry error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/contracts/sources/{source_id}")
+async def get_source(source_id: str):
+    """
+    Tek yasal kaynak detayi
+
+    Ornek: /contracts/sources/SRC-0023
+    """
+    try:
+        from services.source_registry import source_registry
+
+        source = source_registry.get(source_id)
+
+        if not source:
+            raise HTTPException(status_code=404, detail=f"Kaynak bulunamadi: {source_id}")
+
+        return {
+            "schema": {
+                "name": "source_detail",
+                "version": "v1.0",
+                "generated_at": _iso_utc()
+            },
+            "data": source_registry.to_dict(source),
+            "trust_score": 1.0
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        _kurgan_logger.error(f"Source detail error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/contracts/sources/resolve")
+async def resolve_sources(refs: list):
+    """
+    ID listesini detayli kaynaklara cevir
+
+    Body: ["SRC-0023", "SRC-0045"]
+    """
+    try:
+        from services.source_registry import source_registry
+
+        resolved = source_registry.resolve_refs(refs)
+
+        return {
+            "schema": {
+                "name": "source_resolution",
+                "version": "v1.0",
+                "generated_at": _iso_utc()
+            },
+            "data": {
+                "requested": refs,
+                "resolved": resolved,
+                "found": len(resolved),
+                "missing": [r for r in refs if r not in [s["id"] for s in resolved]]
+            },
+            "trust_score": 1.0
+        }
+
+    except Exception as e:
+        _kurgan_logger.error(f"Source resolve error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))

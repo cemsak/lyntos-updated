@@ -1,10 +1,13 @@
 'use client';
 
+import SourceLink from './SourceLink';
+
 interface ExplainModalProps {
   title: string;
   score?: number;
   reason: string;
-  legal_basis: string;
+  legal_basis?: string;           // Legacy: string format
+  legal_basis_refs?: string[];    // New: ID array format
   evidence_refs: string[];
   trust_score: number;
   onClose: () => void;
@@ -15,10 +18,14 @@ export default function ExplainModal({
   score,
   reason,
   legal_basis,
+  legal_basis_refs,
   evidence_refs,
   trust_score,
   onClose
 }: ExplainModalProps) {
+  // Determine if we have refs or legacy string
+  const hasRefs = legal_basis_refs && legal_basis_refs.length > 0;
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
@@ -49,12 +56,18 @@ export default function ExplainModal({
             <p className="text-sm text-gray-900">{reason}</p>
           </div>
 
-          {/* Legal Basis */}
+          {/* Legal Basis - New format with SourceLink */}
           <div>
-            <p className="text-sm font-semibold text-gray-700 mb-1">Yasal Dayanak</p>
-            <p className="text-sm text-gray-900 font-mono bg-gray-50 p-2 rounded">
-              {legal_basis}
-            </p>
+            <p className="text-sm font-semibold text-gray-700 mb-2">Yasal Dayanak</p>
+            {hasRefs ? (
+              <SourceLink refs={legal_basis_refs!} />
+            ) : legal_basis ? (
+              <p className="text-sm text-gray-900 font-mono bg-gray-50 p-2 rounded">
+                {legal_basis}
+              </p>
+            ) : (
+              <p className="text-sm text-gray-500">Yasal dayanak belirtilmemis</p>
+            )}
           </div>
 
           {/* Evidence */}

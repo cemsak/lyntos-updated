@@ -22,7 +22,7 @@ class CrossCheckResult:
     reason_tr: str
     evidence_refs: List[str]
     actions: List[str]
-    legal_basis: str
+    legal_basis_refs: List[str]  # ["SRC-0045", ...]
     trust_score: float = 1.0
 
 
@@ -79,7 +79,7 @@ class CrossCheckEngine:
             reason_tr=reason,
             evidence_refs=["mizan_600.csv", "kdv_beyani.pdf"],
             actions=actions,
-            legal_basis="VUK Madde 227 (Defter-Beyan uyumu)"
+            legal_basis_refs=["SRC-0045"]  # VUK Madde 227
         )
 
     def check_mizan_vs_efatura(
@@ -111,7 +111,7 @@ class CrossCheckEngine:
             reason_tr=reason,
             evidence_refs=["mizan_600.csv", "efatura_rapor.xml"],
             actions=actions,
-            legal_basis="E-Fatura Tebligi"
+            legal_basis_refs=["SRC-0012"]  # E-Fatura Teknik Kilavuzu
         )
 
     def check_mizan_vs_bank(
@@ -143,7 +143,7 @@ class CrossCheckEngine:
             reason_tr=reason,
             evidence_refs=["mizan_102.csv", "banka_ekstresi.pdf"],
             actions=actions,
-            legal_basis="VUK Madde 219 (Banka mutabakati)"
+            legal_basis_refs=["SRC-0046"]  # VUK Madde 219
         )
 
     def run_all_checks(self, data: Dict) -> List[CrossCheckResult]:

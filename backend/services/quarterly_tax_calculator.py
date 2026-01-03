@@ -8,7 +8,7 @@ Kaynak:
 Trust Score: 1.0
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 import logging
 
@@ -25,7 +25,7 @@ class QuarterlyTaxResult:
     calculated_tax: float  # Hesaplanan vergi
     previous_payments: float  # Onceki odemeler toplami
     payable: float  # Bu ceyrekte odenecek
-    legal_basis: str = "5520 KVK Md. 32"
+    legal_basis_refs: List[str] = field(default_factory=lambda: ["SRC-0023"])  # 5520 KVK Md. 32
     trust_score: float = 1.0
 
 
