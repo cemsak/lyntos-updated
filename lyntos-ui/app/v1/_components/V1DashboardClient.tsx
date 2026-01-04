@@ -156,13 +156,27 @@ export default function V1DashboardClient({ contract, ctx }: Props) {
         ]);
 
         if (alive) {
-          if (taxRes.ok) setCorporateTax(await taxRes.json());
-          if (quarterlyRes.ok) setQuarterlyTax(await quarterlyRes.json());
-          if (crossRes.ok) setCrossCheck(await crossRes.json());
-          if (regwatchRes.ok) setRegwatch(await regwatchRes.json());
+          // Extract .data from ResponseEnvelope structure
+          if (taxRes.ok) {
+            const res = await taxRes.json();
+            setCorporateTax(res.data || res);
+          }
+          if (quarterlyRes.ok) {
+            const res = await quarterlyRes.json();
+            setQuarterlyTax(res.data || res);
+          }
+          if (crossRes.ok) {
+            const res = await crossRes.json();
+            setCrossCheck(res.data || res);
+          }
+          if (regwatchRes.ok) {
+            const res = await regwatchRes.json();
+            setRegwatch(res.data || res);
+          }
           if (tasksRes.ok) {
             const t = await tasksRes.json();
-            setTasks(t.tasks || []);
+            const data = t.data || t;
+            setTasks(data.tasks || []);
           }
         }
       } catch (e: any) {
@@ -322,7 +336,7 @@ export default function V1DashboardClient({ contract, ctx }: Props) {
       )}
 
       {/* DONEM OZETI */}
-      {quarterlyTax && (
+      {quarterlyTax?.Q2 && (
         <div className="bg-white border border-gray-200 rounded-lg p-4">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-bold text-gray-900">Q2 2025 Donem Ozeti</h2>
@@ -333,25 +347,25 @@ export default function V1DashboardClient({ contract, ctx }: Props) {
             <div>
               <p className="text-xs text-gray-500 mb-1">Cari Kar (Q2)</p>
               <p className="text-xl font-mono font-bold text-gray-900">
-                {fmt(quarterlyTax.Q2.current_profit)} TL
+                {fmt(quarterlyTax.Q2?.current_profit)} TL
               </p>
             </div>
             <div>
               <p className="text-xs text-gray-500 mb-1">Yillik Tahmin</p>
               <p className="text-xl font-mono font-bold text-gray-900">
-                {fmt(quarterlyTax.Q2.annual_estimate)} TL
+                {fmt(quarterlyTax.Q2?.annual_estimate)} TL
               </p>
             </div>
             <div>
               <p className="text-xs text-gray-500 mb-1">Hesaplanan Vergi</p>
               <p className="text-xl font-mono font-bold text-red-600">
-                {fmt(quarterlyTax.Q2.calculated_tax)} TL
+                {fmt(quarterlyTax.Q2?.calculated_tax)} TL
               </p>
             </div>
             <div>
               <p className="text-xs text-gray-500 mb-1">Mahsup (Q1)</p>
               <p className="text-xl font-mono font-bold text-green-600">
-                -{fmt(quarterlyTax.Q2.previous_payments)} TL
+                -{fmt(quarterlyTax.Q2?.previous_payments)} TL
               </p>
             </div>
           </div>
@@ -360,7 +374,7 @@ export default function V1DashboardClient({ contract, ctx }: Props) {
             <div className="flex items-center justify-between">
               <span className="font-bold text-gray-900">Q2 ODENECEK</span>
               <span className="text-2xl font-mono font-bold text-red-700">
-                {fmt(quarterlyTax.Q2.payable)} TL
+                {fmt(quarterlyTax.Q2?.payable)} TL
               </span>
             </div>
           </div>
@@ -391,19 +405,19 @@ export default function V1DashboardClient({ contract, ctx }: Props) {
                 <tbody className="font-mono text-xs">
                   <tr className="border-b border-gray-200">
                     <td className="py-2">Q1</td>
-                    <td className="text-right">{fmt(quarterlyTax.Q1.current_profit)}</td>
-                    <td className="text-right">{fmt(quarterlyTax.Q1.annual_estimate)}</td>
-                    <td className="text-right text-red-600">{fmt(quarterlyTax.Q1.calculated_tax)}</td>
+                    <td className="text-right">{fmt(quarterlyTax?.Q1?.current_profit)}</td>
+                    <td className="text-right">{fmt(quarterlyTax?.Q1?.annual_estimate)}</td>
+                    <td className="text-right text-red-600">{fmt(quarterlyTax?.Q1?.calculated_tax)}</td>
                     <td className="text-right">0</td>
-                    <td className="text-right font-bold">{fmt(quarterlyTax.Q1.payable)}</td>
+                    <td className="text-right font-bold">{fmt(quarterlyTax?.Q1?.payable)}</td>
                   </tr>
                   <tr className="border-b border-gray-200">
                     <td className="py-2">Q2</td>
-                    <td className="text-right">{fmt(quarterlyTax.Q2.current_profit)}</td>
-                    <td className="text-right">{fmt(quarterlyTax.Q2.annual_estimate)}</td>
-                    <td className="text-right text-red-600">{fmt(quarterlyTax.Q2.calculated_tax)}</td>
-                    <td className="text-right text-green-600">-{fmt(quarterlyTax.Q2.previous_payments)}</td>
-                    <td className="text-right font-bold">{fmt(quarterlyTax.Q2.payable)}</td>
+                    <td className="text-right">{fmt(quarterlyTax?.Q2?.current_profit)}</td>
+                    <td className="text-right">{fmt(quarterlyTax?.Q2?.annual_estimate)}</td>
+                    <td className="text-right text-red-600">{fmt(quarterlyTax?.Q2?.calculated_tax)}</td>
+                    <td className="text-right text-green-600">-{fmt(quarterlyTax?.Q2?.previous_payments)}</td>
+                    <td className="text-right font-bold">{fmt(quarterlyTax?.Q2?.payable)}</td>
                   </tr>
                   <tr className="border-b border-gray-200 bg-gray-100">
                     <td className="py-2">Q3</td>
@@ -426,7 +440,7 @@ export default function V1DashboardClient({ contract, ctx }: Props) {
         )}
 
         {/* KV Projeksiyonu */}
-        {quarterlyTax && (
+        {quarterlyTax?.year_end_projection && (
           <details className="bg-white border border-gray-200 rounded-lg overflow-hidden">
             <summary className="px-4 py-3 cursor-pointer hover:bg-gray-50 font-semibold text-gray-900">
               Yil Sonu Kurumlar Vergisi Projeksiyonu
@@ -437,33 +451,33 @@ export default function V1DashboardClient({ contract, ctx }: Props) {
                   <tr className="border-b border-gray-200">
                     <td className="py-2 text-gray-700">Tahmini Yillik Kar</td>
                     <td className="text-right text-gray-900">
-                      {fmt(quarterlyTax.year_end_projection.estimated_annual_profit)} TL
+                      {fmt(quarterlyTax.year_end_projection?.estimated_annual_profit)} TL
                     </td>
                   </tr>
                   <tr className="border-b border-gray-200">
                     <td className="py-2 text-gray-700">Tahmini KV</td>
                     <td className="text-right text-red-600">
-                      {fmt(quarterlyTax.year_end_projection.estimated_corporate_tax)} TL
+                      {fmt(quarterlyTax.year_end_projection?.estimated_corporate_tax)} TL
                     </td>
                   </tr>
                   <tr className="border-b border-gray-200">
                     <td className="py-2 text-gray-700">Gecici Vergi Mahsubu</td>
                     <td className="text-right text-green-600">
-                      -{fmt(quarterlyTax.year_end_projection.quarterly_offset)} TL
+                      -{fmt(quarterlyTax.year_end_projection?.quarterly_offset)} TL
                     </td>
                   </tr>
                   <tr className="bg-blue-50">
                     <td className="py-3 font-bold text-blue-900">
-                      {quarterlyTax.year_end_projection.estimated_payable_or_refund >= 0 ? 'ODENECEK' : 'IADE'}
+                      {(quarterlyTax.year_end_projection?.estimated_payable_or_refund ?? 0) >= 0 ? 'ODENECEK' : 'IADE'}
                     </td>
                     <td className="text-right font-bold text-blue-900 text-lg">
-                      {fmt(Math.abs(quarterlyTax.year_end_projection.estimated_payable_or_refund))} TL
+                      {fmt(Math.abs(quarterlyTax.year_end_projection?.estimated_payable_or_refund ?? 0))} TL
                     </td>
                   </tr>
                 </tbody>
               </table>
               <p className="text-xs text-gray-600 mt-3">
-                Guven: {quarterlyTax.year_end_projection.confidence}
+                Guven: {quarterlyTax.year_end_projection?.confidence || '-'}
               </p>
             </div>
           </details>
