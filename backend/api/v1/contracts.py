@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import FileResponse, JSONResponse
 from pathlib import Path
+from datetime import datetime
 import json
 import glob
 import os
@@ -2909,7 +2910,8 @@ async def get_actionable_tasks(
     try:
         # Data quality al
         dq_response = await get_data_quality(smmm_id, client_id, period)
-        dq_data = json.loads(dq_response.body.decode("utf-8"))
+        # dq_response is a dict from wrap_response, not a Response object
+        dq_data = dq_response.get("data", {}) if isinstance(dq_response, dict) else {}
 
         tasks = dq_data.get("tasks", [])
 
