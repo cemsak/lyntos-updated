@@ -1,19 +1,27 @@
 """
-RegWatch: Mevzuat Izleme Motoru
+RegWatch: Mevzuat Izleme Motoru - ACTIVE MODE
 
 Kaynaklar:
 - resmigazete.gov.tr (gunluk)
 - gib.gov.tr/mevzuat (haftalik)
 - mevzuat.gov.tr (haftalik)
+- turmob.org.tr (haftalik)
 
-Trust Score: 1.0
+Trust Score: 1.0 (Tier 1 - Resmi Kaynaklar)
 """
 
 from dataclasses import dataclass
 from typing import List, Dict, Optional
-import hashlib
+import json
 import logging
 from datetime import datetime, timedelta
+import sys
+from pathlib import Path
+
+# Add parent to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from database.db import get_connection
 
 logger = logging.getLogger(__name__)
 
@@ -21,24 +29,24 @@ logger = logging.getLogger(__name__)
 @dataclass
 class MevzuatChange:
     """Mevzuat degisikligi"""
-    source: str  # "resmigazete", "gib", "mevzuat"
+    id: int
+    source: str  # "resmigazete", "gib", "mevzuat", "turmob"
     title: str
     url: str
     published_date: str
     content_hash: str
     impact_rules: List[str]  # Etkilenen rule_id'ler
     change_type: str  # "new", "amendment", "repeal"
+    status: str  # "pending", "approved", "rejected"
     trust_score: float = 1.0
 
 
 class RegWatchEngine:
     """
-    Mevzuat izleme motoru
+    Mevzuat izleme motoru - ACTIVE MODE
 
-    BOOTSTRAP MODE:
-    Ilk calistirmada gercek scraping yapilmaz.
-    Mock data ile sistem ayaga kalkar.
-    Production'da real scraper devreye girer.
+    BOOTSTRAP MODE: changes = "NA", trust_score = 0.0
+    ACTIVE MODE: Real database queries, trust_score = 1.0
     """
 
     SOURCES = [
@@ -48,7 +56,13 @@ class RegWatchEngine:
         {"id": "turmob", "name": "TURMOB Sirkuler", "url": "turmob.org.tr", "frequency": "weekly"}
     ]
 
-    def __init__(self, bootstrap_mode: bool = True):
+    def __init__(self, bootstrap_mode: bool = False):
+        """
+        Initialize RegWatch Engine
+
+        Args:
+            bootstrap_mode: If True, return "NA" instead of real counts
+        """
         self.bootstrap_mode = bootstrap_mode
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
 
@@ -57,21 +71,63 @@ class RegWatchEngine:
 
         if self.bootstrap_mode:
             return {
-                "changes": 0,
-                "status": "BOOTSTRAPPED",
-                "message": "Sistem baslatma modunda. Mevzuat kaynaklari henuz taranmiyor.",
+                "changes": "NA",
+                "status": "BOOTSTRAP",
+                "trust_score": 0.0,
+                "message": "Sistem baslatma modunda. Scraper calistirilmadi.",
                 "sources": [s["url"] for s in self.SOURCES],
                 "last_check": datetime.utcnow().isoformat() + "Z",
                 "items": []
             }
 
-        # TODO: Real scraping (production)
+        # ACTIVE MODE - Query database
+        cutoff = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')
+
+        with get_connection() as conn:
+            cursor = conn.cursor()
+
+            # Get count
+            cursor.execute(
+                "SELECT COUNT(*) FROM regwatch_events WHERE detected_at >= ?",
+                [cutoff]
+            )
+            count = cursor.fetchone()[0]
+
+            # Get events
+            cursor.execute(
+                """
+                SELECT id, event_type, source, title, canonical_url,
+                       published_date, impact_rules, status, detected_at
+                FROM regwatch_events
+                WHERE detected_at >= ?
+                ORDER BY detected_at DESC
+                LIMIT 20
+                """,
+                [cutoff]
+            )
+
+            events = []
+            for row in cursor.fetchall():
+                events.append({
+                    'id': row[0],
+                    'event_type': row[1],
+                    'source': row[2],
+                    'title': row[3],
+                    'canonical_url': row[4],
+                    'published_date': row[5],
+                    'impact_rules': json.loads(row[6]) if row[6] else [],
+                    'status': row[7],
+                    'detected_at': row[8]
+                })
+
         return {
-            "changes": 0,
+            "changes": count,
             "status": "ACTIVE",
-            "items": [],
+            "trust_score": 1.0,
             "sources": [s["url"] for s in self.SOURCES],
-            "last_check": datetime.utcnow().isoformat() + "Z"
+            "last_check": datetime.utcnow().isoformat() + "Z",
+            "items": events,
+            "pending_count": sum(1 for e in events if e['status'] == 'pending')
         }
 
     def check_last_30_days(self) -> Dict:
@@ -79,55 +135,121 @@ class RegWatchEngine:
 
         if self.bootstrap_mode:
             return {
-                "changes": 0,
-                "status": "BOOTSTRAPPED",
+                "changes": "NA",
+                "status": "BOOTSTRAP",
+                "trust_score": 0.0,
                 "impact_map": [],
                 "items": []
             }
 
+        cutoff = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+
+        with get_connection() as conn:
+            cursor = conn.cursor()
+
+            cursor.execute(
+                "SELECT COUNT(*) FROM regwatch_events WHERE detected_at >= ?",
+                [cutoff]
+            )
+            count = cursor.fetchone()[0]
+
+            # Impact map: which rules are affected most
+            cursor.execute(
+                """
+                SELECT impact_rules FROM regwatch_events
+                WHERE detected_at >= ? AND impact_rules IS NOT NULL
+                """,
+                [cutoff]
+            )
+
+            rule_counts = {}
+            for row in cursor.fetchall():
+                if row[0]:
+                    rules = json.loads(row[0])
+                    for rule in rules:
+                        rule_counts[rule] = rule_counts.get(rule, 0) + 1
+
+            impact_map = [
+                {'rule_id': rule, 'impact_count': count}
+                for rule, count in sorted(rule_counts.items(), key=lambda x: -x[1])
+            ]
+
         return {
-            "changes": 0,
+            "changes": count,
             "status": "ACTIVE",
-            "items": [],
-            "impact_map": []
+            "trust_score": 1.0,
+            "impact_map": impact_map[:10],  # Top 10 impacted rules
+            "items": []
         }
+
+    def get_pending_events(self) -> List[Dict]:
+        """Get events pending expert approval"""
+
+        with get_connection() as conn:
+            cursor = conn.cursor()
+
+            cursor.execute(
+                """
+                SELECT id, event_type, source, title, canonical_url,
+                       published_date, impact_rules, detected_at
+                FROM regwatch_events
+                WHERE status = 'pending'
+                ORDER BY detected_at DESC
+                """
+            )
+
+            events = []
+            for row in cursor.fetchall():
+                events.append({
+                    'id': row[0],
+                    'event_type': row[1],
+                    'source': row[2],
+                    'title': row[3],
+                    'canonical_url': row[4],
+                    'published_date': row[5],
+                    'impact_rules': json.loads(row[6]) if row[6] else [],
+                    'detected_at': row[7]
+                })
+
+        return events
 
     def get_sources(self) -> List[Dict]:
         """Izlenen kaynaklari dondur"""
         return self.SOURCES
 
-    def _calculate_hash(self, content: str) -> str:
-        """Icerik hash'i"""
-        return hashlib.sha256(content.encode()).hexdigest()[:16]
+    def get_statistics(self) -> Dict:
+        """Get RegWatch statistics"""
 
-    def _map_impact(self, change: MevzuatChange) -> List[str]:
-        """
-        Degisikligin hangi rule'lari etkiledigini belirle
+        with get_connection() as conn:
+            cursor = conn.cursor()
 
-        TODO: NLP/keyword matching
-        """
-        impact_rules = []
+            # Total counts by status
+            cursor.execute(
+                """
+                SELECT status, COUNT(*) as count
+                FROM regwatch_events
+                GROUP BY status
+                """
+            )
+            status_counts = {row[0]: row[1] for row in cursor.fetchall()}
 
-        title_upper = change.title.upper()
+            # Counts by source
+            cursor.execute(
+                """
+                SELECT source, COUNT(*) as count
+                FROM regwatch_events
+                GROUP BY source
+                """
+            )
+            source_counts = {row[0]: row[1] for row in cursor.fetchall()}
 
-        # KDV ile ilgili
-        if "KDV" in title_upper or "KATMA DEGER" in title_upper:
-            impact_rules.extend(["R-KDV-01", "R-KDV-02", "R-401A"])
-
-        # Kurumlar Vergisi
-        if "KURUMLAR" in title_upper:
-            impact_rules.extend(["R-KV-01", "R-501"])
-
-        # Gecici Vergi
-        if "GECICI VERGI" in title_upper:
-            impact_rules.append("R-GV-01")
-
-        # Enflasyon muhasebesi
-        if "ENFLASYON" in title_upper or "TMS 29" in title_upper:
-            impact_rules.append("R-ENFLASYON-01")
-
-        return impact_rules
+        return {
+            "total": sum(status_counts.values()),
+            "by_status": status_counts,
+            "by_source": source_counts,
+            "generated_at": datetime.utcnow().isoformat() + "Z"
+        }
 
 
-# Singleton instance
-regwatch_engine = RegWatchEngine(bootstrap_mode=True)
+# Singleton instance - ACTIVE MODE by default
+regwatch_engine = RegWatchEngine(bootstrap_mode=False)
