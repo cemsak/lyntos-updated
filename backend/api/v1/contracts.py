@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import FileResponse, JSONResponse
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 import glob
 import os
@@ -17,6 +17,23 @@ from schemas.response_envelope import wrap_response
 def _iso_utc() -> str:
     import time as _t
     return _t.strftime('%Y-%m-%dT%H:%M:%SZ', _t.gmtime())
+
+
+def _calculate_deadline(priority: str) -> str:
+    """Calculate deadline based on priority"""
+    days = {
+        "high": 7,
+        "medium": 14,
+        "low": 30
+    }
+    deadline_date = datetime.now() + timedelta(days=days.get(priority, 14))
+    return deadline_date.strftime("%Y-%m-%d")
+
+
+# TEST MODE for missing_data UI testing
+# Set to True to simulate missing data scenario
+_TEST_MISSING_DATA_MODE = False
+
 
 def _ensure_schema_meta(obj: dict, *, name: str, version: str) -> None:
     if not isinstance(obj, dict):
@@ -3172,6 +3189,47 @@ async def get_quarterly_tax(
         }
     """
     try:
+        # TEST MODE: Return missing_data response for UI testing
+        if _TEST_MISSING_DATA_MODE:
+            data = {
+                "ok": False,
+                "Q1": None,
+                "Q2": None,
+                "year_end_projection": None,
+                "reason_tr": "Gelir tablosu ve banka ekstreleri eksik",
+                "missing_data": [
+                    "gelir_tablosu_Q1.pdf",
+                    "gelir_tablosu_Q2.pdf",
+                    "banka_ekstresi_Q2.pdf"
+                ],
+                "required_actions": [
+                    "Q1 ve Q2 gelir tablolarini sisteme yukleyin",
+                    "Banka ekstrelerini temin edin",
+                    "Gelir hesaplarini kontrol edin"
+                ],
+                "deadline": _calculate_deadline("high"),
+                "priority": "high",
+                "legal_basis_refs": ["SRC-0023"],
+                "trust_score": 1.0,
+                "analysis": {
+                    "expert": {
+                        "reason_tr": "Hesaplama yapilamadi - eksik veri",
+                        "method": "Veri eksikligi nedeniyle hesaplama atlandı",
+                        "legal_basis_refs": ["SRC-0023"],
+                        "evidence_refs": [],
+                        "trust_score": 1.0,
+                        "computed_at": datetime.utcnow().isoformat() + "Z"
+                    }
+                }
+            }
+            return wrap_response(
+                endpoint_name="quarterly_tax",
+                smmm_id=smmm_id,
+                client_id=client_id,
+                period=period,
+                data=data
+            )
+
         from services.quarterly_tax_calculator import QuarterlyTaxCalculator
 
         # Portfolio'dan kar bilgilerini al (gercek veri veya mock)
@@ -3197,6 +3255,7 @@ async def get_quarterly_tax(
         projection = calculator.project_year_end(profits, q1.calculated_tax + q2.payable)
 
         data = {
+            "ok": True,
             "Q1": {
                 "current_profit": q1.current_profit,
                 "annual_estimate": q1.annual_estimate,

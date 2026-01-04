@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import ExplainModal from './ExplainModal';
+import MissingDataPanel from './MissingDataPanel';
 
 // ════════════════════════════════════════════════════════════
 // TYPES
@@ -317,6 +318,13 @@ export default function V1DashboardClient({ contract, ctx }: Props) {
           </button>
         </div>
       </div>
+
+      {/* MISSING DATA PANEL - Shows only when missing_data exists */}
+      <MissingDataPanel
+        quarterlyTax={quarterlyTax}
+        crossCheck={crossCheck}
+        corporateTax={corporateTax}
+      />
 
       {/* AKSIYON PANELI */}
       {tasks.length > 0 && (
