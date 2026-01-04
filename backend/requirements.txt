@@ -38,5 +38,10 @@ typing_extensions==4.15.0
 uvicorn==0.37.0
 wheel==0.45.1
 pdfplumber
-
 reportlab
+
+# Added for RegWatch, Evidence Bundle, Rule Library
+pyyaml>=6.0
+jsonschema>=4.20.0
+requests>=2.31.0
+beautifulsoup4>=4.12.0
