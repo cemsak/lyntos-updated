@@ -3,6 +3,7 @@ from fastapi.responses import FileResponse
 from api.v1.contracts import router as v1_router
 from api.v1.evidence import router as evidence_router
 from api.v1.regwatch import router as regwatch_router
+from api.v1.audit import router as audit_router
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -72,6 +73,7 @@ app.add_middleware(
 app.include_router(v1_router, prefix="/api/v1")
 app.include_router(evidence_router, prefix="/api/v1", tags=["Evidence"])
 app.include_router(regwatch_router, prefix="/api/v1", tags=["RegWatch"])
+app.include_router(audit_router, prefix="/api/v1", tags=["Audit"])
 # --- /LYNTOS v1 API ---
 
 app.add_middleware(

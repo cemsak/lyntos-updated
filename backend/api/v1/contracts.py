@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends, Request
 from fastapi.responses import FileResponse, JSONResponse
 from pathlib import Path
 from datetime import datetime, timedelta
@@ -13,6 +13,11 @@ import time
 import re
 
 from schemas.response_envelope import wrap_response
+
+# Multi-tenant auth & audit
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+from middleware.auth import verify_token, check_client_access
+from utils.audit import log_action
 
 def _iso_utc() -> str:
     import time as _t
@@ -2815,12 +2820,13 @@ async def get_kurgan_risk(
 
 @router.get("/contracts/data-quality")
 async def get_data_quality(
-    smmm_id: str = Query(default="HKOZKAN", description="SMMM ID"),
+    request: Request,
     client_id: str = Query(default="OZKAN_KIRTASIYE", description="Musteri ID"),
-    period: str = Query(default="2025-Q2", description="Donem (YYYY-QN)")
+    period: str = Query(default="2025-Q2", description="Donem (YYYY-QN)"),
+    user: dict = Depends(verify_token)
 ):
     """
-    Data Quality + Actionable Tasks
+    Data Quality + Actionable Tasks (Auth Required)
 
     SMMM'ye BUGUN NE YAPMASI GEREKTIGINI soyler!
 
@@ -2831,6 +2837,23 @@ async def get_data_quality(
         errors: Hata sayisi
         warnings: Uyari sayisi
     """
+    # Check client access (RBAC)
+    await check_client_access(user, client_id)
+
+    # Audit log
+    log_action(
+        user_id=user["id"],
+        client_id=client_id,
+        period_id=period,
+        action="get_data_quality",
+        resource_type="data_quality",
+        resource_id=f"{client_id}_{period}",
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent")
+    )
+
+    smmm_id = user["id"]  # Use authenticated user
+
     try:
         # Portfolio verisi al
         portfolio_data = _get_portfolio_data_for_kurgan(smmm_id, client_id, period)
@@ -2910,12 +2933,13 @@ async def get_data_quality(
 
 @router.get("/contracts/actionable-tasks")
 async def get_actionable_tasks(
-    smmm_id: str = Query(default="HKOZKAN", description="SMMM ID"),
+    request: Request,
     client_id: str = Query(default="OZKAN_KIRTASIYE", description="Musteri ID"),
-    period: str = Query(default="2025-Q2", description="Donem (YYYY-QN)")
+    period: str = Query(default="2025-Q2", description="Donem (YYYY-QN)"),
+    user: dict = Depends(verify_token)
 ):
     """
-    SMMM'ye BUGUN NE YAPMASI GEREKTIGINI soyler
+    SMMM'ye BUGUN NE YAPMASI GEREKTIGINI soyler (Auth Required)
 
     EN APTAL SMMM BILE ANLAMALI!
 
@@ -2924,9 +2948,26 @@ async def get_actionable_tasks(
         tasks: Detayli gorev listesi
         message: Kisa ozet mesaj
     """
+    # Check client access (RBAC)
+    await check_client_access(user, client_id)
+
+    # Audit log
+    log_action(
+        user_id=user["id"],
+        client_id=client_id,
+        period_id=period,
+        action="get_actionable_tasks",
+        resource_type="tasks",
+        resource_id=f"{client_id}_{period}",
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent")
+    )
+
+    smmm_id = user["id"]  # Use authenticated user
+
     try:
-        # Data quality al
-        dq_response = await get_data_quality(smmm_id, client_id, period)
+        # Data quality al - internal call with same user context
+        dq_response = await get_data_quality(request, client_id, period, user)
         # dq_response is a dict from wrap_response, not a Response object
         dq_data = dq_response.get("data", {}) if isinstance(dq_response, dict) else {}
 
@@ -3035,12 +3076,13 @@ async def get_actionable_tasks(
 
 @router.get("/contracts/corporate-tax")
 async def get_corporate_tax(
-    smmm_id: str = Query(default="HKOZKAN", description="SMMM ID"),
+    request: Request,
     client_id: str = Query(default="OZKAN_KIRTASIYE", description="Musteri ID"),
-    period: str = Query(default="2025-Q2", description="Donem (YYYY-QN)")
+    period: str = Query(default="2025-Q2", description="Donem (YYYY-QN)"),
+    user: dict = Depends(verify_token)
 ):
     """
-    Kurumlar Vergisi beyani hesaplama
+    Kurumlar Vergisi beyani hesaplama (Auth Required)
 
     Kaynak: 5520 Sayili KVK
 
@@ -3055,6 +3097,23 @@ async def get_corporate_tax(
             "trust_score": 1.0
         }
     """
+    # Check client access (RBAC)
+    await check_client_access(user, client_id)
+
+    # Audit log
+    log_action(
+        user_id=user["id"],
+        client_id=client_id,
+        period_id=period,
+        action="get_corporate_tax",
+        resource_type="corporate_tax",
+        resource_id=f"{client_id}_{period}",
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent")
+    )
+
+    smmm_id = user["id"]  # Use authenticated user
+
     try:
         portfolio = _get_portfolio_data_for_kurgan(smmm_id, client_id, period)
 
@@ -3174,12 +3233,13 @@ async def get_corporate_tax_forecast(
 
 @router.get("/contracts/quarterly-tax")
 async def get_quarterly_tax(
-    smmm_id: str = Query(default="HKOZKAN", description="SMMM ID"),
+    request: Request,
     client_id: str = Query(default="OZKAN_KIRTASIYE", description="Musteri ID"),
-    period: str = Query(default="2025-Q2", description="Donem (YYYY-QN)")
+    period: str = Query(default="2025-Q2", description="Donem (YYYY-QN)"),
+    user: dict = Depends(verify_token)
 ):
     """
-    Gecici vergi hesaplama
+    Gecici vergi hesaplama (Auth Required)
 
     Returns:
         {
@@ -3188,6 +3248,23 @@ async def get_quarterly_tax(
             "year_end_projection": {...}
         }
     """
+    # Check client access (RBAC)
+    await check_client_access(user, client_id)
+
+    # Audit log
+    log_action(
+        user_id=user["id"],
+        client_id=client_id,
+        period_id=period,
+        action="get_quarterly_tax",
+        resource_type="quarterly_tax",
+        resource_id=f"{client_id}_{period}",
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent")
+    )
+
+    smmm_id = user["id"]  # Use authenticated user
+
     try:
         # TEST MODE: Return missing_data response for UI testing
         if _TEST_MISSING_DATA_MODE:
@@ -3312,12 +3389,13 @@ async def get_quarterly_tax(
 
 @router.get("/contracts/cross-check")
 async def get_cross_check(
-    smmm_id: str = Query(default="HKOZKAN", description="SMMM ID"),
+    request: Request,
     client_id: str = Query(default="OZKAN_KIRTASIYE", description="Musteri ID"),
-    period: str = Query(default="2025-Q2", description="Donem (YYYY-QN)")
+    period: str = Query(default="2025-Q2", description="Donem (YYYY-QN)"),
+    user: dict = Depends(verify_token)
 ):
     """
-    Capraz kontrol matrisi
+    Capraz kontrol matrisi (Auth Required)
 
     Returns:
         {
@@ -3325,6 +3403,23 @@ async def get_cross_check(
             "summary": {...}
         }
     """
+    # Check client access (RBAC)
+    await check_client_access(user, client_id)
+
+    # Audit log
+    log_action(
+        user_id=user["id"],
+        client_id=client_id,
+        period_id=period,
+        action="get_cross_check",
+        resource_type="cross_check",
+        resource_id=f"{client_id}_{period}",
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent")
+    )
+
+    smmm_id = user["id"]  # Use authenticated user
+
     try:
         from services.cross_check_engine import CrossCheckEngine
 

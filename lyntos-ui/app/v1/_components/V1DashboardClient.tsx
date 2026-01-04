@@ -146,13 +146,18 @@ export default function V1DashboardClient({ contract, ctx }: Props) {
     let alive = true;
     const fetchData = async () => {
       try {
-        const params = `smmm_id=${ctx.smmm}&client_id=${ctx.client}&period=${ctx.period}`;
+        const params = `client_id=${ctx.client}&period=${ctx.period}`;
+
+        // Auth header for development (DEV_* shortcut)
+        const authHeaders = {
+          'Authorization': `DEV_${ctx.smmm}`
+        };
 
         const [taxRes, quarterlyRes, crossRes, tasksRes, regwatchRes] = await Promise.all([
-          fetch(`/api/v1/contracts/corporate-tax?${params}`),
-          fetch(`/api/v1/contracts/quarterly-tax?${params}`),
-          fetch(`/api/v1/contracts/cross-check?${params}`),
-          fetch(`/api/v1/contracts/actionable-tasks?${params}`),
+          fetch(`/api/v1/contracts/corporate-tax?${params}`, { headers: authHeaders }),
+          fetch(`/api/v1/contracts/quarterly-tax?${params}`, { headers: authHeaders }),
+          fetch(`/api/v1/contracts/cross-check?${params}`, { headers: authHeaders }),
+          fetch(`/api/v1/contracts/actionable-tasks?${params}`, { headers: authHeaders }),
           fetch(`/api/v1/contracts/regwatch-status`)
         ]);
 
@@ -195,8 +200,9 @@ export default function V1DashboardClient({ contract, ctx }: Props) {
   const handlePdfDownload = async () => {
     setPdfLoading(true);
     try {
-      const params = `smmm_id=${ctx.smmm}&client_id=${ctx.client}&period=${ctx.period}`;
-      const res = await fetch(`/api/v1/contracts/export-pdf?${params}`);
+      const params = `client_id=${ctx.client}&period=${ctx.period}`;
+      const authHeaders = { 'Authorization': `DEV_${ctx.smmm}` };
+      const res = await fetch(`/api/v1/contracts/export-pdf?${params}`, { headers: authHeaders });
       if (!res.ok) throw new Error('PDF indirilemedi');
 
       const blob = await res.blob();
