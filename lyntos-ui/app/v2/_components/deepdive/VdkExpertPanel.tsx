@@ -1,14 +1,19 @@
 'use client';
-import React, { useState } from 'react';
+
+import React, { useMemo } from 'react';
 import { Card } from '../shared/Card';
-import { Badge, TrustBadge, RiskBadge } from '../shared/Badge';
 import { PanelState } from '../shared/PanelState';
-import { ExplainModal } from '../kpi/ExplainModal';
 import { useFailSoftFetch } from '../hooks/useFailSoftFetch';
 import { ENDPOINTS } from '../contracts/endpoints';
 import { normalizeToEnvelope } from '../contracts/map';
 import type { PanelEnvelope } from '../contracts/envelope';
+import {
+  RiskScoreSummary,
+  CriteriaSection,
+  RecommendationsPanel,
+} from './vdk';
 
+// Types
 interface VdkCriterion {
   id: string;
   code: string;
@@ -22,29 +27,57 @@ interface VdkCriterion {
   legal_refs?: string[];
 }
 
-// Group criteria by category (KURGAN K-xx vs RAM RAM-xx)
-function groupCriteria(criteria: VdkCriterion[]) {
-  const kurgan = criteria.filter(c => c.code.startsWith('K-'));
-  const ram = criteria.filter(c => c.code.startsWith('RAM-'));
-  return { kurgan, ram };
-}
-
-// Severity color mapping
-const SEVERITY_COLORS: Record<string, { bg: string; text: string }> = {
-  CRITICAL: { bg: 'bg-red-100', text: 'text-red-800' },
-  HIGH: { bg: 'bg-orange-100', text: 'text-orange-800' },
-  MEDIUM: { bg: 'bg-yellow-100', text: 'text-yellow-800' },
-  LOW: { bg: 'bg-green-100', text: 'text-green-800' },
-};
-
 interface VdkResult {
   criteria: VdkCriterion[];
   total_score: number;
   max_score: number;
-  risk_level: string;
+  risk_level: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
   summary_tr?: string;
 }
 
+// Helpers
+function groupCriteria(criteria: VdkCriterion[]) {
+  const kurgan = criteria.filter((c) => c.code.startsWith('K-'));
+  const ram = criteria.filter((c) => c.code.startsWith('RAM-'));
+  return { kurgan, ram };
+}
+
+function getStatusCounts(criteria: VdkCriterion[]) {
+  return {
+    pass: criteria.filter((c) => c.status === 'pass').length,
+    fail: criteria.filter((c) => c.status === 'fail').length,
+    warning: criteria.filter((c) => c.status === 'warning').length,
+    pending: criteria.filter((c) => c.status === 'pending').length,
+  };
+}
+
+function extractRecommendations(criteria: VdkCriterion[]) {
+  return criteria
+    .filter((c) => c.recommendation_tr && c.status !== 'pass')
+    .map((c) => ({
+      code: c.code,
+      text: c.recommendation_tr!,
+      severity: c.severity || 'MEDIUM' as const,
+    }));
+}
+
+function mapVdkStatus(s: unknown): VdkCriterion['status'] {
+  const str = String(s).toLowerCase();
+  if (str === 'pass' || str === 'ok' || str === 'true') return 'pass';
+  if (str === 'fail' || str === 'false' || str === 'error') return 'fail';
+  if (str === 'warning' || str === 'warn') return 'warning';
+  return 'pending';
+}
+
+function calculateRiskLevel(score: number, maxScore: number): VdkResult['risk_level'] {
+  const pct = maxScore > 0 ? (score / maxScore) * 100 : 0;
+  if (pct >= 80) return 'LOW';
+  if (pct >= 50) return 'MEDIUM';
+  if (pct >= 25) return 'HIGH';
+  return 'CRITICAL';
+}
+
+// Normalize API response to PanelEnvelope
 function normalizeVdk(raw: unknown): PanelEnvelope<VdkResult> {
   return normalizeToEnvelope<VdkResult>(raw, (r) => {
     const obj = r as Record<string, unknown>;
@@ -72,134 +105,110 @@ function normalizeVdk(raw: unknown): PanelEnvelope<VdkResult> {
       : typeof data?.total_score === 'number' ? data.total_score
       : criteria.reduce((acc, c) => acc + (c.score || 0), 0);
 
+    const maxScore = typeof summary?.max_score === 'number' ? summary.max_score : criteria.length * 10;
+
+    const rawLevel = String(data?.risk_level || summary?.risk_level || '');
+    const riskLevel = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].includes(rawLevel)
+      ? rawLevel as VdkResult['risk_level']
+      : calculateRiskLevel(totalScore, maxScore);
+
     return {
       criteria,
       total_score: totalScore,
-      max_score: typeof summary?.max_score === 'number' ? summary.max_score : criteria.length * 10,
-      risk_level: String(data?.risk_level || summary?.risk_level || calculateRiskLevel(totalScore, criteria.length * 10)),
+      max_score: maxScore,
+      risk_level: riskLevel,
       summary_tr: summary?.summary_tr ? String(summary.summary_tr) : undefined,
     };
   });
 }
 
-function mapVdkStatus(s: unknown): VdkCriterion['status'] {
-  const str = String(s).toLowerCase();
-  if (str === 'pass' || str === 'ok' || str === 'true') return 'pass';
-  if (str === 'fail' || str === 'false' || str === 'error') return 'fail';
-  if (str === 'warning' || str === 'warn') return 'warning';
-  return 'pending';
-}
-
-function calculateRiskLevel(score: number, maxScore: number): string {
-  const pct = maxScore > 0 ? (score / maxScore) * 100 : 0;
-  if (pct >= 80) return 'LOW';
-  if (pct >= 50) return 'MEDIUM';
-  return 'HIGH';
-}
-
+// Main Component
 export function VdkExpertPanel() {
-  const [selectedCriterion, setSelectedCriterion] = useState<VdkCriterion | null>(null);
   const envelope = useFailSoftFetch<VdkResult>(ENDPOINTS.KURGAN_RISK, normalizeVdk);
-  const { status, reason_tr, data, analysis, trust, legal_basis_refs, evidence_refs, meta } = envelope;
+  const { status, reason_tr, data } = envelope;
 
-  const getStatusIcon = (s: VdkCriterion['status']) => {
-    const config = {
-      pass: { icon: 'P', color: 'text-green-600 bg-green-100' },
-      fail: { icon: 'X', color: 'text-red-600 bg-red-100' },
-      warning: { icon: '!', color: 'text-amber-600 bg-amber-100' },
-      pending: { icon: '?', color: 'text-slate-400 bg-slate-100' },
-    };
-    return config[s];
-  };
+  const { kurgan, ram } = useMemo(
+    () => groupCriteria(data?.criteria || []),
+    [data?.criteria]
+  );
 
-  const passCount = data?.criteria.filter(c => c.status === 'pass').length || 0;
-  const failCount = data?.criteria.filter(c => c.status === 'fail').length || 0;
+  const statusCounts = useMemo(
+    () => getStatusCounts(data?.criteria || []),
+    [data?.criteria]
+  );
+
+  const recommendations = useMemo(
+    () => extractRecommendations(data?.criteria || []),
+    [data?.criteria]
+  );
+
+  const passCount = statusCounts.pass;
+  const failCount = statusCounts.fail;
 
   return (
-    <>
-      <Card
-        title="VDK Uzman Analizi"
-        subtitle="25 Kriter Risk Degerlendirmesi"
-        headerAction={
-          data && (
-            <div className="flex items-center gap-2">
-              <Badge variant="success">{passCount} gecti</Badge>
-              {failCount > 0 && <Badge variant="error">{failCount} basarisiz</Badge>}
-              <RiskBadge level={data.risk_level} />
-            </div>
-          )
-        }
-      >
-        <PanelState status={status} reason_tr={reason_tr}>
-          {data && (
-            <div className="space-y-4">
-              {/* Score Summary */}
-              <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                <div>
-                  <p className="text-sm text-slate-600">Toplam Puan</p>
-                  <p className="text-2xl font-bold text-slate-900">
-                    {data.total_score} <span className="text-sm font-normal text-slate-500">/ {data.max_score}</span>
-                  </p>
-                </div>
-                <TrustBadge trust={trust} />
-              </div>
+    <Card
+      title="VDK Risk Analizi"
+      subtitle="KURGAN + RAM Kriterleri (25 Kriter)"
+      headerAction={
+        data && (
+          <div className="flex items-center gap-2">
+            <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded">
+              {passCount} gecti
+            </span>
+            {failCount > 0 && (
+              <span className="bg-red-100 text-red-700 text-xs px-2 py-0.5 rounded">
+                {failCount} basarisiz
+              </span>
+            )}
+          </div>
+        )
+      }
+    >
+      <PanelState status={status} reason_tr={reason_tr}>
+        {data && (
+          <div>
+            {/* Risk Score Summary */}
+            <RiskScoreSummary
+              totalScore={data.total_score}
+              maxScore={data.max_score}
+              riskLevel={data.risk_level}
+              statusCounts={statusCounts}
+            />
 
-              {/* Criteria List */}
-              <div className="space-y-1 max-h-80 overflow-y-auto">
-                {data.criteria.map((criterion) => {
-                  const statusConfig = getStatusIcon(criterion.status);
-                  return (
-                    <div
-                      key={criterion.id}
-                      className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded cursor-pointer transition-colors"
-                      onClick={() => setSelectedCriterion(criterion)}
-                    >
-                      <span className={`flex-shrink-0 w-6 h-6 flex items-center justify-center rounded text-xs font-bold ${statusConfig.color}`}>
-                        {statusConfig.icon}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-mono text-slate-400">{criterion.code}</span>
-                          <span className="text-sm text-slate-900 truncate">{criterion.name_tr}</span>
-                        </div>
-                      </div>
-                      {criterion.score !== undefined && (
-                        <span className="text-xs font-medium text-slate-500">{criterion.score} puan</span>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+            {/* Summary Text */}
+            {data.summary_tr && (
+              <p className="text-sm text-slate-600 mb-6 italic">
+                {data.summary_tr}
+              </p>
+            )}
 
-              {/* Footer with Explain */}
-              {(analysis.expert || analysis.ai || legal_basis_refs.length > 0) && (
-                <div className="pt-3 border-t border-slate-100 text-right">
-                  <button
-                    onClick={() => setSelectedCriterion(data.criteria[0] || null)}
-                    className="text-xs text-blue-600 hover:text-blue-800 font-medium"
-                  >
-                    Detayli Analiz →
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </PanelState>
-      </Card>
+            {/* KURGAN Section */}
+            {kurgan.length > 0 && (
+              <CriteriaSection
+                title="KURGAN Kriterleri"
+                subtitle="HMB Sahte Belge ile Mucadele (Genelge 18.04.2025)"
+                criteria={kurgan}
+                icon="K"
+                defaultExpanded={true}
+              />
+            )}
 
-      {/* Explain Modal for selected criterion */}
-      {selectedCriterion && (
-        <ExplainModal
-          isOpen={!!selectedCriterion}
-          onClose={() => setSelectedCriterion(null)}
-          title={`${selectedCriterion.code}: ${selectedCriterion.name_tr}`}
-          analysis={analysis}
-          trust={trust}
-          legalBasisRefs={legal_basis_refs}
-          evidenceRefs={evidence_refs}
-          meta={meta}
-        />
-      )}
-    </>
+            {/* RAM Section */}
+            {ram.length > 0 && (
+              <CriteriaSection
+                title="RAM Kriterleri"
+                subtitle="VDK Risk Analizi Modeli (646 KHK)"
+                criteria={ram}
+                icon="R"
+                defaultExpanded={true}
+              />
+            )}
+
+            {/* Recommendations */}
+            <RecommendationsPanel recommendations={recommendations} />
+          </div>
+        )}
+      </PanelState>
+    </Card>
   );
 }
