@@ -1,0 +1,60 @@
+rule_id: RAM-01
+name: "Sektor Ortalamasindan Sapma"
+name_tr: "Karlilik Orani Sektor Sapmasi"
+version: "1.0.0"
+category: "RAM"
+priority: "HIGH"
+severity: "HIGH"
+description: |
+  Brut kar marjinin sektor ortalamasindan %20'den fazla sapmasini kontrol eder.
+
+legal_basis_refs:
+  - "VDK Risk Analizi Modeli (RAM)"
+  - "646 KHK"
+
+inputs:
+  - name: brut_kar_marji
+    type: decimal
+    required: true
+    source: "mizan"
+  - name: sektor_kar_marji_avg
+    type: decimal
+    required: true
+    source: "vdk_api"
+
+algorithm: |
+  if sektor_kar_marji_avg > 0 and brut_kar_marji > 0:
+    sapma = abs(brut_kar_marji - sektor_kar_marji_avg) / sektor_kar_marji_avg
+    if sapma > 0.20:
+      status = 'fail'
+      score = 15
+    else:
+      status = 'pass'
+      score = 0
+  else:
+    status = 'pending'
+    score = 0
+
+thresholds:
+  sapma_limit: 0.20
+
+outputs:
+  - name: status
+    type: string
+    enum: ['pass', 'fail', 'warning', 'pending']
+  - name: score
+    type: integer
+    range: [0, 15]
+  - name: sapma_orani
+    type: decimal
+
+test_cases:
+  - name: "Yuksek sapma"
+    inputs: {brut_kar_marji: 0.10, sektor_kar_marji_avg: 0.25}
+    expected: {status: "fail", score: 15}
+  - name: "Normal"
+    inputs: {brut_kar_marji: 0.22, sektor_kar_marji_avg: 0.25}
+    expected: {status: "pass", score: 0}
+
+created_at: "2026-01-05T00:00:00Z"
+updated_at: "2026-01-05T00:00:00Z"

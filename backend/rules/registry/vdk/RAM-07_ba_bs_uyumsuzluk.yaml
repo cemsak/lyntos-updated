@@ -1,0 +1,57 @@
+rule_id: RAM-07
+name: "Ba-Bs Tutarsizligi"
+name_tr: "Ba-Bs Bildirim Uyumsuzlugu"
+version: "1.0.0"
+category: "RAM"
+priority: "HIGH"
+severity: "HIGH"
+description: |
+  Ba-Bs bildirimlerinde 10.000 TL'yi asan farki kontrol eder.
+
+legal_basis_refs:
+  - "VDK Risk Analizi Modeli (RAM)"
+  - "VUK m.148"
+
+inputs:
+  - name: ba_toplam
+    type: decimal
+    required: true
+    source: "ba_bs"
+  - name: bs_toplam
+    type: decimal
+    required: true
+    source: "ba_bs"
+
+algorithm: |
+  fark = abs(ba_toplam - bs_toplam)
+  if fark > 10000:
+    status = 'fail'
+    score = 15
+    recommendation = "Ba-Bs bildirimleri kontrol edilmeli, duzeltme yapilmali."
+  else:
+    status = 'pass'
+    score = 0
+
+thresholds:
+  ba_bs_fark_limit: 10000
+
+outputs:
+  - name: status
+    type: string
+    enum: ['pass', 'fail', 'warning', 'pending']
+  - name: score
+    type: integer
+    range: [0, 15]
+  - name: ba_bs_fark
+    type: decimal
+
+test_cases:
+  - name: "Yuksek fark"
+    inputs: {ba_toplam: 500000, bs_toplam: 480000}
+    expected: {status: "fail", score: 15}
+  - name: "Normal"
+    inputs: {ba_toplam: 500000, bs_toplam: 498000}
+    expected: {status: "pass", score: 0}
+
+created_at: "2026-01-05T00:00:00Z"
+updated_at: "2026-01-05T00:00:00Z"

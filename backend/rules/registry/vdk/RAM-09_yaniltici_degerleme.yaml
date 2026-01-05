@@ -1,0 +1,48 @@
+rule_id: RAM-09
+name: "Yaniltici Degerleme"
+name_tr: "Stok ve Varlik Degerleme Kontrolu"
+version: "1.0.0"
+category: "RAM"
+priority: "MEDIUM"
+severity: "MEDIUM"
+description: |
+  Stok ve varlik degerleme hatalarini kontrol eder.
+
+legal_basis_refs:
+  - "VDK Risk Analizi Modeli (RAM)"
+  - "VUK m.274-278"
+
+inputs:
+  - name: stok_degeri
+    type: decimal
+    required: true
+    source: "mizan"
+    account: "15X"
+  - name: stok_sayim_degeri
+    type: decimal
+    required: false
+    source: "envanter"
+
+algorithm: |
+  # Requires inventory valuation data
+  status = 'pending'
+  score = 0
+
+outputs:
+  - name: status
+    type: string
+    enum: ['pass', 'fail', 'warning', 'pending']
+  - name: score
+    type: integer
+    range: [0, 10]
+
+test_cases:
+  - name: "Veri eksik"
+    inputs: {stok_degeri: 500000, stok_sayim_degeri: null}
+    expected: {status: "pending", score: 0}
+  - name: "Degerler uyumlu"
+    inputs: {stok_degeri: 500000, stok_sayim_degeri: 495000}
+    expected: {status: "pass", score: 0}
+
+created_at: "2026-01-05T00:00:00Z"
+updated_at: "2026-01-05T00:00:00Z"

@@ -1,0 +1,61 @@
+rule_id: RAM-05
+name: "Ortulu Sermaye"
+name_tr: "Ortaklara Borc Analizi"
+version: "1.0.0"
+category: "RAM"
+priority: "MEDIUM"
+severity: "MEDIUM"
+description: |
+  Ortaklara borclarin (331 hesap) ozsermayenin %30'unu asmasini kontrol eder.
+
+legal_basis_refs:
+  - "VDK Risk Analizi Modeli (RAM)"
+  - "KVK m.12"
+
+inputs:
+  - name: ortaklara_borc
+    type: decimal
+    required: true
+    source: "mizan"
+    account: "331"
+  - name: ozsermaye
+    type: decimal
+    required: true
+    source: "mizan"
+
+algorithm: |
+  if ozsermaye > 0:
+    oran = ortaklara_borc / ozsermaye
+    if oran > 0.30:
+      status = 'fail'
+      score = 10
+    else:
+      status = 'pass'
+      score = 0
+  else:
+    status = 'pending'
+    score = 0
+
+thresholds:
+  ortaklara_borc_limit: 0.30
+
+outputs:
+  - name: status
+    type: string
+    enum: ['pass', 'fail', 'warning', 'pending']
+  - name: score
+    type: integer
+    range: [0, 10]
+  - name: ortaklara_borc_orani
+    type: decimal
+
+test_cases:
+  - name: "Yuksek borc"
+    inputs: {ortaklara_borc: 400000, ozsermaye: 1000000}
+    expected: {status: "fail", score: 10}
+  - name: "Normal"
+    inputs: {ortaklara_borc: 200000, ozsermaye: 1000000}
+    expected: {status: "pass", score: 0}
+
+created_at: "2026-01-05T00:00:00Z"
+updated_at: "2026-01-05T00:00:00Z"

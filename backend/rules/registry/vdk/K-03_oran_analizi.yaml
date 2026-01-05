@@ -1,0 +1,60 @@
+rule_id: K-03
+name: "Oran Analizi"
+name_tr: "Sahte Belge Oran Analizi"
+version: "1.0.0"
+category: "KURGAN"
+priority: "HIGH"
+severity: "HIGH"
+description: |
+  Sahte belge tutarinin maliyet/gider ve KDV icindeki oranini analiz eder.
+  Devreden KDV'nin gelire orani %5'i asarsa risk tetiklenir.
+
+legal_basis_refs:
+  - "HMB Genelge 18.04.2025"
+
+inputs:
+  - name: devreden_kdv
+    type: decimal
+    required: true
+    source: "beyanname"
+  - name: gelir_beyan
+    type: decimal
+    required: true
+    source: "beyanname"
+
+algorithm: |
+  if gelir_beyan > 0:
+    oran = devreden_kdv / gelir_beyan
+    if oran > 0.05:
+      status = 'fail'
+      score = 20
+    else:
+      status = 'pass'
+      score = 0
+  else:
+    status = 'pending'
+    score = 0
+
+thresholds:
+  devreden_kdv_oran_limit: 0.05
+
+outputs:
+  - name: status
+    type: string
+    enum: ['pass', 'fail', 'warning', 'pending']
+  - name: score
+    type: integer
+    range: [0, 20]
+  - name: devreden_kdv_orani
+    type: decimal
+
+test_cases:
+  - name: "Yuksek oran"
+    inputs: {devreden_kdv: 60000, gelir_beyan: 1000000}
+    expected: {status: "fail", score: 20}
+  - name: "Normal oran"
+    inputs: {devreden_kdv: 30000, gelir_beyan: 1000000}
+    expected: {status: "pass", score: 0}
+
+created_at: "2026-01-05T00:00:00Z"
+updated_at: "2026-01-05T00:00:00Z"

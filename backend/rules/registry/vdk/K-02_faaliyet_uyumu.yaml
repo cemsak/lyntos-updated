@@ -1,0 +1,48 @@
+rule_id: K-02
+name: "Faaliyet Uyumu Kontrolu"
+name_tr: "Belge Icerigi Faaliyet Uyumu"
+version: "1.0.0"
+category: "KURGAN"
+priority: "MEDIUM"
+severity: "MEDIUM"
+description: |
+  Alinan belgelerin iceriginin mukellefin faaliyet konusuyla uyumunu kontrol eder.
+
+legal_basis_refs:
+  - "HMB Genelge 18.04.2025"
+  - "VUK m.3"
+
+inputs:
+  - name: e_fatura_icerikleri
+    type: array
+    required: true
+    source: "e_fatura"
+  - name: faaliyet_kodu
+    type: string
+    required: true
+    source: "sicil"
+
+algorithm: |
+  # Requires e-fatura content analysis
+  # Placeholder - needs ML/NLP for full implementation
+  status = 'pending'
+  score = 0
+
+outputs:
+  - name: status
+    type: string
+    enum: ['pass', 'fail', 'warning', 'pending']
+  - name: score
+    type: integer
+    range: [0, 15]
+
+test_cases:
+  - name: "Veri eksik"
+    inputs: {e_fatura_icerikleri: [], faaliyet_kodu: ""}
+    expected: {status: "pending", score: 0}
+  - name: "Uyumlu faaliyet"
+    inputs: {e_fatura_icerikleri: ["Bilgisayar"], faaliyet_kodu: "6201"}
+    expected: {status: "pass", score: 0}
+
+created_at: "2026-01-05T00:00:00Z"
+updated_at: "2026-01-05T00:00:00Z"

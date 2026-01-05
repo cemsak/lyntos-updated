@@ -14,9 +14,28 @@ interface VdkCriterion {
   code: string;
   name_tr: string;
   status: 'pass' | 'fail' | 'warning' | 'pending';
+  severity?: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
   score?: number;
   detail_tr?: string;
+  recommendation_tr?: string;
+  evidence?: Record<string, unknown>;
+  legal_refs?: string[];
 }
+
+// Group criteria by category (KURGAN K-xx vs RAM RAM-xx)
+function groupCriteria(criteria: VdkCriterion[]) {
+  const kurgan = criteria.filter(c => c.code.startsWith('K-'));
+  const ram = criteria.filter(c => c.code.startsWith('RAM-'));
+  return { kurgan, ram };
+}
+
+// Severity color mapping
+const SEVERITY_COLORS: Record<string, { bg: string; text: string }> = {
+  CRITICAL: { bg: 'bg-red-100', text: 'text-red-800' },
+  HIGH: { bg: 'bg-orange-100', text: 'text-orange-800' },
+  MEDIUM: { bg: 'bg-yellow-100', text: 'text-yellow-800' },
+  LOW: { bg: 'bg-green-100', text: 'text-green-800' },
+};
 
 interface VdkResult {
   criteria: VdkCriterion[];
@@ -36,11 +55,15 @@ function normalizeVdk(raw: unknown): PanelEnvelope<VdkResult> {
     const criteria: VdkCriterion[] = Array.isArray(riskDetail)
       ? riskDetail.map((c: Record<string, unknown>, idx: number) => ({
           id: String(c.id || `vdk-${idx}`),
-          code: String(c.code || c.criterion_code || `K${idx + 1}`),
+          code: String(c.code || c.criterion_code || c.rule_id || `K${idx + 1}`),
           name_tr: String(c.name_tr || c.criterion_name || c.title || c.description || 'Kriter'),
           status: mapVdkStatus(c.status || c.result),
+          severity: c.severity ? String(c.severity) as VdkCriterion['severity'] : undefined,
           score: typeof c.score === 'number' ? c.score : typeof c.points === 'number' ? c.points : undefined,
           detail_tr: c.detail_tr ? String(c.detail_tr) : c.reason ? String(c.reason) : undefined,
+          recommendation_tr: c.recommendation_tr ? String(c.recommendation_tr) : undefined,
+          evidence: c.evidence as Record<string, unknown> | undefined,
+          legal_refs: Array.isArray(c.legal_refs) ? c.legal_refs.map(String) : undefined,
         }))
       : [];
 
@@ -96,7 +119,7 @@ export function VdkExpertPanel() {
     <>
       <Card
         title="VDK Uzman Analizi"
-        subtitle="13 Kriter Risk Degerlendirmesi"
+        subtitle="25 Kriter Risk Degerlendirmesi"
         headerAction={
           data && (
             <div className="flex items-center gap-2">

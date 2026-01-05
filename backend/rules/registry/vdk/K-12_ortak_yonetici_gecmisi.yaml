@@ -1,0 +1,51 @@
+rule_id: K-12
+name: "Ortak/Yonetici Gecmisi"
+name_tr: "Ortak ve Yonetici SBD/SBK Kontrolu"
+version: "1.0.0"
+category: "KURGAN"
+priority: "HIGH"
+severity: "HIGH"
+description: |
+  Ortak ve yoneticilerin gecmis SBD (Sahte Belge Duzenleme) veya SBK tespitlerini kontrol eder.
+
+legal_basis_refs:
+  - "HMB Genelge 18.04.2025"
+  - "VUK m.359"
+
+inputs:
+  - name: ortak_sbd_tespiti
+    type: boolean
+    required: false
+    source: "vdk_api"
+  - name: yonetici_sbd_tespiti
+    type: boolean
+    required: false
+    source: "vdk_api"
+
+algorithm: |
+  if ortak_sbd_tespiti or yonetici_sbd_tespiti:
+    status = 'fail'
+    score = 20
+    recommendation = "Ortak/yonetici gecmisi detayli incelenmeli."
+  else:
+    status = 'pending'
+    score = 0
+
+outputs:
+  - name: status
+    type: string
+    enum: ['pass', 'fail', 'warning', 'pending']
+  - name: score
+    type: integer
+    range: [0, 20]
+
+test_cases:
+  - name: "Veri eksik"
+    inputs: {ortak_sbd_tespiti: null, yonetici_sbd_tespiti: null}
+    expected: {status: "pending", score: 0}
+  - name: "Ortak tespiti var"
+    inputs: {ortak_sbd_tespiti: true, yonetici_sbd_tespiti: false}
+    expected: {status: "fail", score: 20}
+
+created_at: "2026-01-05T00:00:00Z"
+updated_at: "2026-01-05T00:00:00Z"

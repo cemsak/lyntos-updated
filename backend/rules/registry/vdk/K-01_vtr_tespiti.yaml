@@ -1,0 +1,49 @@
+rule_id: K-01
+name: "VTR Tespiti Kontrolu"
+name_tr: "VTR'de Bilerek Kullanim Tespiti"
+version: "1.0.0"
+category: "KURGAN"
+priority: "HIGH"
+severity: "HIGH"
+description: |
+  Vergi Teknigi Raporu'nda sahte belgenin bilerek kullanildigina dair tespit olup olmadigini kontrol eder.
+
+legal_basis_refs:
+  - "HMB Genelge 18.04.2025 E-55935724-010.06-7361"
+  - "VUK m.359"
+
+inputs:
+  - name: vtr_tespiti_var
+    type: boolean
+    required: true
+    source: "vdk_api"
+
+algorithm: |
+  if vtr_tespiti_var == True:
+    status = 'fail'
+    score = 25
+    recommendation = "VTR raporu detayli incelenmeli, hukuki savunma hazirlanmali."
+  else:
+    status = 'pass'
+    score = 0
+
+outputs:
+  - name: status
+    type: string
+    enum: ['pass', 'fail', 'warning', 'pending']
+  - name: score
+    type: integer
+    range: [0, 25]
+  - name: recommendation_tr
+    type: string
+
+test_cases:
+  - name: "VTR tespiti var"
+    inputs: {vtr_tespiti_var: true}
+    expected: {status: "fail", score: 25}
+  - name: "VTR tespiti yok"
+    inputs: {vtr_tespiti_var: false}
+    expected: {status: "pass", score: 0}
+
+created_at: "2026-01-05T00:00:00Z"
+updated_at: "2026-01-05T00:00:00Z"

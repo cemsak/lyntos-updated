@@ -1,0 +1,50 @@
+rule_id: RAM-10
+name: "Davranis Takibi"
+name_tr: "Gecmis Inceleme ve Ceza Analizi"
+version: "1.0.0"
+category: "RAM"
+priority: "HIGH"
+severity: "HIGH"
+description: |
+  Gecmis inceleme ve ceza gecmisini degerlendirir.
+
+legal_basis_refs:
+  - "VDK Risk Analizi Modeli (RAM)"
+
+inputs:
+  - name: gecmis_ceza_sayisi
+    type: integer
+    required: true
+    source: "vdk_api"
+  - name: gecmis_inceleme_sayisi
+    type: integer
+    required: true
+    source: "vdk_api"
+
+algorithm: |
+  if gecmis_ceza_sayisi > 0 or gecmis_inceleme_sayisi > 1:
+    status = 'fail'
+    score = 15
+    recommendation = "Gecmis sorunlarin tekrari onlenmeli."
+  else:
+    status = 'pass'
+    score = 0
+
+outputs:
+  - name: status
+    type: string
+    enum: ['pass', 'fail', 'warning', 'pending']
+  - name: score
+    type: integer
+    range: [0, 15]
+
+test_cases:
+  - name: "Ceza gecmisi var"
+    inputs: {gecmis_ceza_sayisi: 2, gecmis_inceleme_sayisi: 1}
+    expected: {status: "fail", score: 15}
+  - name: "Temiz gecmis"
+    inputs: {gecmis_ceza_sayisi: 0, gecmis_inceleme_sayisi: 0}
+    expected: {status: "pass", score: 0}
+
+created_at: "2026-01-05T00:00:00Z"
+updated_at: "2026-01-05T00:00:00Z"

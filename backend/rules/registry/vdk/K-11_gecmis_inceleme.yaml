@@ -1,0 +1,51 @@
+rule_id: K-11
+name: "Gecmis Inceleme"
+name_tr: "SBK Raporu ve Inceleme Gecmisi"
+version: "1.0.0"
+category: "KURGAN"
+priority: "HIGH"
+severity: "HIGH"
+description: |
+  Daha once SBK (Sahte Belge Kullanma) raporu veya vergi inceleme gecmisi olup olmadigini kontrol eder.
+
+legal_basis_refs:
+  - "HMB Genelge 18.04.2025"
+  - "VUK m.359"
+
+inputs:
+  - name: sbk_raporu_var
+    type: boolean
+    required: true
+    source: "vdk_api"
+  - name: gecmis_inceleme_sayisi
+    type: integer
+    required: true
+    source: "vdk_api"
+
+algorithm: |
+  if sbk_raporu_var or gecmis_inceleme_sayisi > 0:
+    status = 'fail'
+    score = 20
+    recommendation = "Onceki inceleme sonuclari degerlendirilerek uyum saglanmali."
+  else:
+    status = 'pass'
+    score = 0
+
+outputs:
+  - name: status
+    type: string
+    enum: ['pass', 'fail', 'warning', 'pending']
+  - name: score
+    type: integer
+    range: [0, 20]
+
+test_cases:
+  - name: "SBK raporu var"
+    inputs: {sbk_raporu_var: true, gecmis_inceleme_sayisi: 1}
+    expected: {status: "fail", score: 20}
+  - name: "Temiz gecmis"
+    inputs: {sbk_raporu_var: false, gecmis_inceleme_sayisi: 0}
+    expected: {status: "pass", score: 0}
+
+created_at: "2026-01-05T00:00:00Z"
+updated_at: "2026-01-05T00:00:00Z"

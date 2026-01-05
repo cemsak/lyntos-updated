@@ -1,0 +1,66 @@
+rule_id: K-05
+name: "Karlilik ve Vergi Uyumu"
+name_tr: "Surekli Zarar ve KDV Analizi"
+version: "1.0.0"
+category: "KURGAN"
+priority: "HIGH"
+severity: "HIGH"
+description: |
+  Surekli zarar, yuksek devreden KDV, dusuk vergi beyani durumlarini kontrol eder.
+
+legal_basis_refs:
+  - "HMB Genelge 18.04.2025"
+  - "KVK m.5"
+
+inputs:
+  - name: ardisik_zarar_yili
+    type: integer
+    required: true
+    source: "beyanname"
+  - name: devreden_kdv
+    type: decimal
+    required: true
+    source: "beyanname"
+  - name: gelir_beyan
+    type: decimal
+    required: true
+    source: "beyanname"
+
+algorithm: |
+  score = 0
+  triggers = []
+
+  if ardisik_zarar_yili >= 2:
+    triggers.append("Ardisik zarar")
+    score += 15
+
+  if gelir_beyan > 0 and devreden_kdv / gelir_beyan > 0.05:
+    triggers.append("Yuksek devreden KDV")
+    score += 10
+
+  status = 'fail' if score > 0 else 'pass'
+
+thresholds:
+  ardisik_zarar_limit: 2
+  devreden_kdv_oran_limit: 0.05
+
+outputs:
+  - name: status
+    type: string
+    enum: ['pass', 'fail', 'warning', 'pending']
+  - name: score
+    type: integer
+    range: [0, 25]
+  - name: triggers
+    type: array
+
+test_cases:
+  - name: "Iki yil zarar"
+    inputs: {ardisik_zarar_yili: 2, devreden_kdv: 0, gelir_beyan: 1000000}
+    expected: {status: "fail", score: 15}
+  - name: "Normal"
+    inputs: {ardisik_zarar_yili: 0, devreden_kdv: 10000, gelir_beyan: 1000000}
+    expected: {status: "pass", score: 0}
+
+created_at: "2026-01-05T00:00:00Z"
+updated_at: "2026-01-05T00:00:00Z"

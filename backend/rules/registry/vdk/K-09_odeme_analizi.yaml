@@ -1,0 +1,63 @@
+rule_id: K-09
+name: "Odeme Analizi"
+name_tr: "Odeme Sekli ve Fiktif Odeme Kontrolu"
+version: "1.0.0"
+category: "KURGAN"
+priority: "HIGH"
+severity: "HIGH"
+description: |
+  Odeme sekli, fiktif odeme, iade, cek ciro silsilesini kontrol eder.
+  Yuksek kasa bakiyesi fiktif odeme gostergesidir.
+
+legal_basis_refs:
+  - "HMB Genelge 18.04.2025"
+  - "VUK m.229"
+
+inputs:
+  - name: kasa_bakiye
+    type: decimal
+    required: true
+    source: "mizan"
+    account: "100"
+  - name: aktif_toplam
+    type: decimal
+    required: true
+    source: "mizan"
+
+algorithm: |
+  if aktif_toplam > 0:
+    kasa_orani = kasa_bakiye / aktif_toplam
+    if kasa_orani > 0.15:
+      status = 'fail'
+      score = 15
+      recommendation = "Kasa hareketleri detayli incelenmeli."
+    else:
+      status = 'pass'
+      score = 0
+  else:
+    status = 'pending'
+    score = 0
+
+thresholds:
+  kasa_aktif_oran_limit: 0.15
+
+outputs:
+  - name: status
+    type: string
+    enum: ['pass', 'fail', 'warning', 'pending']
+  - name: score
+    type: integer
+    range: [0, 15]
+  - name: kasa_orani
+    type: decimal
+
+test_cases:
+  - name: "Yuksek kasa"
+    inputs: {kasa_bakiye: 200000, aktif_toplam: 1000000}
+    expected: {status: "fail", score: 15}
+  - name: "Normal kasa"
+    inputs: {kasa_bakiye: 50000, aktif_toplam: 1000000}
+    expected: {status: "pass", score: 0}
+
+created_at: "2026-01-05T00:00:00Z"
+updated_at: "2026-01-05T00:00:00Z"
