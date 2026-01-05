@@ -13,15 +13,22 @@ function backendBase(): string {
 
 function filterHeaders(src: Headers | undefined): Headers {
   const out = new Headers();
-  if (!src) return out;
-  src.forEach((v, k) => {
-    const kk = k.toLowerCase();
-    if (kk === "host") return;
-    if (kk === "connection") return;
-    if (kk === "content-length") return;
-    if (kk === "accept-encoding") return;
-    out.set(k, v);
-  });
+  
+  if (src) {
+    src.forEach((value, key) => {
+      const lowerKey = key.toLowerCase();
+      // Skip problematic headers
+      if (['host', 'connection', 'content-length', 'accept-encoding'].includes(lowerKey)) {
+        return;
+      }
+      out.set(key, value);
+    });
+  }
+  
+  // DEBUG
+  console.log("=== PROXY filterHeaders DEBUG ===");
+  console.log("Output headers:", Object.fromEntries(out.entries()));
+  
   return out;
 }
 
@@ -47,32 +54,40 @@ export async function proxyJson(
   init?: RequestInit
 ): Promise<Response> {
   const upstreamUrl = buildUpstreamUrl(req, upstreamPath);
+  const headers = filterHeaders((req as any).headers);
+
+  console.log("=== PROXY proxyJson DEBUG ===");
+  console.log("Upstream URL:", upstreamUrl);
+  console.log("Authorization being sent:", headers.get("authorization"));
 
   try {
     const upstream = await fetch(upstreamUrl, {
       ...(init || {}),
       cache: "no-store",
-      headers: filterHeaders((req as any).headers),
+      headers: headers,
     });
 
-    const txt = await upstream.text();
-    const headers = new Headers();
-    headers.set("content-type", upstream.headers.get("content-type") || "application/json; charset=utf-8");
-    headers.set("x-lyntos-proxy-upstream", upstreamUrl);
-    headers.set("x-lyntos-proxy-status", String(upstream.status));
+    console.log("Upstream response status:", upstream.status);
 
-    return new Response(txt, { status: upstream.status, headers });
+    const txt = await upstream.text();
+    const respHeaders = new Headers();
+    respHeaders.set("content-type", upstream.headers.get("content-type") || "application/json; charset=utf-8");
+    respHeaders.set("x-lyntos-proxy-upstream", upstreamUrl);
+    respHeaders.set("x-lyntos-proxy-status", String(upstream.status));
+
+    return new Response(txt, { status: upstream.status, headers: respHeaders });
   } catch (e: any) {
-    const headers = new Headers();
-    headers.set("content-type", "application/json; charset=utf-8");
-    headers.set("x-lyntos-proxy-upstream", upstreamUrl);
-    headers.set("x-lyntos-proxy-status", "FETCH_ERROR");
+    console.log("Proxy fetch error:", e.message);
+    const respHeaders = new Headers();
+    respHeaders.set("content-type", "application/json; charset=utf-8");
+    respHeaders.set("x-lyntos-proxy-upstream", upstreamUrl);
+    respHeaders.set("x-lyntos-proxy-status", "FETCH_ERROR");
 
     const body = {
       detail: "proxy fetch error",
       upstream: upstreamUrl,
       error: e && e.message ? String(e.message) : String(e),
     };
-    return new Response(JSON.stringify(body), { status: 502, headers });
+    return new Response(JSON.stringify(body), { status: 502, headers: respHeaders });
   }
 }

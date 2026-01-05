@@ -1,21 +1,54 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+
+export const dynamic = "force-dynamic";
+
+function getApiBase(): string {
+  return (
+    process.env.LYNTOS_BACKEND_BASE ??
+    process.env.LYNTOS_API_BASE ??
+    "http://127.0.0.1:8000"
+  );
+}
+
+async function proxy(req: NextRequest, pathParts: string[]) {
+  const apiBase = getApiBase();
+  const inUrl = new URL(req.url);
+
+  const target = new URL(`/api/v1/contracts/${pathParts.join("/")}`, apiBase);
+  target.search = inUrl.search;
+
+  // Forward headers including Authorization
+  const headers = new Headers(req.headers);
+  try {
+    headers.set("host", new URL(apiBase).host);
+  } catch {}
+
+  const upstream = await fetch(target.toString(), {
+    method: req.method,
+    headers,
+    cache: "no-store",
+  });
+
+  // Response headers - remove content-encoding to avoid issues
+  const outHeaders = new Headers(upstream.headers);
+  outHeaders.delete("content-encoding");
+
+  return new NextResponse(upstream.body, {
+    status: upstream.status,
+    headers: outHeaders,
+  });
+}
 
 export async function GET(
-  req: Request,
-  ctx: { params: Promise<{ path: string[] }> }
+  req: NextRequest,
+  context: { params: Promise<{ path: string[] }> }
 ) {
-  const { path } = await ctx.params;
-  const base = process.env.LYNTOS_BACKEND_BASE ?? "http://127.0.0.1:8000";
-  const url = `${base}/api/v1/contracts/${path.join("/")}`;
+  return proxy(req, (await context.params).path || []);
+}
 
-  const res = await fetch(url, { cache: "no-store" });
-  const buf = await res.arrayBuffer();
-
-  return new NextResponse(buf, {
-    status: res.status,
-    headers: {
-      "content-type": res.headers.get("content-type") ?? "application/json",
-      "cache-control": "no-store",
-    },
-  });
+export async function POST(
+  req: NextRequest,
+  context: { params: Promise<{ path: string[] }> }
+) {
+  return proxy(req, (await context.params).path || []);
 }

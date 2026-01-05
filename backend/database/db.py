@@ -150,6 +150,113 @@ def init_database():
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_regwatch_source ON regwatch_events(source)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_regwatch_detected ON regwatch_events(detected_at)")
 
+        # ════════════════════════════════════════════════════════════════
+        # DOCUMENT UPLOADS (Big-6 unified)
+        # ════════════════════════════════════════════════════════════════
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS document_uploads (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                client_id TEXT NOT NULL,
+                period_id TEXT NOT NULL,
+                doc_type TEXT NOT NULL CHECK (doc_type IN (
+                    'MIZAN', 'BANKA', 'BEYANNAME', 'TAHAKKUK', 'EDEFTER_BERAT', 'EFATURA_ARSIV'
+                )),
+                original_filename TEXT NOT NULL,
+                stored_path TEXT NOT NULL,
+                mime_type TEXT,
+                size_bytes INTEGER,
+                content_hash_sha256 TEXT NOT NULL,
+                received_at TEXT NOT NULL DEFAULT (datetime('now')),
+                received_by TEXT,
+                parser_name TEXT,
+                parser_version TEXT,
+                parse_status TEXT NOT NULL DEFAULT 'PENDING' CHECK (parse_status IN (
+                    'PENDING', 'OK', 'WARN', 'ERROR'
+                )),
+                parse_error TEXT,
+                doc_date_min TEXT,
+                doc_date_max TEXT,
+                time_shield_status TEXT NOT NULL DEFAULT 'PENDING' CHECK (time_shield_status IN (
+                    'PENDING', 'PASS', 'WARN', 'REJECT'
+                )),
+                time_shield_reason TEXT,
+                classification_confidence REAL NOT NULL DEFAULT 0.0,
+                user_doc_type_override TEXT,
+                override_reason TEXT,
+                metadata TEXT NOT NULL DEFAULT '{}',
+                replaced_by TEXT,
+                is_active INTEGER NOT NULL DEFAULT 1,
+                created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+            )
+        """)
+
+        # Document uploads indexes
+        cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_doc_dedupe ON document_uploads(tenant_id, client_id, period_id, doc_type, content_hash_sha256) WHERE is_active = 1")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_doc_tenant_period ON document_uploads(tenant_id, client_id, period_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_doc_hash ON document_uploads(content_hash_sha256)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_doc_parse_status ON document_uploads(parse_status)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_doc_time_shield ON document_uploads(time_shield_status)")
+
+        # ════════════════════════════════════════════════════════════════
+        # INGESTION AUDIT LOG
+        # ════════════════════════════════════════════════════════════════
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS ingestion_audit_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tenant_id TEXT NOT NULL,
+                client_id TEXT,
+                period_id TEXT,
+                actor TEXT NOT NULL,
+                action TEXT NOT NULL CHECK (action IN (
+                    'UPLOAD_RECEIVED', 'UPLOAD_DEDUPE_SKIP', 'PARSE_OK', 'PARSE_WARN', 'PARSE_ERROR',
+                    'TIME_SHIELD_PASS', 'TIME_SHIELD_WARN', 'TIME_SHIELD_REJECT',
+                    'OVERRIDE_DOC_TYPE', 'MIGRATE_REVIEW_ADDED', 'MIGRATE_OK', 'MIGRATE_REJECTED',
+                    'DELETE_DENIED', 'VERSION_REPLACED'
+                )),
+                target_id TEXT,
+                timestamp TEXT NOT NULL DEFAULT (datetime('now')),
+                details TEXT NOT NULL DEFAULT '{}'
+            )
+        """)
+
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_ing_audit_tenant ON ingestion_audit_log(tenant_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_ing_audit_action ON ingestion_audit_log(action)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_ing_audit_target ON ingestion_audit_log(target_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_ing_audit_time ON ingestion_audit_log(timestamp)")
+
+        # ════════════════════════════════════════════════════════════════
+        # MIGRATION REVIEW QUEUE (legacy file migration)
+        # ════════════════════════════════════════════════════════════════
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS migration_review_queue (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                client_id TEXT,
+                detected_period_id TEXT,
+                suggested_period_id TEXT,
+                suggested_doc_type TEXT,
+                confidence REAL NOT NULL,
+                legacy_path TEXT NOT NULL,
+                legacy_filename TEXT NOT NULL,
+                reason TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'NEEDS_REVIEW' CHECK (status IN (
+                    'NEEDS_REVIEW', 'MIGRATED_OK', 'REJECTED'
+                )),
+                created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                resolved_at TEXT,
+                resolved_by TEXT,
+                resolution TEXT NOT NULL DEFAULT '{}'
+            )
+        """)
+
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_migration_tenant ON migration_review_queue(tenant_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_migration_status ON migration_review_queue(status)")
+
         conn.commit()
         logger.info(f"Database initialized: {DB_PATH}")
 

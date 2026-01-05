@@ -3,7 +3,7 @@ Evidence Bundle API
 Download evidence bundles as ZIP files with dossier manifest
 """
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from fastapi.responses import StreamingResponse
 import logging
 import json
@@ -16,6 +16,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from utils.evidence_bundler import EvidenceBundler
+from middleware.auth import verify_token, check_client_access
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -57,9 +58,9 @@ def load_manifest() -> dict:
 @router.get("/evidence/bundle/{rule_id}")
 async def get_evidence_bundle(
     rule_id: str,
-    smmm_id: str = Query(default="HKOZKAN", description="SMMM identifier"),
-    client_id: str = Query(default="OZKAN_KIRTASIYE", description="Client identifier"),
-    period: str = Query(default="2025-Q2", description="Period (e.g., 2025-Q2)")
+    client_id: str = Query(..., description="Client identifier"),
+    period: str = Query(..., description="Period (e.g., 2025-Q2)"),
+    user: dict = Depends(verify_token)
 ):
     """
     Download evidence bundle as ZIP
@@ -79,6 +80,11 @@ async def get_evidence_bundle(
     Returns:
         ZIP file as streaming response
     """
+    # Get tenant_id from token
+    smmm_id = user["id"]
+
+    # Verify client access
+    await check_client_access(user, client_id)
 
     try:
         # Load rule
@@ -144,9 +150,9 @@ async def get_evidence_bundle(
 
 
 @router.get("/evidence/rules")
-async def list_evidence_rules():
+async def list_evidence_rules(user: dict = Depends(verify_token)):
     """
-    List all rules with their evidence requirements
+    List all rules with their evidence requirements (Auth Required)
 
     Returns list of rules with evidence_required fields
     """

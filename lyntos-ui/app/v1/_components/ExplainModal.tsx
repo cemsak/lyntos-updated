@@ -94,7 +94,7 @@ export default function ExplainModal({
     try {
       const url = `/api/v1/evidence/bundle/${ruleId}?smmm_id=${encodeURIComponent(smmm)}&client_id=${encodeURIComponent(client)}&period=${encodeURIComponent(period)}`;
 
-      const res = await fetch(url);
+      const res = await fetch(url, { headers: { "Authorization": "DEV_" + smmm } });
       if (!res.ok) {
         const error = await res.json().catch(() => ({ detail: 'Bilinmeyen hata' }));
         throw new Error(error.detail || 'Download failed');
@@ -177,7 +177,7 @@ export default function ExplainModal({
               {expert.legal_basis_refs && expert.legal_basis_refs.length > 0 && (
                 <div>
                   <p className="text-xs text-gray-600 mb-1">Yasal Dayanak</p>
-                  <SourceLink refs={expert.legal_basis_refs} />
+                  <SourceLink refs={expert.legal_basis_refs} smmm={smmm} />
                 </div>
               )}
 

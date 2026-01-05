@@ -7,27 +7,33 @@ function backendBase(): string {
     process.env.LYNTOS_BACKEND_BASE ||
     process.env.BACKEND_BASE_URL ||
     process.env.NEXT_PUBLIC_BACKEND_BASE ||
-    "http://localhost:8000"
+    "http://127.0.0.1:8000"
   );
 }
 
-function copyHeaders(src: Headers): Headers {
+function forwardHeaders(src: Headers): Headers {
   const out = new Headers();
-  src.forEach((v, k) => {
-    const lk = k.toLowerCase();
-    // Next serverless ortamında set-cookie forward bazen sorun çıkarır; burada ihtiyacımız yok.
-    if (lk === "set-cookie") return;
-    out.set(k, v);
+  src.forEach((value, key) => {
+    const lk = key.toLowerCase();
+    // Skip headers that cause issues when proxying
+    if (['host', 'connection', 'content-length', 'accept-encoding', 'set-cookie'].includes(lk)) {
+      return;
+    }
+    out.set(key, value);
   });
   return out;
 }
 
 export async function proxyJson(req: NextRequest, upstreamPath: string, init?: RequestInit) {
   const url = `${backendBase()}${upstreamPath}`;
+  
+  // Forward headers from incoming request (including Authorization)
+  const headers = forwardHeaders(req.headers);
+  
   const upstream = await fetch(url, {
     ...init,
-    // refresh/contract için cache istemiyoruz
     cache: "no-store",
+    headers: headers,
   });
 
   const text = await upstream.text();
@@ -41,13 +47,20 @@ export async function proxyJson(req: NextRequest, upstreamPath: string, init?: R
 
 export async function proxyStream(req: NextRequest, upstreamPath: string, init?: RequestInit) {
   const url = `${backendBase()}${upstreamPath}`;
+  
+  // Forward headers from incoming request
+  const headers = forwardHeaders(req.headers);
+  
   const upstream = await fetch(url, {
     ...init,
     cache: "no-store",
+    headers: headers,
   });
 
   return new Response(upstream.body, {
     status: upstream.status,
-    headers: copyHeaders(upstream.headers),
+    headers: new Headers({
+      "content-type": upstream.headers.get("content-type") || "application/json; charset=utf-8",
+    }),
   });
 }

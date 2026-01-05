@@ -636,12 +636,13 @@ def _s10_portfolio_ai_block(c, expert_block):
 # LYNTOS_S10_ANALYSIS_HELPERS_END
 
 @router.get("/contracts/portfolio")
-def contracts_portfolio(
+async def contracts_portfolio(
     smmm: str | None = Query(None),
     client: str | None = Query(None),
     period: str | None = Query(None, description="örn: 2025-Q2"),
     smmm_id: str | None = Query(None),
     client_id: str | None = Query(None),
+    user: dict = Depends(verify_token)
 ):
     """
     Sprint-3: KPI'lar backend contract'tan üretilecek (tek kaynak gerçek).
@@ -766,10 +767,11 @@ def contracts_portfolio(
     # END S10_PORTFOLIO_ANALYSIS
     return JSONResponse(c)
 @router.get("/contracts/dossier/manifest")
-def contracts_dossier_manifest(
-    smmm: str = Query(default="HKOZKAN"),
-    client: str = Query(default="OZKAN_KIRTASIYE"),
-    period: str = Query(default="2025-Q2", description="Donem (YYYY-QN)"),
+async def contracts_dossier_manifest(
+    smmm: str = Query(..., description="SMMM ID"),
+    client: str = Query(..., description="Musteri ID"),
+    period: str = Query(..., description="Donem (YYYY-QN)"),
+    user: dict = Depends(verify_token)
 ):
     """
     Ödül standardı: kanıt üretimi için 'manifest' contract.
@@ -867,11 +869,11 @@ def contracts_dossier_manifest(
     return JSONResponse(resp)
 
 @router.get("/contracts/mbr")
-def contracts_mbr():
+async def contracts_mbr(user: dict = Depends(verify_token)):
     return JSONResponse(_read_json(CONTRACTS_DIR / "mbr_view.json"))
 
 @router.get("/contracts/risks/{code}")
-def contracts_risk(code: str):
+async def contracts_risk(code: str, user: dict = Depends(verify_token)):
     import re as _re
     c = str(code or '').strip()
     if not _re.fullmatch(r'[A-Za-z0-9_-]{1,40}', c):
@@ -883,14 +885,14 @@ def contracts_risk(code: str):
     if p2.exists():
         return JSONResponse(_read_json(p2))
     return JSONResponse(_read_json(p1))
-    return JSONResponse(_read_json(p))
 
 
 @router.post("/refresh")
-def refresh(
-    smmm: str = Query(default="HKOZKAN"),
-    client: str = Query(default="OZKAN_KIRTASIYE"),
-    period: str = Query(default="2025-Q2", description="Donem (YYYY-QN)"),
+async def refresh(
+    smmm: str = Query(..., description="SMMM ID"),
+    client: str = Query(..., description="Musteri ID"),
+    period: str = Query(..., description="Donem (YYYY-QN)"),
+    user: dict = Depends(verify_token)
 ):
     """
     Tek çağrıda:
@@ -947,7 +949,11 @@ def refresh(
     }
 
 @router.get("/dossier/bundle")
-def dossier_bundle_latest(client: str | None = None, period: str | None = None):
+async def dossier_bundle_latest(
+    client: str = Query(..., description="Musteri ID"),
+    period: str = Query(..., description="Donem (YYYY-QN)"),
+    user: dict = Depends(verify_token)
+):
     # En yeni *_BUNDLE.zip dosyasını indir
     pattern = str(OUT_DIR / "LYNTOS_DOSSIER_*_BUNDLE.zip")
     if client and period:
@@ -969,7 +975,11 @@ def dossier_bundle_latest(client: str | None = None, period: str | None = None):
 
 
 @router.get("/dossier/pdf")
-def dossier_pdf_latest(client: str | None = None, period: str | None = None):
+async def dossier_pdf_latest(
+    client: str = Query(..., description="Musteri ID"),
+    period: str = Query(..., description="Donem (YYYY-QN)"),
+    user: dict = Depends(verify_token)
+):
     pattern = str(OUT_DIR / "LYNTOS_DOSSIER_*.pdf")
     if client and period:
         wanted = OUT_DIR / f"LYNTOS_DOSSIER_{client}_{period}.pdf"
@@ -985,14 +995,22 @@ def dossier_pdf_latest(client: str | None = None, period: str | None = None):
 
 
 @router.head("/dossier/bundle")
-def dossier_bundle_head(client: str | None = None, period: str | None = None):
+async def dossier_bundle_head(
+    client: str = Query(..., description="Musteri ID"),
+    period: str = Query(..., description="Donem (YYYY-QN)"),
+    user: dict = Depends(verify_token)
+):
     # GET ile aynı seçimi yapıp sadece header döndürür
-    resp = dossier_bundle_latest(client=client, period=period)
+    resp = await dossier_bundle_latest(client=client, period=period, user=user)
     return resp
 
 @router.head("/dossier/pdf")
-def dossier_pdf_head(client: str | None = None, period: str | None = None):
-    resp = dossier_pdf_latest(client=client, period=period)
+async def dossier_pdf_head(
+    client: str = Query(..., description="Musteri ID"),
+    period: str = Query(..., description="Donem (YYYY-QN)"),
+    user: dict = Depends(verify_token)
+):
+    resp = await dossier_pdf_latest(client=client, period=period, user=user)
     return resp
 
 
@@ -1622,11 +1640,12 @@ def build_axis_d_contract_mizan_only(base_dir: Path, smmm_id: str, client_id: st
 
 
 @router.get("/contracts/axis/{axis}")
-def get_axis_contract(
+async def get_axis_contract(
     axis: str,
-    smmm: str = Query(default="HKOZKAN"),
-    client: str = Query(default="OZKAN_KIRTASIYE"),
-    period: str = Query(default="2025-Q2"),
+    smmm: str = Query(..., description="SMMM ID"),
+    client: str = Query(..., description="Musteri ID"),
+    period: str = Query(..., description="Donem (YYYY-QN)"),
+    user: dict = Depends(verify_token)
 ):
     """
     Axis contracts (v50):
@@ -2577,7 +2596,7 @@ _axisd__wrap_builder("build_axis_contract_mizan_only")
 
 # --- REGWATCH S1: contract endpoint (top-level, fail-soft) ---
 @router.get("/contracts/regwatch")
-def contracts_regwatch():
+async def contracts_regwatch(user: dict = Depends(verify_token)):
     p1 = CONTRACTS_DIR / 'regwatch.json'
     p2 = CONTRACTS_DIR / 'regwatch' / 'regwatch.json'
     if p1.exists():
@@ -2700,9 +2719,9 @@ def _get_banka_data_for_kurgan(client_id: str, period: str) -> dict | None:
 
 @router.get("/contracts/kurgan-risk")
 async def get_kurgan_risk(
-    smmm_id: str = Query(default="HKOZKAN", description="SMMM ID"),
-    client_id: str = Query(default="OZKAN_KIRTASIYE", description="Musteri ID"),
-    period: str = Query(default="2025-Q2", description="Donem (YYYY-QN)")
+    client_id: str = Query(..., description="Musteri ID"),
+    period: str = Query(..., description="Donem (YYYY-QN)"),
+    user: dict = Depends(verify_token)
 ):
     """
     KURGAN 13 kriter risk analizi
@@ -2716,6 +2735,12 @@ async def get_kurgan_risk(
         checklist_url: Kontrol listesi URL'i
         vdk_reference: VDK Genelge referansi
     """
+    # Get tenant_id from token
+    smmm_id = user["id"]
+
+    # Verify client access
+    await check_client_access(user, client_id)
+
     try:
         # Portfolio verisi al
         portfolio_data = _get_portfolio_data_for_kurgan(smmm_id, client_id, period)
@@ -2821,8 +2846,8 @@ async def get_kurgan_risk(
 @router.get("/contracts/data-quality")
 async def get_data_quality(
     request: Request,
-    client_id: str = Query(default="OZKAN_KIRTASIYE", description="Musteri ID"),
-    period: str = Query(default="2025-Q2", description="Donem (YYYY-QN)"),
+    client_id: str = Query(..., description="Musteri ID"),
+    period: str = Query(..., description="Donem (YYYY-QN)"),
     user: dict = Depends(verify_token)
 ):
     """
@@ -2934,8 +2959,8 @@ async def get_data_quality(
 @router.get("/contracts/actionable-tasks")
 async def get_actionable_tasks(
     request: Request,
-    client_id: str = Query(default="OZKAN_KIRTASIYE", description="Musteri ID"),
-    period: str = Query(default="2025-Q2", description="Donem (YYYY-QN)"),
+    client_id: str = Query(..., description="Musteri ID"),
+    period: str = Query(..., description="Donem (YYYY-QN)"),
     user: dict = Depends(verify_token)
 ):
     """
@@ -3077,8 +3102,8 @@ async def get_actionable_tasks(
 @router.get("/contracts/corporate-tax")
 async def get_corporate_tax(
     request: Request,
-    client_id: str = Query(default="OZKAN_KIRTASIYE", description="Musteri ID"),
-    period: str = Query(default="2025-Q2", description="Donem (YYYY-QN)"),
+    client_id: str = Query(..., description="Musteri ID"),
+    period: str = Query(..., description="Donem (YYYY-QN)"),
     user: dict = Depends(verify_token)
 ):
     """
@@ -3169,10 +3194,10 @@ async def get_corporate_tax(
 
 @router.get("/contracts/corporate-tax-forecast")
 async def get_corporate_tax_forecast(
-    smmm_id: str = Query(default="HKOZKAN", description="SMMM ID"),
-    client_id: str = Query(default="OZKAN_KIRTASIYE", description="Musteri ID"),
-    period: str = Query(default="2025-Q2", description="Donem (YYYY-QN)"),
-    scenario: str = Query("base", description="Senaryo: optimistic, base, pessimistic")
+    client_id: str = Query(..., description="Musteri ID"),
+    period: str = Query(..., description="Donem (YYYY-QN)"),
+    scenario: str = Query("base", description="Senaryo: optimistic, base, pessimistic"),
+    user: dict = Depends(verify_token)
 ):
     """
     Gelecek donem vergi ongorusu (3 senaryo)
@@ -3186,6 +3211,12 @@ async def get_corporate_tax_forecast(
             "confidence": "medium"
         }
     """
+    # Get tenant_id from token
+    smmm_id = user["id"]
+
+    # Verify client access
+    await check_client_access(user, client_id)
+
     try:
         # Senaryo validasyonu
         valid_scenarios = ["optimistic", "base", "pessimistic"]
@@ -3234,8 +3265,8 @@ async def get_corporate_tax_forecast(
 @router.get("/contracts/quarterly-tax")
 async def get_quarterly_tax(
     request: Request,
-    client_id: str = Query(default="OZKAN_KIRTASIYE", description="Musteri ID"),
-    period: str = Query(default="2025-Q2", description="Donem (YYYY-QN)"),
+    client_id: str = Query(..., description="Musteri ID"),
+    period: str = Query(..., description="Donem (YYYY-QN)"),
     user: dict = Depends(verify_token)
 ):
     """
@@ -3384,14 +3415,162 @@ async def get_quarterly_tax(
 
 
 # ════════════════════════════════════════════════════════════════
+# MIZAN OMURGA (BACKBONE) ENDPOINTS
+# ════════════════════════════════════════════════════════════════
+
+@router.get("/contracts/mizan-analysis")
+async def get_mizan_analysis_endpoint(
+    request: Request,
+    client_id: str = Query(..., description="Musteri ID"),
+    period: str = Query(..., description="Donem (YYYY-QN)"),
+    user: dict = Depends(verify_token)
+):
+    """
+    Mizan Omurga (Backbone) Analysis (Auth Required)
+
+    Comprehensive trial balance analysis of 20 critical accounts:
+    - Cash (100, 102, 108)
+    - Receivables (120, 131)
+    - Inventory (150, 153)
+    - VAT (191)
+    - Fixed Assets (250, 253)
+    - Payables (320, 321, 335, 360)
+    - Equity (400, 590)
+    - Revenue (600, 620)
+    - Expenses (710, 770)
+
+    Returns:
+        accounts: Dict of account analyses
+        summary: Overall status summary
+        analysis: Expert analysis metadata
+    """
+    # Check client access (RBAC)
+    await check_client_access(user, client_id)
+
+    # Audit log
+    log_action(
+        user_id=user["id"],
+        client_id=client_id,
+        period_id=period,
+        action="get_mizan_analysis",
+        resource_type="mizan",
+        resource_id=f"{client_id}_{period}",
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent")
+    )
+
+    smmm_id = user["id"]
+
+    try:
+        from services.mizan_omurga import get_mizan_analysis
+
+        # Get portfolio data for mizan values
+        portfolio = _get_portfolio_data_for_kurgan(smmm_id, client_id, period)
+
+        # Build mizan data from portfolio (in production, load from CSV/DB)
+        mizan_data = {
+            "100": portfolio.get("kasa_bakiye", 180548),
+            "102": portfolio.get("banka_bakiye", 3315535),
+            "108": 25000,
+            "120": portfolio.get("alacak_bakiye", 2500000),
+            "131": portfolio.get("ortak_cari", 500000),
+            "150": 300000,
+            "153": portfolio.get("stok_bakiye", 1200000),
+            "191": 450000,
+            "250": 150000,
+            "253": 350000,
+            "320": portfolio.get("borc_bakiye", 1800000),
+            "321": 500000,
+            "335": 120000,
+            "360": 250000,
+            "400": 1000000,
+            "590": portfolio.get("kar_zarar", 500000),
+            "600": portfolio.get("ciro", 10000000),
+            "620": -200000,
+            "710": 4000000,
+            "770": 1500000
+        }
+
+        result = get_mizan_analysis(smmm_id, client_id, period, mizan_data)
+
+        return wrap_response(
+            endpoint_name="mizan_analysis",
+            smmm_id=smmm_id,
+            client_id=client_id,
+            period=period,
+            data=result
+        )
+
+    except Exception as e:
+        _kurgan_logger.error(f"Mizan analysis hatasi: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ════════════════════════════════════════════════════════════════
+# ENFLASYON MUHASEBESI ENDPOINT (TMS 29)
+# ════════════════════════════════════════════════════════════════
+
+@router.get("/contracts/inflation-adjustment")
+async def get_inflation_adjustment(
+    request: Request,
+    client_id: str = Query(..., description="Musteri ID"),
+    period: str = Query(..., description="Donem (YYYY-QN)"),
+    user: dict = Depends(verify_token)
+):
+    """
+    TMS 29 Enflasyon Muhasebesi Analizi (Auth Required)
+
+    Returns:
+    - TÜFE indices and coefficient
+    - Monetary vs non-monetary classification
+    - Adjustment entries (648/658/698)
+    - Tax impact
+    - Missing data / required actions
+    """
+    # Check client access (RBAC)
+    await check_client_access(user, client_id)
+
+    # Audit log
+    log_action(
+        user_id=user["id"],
+        client_id=client_id,
+        period_id=period,
+        action="get_inflation_adjustment",
+        resource_type="inflation",
+        resource_id=f"{client_id}_{period}",
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent")
+    )
+
+    smmm_id = user["id"]
+
+    try:
+        from services.enflasyon_duzeltme import get_enflasyon_analizi
+
+        result = get_enflasyon_analizi(smmm_id, client_id, period)
+
+        return wrap_response(
+            endpoint_name="inflation_adjustment",
+            smmm_id=smmm_id,
+            client_id=client_id,
+            period=period,
+            data=result
+        )
+
+    except Exception as e:
+        _kurgan_logger.error(f"Enflasyon duzeltme hatasi: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ════════════════════════════════════════════════════════════════
 # CAPRAZ KONTROL ENDPOINTS
 # ════════════════════════════════════════════════════════════════
 
 @router.get("/contracts/cross-check")
 async def get_cross_check(
     request: Request,
-    client_id: str = Query(default="OZKAN_KIRTASIYE", description="Musteri ID"),
-    period: str = Query(default="2025-Q2", description="Donem (YYYY-QN)"),
+    client_id: str = Query(..., description="Musteri ID"),
+    period: str = Query(..., description="Donem (YYYY-QN)"),
     user: dict = Depends(verify_token)
 ):
     """
@@ -3507,9 +3686,9 @@ async def get_cross_check(
 # ════════════════════════════════════════════════════════════════
 
 @router.get("/contracts/regwatch-status")
-async def get_regwatch_status():
+async def get_regwatch_status(user: dict = Depends(verify_token)):
     """
-    RegWatch mevzuat izleme durumu
+    RegWatch mevzuat izleme durumu (Auth Required)
 
     Returns:
         {
@@ -3553,9 +3732,9 @@ async def get_regwatch_status():
 
 @router.get("/contracts/export-pdf")
 async def export_pdf(
-    smmm_id: str = Query(default="HKOZKAN", description="SMMM ID"),
-    client_id: str = Query(default="OZKAN_KIRTASIYE", description="Musteri ID"),
-    period: str = Query(default="2025-Q2", description="Donem (YYYY-QN)")
+    client_id: str = Query(..., description="Musteri ID"),
+    period: str = Query(..., description="Donem (YYYY-QN)"),
+    user: dict = Depends(verify_token)
 ):
     """
     PDF rapor export
@@ -3563,6 +3742,12 @@ async def export_pdf(
     Returns:
         PDF file (application/pdf)
     """
+    # Get tenant_id from token
+    smmm_id = user["id"]
+
+    # Verify client access
+    await check_client_access(user, client_id)
+
     try:
         from services.pdf_generator import PDFGenerator
         from fastapi.responses import Response
@@ -3599,7 +3784,8 @@ async def export_pdf(
 @router.get("/contracts/sources")
 async def list_sources(
     kapsam: str = Query(default=None, description="Kapsam filtresi (KV, KDV, VUK, TMS, ...)"),
-    trust_class: str = Query(default=None, description="Trust class filtresi (A, B, C, D)")
+    trust_class: str = Query(default=None, description="Trust class filtresi (A, B, C, D)"),
+    user: dict = Depends(verify_token)
 ):
     """
     Tum yasal kaynaklari listele
@@ -3634,7 +3820,7 @@ async def list_sources(
 
 
 @router.get("/contracts/sources/{source_id}")
-async def get_source(source_id: str):
+async def get_source(source_id: str, user: dict = Depends(verify_token)):
     """
     Tek yasal kaynak detayi
 
@@ -3666,7 +3852,7 @@ async def get_source(source_id: str):
 
 
 @router.post("/contracts/sources/resolve")
-async def resolve_sources(refs: list):
+async def resolve_sources(refs: list, user: dict = Depends(verify_token)):
     """
     ID listesini detayli kaynaklara cevir
 

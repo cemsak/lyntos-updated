@@ -1,4 +1,4 @@
-import SimpleDashboard from "./_components/SimpleDashboard";
+import V1DashboardClient from "./_components/V1DashboardClient";
 
 export const dynamic = "force-dynamic";
 
@@ -24,10 +24,11 @@ export default async function V1Page({
   };
 
   return (
-    <SimpleDashboard
-      smmmId={ctx.smmm}
-      clientId={ctx.client}
-      period={ctx.period}
-    />
+    <div className="mx-auto max-w-5xl p-6">
+      <V1DashboardClient
+        contract={null}
+        ctx={ctx}
+      />
+    </div>
   );
 }

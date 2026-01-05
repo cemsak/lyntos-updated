@@ -10,7 +10,7 @@ Endpoints:
 - GET /regwatch/statistics - Get statistics
 """
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional
@@ -24,6 +24,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from database.db import get_connection
 from services.regwatch_engine import regwatch_engine
 from services.regwatch_scraper import run_all_scrapers
+from middleware.auth import verify_token
 
 router = APIRouter()
 
@@ -39,9 +40,9 @@ class RejectionRequest(BaseModel):
 
 
 @router.get("/regwatch/status")
-async def get_regwatch_status():
+async def get_regwatch_status(user: dict = Depends(verify_token)):
     """
-    Get RegWatch status for last 7 days
+    Get RegWatch status for last 7 days (Auth Required)
 
     Returns change count, status (ACTIVE/BOOTSTRAP), and recent events
     """
@@ -59,13 +60,16 @@ async def get_regwatch_status():
 
 
 @router.get("/regwatch/pending")
-async def get_pending_events():
+async def get_pending_events(user: dict = Depends(verify_token)):
     """
-    Get events pending expert approval
+    Get events pending expert approval (Auth Required)
 
     These are mevzuat changes detected by scrapers that need
     expert review before being added to Source Registry.
     """
+    # Role check - only admin/smmm can view pending
+    if user.get("role") not in ["admin", "smmm"]:
+        raise HTTPException(403, "Bu işlem için yetkiniz yok")
 
     events = regwatch_engine.get_pending_events()
 
@@ -83,15 +87,21 @@ async def get_pending_events():
 
 
 @router.post("/regwatch/approve/{event_id}")
-async def approve_event(event_id: int, approval: ApprovalRequest):
+async def approve_event(event_id: int, approval: ApprovalRequest, user: dict = Depends(verify_token)):
     """
-    Approve event and add to Source Registry
+    Approve event and add to Source Registry (Auth + Role Required)
 
     Expert Gate workflow:
     1. Event detected by scraper → status: 'pending'
     2. Expert reviews and approves → status: 'approved'
     3. New source created in source_registry with SRC-XXXX ID
     """
+    # Role check - only admin/smmm can approve
+    if user.get("role") not in ["admin", "smmm"]:
+        raise HTTPException(403, "Bu işlem için yetkiniz yok")
+
+    # Override expert_id with authenticated user
+    approval.expert_id = user["id"]
 
     with get_connection() as conn:
         cursor = conn.cursor()
@@ -196,12 +206,18 @@ async def approve_event(event_id: int, approval: ApprovalRequest):
 
 
 @router.post("/regwatch/reject/{event_id}")
-async def reject_event(event_id: int, rejection: RejectionRequest):
+async def reject_event(event_id: int, rejection: RejectionRequest, user: dict = Depends(verify_token)):
     """
-    Reject event
+    Reject event (Auth + Role Required)
 
     Rejected events are not added to Source Registry.
     """
+    # Role check - only admin/smmm can reject
+    if user.get("role") not in ["admin", "smmm"]:
+        raise HTTPException(403, "Bu işlem için yetkiniz yok")
+
+    # Override expert_id with authenticated user
+    rejection.expert_id = user["id"]
 
     with get_connection() as conn:
         cursor = conn.cursor()
@@ -243,13 +259,16 @@ async def reject_event(event_id: int, rejection: RejectionRequest):
 
 
 @router.post("/regwatch/scrape")
-async def trigger_scrape(days: int = Query(default=7, ge=1, le=30)):
+async def trigger_scrape(days: int = Query(default=7, ge=1, le=30), user: dict = Depends(verify_token)):
     """
-    Trigger manual scrape of all sources
+    Trigger manual scrape of all sources (Auth + Admin Required)
 
     This runs all scrapers and saves new events to the database.
     New events will have status 'pending' and need expert approval.
     """
+    # Role check - only admin can trigger scrape
+    if user.get("role") != "admin":
+        raise HTTPException(403, "Bu işlem sadece admin için geçerli")
 
     try:
         result = run_all_scrapers(days)
@@ -263,8 +282,8 @@ async def trigger_scrape(days: int = Query(default=7, ge=1, le=30)):
 
 
 @router.get("/regwatch/statistics")
-async def get_statistics():
-    """Get RegWatch statistics"""
+async def get_statistics(user: dict = Depends(verify_token)):
+    """Get RegWatch statistics (Auth Required)"""
 
     stats = regwatch_engine.get_statistics()
 
@@ -279,8 +298,8 @@ async def get_statistics():
 
 
 @router.get("/regwatch/sources")
-async def get_sources():
-    """Get list of monitored sources"""
+async def get_sources(user: dict = Depends(verify_token)):
+    """Get list of monitored sources (Auth Required)"""
 
     sources = regwatch_engine.get_sources()
 

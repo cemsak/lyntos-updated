@@ -1,7 +1,8 @@
 @import "tailwindcss";
 
-/* Tailwind v4: rgba/hsl değerlerini tema token'ı olarak @theme ile bildir
-   Böylece bg-background, text-foreground, border, ring, input vb. sınıflar çalışır */
+/* Google Fonts - IBM Plex Sans (Enterprise typography) */
+
+/* Tailwind v4 Theme Tokens */
 @theme {
   --color-background: 0 0% 100%;
   --color-foreground: 222.2 84% 4.9%;
@@ -12,12 +13,12 @@
   --color-popover: 0 0% 100%;
   --color-popover-foreground: 222.2 84% 4.9%;
 
-  /* Marka renkleri */
-  --color-primary: 197 87% 29%;            /* #0B6A88 yaklaşık HSL */
+  /* Brand colors */
+  --color-primary: 221 83% 53%;
   --color-primary-foreground: 0 0% 100%;
 
-  --color-secondary: 70 37% 31%;           /* #636B2F yaklaşık HSL */
-  --color-secondary-foreground: 0 0% 100%;
+  --color-secondary: 210 40% 96.1%;
+  --color-secondary-foreground: 222.2 47.4% 11.2%;
 
   --color-muted: 210 40% 96.1%;
   --color-muted-foreground: 215.4 16.3% 46.9%;
@@ -32,35 +33,154 @@
   --color-input: 214.3 31.8% 91.4%;
   --color-ring: 215 20.2% 65.1%;
 
-  /* Radius token'ı (shadcn için) */
-  --radius: 14px;
+  --radius: 8px;
 }
 
-/* Dark tema override'ları */
+/* Dark theme */
 .dark {
   --color-background: 222.2 84% 4.9%;
   --color-foreground: 210 40% 98%;
-
   --color-card: 222.2 84% 4.9%;
   --color-card-foreground: 210 40% 98%;
-
   --color-popover: 222.2 84% 4.9%;
   --color-popover-foreground: 210 40% 98%;
-
   --color-muted: 217.2 32.6% 17.5%;
   --color-muted-foreground: 215 20.2% 65.1%;
-
   --color-accent: 217.2 32.6% 17.5%;
   --color-accent-foreground: 210 40% 98%;
-
   --color-destructive: 0 62.8% 30.6%;
   --color-destructive-foreground: 210 40% 98%;
-
   --color-border: 217.2 32.6% 17.5%;
   --color-input: 217.2 32.6% 17.5%;
-  --color-ring: 212.7 26.8% 83.9%;
+  --color-ring: 224.3 76.3% 48%;
 }
 
-/* Genel */
-html, body { height: 100%; }
-body { @apply bg-background text-foreground antialiased; }
+/* Base styles */
+* {
+  border-color: theme('colors.border');
+}
+
+html {
+  font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-color: #f8fafc;
+  color: #1e293b;
+}
+
+/* Monospace for numbers and codes */
+.font-mono {
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+}
+
+/* Tabular numbers for alignment */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Dense table styling */
+.table-dense th,
+.table-dense td {
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.table-dense th {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  background-color: #f8fafc;
+}
+
+/* Card hover effect */
+.card-hover {
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.card-hover:hover {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  border-color: #cbd5e1;
+}
+
+/* Status badges */
+.badge-success { background-color: #ecfdf5; color: #059669; }
+.badge-warning { background-color: #fffbeb; color: #d97706; }
+.badge-error { background-color: #fef2f2; color: #dc2626; }
+.badge-info { background-color: #eff6ff; color: #2563eb; }
+.badge-neutral { background-color: #f1f5f9; color: #64748b; }
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Focus ring */
+*:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Button base */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background-color: #2563eb;
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #1d4ed8;
+}
+
+.btn-secondary {
+  background-color: white;
+  color: #374151;
+  border: 1px solid #d1d5db;
+}
+
+.btn-secondary:hover {
+  background-color: #f9fafb;
+  border-color: #9ca3af;
+}
+
+/* Animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out;
+}

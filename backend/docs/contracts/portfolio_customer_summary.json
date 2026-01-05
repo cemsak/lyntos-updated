@@ -1,9 +1,5 @@
 {
-  "schema": {
-    "name": "portfolio",
-    "version": "v1.0"
-  },
-  "generated_at": "2026-01-01T21:44:40Z",
+  "kind": "portfolio_customer_summary",
   "period_window": {
     "period": "2025-Q2",
     "start_date": "2025-04-01",
@@ -23,49 +19,17 @@
       "Çeyrek dışı satır içeren banka dosyaları tespit edildi (örnek): ['102.01 YKB 7. AY.csv', '102.01 YKB 8. AY.csv', '102.01 YKB 9. AY.csv']"
     ]
   },
-  "kpis": {},
-  "kpis_meta": {
-    "modules": {}
-  },
   "warnings": [
-    "PORTFOLIO:rebuilt_from_risk_detail_contracts"
+    "Banka verilerinde seçili çeyrek dışı satırlar bulundu; metriklere dahil edilmedi.",
+    "Çeyrek dışı satır içeren banka dosyaları tespit edildi (örnek): ['102.01 YKB 7. AY.csv', '102.01 YKB 8. AY.csv', '102.01 YKB 9. AY.csv']"
   ],
   "risks": [
     {
       "code": "R-401A",
-      "title_tr": "",
-      "severity": "",
-      "description_tr": "",
-      "analysis": {
-        "expert": {
-          "version": "v1",
-          "generated_at": "2025-12-31T04:28:04Z",
-          "summary_tr": "Uzman blok deterministiktir; kanıt yoksa iddia üretmez (fail-soft).",
-          "legal_basis": [],
-          "evidence_refs": [
-            {
-              "source": "DATA_QUALITY",
-              "note_tr": "Banka verilerinde seçili çeyrek dışı satırlar bulundu; metriklere dahil edilmedi."
-            }
-          ],
-          "checks": [
-            {
-              "id": "CTX",
-              "title_tr": "Bağlam Parametreleri (SMMM/Mükellef/Dönem)",
-              "status": "ok",
-              "severity": "LOW",
-              "detail_tr": "smmm=HKOZKAN | client=OZKAN_KIRTASIYE | period=2025-Q2",
-              "evidence_refs": []
-            }
-          ]
-        },
-        "ai": {
-          "confidence": 0.35,
-          "disclaimer_tr": "UYARI: AI bloğu yalnız öneri üretir; nihai görüş expert bloktadır.",
-          "evidence_refs": [],
-          "items": []
-        }
-      },
+      "severity": "LOW",
+      "score": null,
+      "title_tr": "Mizan 102 Alt Hesap Var, Banka Ekstresi Yok",
+      "summary_tr": null,
       "kurgan_criteria_signals": [
         {
           "code": "KRG-11",
@@ -87,39 +51,10 @@
     },
     {
       "code": "R-501",
-      "title_tr": "",
-      "severity": "",
-      "description_tr": "",
-      "analysis": {
-        "expert": {
-          "version": "v1",
-          "generated_at": "2025-12-31T04:28:04Z",
-          "summary_tr": "Uzman blok deterministiktir; kanıt yoksa iddia üretmez (fail-soft).",
-          "legal_basis": [],
-          "evidence_refs": [
-            {
-              "source": "DATA_QUALITY",
-              "note_tr": "Banka verilerinde seçili çeyrek dışı satırlar bulundu; metriklere dahil edilmedi."
-            }
-          ],
-          "checks": [
-            {
-              "id": "CTX",
-              "title_tr": "Bağlam Parametreleri (SMMM/Mükellef/Dönem)",
-              "status": "ok",
-              "severity": "LOW",
-              "detail_tr": "smmm=HKOZKAN | client=OZKAN_KIRTASIYE | period=2025-Q2",
-              "evidence_refs": []
-            }
-          ]
-        },
-        "ai": {
-          "confidence": 0.35,
-          "disclaimer_tr": "UYARI: AI bloğu yalnız öneri üretir; nihai görüş expert bloktadır.",
-          "evidence_refs": [],
-          "items": []
-        }
-      },
+      "severity": "MEDIUM",
+      "score": null,
+      "title_tr": "KDV Matrahı - Satışlar Uyumsuzluğu",
+      "summary_tr": null,
       "kurgan_criteria_signals": [
         {
           "code": "KRG-02",
