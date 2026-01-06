@@ -20,9 +20,9 @@ const VDK_KRITERLER: Record<string, { baslik: string; aciklama: string; oneri: s
     risk: 'Orta',
   },
   'K-07': {
-    baslik: 'Ba-Bs Uyumsuzlugu',
-    aciklama: 'Ba ve Bs formlari arasinda tutarsizlik tespit edildi.',
-    oneri: 'Karsi firma ile mutabakat yapilmali, gerekirse duzeltme beyani verilmelidir.',
+    baslik: 'E-Fatura Uyumsuzlugu',
+    aciklama: 'E-fatura kayitlari ile muhasebe kayitlari arasinda tutarsizlik tespit edildi.',
+    oneri: 'Karsi firma ile mutabakat yapilmali, eksik faturalar kaydedilmelidir.',
     risk: 'Orta',
   },
   'K-01': {

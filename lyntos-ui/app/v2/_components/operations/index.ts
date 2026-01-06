@@ -9,6 +9,14 @@ export { MissingDataPanel } from './MissingDataPanel';
 export { RegWatchPanel } from './RegWatchPanel';
 export { OperationsRow } from './OperationsRow';
 
+// Hooks
+export { useRegWatchState } from './useRegWatchState';
+export type {
+  RegWatchStatus,
+  RegWatchItemState,
+  UseRegWatchStateReturn,
+} from './useRegWatchState';
+
 // Types
 export type {
   AksiyonOncelik,

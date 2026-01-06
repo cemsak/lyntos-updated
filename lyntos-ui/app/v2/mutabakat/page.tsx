@@ -22,7 +22,7 @@ export default function MutabakatPage() {
           </button>
           <div>
             <h1 className="text-2xl font-bold text-slate-800">Mutabakat Kontrolu</h1>
-            <p className="text-slate-600">Ba-Bs ve diger mutabakat islemleri</p>
+            <p className="text-slate-600">Cross-check ve mutabakat islemleri</p>
           </div>
         </div>
 
