@@ -1,5 +1,6 @@
 'use client';
 import React, { useState } from 'react';
+import { HelpCircle, X, CheckCircle2, AlertTriangle, BookOpen } from 'lucide-react';
 import { Card } from '../shared/Card';
 import { Badge, TrustBadge } from '../shared/Badge';
 import { PanelState } from '../shared/PanelState';
@@ -8,6 +9,31 @@ import { useFailSoftFetch } from '../hooks/useFailSoftFetch';
 import { ENDPOINTS } from '../contracts/endpoints';
 import { normalizeToEnvelope } from '../contracts/map';
 import type { PanelEnvelope } from '../contracts/envelope';
+
+// SMMM Context Info for Cross-Check Panel
+const CROSS_CHECK_SMMM_INFO = {
+  title: 'Cross-Check Matrisi Nedir?',
+  description: 'Kaynak belgeler arasi tutarlilik kontrolu',
+  context: [
+    'Cross-Check, farkli veri kaynaklarini karsilastirarak tutarsizliklari tespit eder.',
+    'Mizan vs KDV Beyannamesi: Satis/alis tutarlari eslesmeli.',
+    'Mizan vs E-Fatura: Fatura toplamlari mizan ile uyumlu olmali.',
+    'Mizan vs Banka: Tahsilat/odeme kayitlari tutarli olmali.',
+    'VDK incelemelerde bu tutarsizliklar ilk kontrol noktasidir.',
+  ],
+  farkTipleri: [
+    { level: 'Eslesme', desc: 'Fark yok - Kayitlar tutarli', color: 'bg-green-50 text-green-700' },
+    { level: 'Kucuk Fark', desc: '≤%5 fark - Yuvarlama/zamanlama farki olabilir', color: 'bg-amber-50 text-amber-700' },
+    { level: 'Buyuk Fark', desc: '%5-10 fark - Incelenmeli, muhtemel kayit hatasi', color: 'bg-orange-50 text-orange-700' },
+    { level: 'Kritik', desc: '>%10 fark - Acil duzeltme gerekli', color: 'bg-red-50 text-red-700' },
+  ],
+  actions: [
+    'Kritik farklari oncelikli olarak inceleyin',
+    'Fark nedenini belirleyin (zamanlama, kur, hata)',
+    'Duzeltme fislerini hazirlayin',
+    'Mutabakat dosyasini arsivleyin',
+  ],
+};
 
 interface CrossCheckItem {
   id: string;
@@ -102,8 +128,96 @@ const STATUS_CONFIG: Record<CrossCheckItem['status'], { badge: 'success' | 'warn
   critical: { badge: 'error', label: 'Kritik' },
 };
 
+// Cross-Check SMMM Info Modal
+function CrossCheckInfoModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  if (!isOpen) return null;
+
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) onClose();
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onClick={handleBackdropClick}
+    >
+      <div className="bg-white rounded-xl shadow-xl max-w-lg w-full overflow-hidden">
+        {/* Header */}
+        <div className="p-4 flex items-center justify-between bg-indigo-50 border-b border-indigo-200">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-indigo-100">
+              <BookOpen className="w-6 h-6 text-indigo-600" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-indigo-800">{CROSS_CHECK_SMMM_INFO.title}</h2>
+              <p className="text-sm text-slate-600">{CROSS_CHECK_SMMM_INFO.description}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-4 space-y-4 max-h-[60vh] overflow-y-auto">
+          {/* Context */}
+          <div>
+            <h3 className="text-sm font-semibold text-slate-700 mb-2">Cross-Check Nasil Calisir?</h3>
+            <ul className="space-y-2">
+              {CROSS_CHECK_SMMM_INFO.context.map((item, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-slate-600">
+                  <CheckCircle2 className="w-4 h-4 text-indigo-500 flex-shrink-0 mt-0.5" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Fark Tipleri */}
+          <div>
+            <h3 className="text-sm font-semibold text-slate-700 mb-2">Fark Seviyeleri</h3>
+            <div className="space-y-2">
+              {CROSS_CHECK_SMMM_INFO.farkTipleri.map((fark, i) => (
+                <div key={i} className={`p-2 rounded text-sm ${fark.color}`}>
+                  <strong>{fark.level}:</strong> {fark.desc}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3">
+            <h3 className="text-sm font-semibold text-indigo-800 mb-2 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4" />
+              SMMM Olarak Ne Yapmalisiniz?
+            </h3>
+            <ul className="space-y-1">
+              {CROSS_CHECK_SMMM_INFO.actions.map((action, i) => (
+                <li key={i} className="text-sm text-slate-700 pl-4 border-l-2 border-indigo-300">
+                  {action}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="p-4 border-t border-slate-200 flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            Anladim
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function CrossCheckPanel() {
   const [showExplain, setShowExplain] = useState(false);
+  const [showSmmmInfo, setShowSmmmInfo] = useState(false);
   const envelope = useFailSoftFetch<CrossCheckResult>(ENDPOINTS.CROSS_CHECK, normalizeCrossCheck);
   const { status, reason_tr, data, analysis, trust, legal_basis_refs, evidence_refs, meta } = envelope;
 
@@ -112,7 +226,18 @@ export function CrossCheckPanel() {
   return (
     <>
       <Card
-        title="Cross-Check Matrisi"
+        title={
+          <span className="flex items-center gap-2">
+            Cross-Check Matrisi
+            <button
+              onClick={() => setShowSmmmInfo(true)}
+              className="text-slate-400 hover:text-indigo-600 transition-colors"
+              title="SMMM Rehberi"
+            >
+              <HelpCircle className="w-4 h-4" />
+            </button>
+          </span>
+        }
         subtitle="Mizan vs KDV / e-Fatura / Banka"
         headerAction={
           data && (
@@ -215,6 +340,8 @@ export function CrossCheckPanel() {
         evidenceRefs={evidence_refs}
         meta={meta}
       />
+
+      <CrossCheckInfoModal isOpen={showSmmmInfo} onClose={() => setShowSmmmInfo(false)} />
     </>
   );
 }

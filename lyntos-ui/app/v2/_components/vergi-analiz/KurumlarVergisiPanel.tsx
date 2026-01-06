@@ -17,6 +17,9 @@ import {
   AlertCircle,
   FileText,
   Calendar,
+  HelpCircle,
+  X,
+  type LucideIcon,
 } from 'lucide-react';
 import { Card } from '../shared/Card';
 import { Badge } from '../shared/Badge';
@@ -87,6 +90,101 @@ const TIP_CONFIG: Record<KontrolTipi, { bg: string; text: string; label: string;
 };
 
 // ════════════════════════════════════════════════════════════════════════════
+// CATEGORY INFO - SMMM EXPLANATIONS
+// ════════════════════════════════════════════════════════════════════════════
+
+interface CategoryInfo {
+  title: string;
+  icon: LucideIcon;
+  description: string;
+  details: string[];
+  action: string;
+  examples: string[];
+}
+
+const CATEGORY_INFO: Record<'risk' | 'avantaj' | 'zorunlu', CategoryInfo> = {
+  risk: {
+    title: 'Risk Kontrolleri',
+    icon: TrendingDown,
+    description: 'VDK incelemelerinde sikca tespit edilen riskli durumlar',
+    details: [
+      'Bu kontroller, vergi incelemelerinde elestiri konusu olabilecek alanlari gosterir.',
+      'Her kontrol, potansiyel vergi riski ve ceza ihtimalini azaltmak icin onemlidir.',
+      'Yuksek riskli kontroller oncelikli olarak ele alinmalidir.',
+    ],
+    action: 'Risk kontrollerini gozden gecirin ve gerekli duzeltmeleri yapin.',
+    examples: [
+      'Ortulu Sermaye Kontrolu - Ortaklara borc/sermaye orani',
+      'Transfer Fiyatlandirmasi - Iliskili taraf islemleri',
+      'KKEG Analizi - Kanunen kabul edilmeyen giderler',
+    ],
+  },
+  avantaj: {
+    title: 'Avantaj Firsatlari',
+    icon: Sparkles,
+    description: 'Yasal vergi avantajlari ve tasarruf firsatlari',
+    details: [
+      'Bu kontroller, mukelleflerin yararlanabilecegi yasal vergi avantajlarini gosterir.',
+      'Her avantaj, vergi yukunu azaltmak icin kullanilabilecek bir firsattir.',
+      'Bazi avantajlar belirli kosullara baglidir, sartlari kontrol edin.',
+    ],
+    action: 'Avantaj firsatlarini degerlendirin ve uygun olanlari uygulayin.',
+    examples: [
+      'Ar-Ge Indirimi - %100 ek indirim hakki',
+      'Ihracat Indirimi - %5 kurumlar vergisi indirimi',
+      'Istihdam Tesvikleri - SGK prim destekleri',
+    ],
+  },
+  zorunlu: {
+    title: 'Zorunlu Kontroller',
+    icon: FileText,
+    description: 'Yasal olarak yapilmasi zorunlu kontroller ve beyanlar',
+    details: [
+      'Bu kontroller, vergi mevzuati geregi yapilmasi zorunlu olan islemlerdir.',
+      'Eksik veya hatali beyan durumunda cezai muyyeide uygulanabilir.',
+      'Tum zorunlu kontrollerin eksiksiz tamamlanmasi gerekir.',
+    ],
+    action: 'Tum zorunlu kontrolleri tamamlayin ve belgendirin.',
+    examples: [
+      'Kurumlar Vergisi Beyannamesi - Yillik beyan',
+      'Gecici Vergi Beyannamesi - Uc aylik beyan',
+      'E-Defter Berat - Aylik yukleme zorunlulugu',
+    ],
+  },
+};
+
+// Category Info Modal Colors
+const CATEGORY_COLORS: Record<'risk' | 'avantaj' | 'zorunlu', {
+  bg: string;
+  border: string;
+  text: string;
+  iconBg: string;
+  icon: string;
+}> = {
+  risk: {
+    bg: 'bg-red-50',
+    border: 'border-red-200',
+    text: 'text-red-800',
+    iconBg: 'bg-red-100',
+    icon: 'text-red-600',
+  },
+  avantaj: {
+    bg: 'bg-green-50',
+    border: 'border-green-200',
+    text: 'text-green-800',
+    iconBg: 'bg-green-100',
+    icon: 'text-green-600',
+  },
+  zorunlu: {
+    bg: 'bg-blue-50',
+    border: 'border-blue-200',
+    text: 'text-blue-800',
+    iconBg: 'bg-blue-100',
+    icon: 'text-blue-600',
+  },
+};
+
+// ════════════════════════════════════════════════════════════════════════════
 // HELPERS
 // ════════════════════════════════════════════════════════════════════════════
 
@@ -96,6 +194,99 @@ function formatCurrency(value: number): string {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(value) + ' TL';
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// CATEGORY INFO MODAL
+// ════════════════════════════════════════════════════════════════════════════
+
+interface CategoryInfoModalProps {
+  category: 'risk' | 'avantaj' | 'zorunlu' | null;
+  onClose: () => void;
+}
+
+function CategoryInfoModal({ category, onClose }: CategoryInfoModalProps) {
+  if (!category) return null;
+
+  const info = CATEGORY_INFO[category];
+  const colors = CATEGORY_COLORS[category];
+  const Icon = info.icon;
+
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) onClose();
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onClick={handleBackdropClick}
+    >
+      <div className="bg-white rounded-xl shadow-xl max-w-lg w-full overflow-hidden">
+        {/* Header */}
+        <div className={`p-4 flex items-center justify-between ${colors.bg} ${colors.border} border-b`}>
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${colors.iconBg}`}>
+              <Icon className={`w-6 h-6 ${colors.icon}`} />
+            </div>
+            <div>
+              <h2 className={`text-lg font-bold ${colors.text}`}>{info.title}</h2>
+              <p className="text-sm text-slate-600">{info.description}</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-slate-400 hover:text-slate-600 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-4 space-y-4">
+          {/* Details */}
+          <div>
+            <h3 className="text-sm font-semibold text-slate-700 mb-2">Bu Ne Anlama Geliyor?</h3>
+            <ul className="space-y-2">
+              {info.details.map((detail, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-slate-600">
+                  <CheckCircle2 className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" />
+                  <span>{detail}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Examples */}
+          <div>
+            <h3 className="text-sm font-semibold text-slate-700 mb-2">Ornek Kontroller</h3>
+            <ul className="space-y-1">
+              {info.examples.map((example, i) => (
+                <li key={i} className="text-sm text-slate-600 pl-4 border-l-2 border-slate-200">
+                  {example}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Action */}
+          <div className={`p-3 rounded-lg ${colors.bg} ${colors.border} border`}>
+            <h3 className={`text-sm font-semibold mb-1 ${colors.text}`}>SMMM Olarak Ne Yapmalisiniz?</h3>
+            <p className="text-sm text-slate-700">{info.action}</p>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="p-4 border-t border-slate-200 flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition-colors"
+          >
+            Anladim
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -283,6 +474,7 @@ export function KurumlarVergisiPanel({
 }: KurumlarVergisiPanelProps) {
   const [expandedKontrol, setExpandedKontrol] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'tumu' | 'risk' | 'avantaj' | 'zorunlu'>('tumu');
+  const [selectedCategory, setSelectedCategory] = useState<'risk' | 'avantaj' | 'zorunlu' | null>(null);
 
   // Mock matrah verileri (gercekte props'tan gelecek)
   const veriler: MatrahVerileri = matrahVerileri || {
@@ -376,29 +568,50 @@ export function KurumlarVergisiPanel({
           </div>
         </div>
 
-        {/* Tip Istatistikleri */}
+        {/* Tip Istatistikleri - Clickable Cards */}
         <div className="grid grid-cols-3 gap-3">
-          <div className="bg-red-500/20 rounded-lg p-3 border border-red-500/30">
-            <div className="flex items-center gap-2 text-red-300 text-sm mb-1">
-              <TrendingDown className="w-4 h-4" />
-              Risk Kontrolleri
+          <button
+            onClick={() => setSelectedCategory('risk')}
+            className="bg-red-500/20 rounded-lg p-3 border border-red-500/30 text-left hover:bg-red-500/30 hover:scale-[1.02] transition-all cursor-pointer"
+          >
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-2 text-red-300 text-sm">
+                <TrendingDown className="w-4 h-4" />
+                Risk Kontrolleri
+              </div>
+              <HelpCircle className="w-4 h-4 text-red-300/60 hover:text-red-200" />
             </div>
             <div className="text-2xl font-bold text-red-100">{stats.riskKontrol}</div>
-          </div>
-          <div className="bg-green-500/20 rounded-lg p-3 border border-green-500/30">
-            <div className="flex items-center gap-2 text-green-300 text-sm mb-1">
-              <Sparkles className="w-4 h-4" />
-              Avantaj Firsatlari
+            <p className="text-xs text-red-300/70 mt-1">Tikla: Detayli bilgi</p>
+          </button>
+          <button
+            onClick={() => setSelectedCategory('avantaj')}
+            className="bg-green-500/20 rounded-lg p-3 border border-green-500/30 text-left hover:bg-green-500/30 hover:scale-[1.02] transition-all cursor-pointer"
+          >
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-2 text-green-300 text-sm">
+                <Sparkles className="w-4 h-4" />
+                Avantaj Firsatlari
+              </div>
+              <HelpCircle className="w-4 h-4 text-green-300/60 hover:text-green-200" />
             </div>
             <div className="text-2xl font-bold text-green-100">{stats.avantajKontrol}</div>
-          </div>
-          <div className="bg-blue-500/20 rounded-lg p-3 border border-blue-500/30">
-            <div className="flex items-center gap-2 text-blue-300 text-sm mb-1">
-              <FileText className="w-4 h-4" />
-              Zorunlu Kontroller
+            <p className="text-xs text-green-300/70 mt-1">Tikla: Detayli bilgi</p>
+          </button>
+          <button
+            onClick={() => setSelectedCategory('zorunlu')}
+            className="bg-blue-500/20 rounded-lg p-3 border border-blue-500/30 text-left hover:bg-blue-500/30 hover:scale-[1.02] transition-all cursor-pointer"
+          >
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-2 text-blue-300 text-sm">
+                <FileText className="w-4 h-4" />
+                Zorunlu Kontroller
+              </div>
+              <HelpCircle className="w-4 h-4 text-blue-300/60 hover:text-blue-200" />
             </div>
             <div className="text-2xl font-bold text-blue-100">{stats.zorunluKontrol}</div>
-          </div>
+            <p className="text-xs text-blue-300/70 mt-1">Tikla: Detayli bilgi</p>
+          </button>
         </div>
       </div>
 
@@ -646,6 +859,12 @@ export function KurumlarVergisiPanel({
           <MatrahHesaplama veriler={veriler} yil={yil} />
         </div>
       </div>
+
+      {/* Category Info Modal */}
+      <CategoryInfoModal
+        category={selectedCategory}
+        onClose={() => setSelectedCategory(null)}
+      />
     </div>
   );
 }
