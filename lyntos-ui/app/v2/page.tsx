@@ -1,6 +1,6 @@
 'use client';
 import React, { useState } from 'react';
-import { ListTodo, FolderOpen, BarChart3, Radio, Layers } from 'lucide-react';
+import { ListTodo, FolderOpen, BarChart3, Radio, Layers, Calculator } from 'lucide-react';
 import { useDashboardScope, useScopeComplete } from './_components/scope/useDashboardScope';
 import { Card } from './_components/shared/Card';
 import { Badge } from './_components/shared/Badge';
@@ -26,6 +26,12 @@ import { RegWatchPanel } from './_components/operations/RegWatchPanel';
 // Deep Dive (Uzman Modu)
 import { DeepDiveSection } from './_components/deepdive/DeepDiveSection';
 
+// P1: Vergi Analizi
+import { GeciciVergiPanel, KurumlarVergisiPanel } from './_components/vergi-analiz';
+
+// 5 Why Wizard
+import { FiveWhyWizard } from './_components/vdk/FiveWhyWizard';
+
 export default function V2DashboardPage() {
   const { scope } = useDashboardScope();
   const scopeComplete = useScopeComplete();
@@ -33,6 +39,10 @@ export default function V2DashboardPage() {
   // Upload Modal State
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [uploadBelgeTipi, setUploadBelgeTipi] = useState<BelgeTipi | null>(null);
+
+  // 5 Why Wizard State
+  const [fiveWhyOpen, setFiveWhyOpen] = useState(false);
+  const [selectedAksiyon, setSelectedAksiyon] = useState<AksiyonItem | null>(null);
 
   // Donem Verileri Hook
   const { markAsUploaded } = useDonemVerileri();
@@ -48,8 +58,15 @@ export default function V2DashboardPage() {
   };
 
   const handleProblemCozmeClick = (aksiyon: AksiyonItem) => {
-    console.log('Problem cozme:', aksiyon.id);
-    // TODO: Open 5 Why modal
+    setSelectedAksiyon(aksiyon);
+    setFiveWhyOpen(true);
+  };
+
+  const handleFiveWhyComplete = (analysis: { kriterId: string; problem: string; whys: string[]; kokNeden: string; onerilenAksiyonlar: string[] }) => {
+    console.log('5 Why Analysis completed:', analysis);
+    // TODO: Save to backend/state
+    setFiveWhyOpen(false);
+    setSelectedAksiyon(null);
   };
 
   const handleRegWatchClick = () => {
@@ -143,7 +160,25 @@ export default function V2DashboardPage() {
       </DashboardSection>
 
       {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* BOLUM 4: MEVZUAT TAKIBI (P2) */}
+      {/* BOLUM 4: VERGI ANALIZI (P1) */}
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      <DashboardSection
+        id="vergi-analizi-section"
+        title="Vergi Analizi"
+        icon={<Calculator className="w-5 h-5 text-indigo-600" />}
+        priority="P1"
+      >
+        <div className="space-y-6">
+          {/* Gecici Vergi - Ceyreklik */}
+          <GeciciVergiPanel donem={scope.period} />
+
+          {/* Kurumlar Vergisi - Yillik */}
+          <KurumlarVergisiPanel yil={2024} />
+        </div>
+      </DashboardSection>
+
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      {/* BOLUM 5: MEVZUAT TAKIBI (P2) */}
       {/* ═══════════════════════════════════════════════════════════════════ */}
       <DashboardSection
         id="regwatch-section"
@@ -155,7 +190,7 @@ export default function V2DashboardPage() {
       </DashboardSection>
 
       {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* BOLUM 5: DEEP DIVE - Uzman Modu veya Collapsed */}
+      {/* BOLUM 6: DEEP DIVE - Uzman Modu veya Collapsed */}
       {/* ═══════════════════════════════════════════════════════════════════ */}
       <DashboardSection
         id="deep-dive-section"
@@ -181,6 +216,7 @@ export default function V2DashboardPage() {
             <StatusRow label="Sprint 5.6: Operations Kaizen" status="ok" />
             <StatusRow label="Sprint 5.7: Dashboard Layout" status="ok" />
             <StatusRow label="Sprint 5.8: Full Functionality + Design" status="ok" />
+            <StatusRow label="Sprint 5.9: Vergi Analiz Sistemi" status="ok" />
           </div>
         </Card>
       )}
@@ -192,6 +228,21 @@ export default function V2DashboardPage() {
         belgeTipi={uploadBelgeTipi}
         onSuccess={handleUploadSuccess}
       />
+
+      {/* 5 Why Wizard */}
+      {selectedAksiyon && (
+        <FiveWhyWizard
+          isOpen={fiveWhyOpen}
+          onClose={() => {
+            setFiveWhyOpen(false);
+            setSelectedAksiyon(null);
+          }}
+          kriterId={selectedAksiyon.iliskiliVeri?.id || selectedAksiyon.id}
+          kriterBaslik={selectedAksiyon.baslik}
+          problemAciklama={selectedAksiyon.aciklama}
+          onComplete={handleFiveWhyComplete}
+        />
+      )}
     </div>
   );
 }

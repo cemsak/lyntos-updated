@@ -122,7 +122,147 @@ Bu sınırların aşılması halinde takip eden yılın başından itibaren e-fa
     ],
     ilgiliMaddeler: ['VUK 232', 'E-Fatura Genel Tebliği'],
   },
+  // Dashboard mockData'dan gelen ID: teblig-123
+  'teblig-123': {
+    id: 'teblig-123',
+    baslik: 'KDV Genel Uygulama Tebliğinde Değişiklik',
+    ozet: 'KDV iade süreleri ve belge ibraz süreleri güncellendi. Bu değişiklik KDV iade taleplerini etkileyebilir.',
+    detay: `KDV Genel Uygulama Tebliğinde yapılan değişiklikler:
+
+1. İade Talep Süreleri:
+   - İndirimli orana tabi işlemlerden doğan iade talepleri için süre 2 aydan 3 aya uzatıldı
+   - İstisna kapsamındaki işlemler için belge ibraz süresi 1 ay olarak belirlendi
+
+2. Belge İbraz Zorunlulukları:
+   - Elektronik ortamda belge ibrazı zorunlu hale getirildi
+   - YMM raporu için ek süre tanındı
+
+3. Özel Esaslar:
+   - Sahte belge düzenleme riski olan mükelleflere yönelik ek tedbirler getirildi`,
+    yayinTarihi: '2025-12-20',
+    sonTarih: '2026-02-28',
+    kaynak: 'Resmi Gazete',
+    kaynakUrl: 'https://www.resmigazete.gov.tr',
+    kategori: 'teblig',
+    oncelik: 'yuksek',
+    etkilenenAlanlar: ['KDV', 'İade İşlemleri', 'Beyanname', 'YMM Raporu'],
+    gerekliAksiyonlar: [
+      {
+        id: 'A1',
+        baslik: 'Mevcut İade Taleplerini Gözden Geçir',
+        aciklama: 'Bekleyen KDV iade taleplerinin yeni sürelere uygunluğunu kontrol edin',
+        tamamlandi: false,
+      },
+      {
+        id: 'A2',
+        baslik: 'Mükellefleri Bilgilendir',
+        aciklama: 'İade talebinde bulunan mükelleflere yeni süreleri bildirin',
+        tamamlandi: false,
+      },
+      {
+        id: 'A3',
+        baslik: 'Sistem Güncellemesi',
+        aciklama: 'Takip sistemindeki hatırlatma sürelerini güncelleyin',
+        tamamlandi: false,
+      },
+    ],
+    ilgiliMaddeler: ['KDVK 29', 'KDVK 32', 'KDV Genel Tebliği'],
+  },
+  // Ek mevzuat örnekleri
+  'REG-2025-001': {
+    id: 'REG-2025-001',
+    baslik: 'Asgari Kurumlar Vergisi Uygulaması',
+    ozet: '7524 sayılı Kanun ile getirilen asgari kurumlar vergisi 2025 yılından itibaren uygulanacak.',
+    detay: `Asgari Kurumlar Vergisi (AKV) Uygulaması:
+
+2025 yılından itibaren kurumlar vergisi mükellefleri için asgari vergi uygulaması başlıyor.
+
+Hesaplama:
+- Matrah = Ticari Bilanço Karı (indirim ve istisnalar öncesi)
+- AKV Oranı = %10
+- Hesaplanan KV < AKV ise, AKV ödenir
+
+İstisnalar:
+- İlk 5 yıl için yeni kurulan şirketler muaf
+- Serbest bölge kazançları muaf
+- AR-GE indirimleri %50 oranında dikkate alınır`,
+    yayinTarihi: '2025-01-01',
+    sonTarih: '2025-04-30',
+    kaynak: 'Resmi Gazete',
+    kaynakUrl: 'https://www.resmigazete.gov.tr',
+    kategori: 'kanun',
+    oncelik: 'kritik',
+    etkilenenAlanlar: ['Kurumlar Vergisi', 'Vergi Planlaması', 'Mali Tablolar'],
+    gerekliAksiyonlar: [
+      {
+        id: 'A1',
+        baslik: 'AKV Simülasyonu',
+        aciklama: 'Tüm mükelleflerin AKV durumunu simüle edin',
+        tamamlandi: false,
+      },
+      {
+        id: 'A2',
+        baslik: 'İstisna Analizi',
+        aciklama: 'Hangi mükelleflerin istisnadan yararlanabileceğini belirleyin',
+        tamamlandi: false,
+      },
+      {
+        id: 'A3',
+        baslik: 'Strateji Geliştirme',
+        aciklama: 'Vergi optimizasyonu için strateji önerileri hazırlayın',
+        tamamlandi: false,
+      },
+    ],
+    ilgiliMaddeler: ['KVK 32/C', '7524 sayılı Kanun'],
+  },
 };
+
+// Fallback for unknown IDs - creates a generic item
+function createFallbackItem(id: string): RegWatchItem {
+  return {
+    id: id,
+    baslik: `Mevzuat Değişikliği: ${id}`,
+    ozet: 'Bu mevzuat değişikliği henüz detaylandırılmamış. Lütfen resmi kaynakları kontrol edin.',
+    detay: `Mevzuat ID: ${id}
+
+Bu düzenleme hakkında detaylı bilgi henüz sisteme girilmemiş.
+
+Yapmanız gerekenler:
+1. Resmi Gazete'yi kontrol edin
+2. İlgili kurumun web sitesini ziyaret edin
+3. SMMM/YMM'nize danışın
+
+Not: Bu sayfa otomatik olarak oluşturulmuştur.`,
+    yayinTarihi: new Date().toISOString().split('T')[0],
+    sonTarih: null,
+    kaynak: 'Belirlenmedi',
+    kaynakUrl: 'https://www.resmigazete.gov.tr',
+    kategori: 'duyuru',
+    oncelik: 'orta',
+    etkilenenAlanlar: ['Genel'],
+    gerekliAksiyonlar: [
+      {
+        id: 'A1',
+        baslik: 'Resmi Kaynağı İncele',
+        aciklama: 'Düzenlemenin tam metnini resmi kaynaktan okuyun',
+        tamamlandi: false,
+      },
+      {
+        id: 'A2',
+        baslik: 'Etki Analizi Yap',
+        aciklama: 'Mükelleflere etkisini değerlendirin',
+        tamamlandi: false,
+      },
+      {
+        id: 'A3',
+        baslik: 'Gerekli Aksiyonları Belirle',
+        aciklama: 'Yapılması gereken işlemleri listeleyin',
+        tamamlandi: false,
+      },
+    ],
+    ilgiliMaddeler: ['Belirlenmedi'],
+  };
+}
 
 export default function RegWatchDetailPage() {
   const router = useRouter();
@@ -139,17 +279,21 @@ export default function RegWatchDetailPage() {
       setLoading(true);
       await new Promise(resolve => setTimeout(resolve, 300));
 
-      const data = MOCK_REGWATCH_DATA[regId];
-      if (data) {
-        setItem(data);
-        // Load saved state from localStorage
-        const savedState = localStorage.getItem(`regwatch-${regId}`);
-        if (savedState) {
+      // Use mock data or fallback for unknown IDs
+      const data = MOCK_REGWATCH_DATA[regId] || createFallbackItem(regId);
+      setItem(data);
+
+      // Load saved state from localStorage
+      const savedState = localStorage.getItem(`regwatch-${regId}`);
+      if (savedState) {
+        try {
           const parsed = JSON.parse(savedState);
           setAksiyonlar(parsed.aksiyonlar || data.gerekliAksiyonlar);
-        } else {
+        } catch {
           setAksiyonlar(data.gerekliAksiyonlar);
         }
+      } else {
+        setAksiyonlar(data.gerekliAksiyonlar);
       }
       setLoading(false);
     };

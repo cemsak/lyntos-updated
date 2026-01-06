@@ -1,9 +1,10 @@
 'use client';
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, AlertTriangle, Info, Lightbulb } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, Lightbulb } from 'lucide-react';
 import { Card } from '../../_components/shared/Card';
 import { Badge } from '../../_components/shared/Badge';
+import { FiveWhyWizard } from '../../_components/vdk/FiveWhyWizard';
 
 // VDK Kriter bilgileri
 const VDK_KRITERLER: Record<string, { baslik: string; aciklama: string; oneri: string; risk: string }> = {
@@ -38,6 +39,9 @@ export default function VdkDetayPage() {
   const router = useRouter();
   const kriterId = params.id as string;
 
+  // 5 Why Wizard State
+  const [fiveWhyOpen, setFiveWhyOpen] = useState(false);
+
   const kriter = VDK_KRITERLER[kriterId] || {
     baslik: `VDK Kriter ${kriterId}`,
     aciklama: 'Kriter detaylari yukleniyor...',
@@ -46,6 +50,12 @@ export default function VdkDetayPage() {
   };
 
   const riskVariant = kriter.risk === 'Yuksek' ? 'error' : kriter.risk === 'Orta' ? 'warning' : 'default';
+
+  const handleFiveWhyComplete = (analysis: { kriterId: string; problem: string; whys: string[]; kokNeden: string; onerilenAksiyonlar: string[] }) => {
+    console.log('5 Why Analysis completed:', analysis);
+    // TODO: Save to backend/state
+    setFiveWhyOpen(false);
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 p-6">
@@ -98,10 +108,23 @@ export default function VdkDetayPage() {
             <p className="text-slate-500 mb-4">
               5 Why metoduyla bu riskin kok nedenini analiz edin.
             </p>
-            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            <button
+              onClick={() => setFiveWhyOpen(true)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
               5 Why Analizi Baslat
             </button>
           </Card>
+
+          {/* 5 Why Wizard */}
+          <FiveWhyWizard
+            isOpen={fiveWhyOpen}
+            onClose={() => setFiveWhyOpen(false)}
+            kriterId={kriterId}
+            kriterBaslik={kriter.baslik}
+            problemAciklama={kriter.aciklama}
+            onComplete={handleFiveWhyComplete}
+          />
 
           {/* Geri Don */}
           <div className="flex justify-end">

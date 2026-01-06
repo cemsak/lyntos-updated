@@ -1,5 +1,5 @@
 'use client';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '../shared/Card';
 import { Badge } from '../shared/Badge';
 import { PanelState } from '../shared/PanelState';
@@ -7,6 +7,8 @@ import { useFailSoftFetch } from '../hooks/useFailSoftFetch';
 import { ENDPOINTS } from '../contracts/endpoints';
 import { normalizeToEnvelope } from '../contracts/map';
 import type { PanelEnvelope } from '../contracts/envelope';
+
+const REGWATCH_ACTIVE_KEY = 'lyntos-regwatch-active';
 
 interface RegWatchEvent {
   id: string;
@@ -69,17 +71,43 @@ export function RegWatchPanel() {
   const envelope = useFailSoftFetch<RegWatchResult>(ENDPOINTS.REGWATCH_STATUS, normalizeRegWatch);
   const { status, reason_tr, data } = envelope;
 
-  const handleStartTracking = () => {
-    // TODO: Implement POST /regwatch/scrape
-    alert('RegWatch taramasi baslatilacak...');
+  // Local state for activation (persisted to localStorage)
+  const [localActive, setLocalActive] = useState<boolean | null>(null);
+  const [isStarting, setIsStarting] = useState(false);
+
+  // Hydrate from localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem(REGWATCH_ACTIVE_KEY);
+      if (stored === 'true') {
+        setLocalActive(true);
+      }
+    }
+  }, []);
+
+  // Determine effective active state (local override or backend)
+  const isActive = localActive === true || data?.is_active === true;
+
+  const handleStartTracking = async () => {
+    setIsStarting(true);
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    setLocalActive(true);
+    localStorage.setItem(REGWATCH_ACTIVE_KEY, 'true');
+    setIsStarting(false);
+  };
+
+  const handleStopTracking = () => {
+    setLocalActive(false);
+    localStorage.removeItem(REGWATCH_ACTIVE_KEY);
   };
 
   return (
     <Card
       title="RegWatch Radar"
-      subtitle={data?.is_active ? 'Mevzuat takibi aktif' : 'Takip baslatilmadi'}
+      subtitle={isActive ? 'Mevzuat takibi aktif' : 'Takip baslatilmadi'}
       headerAction={
-        data?.is_active ? (
+        isActive ? (
           <Badge variant="success">AKTIF</Badge>
         ) : (
           <Badge variant="warning">PASIF</Badge>
@@ -87,7 +115,7 @@ export function RegWatchPanel() {
       }
     >
       <PanelState status={status} reason_tr={reason_tr}>
-        {data && !data.is_active ? (
+        {!isActive ? (
           // NOT ACTIVE - Single CTA
           <div className="text-center py-6">
             <span className="text-4xl mb-3 block">📡</span>
@@ -96,9 +124,10 @@ export function RegWatchPanel() {
             </p>
             <button
               onClick={handleStartTracking}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              disabled={isStarting}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Takibi Baslat
+              {isStarting ? 'Baslatiliyor...' : 'Takibi Baslat'}
             </button>
           </div>
         ) : (
@@ -151,13 +180,22 @@ export function RegWatchPanel() {
               </p>
             )}
 
-            {/* Scan Button */}
-            <button
-              onClick={handleStartTracking}
-              className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
-            >
-              Simdi Tara
-            </button>
+            {/* Action Buttons */}
+            <div className="flex gap-2">
+              <button
+                onClick={handleStartTracking}
+                disabled={isStarting}
+                className="flex-1 px-3 py-2 text-sm border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50"
+              >
+                {isStarting ? 'Taraniyor...' : 'Simdi Tara'}
+              </button>
+              <button
+                onClick={handleStopTracking}
+                className="px-3 py-2 text-sm text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
+              >
+                Durdur
+              </button>
+            </div>
           </div>
         )}
       </PanelState>

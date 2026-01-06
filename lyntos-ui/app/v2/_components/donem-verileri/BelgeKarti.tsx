@@ -1,8 +1,50 @@
 'use client';
 import React from 'react';
+import {
+  BookOpen,
+  Book,
+  Table,
+  FileText,
+  Building2,
+  Receipt,
+  FileSpreadsheet,
+  Users,
+  Stamp,
+  CalendarClock,
+  Building,
+  User,
+  Fuel,
+  Scale,
+  TrendingUp,
+  Banknote,
+  PieChart,
+  FileQuestion,
+  type LucideIcon,
+} from 'lucide-react';
 import { Badge } from '../shared/Badge';
 import type { BelgeDurumData, BelgeDurumu } from './types';
 import { BELGE_TANIMLARI } from './types';
+
+// Icon string to component mapper
+const ICON_MAP: Record<string, LucideIcon> = {
+  BookOpen,
+  Book,
+  Table,
+  FileText,
+  Building2,
+  Receipt,
+  FileSpreadsheet,
+  Users,
+  Stamp,
+  CalendarClock,
+  Building,
+  User,
+  Fuel,
+  Scale,
+  TrendingUp,
+  Banknote,
+  PieChart,
+};
 
 interface BelgeKartiProps {
   belge: BelgeDurumData;
@@ -35,8 +77,15 @@ export function BelgeKarti({ belge, onUploadClick }: BelgeKartiProps) {
       tabIndex={belge.durum === 'EKSIK' ? 0 : undefined}
     >
       {/* Icon */}
-      <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-lg bg-white border border-slate-200 text-lg font-bold text-slate-600">
-        {tanim.icon}
+      <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-lg bg-white border border-slate-200">
+        {(() => {
+          const IconComponent = tanim.icon ? ICON_MAP[tanim.icon] : FileQuestion;
+          return IconComponent ? (
+            <IconComponent className="w-5 h-5 text-slate-600" />
+          ) : (
+            <FileQuestion className="w-5 h-5 text-slate-600" />
+          );
+        })()}
       </div>
 
       {/* Content */}
