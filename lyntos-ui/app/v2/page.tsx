@@ -74,6 +74,8 @@ export default function V2DashboardPage() {
             <StatusRow label="Sprint 1: KPI Strip + ExplainModal" status="ok" />
             <StatusRow label="Sprint 2: Operations Row" status="ok" />
             <StatusRow label="Sprint 3: Deep Dive Panels" status="ok" />
+            <StatusRow label="Sprint 5.5: Donem Verileri Panel" status="ok" />
+            <StatusRow label="Sprint 5.6: Operations Kaizen" status="ok" />
           </div>
         </Card>
       )}
