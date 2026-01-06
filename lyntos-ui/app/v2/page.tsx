@@ -5,6 +5,7 @@ import { Card } from './_components/shared/Card';
 import { Badge } from './_components/shared/Badge';
 import { KpiStrip } from './_components/kpi/KpiStrip';
 import { OperationsRow } from './_components/operations/OperationsRow';
+import { DonemVerileriPanel } from './_components/donem-verileri';
 import { DeepDiveSection } from './_components/deepdive/DeepDiveSection';
 
 export default function V2DashboardPage() {
@@ -47,6 +48,20 @@ export default function V2DashboardPage() {
 
       {/* Layer 3: Operations Row */}
       <OperationsRow />
+
+      {/* Layer 3.5: Donem Verileri - Period Documents */}
+      <section>
+        <h2 className="text-sm font-semibold text-slate-700 mb-3">Donem Verileri</h2>
+        <div className="grid grid-cols-2 gap-4">
+          <DonemVerileriPanel />
+          <div id="upload-section" className="bg-white border border-dashed border-slate-300 rounded-lg p-6 flex items-center justify-center">
+            <div className="text-center text-slate-400">
+              <span className="text-2xl block mb-2">+</span>
+              <p className="text-sm">Belge yuklemek icin tiklayin veya surukleyin</p>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Layer 4: Deep Dive Panels */}
       <DeepDiveSection />

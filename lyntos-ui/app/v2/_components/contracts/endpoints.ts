@@ -14,6 +14,7 @@ export const ENDPOINTS = {
   INFLATION_ADJUSTMENT: `${API_BASE}/contracts/inflation-adjustment`,
   CROSS_CHECK: `${API_BASE}/contracts/cross-check`,
   REGWATCH_STATUS: `${API_BASE}/contracts/regwatch-status`,
+  PERIOD_COMPLETENESS: `${API_BASE}/documents/period-completeness`,
   SOURCES: `${API_BASE}/contracts/sources`,
   SOURCE_BY_ID: (id: string) => `${API_BASE}/contracts/sources/${id}`,
   EVIDENCE_RULES: `${API_BASE}/evidence/rules`,
