@@ -18,9 +18,11 @@ interface KpiCardProps {
   envelope: PanelEnvelope<KpiData>;
   icon?: string;
   onRefresh?: () => void;
+  onClick?: () => void;
+  compact?: boolean;
 }
 
-export function KpiCard({ title, envelope, icon, onRefresh }: KpiCardProps) {
+export function KpiCard({ title, envelope, icon, onRefresh, onClick, compact }: KpiCardProps) {
   const [showExplain, setShowExplain] = useState(false);
   const { status, reason_tr, data, analysis, trust, legal_basis_refs, evidence_refs } = envelope;
 
@@ -44,7 +46,12 @@ export function KpiCard({ title, envelope, icon, onRefresh }: KpiCardProps) {
 
   return (
     <>
-      <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-4 hover:shadow-md transition-shadow">
+      <div
+        className={`bg-white border border-slate-200 rounded-lg shadow-sm p-4 hover:shadow-md transition-shadow ${onClick ? 'cursor-pointer' : ''}`}
+        onClick={onClick}
+        role={onClick ? 'button' : undefined}
+        tabIndex={onClick ? 0 : undefined}
+      >
         {/* Header */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">

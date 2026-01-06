@@ -30,3 +30,16 @@ export {
   getTaxPaymentBanks,
   getKatilimBanks,
 } from './bankRegistry';
+
+// Sprint 5.3: Mizan parsing and VDK validation
+export { parseMizanFile, getAccountBalance, getAccountGroupTotal } from './mizanParser';
+export type { ParsedMizan, AccountBalance } from './mizanParser';
+
+export { aggregateMizanData, mergeExternalData } from './dataAggregator';
+export type { TaxpayerData } from './dataAggregator';
+
+export { useVdkValidation } from './useVdkValidation';
+export type { VdkAssessmentResult, VdkCriterionResult, UseVdkValidationReturn } from './useVdkValidation';
+
+export { UploadValidationBadge } from './UploadValidationBadge';
+export { QuickRiskSummary } from './QuickRiskSummary';

@@ -75,17 +75,18 @@ export function RegWatchPanel() {
   };
 
   return (
-    <Card
-      title="RegWatch Radar"
-      subtitle={data?.is_active ? 'Mevzuat takibi aktif' : 'Takip baslatilmadi'}
-      headerAction={
-        data?.is_active ? (
-          <Badge variant="success">AKTIF</Badge>
-        ) : (
-          <Badge variant="warning">PASIF</Badge>
-        )
-      }
-    >
+    <div id="regwatch-radar-section">
+      <Card
+        title="RegWatch Radar"
+        subtitle={data?.is_active ? 'Mevzuat takibi aktif' : 'Takip baslatilmadi'}
+        headerAction={
+          data?.is_active ? (
+            <Badge variant="success">AKTIF</Badge>
+          ) : (
+            <Badge variant="warning">PASIF</Badge>
+          )
+        }
+      >
       <PanelState status={status} reason_tr={reason_tr}>
         {data && !data.is_active ? (
           // NOT ACTIVE - Single CTA
@@ -161,6 +162,7 @@ export function RegWatchPanel() {
           </div>
         )}
       </PanelState>
-    </Card>
+      </Card>
+    </div>
   );
 }

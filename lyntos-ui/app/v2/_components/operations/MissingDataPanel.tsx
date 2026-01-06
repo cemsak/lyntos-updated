@@ -79,10 +79,16 @@ export function MissingDataPanel() {
       }
     >
       <PanelState status={status} reason_tr={reason_tr}>
-        {data && data.items.length === 0 ? (
+        {data && data.completeness_score >= 100 && data.items.length === 0 ? (
           <div className="text-center py-6">
-            <span className="text-3xl">✓</span>
+            <span className="text-3xl">P</span>
             <p className="text-sm text-green-600 mt-2">Tum veriler tam!</p>
+          </div>
+        ) : data && data.items.length === 0 && data.completeness_score < 100 ? (
+          <div className="text-center py-6">
+            <span className="text-3xl">!</span>
+            <p className="text-sm text-amber-600 mt-2">Veri yuklenmesi bekleniyor</p>
+            <p className="text-xs text-slate-500 mt-1">Eksik belgeler icin Upload modulunu kullanin</p>
           </div>
         ) : (
           <div className="space-y-3 max-h-64 overflow-y-auto">

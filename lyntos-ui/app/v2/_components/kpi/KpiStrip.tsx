@@ -76,7 +76,8 @@ function createKpiEnvelope<T>(
   raw: unknown,
   extractData: (raw: unknown) => T | undefined,
   dataKey?: string,
-  requestId?: string
+  requestId?: string,
+  emptyMessage?: string
 ): PanelEnvelope<T> {
   if (!raw || typeof raw !== 'object') {
     return {
@@ -101,7 +102,7 @@ function createKpiEnvelope<T>(
 
   if (data === undefined || data === null) {
     status = 'empty';
-    reason_tr = 'Goruntulenecek veri yok.';
+    reason_tr = emptyMessage || 'Goruntulenecek veri yok.';
   }
 
   return {
@@ -130,7 +131,7 @@ function normalizeKurganRisk(raw: unknown, requestId?: string): PanelEnvelope<Kp
       unit: 'puan',
       risk_level: typeof kurgan.risk_level === 'string' ? kurgan.risk_level : undefined,
     };
-  }, 'kurgan_risk', requestId);
+  }, 'kurgan_risk', requestId, 'Risk analizi icin mizan yukleyin');
 }
 
 function normalizeDataQuality(raw: unknown, requestId?: string): PanelEnvelope<KpiData> {
@@ -143,7 +144,7 @@ function normalizeDataQuality(raw: unknown, requestId?: string): PanelEnvelope<K
       label: 'Veri Tamam',
       unit: '%',
     };
-  }, undefined, requestId);
+  }, undefined, requestId, 'Veri kalitesi icin belge yukleyin');
 }
 
 function normalizeCrossCheck(raw: unknown, requestId?: string): PanelEnvelope<KpiData> {
@@ -159,7 +160,7 @@ function normalizeCrossCheck(raw: unknown, requestId?: string): PanelEnvelope<Kp
       label: `${errors} hata, ${warnings} uyari`,
       risk_level: errors > 0 ? 'Yuksek' : warnings > 0 ? 'Orta' : 'Dusuk',
     };
-  }, undefined, requestId);
+  }, undefined, requestId, 'Capraz kontrol icin mizan ve beyanname yukleyin');
 }
 
 function normalizeQuarterlyTax(raw: unknown, requestId?: string): PanelEnvelope<KpiData> {
@@ -173,7 +174,7 @@ function normalizeQuarterlyTax(raw: unknown, requestId?: string): PanelEnvelope<
       label: 'Gecici Vergi',
       unit: 'TL',
     };
-  }, undefined, requestId);
+  }, undefined, requestId, 'Gecici vergi hesabi icin mizan yukleyin');
 }
 
 function normalizeCorporateTax(raw: unknown, requestId?: string): PanelEnvelope<KpiData> {
@@ -187,7 +188,7 @@ function normalizeCorporateTax(raw: unknown, requestId?: string): PanelEnvelope<
       label: 'Kurumlar Vergisi',
       unit: 'TL',
     };
-  }, undefined, requestId);
+  }, undefined, requestId, 'Kurumlar vergisi hesaplamasi icin mizan yukleyin');
 }
 
 function normalizeCorporateTaxForecast(raw: unknown, requestId?: string): PanelEnvelope<KpiData> {
@@ -201,7 +202,7 @@ function normalizeCorporateTaxForecast(raw: unknown, requestId?: string): PanelE
       label: 'KV Tahmini',
       unit: 'TL',
     };
-  }, undefined, requestId);
+  }, undefined, requestId, 'Tahmin icin en az 3 donem mizan verisi gerekli');
 }
 
 function normalizeInflation(raw: unknown, requestId?: string): PanelEnvelope<KpiData> {
@@ -215,7 +216,7 @@ function normalizeInflation(raw: unknown, requestId?: string): PanelEnvelope<Kpi
       label: 'Enflasyon Duzeltmesi',
       unit: 'TL',
     };
-  }, undefined, requestId);
+  }, undefined, requestId, 'Enflasyon duzeltmesi icin bilanco yukleyin');
 }
 
 function normalizeRegwatch(raw: unknown, requestId?: string): PanelEnvelope<KpiData> {
@@ -227,9 +228,9 @@ function normalizeRegwatch(raw: unknown, requestId?: string): PanelEnvelope<KpiD
     const pending = typeof data.pending_count === 'number' ? data.pending_count : 0;
     return {
       value: isActive ? 'Aktif' : 'Pasif',
-      label: isActive ? `${pending} bekleyen` : 'Takip baslatilmadi',
+      label: isActive ? `${pending} bekleyen` : 'Tikla ve baslat',
     };
-  }, undefined, requestId);
+  }, undefined, requestId, 'Mevzuat takibi icin tiklayin');
 }
 
 export function KpiStrip() {
@@ -243,6 +244,14 @@ export function KpiStrip() {
   const inflation = useFailSoftFetch<KpiData>(ENDPOINTS.INFLATION_ADJUSTMENT, normalizeInflation);
   const regwatch = useFailSoftFetch<KpiData>(ENDPOINTS.REGWATCH_STATUS, normalizeRegwatch);
 
+  // Scroll to RegWatch section in Operations Row
+  const scrollToRegWatch = () => {
+    const section = document.getElementById('regwatch-radar-section');
+    if (section) {
+      section.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
+
   return (
     <section>
       <h2 className="text-sm font-semibold text-slate-700 mb-3">Ozet Gostergeler</h2>
@@ -254,7 +263,7 @@ export function KpiStrip() {
         <KpiCard title="Kurumlar Vergisi" icon="🏢" envelope={corporateTax} />
         <KpiCard title="KV Forecast" icon="📈" envelope={corporateTaxForecast} />
         <KpiCard title="Enflasyon" icon="📉" envelope={inflation} />
-        <KpiCard title="RegWatch" icon="📡" envelope={regwatch} />
+        <KpiCard title="RegWatch" icon="📡" envelope={regwatch} onClick={scrollToRegWatch} />
       </div>
     </section>
   );

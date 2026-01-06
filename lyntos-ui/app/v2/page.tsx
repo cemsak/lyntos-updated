@@ -51,15 +51,17 @@ export default function V2DashboardPage() {
       {/* Layer 4: Deep Dive Panels */}
       <DeepDiveSection />
 
-      {/* Sprint Status */}
-      <Card title="Sprint Durumu" subtitle="V2 Dashboard gelistirme">
-        <div className="space-y-2 text-sm">
-          <StatusRow label="Sprint 0: Contract & Scope" status="ok" />
-          <StatusRow label="Sprint 1: KPI Strip + ExplainModal" status="ok" />
-          <StatusRow label="Sprint 2: Operations Row" status="ok" />
-          <StatusRow label="Sprint 3: Deep Dive Panels" status="ok" />
-        </div>
-      </Card>
+      {/* Sprint Status - Dev only */}
+      {process.env.NODE_ENV === 'development' && (
+        <Card title="Sprint Durumu" subtitle="V2 Dashboard gelistirme (DEV only)">
+          <div className="space-y-2 text-sm">
+            <StatusRow label="Sprint 0: Contract & Scope" status="ok" />
+            <StatusRow label="Sprint 1: KPI Strip + ExplainModal" status="ok" />
+            <StatusRow label="Sprint 2: Operations Row" status="ok" />
+            <StatusRow label="Sprint 3: Deep Dive Panels" status="ok" />
+          </div>
+        </Card>
+      )}
     </div>
   );
 }
