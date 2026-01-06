@@ -59,13 +59,80 @@ export function EvidenceViewer({ isOpen, onClose, evidenceRefs, title = 'Kanit D
     return labels[kind] || kind;
   };
 
-  const handleDownload = (item: EvidenceItem) => {
-    if (item.url) {
-      window.open(item.url, '_blank');
-    } else {
-      const downloadUrl = `/api/v1/documents/document/${item.ref}`;
-      window.open(downloadUrl, '_blank');
+  // Check if item is demo/mock data
+  const isDemoItem = (item: EvidenceItem): boolean => {
+    // Demo indicators: no url, ref starts with demo/mock, or ref looks like placeholder
+    if (!item.url && item.ref) {
+      const ref = item.ref.toLowerCase();
+      if (ref.startsWith('demo') || ref.startsWith('mock') || ref.includes('sample')) {
+        return true;
+      }
+      // Check if it's a placeholder ref like "SRC-0001" or "DOC-xxx"
+      if (/^[A-Z]{2,4}-\d+$/.test(item.ref)) {
+        return true;
+      }
     }
+    return false;
+  };
+
+  // Create demo download file
+  const downloadDemoFile = (item: EvidenceItem) => {
+    const demoContent = `
+╔══════════════════════════════════════════════════════════════╗
+║                    LYNTOS Demo Dosyası                        ║
+╚══════════════════════════════════════════════════════════════╝
+
+Dosya Bilgileri
+───────────────
+Başlık:    ${item.title}
+Referans:  ${item.ref}
+Tür:       ${getKindLabel(item.kind)}
+${item.size ? `Boyut:     ${item.size}` : ''}
+${item.uploaded_at ? `Tarih:     ${new Date(item.uploaded_at).toLocaleString('tr-TR')}` : ''}
+
+─────────────────────────────────────────────────────────────────
+
+Bu dosya demo amaçlıdır.
+
+Gerçek sistemde:
+• Orijinal belge PDF/Excel formatında indirilecektir
+• Belge içeriği tam olarak görüntülenebilecektir
+• Sayfa referansları ile doğrudan ilgili bölüme gidilebilecektir
+
+Mevcut durumda demo veriler kullanılmaktadır.
+Gerçek veri yüklendiğinde bu dosyalara erişim sağlanacaktır.
+
+─────────────────────────────────────────────────────────────────
+LYNTOS - Muhasebe ve Vergi Analiz Platformu
+`;
+
+    const blob = new Blob([demoContent], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${item.title.replace(/[^a-zA-Z0-9_-]/g, '_')}_DEMO.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleDownload = (item: EvidenceItem) => {
+    // If item has a real URL, open it
+    if (item.url && item.url.startsWith('http')) {
+      window.open(item.url, '_blank');
+      return;
+    }
+
+    // Check if this is demo data
+    if (isDemoItem(item) || !item.url) {
+      downloadDemoFile(item);
+      return;
+    }
+
+    // For real API URLs, open in new tab (auth will be handled by cookies if available)
+    const downloadUrl = item.url || `/api/v1/documents/document/${item.ref}`;
+    window.open(downloadUrl, '_blank');
   };
 
   return (
@@ -105,7 +172,14 @@ export function EvidenceViewer({ isOpen, onClose, evidenceRefs, title = 'Kanit D
                     <div className="flex items-start gap-3">
                       <span className="text-xl font-bold text-slate-400">{getKindIcon(item.kind)}</span>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-slate-900 truncate">{item.title}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium text-slate-900 truncate">{item.title}</p>
+                          {isDemoItem(item) && (
+                            <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded flex-shrink-0">
+                              Demo
+                            </span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2 mt-1">
                           <Badge variant="default">{getKindLabel(item.kind)}</Badge>
                           {item.size && <span className="text-xs text-slate-400">{item.size}</span>}
@@ -157,14 +231,24 @@ export function EvidenceViewer({ isOpen, onClose, evidenceRefs, title = 'Kanit D
                       </p>
                     )}
 
+                    {/* Demo Mode Warning */}
+                    {isDemoItem(selectedEvidence) && (
+                      <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-3 text-center max-w-md">
+                        <p className="text-sm text-amber-800">
+                          <strong>Demo Modu:</strong> Bu dosya gercek sistemde acilacaktir.
+                          Simdilik ornek dosya indirebilirsiniz.
+                        </p>
+                      </div>
+                    )}
+
                     <div className="mt-6 flex gap-3">
                       <button
                         onClick={() => handleDownload(selectedEvidence)}
                         className="px-4 py-2 text-sm bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors"
                       >
-                        Dosyayi Ac
+                        {isDemoItem(selectedEvidence) ? 'Demo Indir' : 'Dosyayi Ac'}
                       </button>
-                      {selectedEvidence.url && (
+                      {selectedEvidence.url && selectedEvidence.url.startsWith('http') && (
                         <a
                           href={selectedEvidence.url}
                           target="_blank"

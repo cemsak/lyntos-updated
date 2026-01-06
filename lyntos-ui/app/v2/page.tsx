@@ -44,6 +44,10 @@ export default function V2DashboardPage() {
   const [fiveWhyOpen, setFiveWhyOpen] = useState(false);
   const [selectedAksiyon, setSelectedAksiyon] = useState<AksiyonItem | null>(null);
 
+  // Vergi Kontrol Modal State
+  const [kontrolModalOpen, setKontrolModalOpen] = useState(false);
+  const [selectedKontrol, setSelectedKontrol] = useState<{ id: string; baslik: string } | null>(null);
+
   // Donem Verileri Hook
   const { markAsUploaded } = useDonemVerileri();
 
@@ -71,6 +75,15 @@ export default function V2DashboardPage() {
 
   const handleRegWatchClick = () => {
     scrollToSection('regwatch-section');
+  };
+
+  const handleKontrolBaslat = (kontrolId: string) => {
+    const isGeciciVergi = kontrolId.startsWith('GV-');
+    const kontrolBaslik = isGeciciVergi
+      ? `Gecici Vergi Kontrolu: ${kontrolId}`
+      : `Kurumlar Vergisi Kontrolu: ${kontrolId}`;
+    setSelectedKontrol({ id: kontrolId, baslik: kontrolBaslik });
+    setKontrolModalOpen(true);
   };
 
   // Scope bekleniyor
@@ -170,10 +183,10 @@ export default function V2DashboardPage() {
       >
         <div className="space-y-6">
           {/* Gecici Vergi - Ceyreklik */}
-          <GeciciVergiPanel donem={scope.period} />
+          <GeciciVergiPanel donem={scope.period} onKontrolClick={handleKontrolBaslat} />
 
           {/* Kurumlar Vergisi - Yillik */}
-          <KurumlarVergisiPanel yil={2024} />
+          <KurumlarVergisiPanel yil={2024} onKontrolClick={handleKontrolBaslat} />
         </div>
       </DashboardSection>
 
@@ -242,6 +255,48 @@ export default function V2DashboardPage() {
           problemAciklama={selectedAksiyon.aciklama}
           onComplete={handleFiveWhyComplete}
         />
+      )}
+
+      {/* Vergi Kontrol Modal */}
+      {kontrolModalOpen && selectedKontrol && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl p-6 max-w-lg w-full mx-4 shadow-2xl">
+            <h2 className="text-xl font-bold text-slate-800 mb-2">{selectedKontrol.baslik}</h2>
+            <p className="text-slate-600 mb-6">
+              Bu kontrol icin gerekli veriler analiz edilecek. Devam etmek istiyor musunuz?
+            </p>
+            <div className="bg-slate-50 rounded-lg p-4 mb-6">
+              <p className="text-sm text-slate-600">
+                <strong>Kontrol ID:</strong> {selectedKontrol.id}
+              </p>
+              <p className="text-sm text-slate-600 mt-1">
+                <strong>Mukellef:</strong> {scope.client_id}
+              </p>
+              <p className="text-sm text-slate-600 mt-1">
+                <strong>Donem:</strong> {scope.period}
+              </p>
+            </div>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setKontrolModalOpen(false)}
+                className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                Iptal
+              </button>
+              <button
+                onClick={() => {
+                  console.log('Kontrol baslatiliyor:', selectedKontrol.id);
+                  // TODO: Start actual kontrol logic
+                  setKontrolModalOpen(false);
+                  setSelectedKontrol(null);
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Kontrolu Baslat
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

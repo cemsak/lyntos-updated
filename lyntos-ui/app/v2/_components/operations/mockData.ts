@@ -30,7 +30,7 @@ export const MOCK_AKSIYONLAR: AksiyonItem[] = [
     kalanGun: 3,
     tahminiDakika: 15,
     aksiyonTipi: 'yukle',
-    aksiyonUrl: '/v2/upload?tip=enflasyon',
+    aksiyonUrl: '/v2/enflasyon/upload',
     aksiyonLabel: 'Belgeleri Yukle',
     problemDurumu: 'd1_ekip',
     olusturmaTarihi: new Date(),
