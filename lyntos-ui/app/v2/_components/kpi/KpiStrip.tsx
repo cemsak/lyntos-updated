@@ -233,7 +233,11 @@ function normalizeRegwatch(raw: unknown, requestId?: string): PanelEnvelope<KpiD
   }, undefined, requestId, 'Mevzuat takibi icin tiklayin');
 }
 
-export function KpiStrip() {
+interface KpiStripProps {
+  onRegWatchClick?: () => void;
+}
+
+export function KpiStrip({ onRegWatchClick }: KpiStripProps) {
   // Each KPI has its own fail-soft fetch
   const kurgan = useFailSoftFetch<KpiData>(ENDPOINTS.KURGAN_RISK, normalizeKurganRisk);
   const dataQuality = useFailSoftFetch<KpiData>(ENDPOINTS.DATA_QUALITY, normalizeDataQuality);
@@ -244,27 +248,24 @@ export function KpiStrip() {
   const inflation = useFailSoftFetch<KpiData>(ENDPOINTS.INFLATION_ADJUSTMENT, normalizeInflation);
   const regwatch = useFailSoftFetch<KpiData>(ENDPOINTS.REGWATCH_STATUS, normalizeRegwatch);
 
-  // Scroll to RegWatch section in Operations Row
-  const scrollToRegWatch = () => {
-    const section = document.getElementById('regwatch-radar-section');
+  // Scroll to RegWatch section - use prop if provided, else default
+  const handleRegWatchClick = onRegWatchClick || (() => {
+    const section = document.getElementById('regwatch-section');
     if (section) {
-      section.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      section.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-  };
+  });
 
   return (
-    <section>
-      <h2 className="text-sm font-semibold text-slate-700 mb-3">Ozet Gostergeler</h2>
-      <div className="grid grid-cols-4 gap-4">
-        <KpiCard title="KURGAN Risk" icon="🎯" envelope={kurgan} />
-        <KpiCard title="Veri Kalitesi" icon="📊" envelope={dataQuality} />
-        <KpiCard title="Cross-Check" icon="✓" envelope={crossCheck} />
-        <KpiCard title="Gecici Vergi" icon="💰" envelope={quarterlyTax} />
-        <KpiCard title="Kurumlar Vergisi" icon="🏢" envelope={corporateTax} />
-        <KpiCard title="KV Forecast" icon="📈" envelope={corporateTaxForecast} />
-        <KpiCard title="Enflasyon" icon="📉" envelope={inflation} />
-        <KpiCard title="RegWatch" icon="📡" envelope={regwatch} onClick={scrollToRegWatch} />
-      </div>
-    </section>
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <KpiCard title="KURGAN Risk" icon="🎯" envelope={kurgan} />
+      <KpiCard title="Veri Kalitesi" icon="📊" envelope={dataQuality} />
+      <KpiCard title="Cross-Check" icon="✓" envelope={crossCheck} />
+      <KpiCard title="Gecici Vergi" icon="💰" envelope={quarterlyTax} />
+      <KpiCard title="Kurumlar Vergisi" icon="🏢" envelope={corporateTax} />
+      <KpiCard title="KV Forecast" icon="📈" envelope={corporateTaxForecast} />
+      <KpiCard title="Enflasyon" icon="📉" envelope={inflation} />
+      <KpiCard title="RegWatch" icon="📡" envelope={regwatch} onClick={handleRegWatchClick} />
+    </div>
   );
 }
