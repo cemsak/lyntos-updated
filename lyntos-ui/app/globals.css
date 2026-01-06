@@ -184,3 +184,70 @@ body {
 .animate-fadeIn {
   animation: fadeIn 0.2s ease-out;
 }
+
+/* Toast slide-in animation */
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in {
+  animation: slide-in 0.3s ease-out;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* LYNTOS DESIGN SYSTEM - Professional Accounting Software Palette           */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* Primary: Professional Blue */
+  --lyntos-primary-50: #eff6ff;
+  --lyntos-primary-100: #dbeafe;
+  --lyntos-primary-500: #3b82f6;
+  --lyntos-primary-600: #2563eb;
+  --lyntos-primary-700: #1d4ed8;
+
+  /* Neutral: Slate-based (cleaner than gray) */
+  --lyntos-slate-50: #f8fafc;
+  --lyntos-slate-100: #f1f5f9;
+  --lyntos-slate-200: #e2e8f0;
+  --lyntos-slate-300: #cbd5e1;
+  --lyntos-slate-400: #94a3b8;
+  --lyntos-slate-500: #64748b;
+  --lyntos-slate-600: #475569;
+  --lyntos-slate-700: #334155;
+  --lyntos-slate-800: #1e293b;
+  --lyntos-slate-900: #0f172a;
+
+  /* Semantic Colors */
+  --lyntos-success: #10b981;
+  --lyntos-success-light: #ecfdf5;
+  --lyntos-warning: #f59e0b;
+  --lyntos-warning-light: #fffbeb;
+  --lyntos-error: #ef4444;
+  --lyntos-error-light: #fef2f2;
+  --lyntos-info: #3b82f6;
+  --lyntos-info-light: #eff6ff;
+
+  /* Spacing Scale */
+  --lyntos-space-xs: 4px;
+  --lyntos-space-sm: 8px;
+  --lyntos-space-md: 16px;
+  --lyntos-space-lg: 24px;
+  --lyntos-space-xl: 32px;
+
+  /* Border Radius */
+  --lyntos-radius-sm: 4px;
+  --lyntos-radius-md: 6px;
+  --lyntos-radius-lg: 8px;
+
+  /* Typography */
+  --lyntos-font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --lyntos-font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+}

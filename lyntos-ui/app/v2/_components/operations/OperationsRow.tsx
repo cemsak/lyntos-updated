@@ -6,12 +6,6 @@ import { MOCK_AKSIYONLAR } from './mockData';
 import type { AksiyonItem } from './types';
 
 export function OperationsRow() {
-  const handleAksiyonClick = (aksiyon: AksiyonItem) => {
-    // Navigate to aksiyon.aksiyonUrl
-    console.log('Aksiyon:', aksiyon.aksiyonUrl);
-    // TODO: Implement router navigation
-  };
-
   const handleProblemCozmeClick = (aksiyon: AksiyonItem) => {
     // Open 5 Why wizard
     console.log('Problem cozme:', aksiyon.id);
@@ -26,7 +20,6 @@ export function OperationsRow() {
         <div className="lg:col-span-2">
           <AksiyonKuyruguPanel
             aksiyonlar={MOCK_AKSIYONLAR}
-            onAksiyonClick={handleAksiyonClick}
             onProblemCozmeClick={handleProblemCozmeClick}
           />
         </div>

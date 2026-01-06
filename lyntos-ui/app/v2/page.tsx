@@ -1,5 +1,5 @@
 'use client';
-import React from 'react';
+import React, { useState } from 'react';
 import { ListTodo, FolderOpen, BarChart3, Radio, Layers } from 'lucide-react';
 import { useDashboardScope, useScopeComplete } from './_components/scope/useDashboardScope';
 import { Card } from './_components/shared/Card';
@@ -11,7 +11,11 @@ import { AksiyonKuyruguPanel, MOCK_AKSIYONLAR } from './_components/operations';
 import type { AksiyonItem } from './_components/operations';
 
 // P0: Donem Verileri
-import { DonemVerileriPanel } from './_components/donem-verileri';
+import { DonemVerileriPanel, useDonemVerileri } from './_components/donem-verileri';
+import type { BelgeTipi } from './_components/donem-verileri/types';
+
+// Upload Modal
+import { UploadModal } from './_components/modals';
 
 // P1: Risk Ozeti (KPI Strip)
 import { KpiStrip } from './_components/kpi/KpiStrip';
@@ -26,10 +30,21 @@ export default function V2DashboardPage() {
   const { scope } = useDashboardScope();
   const scopeComplete = useScopeComplete();
 
+  // Upload Modal State
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [uploadBelgeTipi, setUploadBelgeTipi] = useState<BelgeTipi | null>(null);
+
+  // Donem Verileri Hook
+  const { markAsUploaded } = useDonemVerileri();
+
   // Handlers
-  const handleAksiyonClick = (aksiyon: AksiyonItem) => {
-    console.log('Aksiyon:', aksiyon.aksiyonUrl);
-    // TODO: Router navigation
+  const handleUploadClick = (belgeTipi: BelgeTipi) => {
+    setUploadBelgeTipi(belgeTipi);
+    setUploadModalOpen(true);
+  };
+
+  const handleUploadSuccess = (belgeTipi: BelgeTipi) => {
+    markAsUploaded(belgeTipi);
   };
 
   const handleProblemCozmeClick = (aksiyon: AksiyonItem) => {
@@ -86,7 +101,6 @@ export default function V2DashboardPage() {
       >
         <AksiyonKuyruguPanel
           aksiyonlar={MOCK_AKSIYONLAR}
-          onAksiyonClick={handleAksiyonClick}
           onProblemCozmeClick={handleProblemCozmeClick}
         />
       </DashboardSection>
@@ -101,13 +115,18 @@ export default function V2DashboardPage() {
         priority="P0"
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <DonemVerileriPanel />
-          <div id="upload-section" className="bg-white border border-dashed border-slate-300 rounded-lg p-6 flex items-center justify-center min-h-[200px]">
+          <DonemVerileriPanel onUploadClick={handleUploadClick} />
+          <button
+            id="upload-section"
+            onClick={() => handleUploadClick('MIZAN')}
+            className="bg-white border-2 border-dashed border-slate-300 rounded-lg p-6 flex items-center justify-center min-h-[200px] hover:border-blue-400 hover:bg-blue-50/50 transition-colors cursor-pointer"
+          >
             <div className="text-center text-slate-400">
-              <span className="text-2xl block mb-2">+</span>
-              <p className="text-sm">Belge yuklemek icin tiklayin veya surukleyin</p>
+              <span className="text-3xl block mb-2">+</span>
+              <p className="text-sm font-medium">Belge yuklemek icin tiklayin</p>
+              <p className="text-xs mt-1">veya surukleyin</p>
             </div>
-          </div>
+          </button>
         </div>
       </DashboardSection>
 
@@ -161,9 +180,18 @@ export default function V2DashboardPage() {
             <StatusRow label="Sprint 5.5: Donem Verileri Panel" status="ok" />
             <StatusRow label="Sprint 5.6: Operations Kaizen" status="ok" />
             <StatusRow label="Sprint 5.7: Dashboard Layout" status="ok" />
+            <StatusRow label="Sprint 5.8: Full Functionality + Design" status="ok" />
           </div>
         </Card>
       )}
+
+      {/* Upload Modal */}
+      <UploadModal
+        isOpen={uploadModalOpen}
+        onClose={() => setUploadModalOpen(false)}
+        belgeTipi={uploadBelgeTipi}
+        onSuccess={handleUploadSuccess}
+      />
     </div>
   );
 }

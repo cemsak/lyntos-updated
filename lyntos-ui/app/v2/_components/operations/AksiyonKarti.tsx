@@ -1,12 +1,12 @@
 'use client';
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import { Badge } from '../shared/Badge';
 import type { AksiyonItem } from './types';
 import { ONCELIK_CONFIG, PROBLEM_DURUMU_CONFIG, KAYNAK_ICONS } from './types';
 
 interface AksiyonKartiProps {
   aksiyon: AksiyonItem;
-  onAksiyonClick: (aksiyon: AksiyonItem) => void;
   onProblemCozmeClick?: (aksiyon: AksiyonItem) => void;
   compact?: boolean;
 }
@@ -30,14 +30,20 @@ function formatSure(dakika: number): string {
 
 export function AksiyonKarti({
   aksiyon,
-  onAksiyonClick,
   onProblemCozmeClick,
   compact = false,
 }: AksiyonKartiProps) {
+  const router = useRouter();
   const oncelikConfig = ONCELIK_CONFIG[aksiyon.oncelik];
   const problemConfig = aksiyon.problemDurumu
     ? PROBLEM_DURUMU_CONFIG[aksiyon.problemDurumu]
     : null;
+
+  const handleAksiyonClick = () => {
+    if (aksiyon.aksiyonUrl) {
+      router.push(aksiyon.aksiyonUrl);
+    }
+  };
 
   return (
     <div
@@ -129,7 +135,7 @@ export function AksiyonKarti({
 
         {/* Ana Aksiyon Butonu */}
         <button
-          onClick={() => onAksiyonClick(aksiyon)}
+          onClick={handleAksiyonClick}
           className={`px-4 py-1.5 text-sm font-medium text-white rounded-lg transition-colors flex items-center gap-1 ${
             aksiyon.oncelik === 'acil' ? 'bg-red-600 hover:bg-red-700' :
             aksiyon.oncelik === 'normal' ? 'bg-amber-600 hover:bg-amber-700' :

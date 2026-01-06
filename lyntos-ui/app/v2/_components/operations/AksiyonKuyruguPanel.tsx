@@ -9,7 +9,6 @@ import { ONCELIK_CONFIG } from './types';
 interface AksiyonKuyruguPanelProps {
   aksiyonlar: AksiyonItem[];
   stats?: AksiyonStats;
-  onAksiyonClick: (aksiyon: AksiyonItem) => void;
   onProblemCozmeClick?: (aksiyon: AksiyonItem) => void;
   maxGosterim?: number;
 }
@@ -26,7 +25,6 @@ function formatToplamSure(dakika: number): string {
 export function AksiyonKuyruguPanel({
   aksiyonlar,
   stats,
-  onAksiyonClick,
   onProblemCozmeClick,
   maxGosterim = 10,
 }: AksiyonKuyruguPanelProps) {
@@ -100,7 +98,6 @@ export function AksiyonKuyruguPanel({
               <AksiyonKarti
                 key={aksiyon.id}
                 aksiyon={aksiyon}
-                onAksiyonClick={onAksiyonClick}
                 onProblemCozmeClick={onProblemCozmeClick}
               />
             ))}
