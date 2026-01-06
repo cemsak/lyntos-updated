@@ -4,6 +4,8 @@ import React, { useMemo, useState } from 'react';
 import { HelpCircle, X, CheckCircle2, AlertTriangle, BookOpen } from 'lucide-react';
 import { Card } from '../shared/Card';
 import { PanelState } from '../shared/PanelState';
+import { TrustBadge } from '../shared/Badge';
+import { ExplainModal } from '../kpi/ExplainModal';
 import { useFailSoftFetch } from '../hooks/useFailSoftFetch';
 import { ENDPOINTS } from '../contracts/endpoints';
 import { normalizeToEnvelope } from '../contracts/map';
@@ -242,8 +244,9 @@ function SmmmInfoModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
 // Main Component
 export function VdkExpertPanel() {
   const [showSmmmInfo, setShowSmmmInfo] = useState(false);
+  const [showExplain, setShowExplain] = useState(false);
   const envelope = useFailSoftFetch<VdkResult>(ENDPOINTS.KURGAN_RISK, normalizeVdk);
-  const { status, reason_tr, data } = envelope;
+  const { status, reason_tr, data, analysis, trust, legal_basis_refs, evidence_refs, meta } = envelope;
 
   const { kurgan, ram } = useMemo(
     () => groupCriteria(data?.criteria || []),
@@ -336,10 +339,35 @@ export function VdkExpertPanel() {
 
             {/* Recommendations */}
             <RecommendationsPanel recommendations={recommendations} />
+
+            {/* Footer with Neden? button */}
+            <div className="flex items-center justify-between pt-4 mt-4 border-t border-slate-100">
+              <TrustBadge trust={trust} />
+              {(analysis.expert || analysis.ai || legal_basis_refs.length > 0) && (
+                <button
+                  onClick={() => setShowExplain(true)}
+                  className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                >
+                  Neden? →
+                </button>
+              )}
+            </div>
           </div>
         )}
       </PanelState>
     </Card>
+
+    <ExplainModal
+      isOpen={showExplain}
+      onClose={() => setShowExplain(false)}
+      title="VDK Risk Analizi"
+      analysis={analysis}
+      trust={trust}
+      legalBasisRefs={legal_basis_refs}
+      evidenceRefs={evidence_refs}
+      meta={meta}
+    />
+
     <SmmmInfoModal isOpen={showSmmmInfo} onClose={() => setShowSmmmInfo(false)} />
     </>
   );
