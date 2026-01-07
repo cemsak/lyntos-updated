@@ -11,6 +11,7 @@ import {
   BarChart3,
   Settings,
   HelpCircle,
+  Sparkles,
   type LucideIcon
 } from 'lucide-react';
 
@@ -72,6 +73,12 @@ export const NAVIGATION: NavSection[] = [
     id: 'tax',
     label: 'Vergi İşlemleri',
     items: [
+      {
+        id: 'vergus',
+        label: 'VERGUS Stratejist',
+        href: '/v2/vergus',
+        icon: Sparkles,
+      },
       {
         id: 'declarations',
         label: 'Beyannameler',

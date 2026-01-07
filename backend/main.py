@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.responses import FileResponse
 from api.v1.contracts import router as v1_router
@@ -10,10 +11,12 @@ from api.v1.tax_certificate import router as tax_certificate_router
 from api.v1.vdk_simulator import router as vdk_simulator_router
 from api.v1.inspector_prep import router as inspector_prep_router
 from api.v1.document_upload import router as document_upload_router
+from api.v1.tax_strategist import router as tax_strategist_router
 from api.v2.validate_vdk import router as vdk_validate_router
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from services.regwatch_scheduler import start_scheduler, stop_scheduler, get_scheduler_status
 
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
@@ -61,7 +64,26 @@ SCHEMA_VERSION = "2025-11-02"
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "lyntos_secret_key_2025")
 ALGORITHM = "HS256"
 
-app = FastAPI(title="LYNTOS SMMM Backend – Risk Motoru v1")
+# Enable/disable scheduler via env
+ENABLE_SCHEDULER = os.getenv("ENABLE_REGWATCH_SCHEDULER", "false").lower() == "true"
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan handler for startup/shutdown events"""
+    # Startup
+    if ENABLE_SCHEDULER:
+        start_scheduler()
+    yield
+    # Shutdown
+    if ENABLE_SCHEDULER:
+        stop_scheduler()
+
+
+app = FastAPI(
+    title="LYNTOS SMMM Backend – Risk Motoru v1",
+    lifespan=lifespan
+)
 
 
 # --- LYNTOS v1 API ---
@@ -87,6 +109,7 @@ app.include_router(tax_certificate_router, prefix="/api/v1", tags=["TaxCertifica
 app.include_router(vdk_simulator_router, prefix="/api/v1", tags=["VDKSimulator"])
 app.include_router(inspector_prep_router, tags=["InspectorPrep"])
 app.include_router(document_upload_router, tags=["DocumentUpload"])
+app.include_router(tax_strategist_router, prefix="/api/v1", tags=["VERGUS"])
 # --- /LYNTOS v1 API ---
 
 # --- LYNTOS v2 API ---
@@ -305,4 +328,17 @@ def get_latest_bundle(smmm: str, client: str, period: str):
         media_type="application/zip",
         filename=zip_name
     )
+
+
+# ---------------------------------------------------------------------------
+#  REGWATCH SCHEDULER STATUS
+# ---------------------------------------------------------------------------
+
+@app.get("/v1/scheduler/status")
+def scheduler_status():
+    """Get RegWatch scheduler status"""
+    return {
+        "scheduler_enabled": ENABLE_SCHEDULER,
+        "status": get_scheduler_status()
+    }
 

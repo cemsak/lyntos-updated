@@ -151,6 +151,72 @@ def init_database():
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_regwatch_detected ON regwatch_events(detected_at)")
 
         # ════════════════════════════════════════════════════════════════
+        # TAX PARAMETERS TABLE (Sprint R1 - Live Mevzuat Tracking)
+        # ════════════════════════════════════════════════════════════════
+
+        # Tax Parameters - Stores all current and historical tax rates/limits
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS tax_parameters (
+                id TEXT PRIMARY KEY,
+                category TEXT NOT NULL,
+                param_key TEXT NOT NULL,
+                param_value REAL,
+                param_unit TEXT,
+                valid_from TEXT NOT NULL,
+                valid_until TEXT,
+                legal_reference TEXT,
+                source_url TEXT,
+                created_at TEXT DEFAULT (datetime('now')),
+                updated_at TEXT,
+                updated_by TEXT
+            )
+        """)
+
+        # Tax Parameter indexes
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_tax_param_category ON tax_parameters(category)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_tax_param_key ON tax_parameters(param_key)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_tax_param_valid ON tax_parameters(valid_from, valid_until)")
+        cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_tax_param_unique ON tax_parameters(param_key, valid_from)")
+
+        # Change Log - Tracks all parameter changes
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS tax_change_log (
+                id TEXT PRIMARY KEY,
+                param_id TEXT,
+                old_value REAL,
+                new_value REAL,
+                change_type TEXT,
+                effective_date TEXT,
+                detected_at TEXT DEFAULT (datetime('now')),
+                source_document TEXT,
+                impact_analysis TEXT,
+                notification_sent INTEGER DEFAULT 0,
+                FOREIGN KEY (param_id) REFERENCES tax_parameters(id)
+            )
+        """)
+
+        # Change Log indexes
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_change_log_param ON tax_change_log(param_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_change_log_detected ON tax_change_log(detected_at)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_change_log_type ON tax_change_log(change_type)")
+
+        # Regulatory Sources - Tracks monitored sources
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS regulatory_sources (
+                id TEXT PRIMARY KEY,
+                source_name TEXT NOT NULL,
+                source_url TEXT NOT NULL,
+                scrape_frequency INTEGER DEFAULT 15,
+                last_scraped_at TEXT,
+                last_change_detected_at TEXT,
+                is_active INTEGER DEFAULT 1,
+                scraper_config TEXT DEFAULT '{}'
+            )
+        """)
+
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_reg_sources_active ON regulatory_sources(is_active)")
+
+        # ════════════════════════════════════════════════════════════════
         # DOCUMENT UPLOADS (Big-6 unified)
         # ════════════════════════════════════════════════════════════════
 
