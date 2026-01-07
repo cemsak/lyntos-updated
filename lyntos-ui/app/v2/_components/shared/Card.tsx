@@ -7,6 +7,7 @@ interface CardProps {
   headerAction?: React.ReactNode;
   className?: string;
   accent?: boolean; // Left accent bar
+  noPadding?: boolean; // Remove content padding
 }
 
 export function Card({
@@ -16,6 +17,7 @@ export function Card({
   headerAction,
   className = '',
   accent = false,
+  noPadding = false,
 }: CardProps) {
   return (
     <div
@@ -50,7 +52,7 @@ export function Card({
       )}
 
       {/* Content */}
-      <div className="p-4">{children}</div>
+      <div className={noPadding ? '' : 'p-4'}>{children}</div>
     </div>
   );
 }

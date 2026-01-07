@@ -45,6 +45,19 @@
   --lyntos-surface: #ffffff;
   --lyntos-surface-muted: #f8fafc;
   --lyntos-surface-elevated: #ffffff;
+
+  /* Stripe Design Tokens - Light mode */
+  --stripe-bg: #f6f9fc;
+  --stripe-card: #ffffff;
+  --stripe-border: #e3e8ee;
+  --stripe-text: #1a1f36;
+  --stripe-text-secondary: #697386;
+  --stripe-text-tertiary: #8792a2;
+  --stripe-primary: #635bff;
+  --stripe-primary-hover: #5851ea;
+  --stripe-success: #0caf60;
+  --stripe-warning: #e56f4a;
+  --stripe-danger: #cd3d64;
 }
 
 /* Dark mode already active for V2 */
@@ -52,6 +65,16 @@ html, :root {
   --lyntos-surface: #0f172a;
   --lyntos-surface-muted: #1e293b;
   --lyntos-surface-elevated: #1e293b;
+}
+
+.dark {
+  /* Stripe Design Tokens - Dark mode */
+  --stripe-bg: #0a0d14;
+  --stripe-card: #1a1f2e;
+  --stripe-border: #2d3343;
+  --stripe-text: #f6f9fc;
+  --stripe-text-secondary: #a3acb9;
+  --stripe-text-tertiary: #6b7280;
 }
 
 /* Dark theme */
