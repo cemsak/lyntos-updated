@@ -36,6 +36,24 @@
   --radius: 8px;
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* LYNTOS CSS VARIABLES (for var-based surface colors)                         */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* Light mode surface colors (legacy support) */
+  --lyntos-surface: #ffffff;
+  --lyntos-surface-muted: #f8fafc;
+  --lyntos-surface-elevated: #ffffff;
+}
+
+/* Dark mode already active for V2 */
+html, :root {
+  --lyntos-surface: #0f172a;
+  --lyntos-surface-muted: #1e293b;
+  --lyntos-surface-elevated: #1e293b;
+}
+
 /* Dark theme */
 .dark {
   --color-background: 222.2 84% 4.9%;
@@ -250,4 +268,261 @@ body {
   /* Typography */
   --lyntos-font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --lyntos-font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* LYNTOS V2 DARK THEME SYSTEM                                                  */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Force dark mode */
+:root {
+  color-scheme: dark;
+}
+
+html {
+  background-color: #09090b;
+}
+
+body {
+  background-color: #09090b;
+  color: #fafafa;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* GLOBAL OVERRIDES - Convert all light mode classes to dark                   */
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+/* Backgrounds */
+.bg-white { background-color: #27272a !important; }
+.bg-slate-50 { background-color: #09090b !important; }
+.bg-slate-100 { background-color: #18181b !important; }
+.bg-gray-50 { background-color: #09090b !important; }
+.bg-gray-100 { background-color: #18181b !important; }
+
+/* Text */
+.text-slate-900 { color: #fafafa !important; }
+.text-slate-800 { color: #e4e4e7 !important; }
+.text-slate-700 { color: #d4d4d8 !important; }
+.text-slate-600 { color: #a1a1aa !important; }
+.text-gray-900 { color: #fafafa !important; }
+.text-gray-800 { color: #e4e4e7 !important; }
+.text-gray-700 { color: #d4d4d8 !important; }
+
+/* Borders */
+.border-slate-200 { border-color: #3f3f46 !important; }
+.border-slate-300 { border-color: #52525b !important; }
+.border-gray-200 { border-color: #3f3f46 !important; }
+.border-gray-300 { border-color: #52525b !important; }
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* LYNTOS COMPONENT CLASSES                                                    */
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+/* Card with accent bar */
+.lyntos-card {
+  background-color: #27272a;
+  border: 1px solid #3f3f46;
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+/* Panel with left accent bar */
+.lyntos-panel {
+  position: relative;
+  background-color: #27272a;
+  border: 1px solid #3f3f46;
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+.lyntos-panel::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0.25rem;
+  background-color: #f59e0b;
+}
+
+/* Section header */
+.lyntos-section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.lyntos-section-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #fafafa;
+}
+
+/* Input fields */
+.lyntos-input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  background-color: #18181b;
+  border: 1px solid #3f3f46;
+  border-radius: 0.5rem;
+  color: #fafafa;
+  transition: all 0.2s;
+}
+
+.lyntos-input::placeholder {
+  color: #71717a;
+}
+
+.lyntos-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px #f59e0b;
+  border-color: transparent;
+}
+
+/* Select/Dropdown */
+.lyntos-select {
+  width: 100%;
+  padding: 0.5rem 2.5rem 0.5rem 0.75rem;
+  background-color: #18181b;
+  border: 1px solid #3f3f46;
+  border-radius: 0.5rem;
+  color: #fafafa;
+  cursor: pointer;
+  transition: all 0.2s;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23a1a1aa'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1rem;
+}
+
+.lyntos-select:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px #f59e0b;
+  border-color: transparent;
+}
+
+/* Button variants */
+.lyntos-btn-primary {
+  padding: 0.5rem 1rem;
+  background-color: #f59e0b;
+  color: #09090b;
+  font-weight: 500;
+  border-radius: 0.5rem;
+  transition: all 0.2s;
+}
+
+.lyntos-btn-primary:hover,
+.lyntos-btn-primary:active {
+  background-color: #d97706;
+}
+
+.lyntos-btn-primary:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px #09090b, 0 0 0 4px #f59e0b;
+}
+
+.lyntos-btn-secondary {
+  padding: 0.5rem 1rem;
+  background-color: #3f3f46;
+  color: #fafafa;
+  font-weight: 500;
+  border-radius: 0.5rem;
+  border: 1px solid #3f3f46;
+  transition: all 0.2s;
+}
+
+.lyntos-btn-secondary:hover,
+.lyntos-btn-secondary:active {
+  background-color: #3f3f46;
+}
+
+.lyntos-btn-secondary:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px #09090b, 0 0 0 4px #f59e0b;
+}
+
+/* Status badges */
+.lyntos-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.625rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.lyntos-badge-risk {
+  background-color: #7f1d1d;
+  color: #fca5a5;
+}
+
+.lyntos-badge-success {
+  background-color: #14532d;
+  color: #86efac;
+}
+
+.lyntos-badge-warning {
+  background-color: #78350f;
+  color: #fcd34d;
+}
+
+.lyntos-badge-info {
+  background-color: #1e3a8a;
+  color: #93c5fd;
+}
+
+.lyntos-badge-neutral {
+  background-color: #3f3f46;
+  color: #a1a1aa;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* SCROLLBAR STYLING (DARK)                                                    */
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #18181b;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #52525b;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* ANIMATIONS                                                                   */
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.lyntos-skeleton {
+  background: linear-gradient(to right, #27272a, #3f3f46, #27272a);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* FOCUS VISIBLE (Accessibility)                                               */
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+*:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px #09090b, 0 0 0 4px #f59e0b;
 }

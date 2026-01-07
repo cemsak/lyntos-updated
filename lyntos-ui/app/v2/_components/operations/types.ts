@@ -90,24 +90,24 @@ export interface AksiyonStats {
   buHaftaHedef: number;
 }
 
-// 8D Badge renkleri
+// 8D Badge renkleri - Dark mode aware
 export const PROBLEM_DURUMU_CONFIG: Record<ProblemDurumu, {
   label: string;
   color: string;
   bgColor: string;
 }> = {
-  d0_farkedildi: { label: 'D0', color: 'text-gray-600', bgColor: 'bg-gray-100' },
-  d1_ekip: { label: 'D1', color: 'text-red-600', bgColor: 'bg-red-100' },
-  d2_tanimlandi: { label: 'D2', color: 'text-orange-600', bgColor: 'bg-orange-100' },
-  d3_gecici: { label: 'D3', color: 'text-amber-600', bgColor: 'bg-amber-100' },
-  d4_kok_neden: { label: 'D4', color: 'text-yellow-600', bgColor: 'bg-yellow-100' },
-  d5_cozum_secildi: { label: 'D5', color: 'text-lime-600', bgColor: 'bg-lime-100' },
-  d6_uygulandi: { label: 'D6', color: 'text-green-600', bgColor: 'bg-green-100' },
-  d7_onleme: { label: 'D7', color: 'text-teal-600', bgColor: 'bg-teal-100' },
-  d8_kapandi: { label: 'D8', color: 'text-emerald-600', bgColor: 'bg-emerald-100' },
+  d0_farkedildi: { label: 'D0', color: 'text-gray-600 dark:text-gray-400', bgColor: 'bg-gray-100 dark:bg-gray-800' },
+  d1_ekip: { label: 'D1', color: 'text-red-600 dark:text-red-400', bgColor: 'bg-red-100 dark:bg-red-900/30' },
+  d2_tanimlandi: { label: 'D2', color: 'text-orange-600 dark:text-orange-400', bgColor: 'bg-orange-100 dark:bg-orange-900/30' },
+  d3_gecici: { label: 'D3', color: 'text-amber-600 dark:text-amber-400', bgColor: 'bg-amber-100 dark:bg-amber-900/30' },
+  d4_kok_neden: { label: 'D4', color: 'text-yellow-600 dark:text-yellow-400', bgColor: 'bg-yellow-100 dark:bg-yellow-900/30' },
+  d5_cozum_secildi: { label: 'D5', color: 'text-lime-600 dark:text-lime-400', bgColor: 'bg-lime-100 dark:bg-lime-900/30' },
+  d6_uygulandi: { label: 'D6', color: 'text-green-600 dark:text-green-400', bgColor: 'bg-green-100 dark:bg-green-900/30' },
+  d7_onleme: { label: 'D7', color: 'text-teal-600 dark:text-teal-400', bgColor: 'bg-teal-100 dark:bg-teal-900/30' },
+  d8_kapandi: { label: 'D8', color: 'text-emerald-600 dark:text-emerald-400', bgColor: 'bg-emerald-100 dark:bg-emerald-900/30' },
 };
 
-// Oncelik config
+// Oncelik config - Dark mode aware
 export const ONCELIK_CONFIG: Record<AksiyonOncelik, {
   label: string;
   labelTr: string;
@@ -120,25 +120,25 @@ export const ONCELIK_CONFIG: Record<AksiyonOncelik, {
     label: 'ACIL',
     labelTr: 'Hemen yapilmali',
     icon: '🔴',
-    color: 'text-red-700',
-    bgColor: 'bg-red-50',
-    borderColor: 'border-red-200',
+    color: 'text-red-700 dark:text-red-400',
+    bgColor: 'bg-red-50 dark:bg-red-950/30',
+    borderColor: 'border-red-200 dark:border-red-800',
   },
   normal: {
     label: 'NORMAL',
     labelTr: 'Bu hafta',
     icon: '🟡',
-    color: 'text-amber-700',
-    bgColor: 'bg-amber-50',
-    borderColor: 'border-amber-200',
+    color: 'text-amber-700 dark:text-amber-400',
+    bgColor: 'bg-amber-50 dark:bg-amber-950/30',
+    borderColor: 'border-amber-200 dark:border-amber-800',
   },
   bilgi: {
     label: 'BILGI',
     labelTr: 'Bilginize',
     icon: '🔵',
-    color: 'text-blue-700',
-    bgColor: 'bg-blue-50',
-    borderColor: 'border-blue-200',
+    color: 'text-blue-700 dark:text-blue-400',
+    bgColor: 'bg-blue-50 dark:bg-blue-950/30',
+    borderColor: 'border-blue-200 dark:border-blue-800',
   },
 };
 

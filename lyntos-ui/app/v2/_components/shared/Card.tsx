@@ -1,28 +1,56 @@
-'use client';
 import React from 'react';
 
 interface CardProps {
+  children: React.ReactNode;
   title?: React.ReactNode;
   subtitle?: string;
-  children: React.ReactNode;
-  className?: string;
   headerAction?: React.ReactNode;
-  noPadding?: boolean;
+  className?: string;
+  accent?: boolean; // Left accent bar
 }
 
-export function Card({ title, subtitle, children, className = '', headerAction, noPadding = false }: CardProps) {
+export function Card({
+  children,
+  title,
+  subtitle,
+  headerAction,
+  className = '',
+  accent = false,
+}: CardProps) {
   return (
-    <div className={`bg-white border border-slate-200 rounded-lg shadow-sm ${className}`}>
+    <div
+      className={`
+        relative bg-lyntos-bg-card border border-lyntos-border rounded-xl overflow-hidden
+        ${accent ? 'pl-1' : ''}
+        ${className}
+      `}
+    >
+      {/* Accent Bar */}
+      {accent && (
+        <div className="absolute left-0 top-0 bottom-0 w-1 bg-lyntos-accent" />
+      )}
+
+      {/* Header */}
       {(title || headerAction) && (
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-lyntos-border">
           <div>
-            {title && <h3 className="text-sm font-semibold text-slate-900">{title}</h3>}
-            {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
+            {title && (
+              <h3 className="text-sm font-semibold text-lyntos-text-primary">
+                {title}
+              </h3>
+            )}
+            {subtitle && (
+              <p className="text-xs text-lyntos-text-muted mt-0.5">
+                {subtitle}
+              </p>
+            )}
           </div>
-          {headerAction}
+          {headerAction && <div>{headerAction}</div>}
         </div>
       )}
-      <div className={noPadding ? '' : 'p-4'}>{children}</div>
+
+      {/* Content */}
+      <div className="p-4">{children}</div>
     </div>
   );
 }

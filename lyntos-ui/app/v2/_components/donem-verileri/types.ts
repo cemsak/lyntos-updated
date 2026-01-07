@@ -530,6 +530,147 @@ export function hesaplaKurumlarVergiSonGun(yil: number): Date {
   return new Date(yil + 1, 3, 30);
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// SADELEŞTİRİLMİŞ BELGE KATEGORİLERİ (SMMM UI İÇİN)
+// Son Güncelleme: 2026-01-07
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * SMMM'lerin gördüğü basitleştirilmiş kategori sistemi.
+ * Tüm beyannameler tek "beyannameler" altında toplanır.
+ * Mizan ve Ayrıntılı Mizan tek "mizan" olarak görünür.
+ */
+export type BelgeKategorisiUI =
+  | 'mizan'           // Mizan (ayrıntılı dahil)
+  | 'e_defter'        // E-Defter Yevmiye + Kebir
+  | 'beyannameler'    // TÜM beyannameler (KDV, Muhtasar, Geçici, vs.)
+  | 'e_fatura'        // E-Fatura/E-Arşiv listesi
+  | 'banka'           // Banka ekstreleri
+  | 'tahakkuk'        // Vergi tahakkukları
+  | 'mali_tablolar';  // Bilanço, Gelir Tablosu (opsiyonel)
+
+export interface BelgeKategorisiTanim {
+  kategori: BelgeKategorisiUI;
+  ad: string;
+  kisaAd: string;
+  aciklama: string;
+  icon: string;
+  zorunlu: boolean;
+  altTipler: BelgeTipi[];
+  spikyTip?: BelgeTipi; // Upload modal açılınca hangi tip seçilsin
+}
+
+export const BELGE_KATEGORILERI_UI: Record<BelgeKategorisiUI, BelgeKategorisiTanim> = {
+  mizan: {
+    kategori: 'mizan',
+    ad: 'Mizan',
+    kisaAd: 'Mizan',
+    aciklama: 'Dönem sonu mizan. Sistem ayrıntılı/özet otomatik algılar.',
+    icon: 'Table',
+    zorunlu: true,
+    altTipler: ['mizan_ayrintili', 'MIZAN'],
+    spikyTip: 'mizan_ayrintili',
+  },
+  e_defter: {
+    kategori: 'e_defter',
+    ad: 'E-Defter Beratı',
+    kisaAd: 'E-Defter',
+    aciklama: 'E-Defter yevmiye ve kebir beratları (ZIP/XML).',
+    icon: 'BookOpen',
+    zorunlu: true,
+    altTipler: ['e_defter_yevmiye', 'e_defter_kebir', 'E_DEFTER'],
+    spikyTip: 'E_DEFTER',
+  },
+  beyannameler: {
+    kategori: 'beyannameler',
+    ad: 'Beyannameler',
+    kisaAd: 'Beyanname',
+    aciklama: 'Tüm beyannameler. Sistem KDV/Muhtasar/Geçici otomatik algılar.',
+    icon: 'FileSpreadsheet',
+    zorunlu: true,
+    altTipler: [
+      'beyan_kdv', 'beyan_kdv2', 'beyan_muhtasar', 'beyan_damga',
+      'beyan_gecici', 'beyan_kurumlar', 'beyan_gelir', 'beyan_otv'
+    ],
+    spikyTip: 'beyan_kdv',
+  },
+  e_fatura: {
+    kategori: 'e_fatura',
+    ad: 'E-Fatura Listesi',
+    kisaAd: 'E-Fatura',
+    aciklama: 'Dönem e-fatura ve e-arşiv listesi.',
+    icon: 'FileText',
+    zorunlu: true,
+    altTipler: ['e_fatura_listesi'],
+    spikyTip: 'e_fatura_listesi',
+  },
+  banka: {
+    kategori: 'banka',
+    ad: 'Banka Ekstreleri',
+    kisaAd: 'Banka',
+    aciklama: 'Tüm hesapların dönem ekstresi.',
+    icon: 'Building2',
+    zorunlu: true,
+    altTipler: ['banka_ekstresi'],
+    spikyTip: 'banka_ekstresi',
+  },
+  tahakkuk: {
+    kategori: 'tahakkuk',
+    ad: 'Vergi Tahakkukları',
+    kisaAd: 'Tahakkuk',
+    aciklama: 'GİB vergi tahakkuk belgeleri.',
+    icon: 'Receipt',
+    zorunlu: true,
+    altTipler: ['vergi_tahakkuk'],
+    spikyTip: 'vergi_tahakkuk',
+  },
+  mali_tablolar: {
+    kategori: 'mali_tablolar',
+    ad: 'Mali Tablolar',
+    kisaAd: 'Mali Tab.',
+    aciklama: 'Bilanço, Gelir Tablosu ve diğer mali tablolar.',
+    icon: 'PieChart',
+    zorunlu: false,
+    altTipler: ['bilanco', 'gelir_tablosu', 'nakit_akim', 'ozkaynak_degisim'],
+    spikyTip: 'bilanco',
+  },
+};
+
+/**
+ * BelgeTipi'nden kategori bul
+ */
+export function getKategoriFromBelgeTipi(tip: BelgeTipi): BelgeKategorisiUI | null {
+  for (const [kategori, tanim] of Object.entries(BELGE_KATEGORILERI_UI)) {
+    if (tanim.altTipler.includes(tip)) {
+      return kategori as BelgeKategorisiUI;
+    }
+  }
+  return null;
+}
+
+/**
+ * Kategorideki tüm BelgeTipi'leri getir
+ */
+export function getBelgeTipleriByKategori(kategori: BelgeKategorisiUI): BelgeTipi[] {
+  return BELGE_KATEGORILERI_UI[kategori]?.altTipler || [];
+}
+
+/**
+ * Zorunlu kategorileri getir
+ */
+export function getZorunluKategoriler(): BelgeKategorisiUI[] {
+  return (Object.keys(BELGE_KATEGORILERI_UI) as BelgeKategorisiUI[])
+    .filter(k => BELGE_KATEGORILERI_UI[k].zorunlu);
+}
+
+/**
+ * Opsiyonel kategorileri getir
+ */
+export function getOpsiyonelKategoriler(): BelgeKategorisiUI[] {
+  return (Object.keys(BELGE_KATEGORILERI_UI) as BelgeKategorisiUI[])
+    .filter(k => !BELGE_KATEGORILERI_UI[k].zorunlu);
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // DÖNEM TİPİ TESPİTİ
 // ─────────────────────────────────────────────────────────────────────────────
