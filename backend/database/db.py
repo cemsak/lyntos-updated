@@ -310,6 +310,59 @@ def init_database():
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_taxcert_year ON tax_certificates(year)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_taxcert_nace ON tax_certificates(nace_code)")
 
+        # ════════════════════════════════════════════════════════════════
+        # INSPECTOR PREPARATION TABLES (Sprint 8.1)
+        # ════════════════════════════════════════════════════════════════
+
+        # Preparation notes for inspector questions
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS preparation_notes (
+                id TEXT PRIMARY KEY,
+                client_id TEXT NOT NULL,
+                period TEXT NOT NULL,
+                rule_id TEXT NOT NULL,
+                question_index INTEGER NOT NULL,
+                note_text TEXT,
+                created_at TEXT DEFAULT (datetime('now')),
+                updated_at TEXT DEFAULT (datetime('now')),
+                UNIQUE(client_id, period, rule_id, question_index)
+            )
+        """)
+
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_prep_notes_client ON preparation_notes(client_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_prep_notes_period ON preparation_notes(client_id, period)")
+
+        # Document preparation status
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS document_preparation (
+                id TEXT PRIMARY KEY,
+                client_id TEXT NOT NULL,
+                period TEXT NOT NULL,
+                document_id TEXT NOT NULL,
+                status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'uploaded', 'verified')),
+                file_url TEXT,
+                uploaded_at TEXT,
+                notes TEXT,
+                created_at TEXT DEFAULT (datetime('now')),
+                updated_at TEXT DEFAULT (datetime('now')),
+                UNIQUE(client_id, period, document_id)
+            )
+        """)
+
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_doc_prep_client ON document_preparation(client_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_doc_prep_period ON document_preparation(client_id, period)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_doc_prep_status ON document_preparation(status)")
+
+        # Add rule_id and file_name columns to document_preparation if not exists (Sprint 8.2)
+        cursor.execute("PRAGMA table_info(document_preparation)")
+        doc_columns = [col[1] for col in cursor.fetchall()]
+        if 'rule_id' not in doc_columns:
+            cursor.execute("ALTER TABLE document_preparation ADD COLUMN rule_id TEXT")
+            logger.info("Added rule_id column to document_preparation table")
+        if 'file_name' not in doc_columns:
+            cursor.execute("ALTER TABLE document_preparation ADD COLUMN file_name TEXT")
+            logger.info("Added file_name column to document_preparation table")
+
         # Add nace_code column to clients table if not exists
         cursor.execute("PRAGMA table_info(clients)")
         columns = [col[1] for col in cursor.fetchall()]

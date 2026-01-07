@@ -1,7 +1,7 @@
 {
-  "version": "2.0",
+  "version": "2.1",
   "last_updated": "2025-01-07",
-  "description": "KURGAN VDK Simulator Rules - Inspector Questions & Document Checklist",
+  "description": "KURGAN VDK Simulator Rules - Inspector Questions, Answer Templates & Document Checklist",
   "rules": [
     {
       "id": "K-09",
@@ -22,6 +22,86 @@
         "Kasa sayimi yapildi mi? Tutanak var mi?",
         "Buyuk nakit cikislarini belgelendirebilir misiniz?",
         "Donem sonu kasa sayim tutanaginizi gosterir misiniz?"
+      ],
+      "answer_templates": [
+        {
+          "question_index": 0,
+          "question": "Bu kadar yuksek nakit bakiyesinin kaynagi nedir?",
+          "suggested_approaches": [
+            "Donem sonu tahsilatlarin yogunlasmasindan kaynaklanmaktadir",
+            "Vadeli satislarin donem sonunda nakde donmesi",
+            "Odemesi yapilacak giderlerin yeni doneme sarkmasi",
+            "Buyuk bir satis isleminin nakit tahsilati"
+          ],
+          "avoid_phrases": [
+            "Bilmiyorum",
+            "Hatirlamiyorum",
+            "Muhasebeci halletti",
+            "Emin degilim"
+          ],
+          "key_documents": ["DOC-K09-1", "DOC-K09-2"],
+          "sample_answer": "Donem sonunda vadeli satislarimizin tahsilati yogunlasti. Ozellikle X, Y, Z musterilerimizden toplam [TUTAR] TL tahsilat yapildi. Bu tutarlar Ocak ayi basinda tedarikci odemelerine aktarilmistir. Kasa sayim tutanagi ve gunluk kasa defteri mevcuttur."
+        },
+        {
+          "question_index": 1,
+          "question": "Neden bu tutar bankaya yatirilmadi?",
+          "suggested_approaches": [
+            "Is akisi geregi nakit odeme yapilmasi gereken durumlar",
+            "Hafta sonu/tatil donemine denk gelmesi",
+            "Acil tedarikci odemeleri icin hazir tutulmasi"
+          ],
+          "avoid_phrases": [
+            "Bankaya guvenmiyoruz",
+            "Vergi kacirmak icin degil"
+          ],
+          "key_documents": ["DOC-K09-1", "DOC-K09-3"],
+          "sample_answer": "Donem sonu hafta sonuna denk geldigi icin bankaya yatirma imkani olmadi. Ayrica Ocak ayi basinda yapilmasi gereken acil tedarikci odemeleri icin nakit hazir tutuldu."
+        },
+        {
+          "question_index": 2,
+          "question": "Kasa sayimi yapildi mi? Tutanak var mi?",
+          "suggested_approaches": [
+            "Evet, donem sonu kasa sayimi yapilmistir",
+            "Tutanak imzali olarak dosyadadir",
+            "Sayim tarihi ve katilimcilar belirtilmistir"
+          ],
+          "avoid_phrases": [
+            "Sayim yapilmadi",
+            "Tutanak yok"
+          ],
+          "key_documents": ["DOC-K09-1"],
+          "sample_answer": "Evet, 31.12.2024 tarihinde kasa sayimi yapilmis ve tutanak duzenlenmistir. Sayima sirket yetkilisi [ISIM] ve mali musavir olarak ben katildim. Tutanak ekte sunulmustur."
+        },
+        {
+          "question_index": 3,
+          "question": "Buyuk nakit cikislarini belgelendirebilir misiniz?",
+          "suggested_approaches": [
+            "Her islem icin makbuz/fatura mevcuttur",
+            "Tediye fisleri duzenlenmistir",
+            "Odeme yapilan kisi/firma bilgileri kayitlidir"
+          ],
+          "avoid_phrases": [
+            "Belge yok",
+            "Kayit tutulmadi"
+          ],
+          "key_documents": ["DOC-K09-2", "DOC-K09-3"],
+          "sample_answer": "Tum nakit cikislari icin tediye fisi duzenlenmis ve karsi taraftan makbuz/fatura alinmistir. [TUTAR] TL uzeri islemlerin listesi ve belgeleri ekte sunulmustur."
+        },
+        {
+          "question_index": 4,
+          "question": "Donem sonu kasa sayim tutanaginizi gosterir misiniz?",
+          "suggested_approaches": [
+            "Tutanak hazir ve imzalidir",
+            "Sayim detaylari ve katilimcilar bellidir",
+            "Fiziki sayim yapilmistir"
+          ],
+          "avoid_phrases": [
+            "Tutanak bulamiyorum",
+            "Sonra hazirlayalim"
+          ],
+          "key_documents": ["DOC-K09-1"],
+          "sample_answer": "Evet, iste 31.12.2024 tarihli kasa sayim tutanagi. Sayim [SAAT]'de yapilmis, [TUTAR] TL nakit sayilmis ve tutanaga baglanan imzalarla teyit edilmistir."
+        }
       ],
       "required_documents": [
         {
@@ -86,6 +166,83 @@
         "Ortaklarin geri odeme plani var mi?",
         "Faiz orani nasil belirlendi? TCMB orani mi kullanildi?"
       ],
+      "answer_templates": [
+        {
+          "question_index": 0,
+          "question": "Ortaklara verilen borclarin gerekcesi nedir?",
+          "suggested_approaches": [
+            "Ortaklarin kisisel yatirimlari icin gecici finansman",
+            "Grup sirketi sermaye ihtiyaci",
+            "Ortaklarin likidite ihtiyaci - geri odeme plani mevcut"
+          ],
+          "avoid_phrases": [
+            "Bilmiyorum neden verildi",
+            "Ortak istedi verdik"
+          ],
+          "key_documents": ["DOC-K15-1", "DOC-K15-3"],
+          "sample_answer": "Ortaklarimiz yeni bir yatirim projesi icin gecici finansman ihtiyaci duymustur. Yonetim kurulu karari ile borc verilmis olup, [SURE] ay vadeli geri odeme plani belirlenmistir."
+        },
+        {
+          "question_index": 1,
+          "question": "Bu borclara faiz tahakkuk ettirildi mi?",
+          "suggested_approaches": [
+            "Evet, TCMB avans faiz orani uygulanmistir",
+            "Emsallere uygun faiz orani belirlenmistir",
+            "Faiz tahakkuku yapilmis, gelir kaydedilmistir"
+          ],
+          "avoid_phrases": [
+            "Faiz almadik",
+            "Ortagimiz faiz istemiyordu"
+          ],
+          "key_documents": ["DOC-K15-2"],
+          "sample_answer": "Evet, Transfer Fiyatlandirmasi mevzuati geregi TCMB avans faiz orani (%[ORAN]) uygulanmistir. Faiz tahakkuku yapilmis ve [TUTAR] TL faiz geliri kaydedilmistir. Hesaplama tablosu ektedir."
+        },
+        {
+          "question_index": 2,
+          "question": "Transfer fiyatlandirmasi kapsaminda degerlendirdiniz mi?",
+          "suggested_approaches": [
+            "Evet, emsallere uygunluk analizi yapilmistir",
+            "TCMB faiz oranlari referans alinmistir",
+            "Belgelendirme yukumlulugu yerine getirilmistir"
+          ],
+          "avoid_phrases": [
+            "Transfer fiyatlandirmasi nedir?",
+            "Bunu dusunmedik"
+          ],
+          "key_documents": ["DOC-K15-4"],
+          "sample_answer": "Evet, 1 Seri No'lu Transfer Fiyatlandirmasi Tebligi kapsaminda degerlendirilmistir. Emsallere uygun faiz orani olarak TCMB avans faizi esas alinmistir. Ilgili donem icin belgelendirme dosyasi hazirlanmistir."
+        },
+        {
+          "question_index": 3,
+          "question": "Ortaklarin geri odeme plani var mi?",
+          "suggested_approaches": [
+            "Evet, yazili geri odeme plani mevcuttur",
+            "Aylik/uc aylik taksitler belirlenmistir",
+            "Kismi odemeler yapilmaya baslanmistir"
+          ],
+          "avoid_phrases": [
+            "Plan yok",
+            "Ne zaman odenecegi belli degil"
+          ],
+          "key_documents": ["DOC-K15-1", "DOC-K15-5"],
+          "sample_answer": "Evet, borc sozlesmesinde geri odeme plani belirlenmistir. [SURE] ay vadeli olup aylik [TUTAR] TL taksitler halinde odenmektedir. Su ana kadar [TUTAR] TL geri odenmistir."
+        },
+        {
+          "question_index": 4,
+          "question": "Faiz orani nasil belirlendi? TCMB orani mi kullanildi?",
+          "suggested_approaches": [
+            "TCMB avans faiz orani esas alinmistir",
+            "Donem basi faiz orani referans alinmistir",
+            "Mevzuata uygun faiz orani uygulanmistir"
+          ],
+          "avoid_phrases": [
+            "Faiz uygulamadik",
+            "Banka faizi mi? TCMB faizi mi?"
+          ],
+          "key_documents": ["DOC-K15-2"],
+          "sample_answer": "TCMB avans faiz orani (%[ORAN]) esas alinmistir. Bu oran ilgili donemdeki yasal faiz orani uzerinden belirlenip, faiz hesaplama tablosunda detayli olarak gosterilmistir."
+        }
+      ],
       "required_documents": [
         {
           "id": "DOC-K15-1",
@@ -133,7 +290,7 @@
       "name": "Stok Devir Hizi Anomalisi",
       "category": "STOK_ANALIZI",
       "severity": "medium",
-      "description": "Stok devir hizinin sektor ortalamasindan sapması",
+      "description": "Stok devir hizinin sektor ortalamasindan sapmasi",
       "calculation": {
         "formula": "cost_of_goods_sold / average_inventory",
         "threshold_type": "deviation",
@@ -147,6 +304,84 @@
         "Stok sayimi ne zaman yapildi?",
         "Fiktif stok kaydi var mi?",
         "Stok yaslandirma analizi yapiliyor mu?"
+      ],
+      "answer_templates": [
+        {
+          "question_index": 0,
+          "question": "Stok devir hiziniz neden sektor ortalamasindan farkli?",
+          "suggested_approaches": [
+            "Is modelimiz sektorden farklilik gostermektedir",
+            "Ozel urunler/siparis usulu calisma",
+            "Mevsimsel dalgalanmalar",
+            "Buyuk siparis bekleyen stoklar"
+          ],
+          "avoid_phrases": [
+            "Bilmiyorum",
+            "Sektor ortalamasini bilmiyoruz"
+          ],
+          "key_documents": ["DOC-K22-1", "DOC-K22-4"],
+          "sample_answer": "Is modelimiz siparis usulu oldugu icin stok devir hizimiz sektorden farklilik gostermektedir. Musteriye ozel uretim yaptigimiz icin stoklar daha uzun surede tuketilmektedir. Stok yaslandirma raporu ektedir."
+        },
+        {
+          "question_index": 1,
+          "question": "Fire, zayi veya deger dusukluğu var mi?",
+          "suggested_approaches": [
+            "Fire oranlari sektor standartlarinda",
+            "Zayi tutanaklari mevcuttur",
+            "Deger dusukluğu hesaplamasi yapildi"
+          ],
+          "avoid_phrases": [
+            "Fire oldu ama kayit tutmadik",
+            "Bilmiyorum"
+          ],
+          "key_documents": ["DOC-K22-2", "DOC-K22-3"],
+          "sample_answer": "Fire oranlarimiz sektor ortalamasinda olup (%[ORAN]), tum fire islemleri icin tutanak duzenlenmistir. [TUTAR] TL tutarinda fire gerceklesmis ve muhasebe kayitlarina yansitilmistir."
+        },
+        {
+          "question_index": 2,
+          "question": "Stok sayimi ne zaman yapildi?",
+          "suggested_approaches": [
+            "Donem sonunda sayim yapildi",
+            "Tutanak imzali ve tarihli",
+            "Sayim ekibi ve detaylari belli"
+          ],
+          "avoid_phrases": [
+            "Sayim yapilmadi",
+            "Tutanak yok"
+          ],
+          "key_documents": ["DOC-K22-1"],
+          "sample_answer": "31.12.2024 tarihinde fiziki stok sayimi yapilmistir. Sayim ekibinde depo sorumlusu, muhasebe personeli ve mali musavir olarak ben yer aldim. Tutanak ekte sunulmustur."
+        },
+        {
+          "question_index": 3,
+          "question": "Fiktif stok kaydi var mi?",
+          "suggested_approaches": [
+            "Hayir, tum stoklar fiziki olarak mevcuttur",
+            "Sayim ile kayitlar otusmaktadir",
+            "Fark varsa nedenleri belgelenmistir"
+          ],
+          "avoid_phrases": [
+            "Ne demek fiktif stok?",
+            "Kontrol etmedik"
+          ],
+          "key_documents": ["DOC-K22-1"],
+          "sample_answer": "Hayir, tum stoklarimiz fiziki olarak mevcuttur. Yapilan sayimda kayitlar ile fiili stok arasinda [TUTAR] TL fark cikti ve bunun nedeni [SEBEP] olarak tespit edilmistir. Detaylar ektedir."
+        },
+        {
+          "question_index": 4,
+          "question": "Stok yaslandirma analizi yapiliyor mu?",
+          "suggested_approaches": [
+            "Evet, duzenli analiz yapiliyor",
+            "Eski stoklarin takibi yapiliyor",
+            "Deger dusukluğu hesaplanmistir"
+          ],
+          "avoid_phrases": [
+            "Yaslandirma nedir?",
+            "Yapmiyor"
+          ],
+          "key_documents": ["DOC-K22-3", "DOC-K22-4"],
+          "sample_answer": "Evet, stok yaslandirma analizi duzenli olarak yapilmaktadir. 1 yildan eski stoklarimiz toplam stogun %[ORAN]'ini olusturmakta olup, bunlar icin deger dusukluğu karsiligi ayrilmistir."
+        }
       ],
       "required_documents": [
         {
@@ -207,6 +442,83 @@
         "Alacak yaslandirma analizi var mi?",
         "Son 1 yilda ne kadar alacak tahsil edilemedi?"
       ],
+      "answer_templates": [
+        {
+          "question_index": 0,
+          "question": "Supheli alacak karsiligi ayirma kriterleri nelerdir?",
+          "suggested_approaches": [
+            "VUK 323'e uygun kriterler belirlenmistir",
+            "Protesto edilen veya dava konusu alacaklar",
+            "Vadesi 1 yili gecen alacaklar"
+          ],
+          "avoid_phrases": [
+            "Kriter yok",
+            "Muhasebeci karar verdi"
+          ],
+          "key_documents": ["DOC-K31-1", "DOC-K31-3"],
+          "sample_answer": "VUK Madde 323'e uygun olarak, protesto edilmis veya yazili sekilde birden fazla istenmis ya da dava veya icra safhasinda bulunan alacaklar icin karsilik ayrilmistir. Detayli kriterler ve liste ektedir."
+        },
+        {
+          "question_index": 1,
+          "question": "Tahsil edilemeyen alacaklar icin dava acildi mi?",
+          "suggested_approaches": [
+            "Evet, dava/icra sureci baslatilmistir",
+            "Dosya numaralari ve durumlari mevcuttur",
+            "Hukuki surec takip edilmektedir"
+          ],
+          "avoid_phrases": [
+            "Dava acmadik",
+            "Avukat masrafli"
+          ],
+          "key_documents": ["DOC-K31-2"],
+          "sample_answer": "Evet, [SAYI] adet borclumuz icin dava/icra sureci baslatilmistir. Toplam [TUTAR] TL alacagimiz icin hukuki takip yapilmaktadir. Dosya numaralari ve durumlari ekte sunulmustur."
+        },
+        {
+          "question_index": 2,
+          "question": "Icra takibi baslatildi mi?",
+          "suggested_approaches": [
+            "Evet, icra takibi baslatildi",
+            "Icra dosya numaralari mevcuttur",
+            "Haciz islemleri yapildi"
+          ],
+          "avoid_phrases": [
+            "Baslatilmadi",
+            "Gerek gormedik"
+          ],
+          "key_documents": ["DOC-K31-2"],
+          "sample_answer": "[SAYI] adet borclumuz icin icra takibi baslatilmistir. Icra mudurlugu [YER] Icra Dairesi olup, dosya numaralari ekte listelenmelimistir. Kismen tahsilat saglanmistir."
+        },
+        {
+          "question_index": 3,
+          "question": "Alacak yaslandirma analizi var mi?",
+          "suggested_approaches": [
+            "Evet, duzenli analiz yapiliyor",
+            "Vade araliklarina gore gruplanmis",
+            "Riskli alacaklar belirlenmis"
+          ],
+          "avoid_phrases": [
+            "Yaslandirma yapmiyoruz",
+            "Gerek yok"
+          ],
+          "key_documents": ["DOC-K31-3"],
+          "sample_answer": "Evet, alacak yaslandirma analizi yapilmaktadir. 0-30 gun: [TUTAR], 31-60 gun: [TUTAR], 61-90 gun: [TUTAR], 90+ gun: [TUTAR] alacagimiz mevcuttur. Detayli rapor ektedir."
+        },
+        {
+          "question_index": 4,
+          "question": "Son 1 yilda ne kadar alacak tahsil edilemedi?",
+          "suggested_approaches": [
+            "Tutarlar ve nedenler bellidir",
+            "Takip sureci devam etmektedir",
+            "Karsilik ayrilmistir"
+          ],
+          "avoid_phrases": [
+            "Takip etmiyoruz",
+            "Bilmiyorum"
+          ],
+          "key_documents": ["DOC-K31-1", "DOC-K31-4"],
+          "sample_answer": "Son 1 yilda toplam [TUTAR] TL alacak tahsil edilemedi. Bu tutarin [TUTAR] TL'si icin icra takibi devam etmekte, [TUTAR] TL'si icin karsilik ayrilmistir. Tahsilat takip tablosu ektedir."
+        }
+      ],
       "required_documents": [
         {
           "id": "DOC-K31-1",
@@ -264,6 +576,87 @@
         "Satis kayiplarini aciklayabilir misiniz?",
         "Yeni rakipler mi girdi? Pazar kaybi mi yasandi?"
       ],
+      "answer_templates": [
+        {
+          "question_index": 0,
+          "question": "Matrahiniz neden bu kadar dustu?",
+          "suggested_approaches": [
+            "Sektorel daralma ve piyasa kosullari",
+            "Ham madde/maliyet artislari",
+            "Musteri kaybi veya siparis azalmasi",
+            "Yeni yatirim giderleri"
+          ],
+          "avoid_phrases": [
+            "Bilmiyorum",
+            "Kriz var",
+            "Herkes ayni durumda"
+          ],
+          "key_documents": ["DOC-TREND-1", "DOC-TREND-3"],
+          "sample_answer": "2024 yilinda sektorumuzde genel bir daralma yasandi. Ozellikle [SEBEP] nedeniyle satislarimiz %[ORAN] dustu. Ayrica ham madde maliyetlerindeki %[ORAN] artis kar marjimizi olumsuz etkiledi. Detayli analiz ektedir."
+        },
+        {
+          "question_index": 1,
+          "question": "Sektor buyurken sizin kuculmenizin nedeni ne?",
+          "suggested_approaches": [
+            "Buyuk musteri kaybi (somut ornek)",
+            "Yeni rakip girisi",
+            "Stratejik karar ile kuculme",
+            "Cografi/bolgesel farklilik"
+          ],
+          "avoid_phrases": [
+            "Sektor de kuculuyor aslinda",
+            "Verileriniz yanlis"
+          ],
+          "key_documents": ["DOC-TREND-1", "DOC-TREND-3"],
+          "sample_answer": "Ana musterimiz [FIRMA] ile olan sozlesmemiz 2024 basinda sona erdi. Bu musteri ciromuzun %[ORAN]'ini olusturuyordu. Yeni musteri portfoyu olusturma calismalarimiz devam etmektedir."
+        },
+        {
+          "question_index": 2,
+          "question": "Giderleriniz neden artti?",
+          "suggested_approaches": [
+            "Personel maliyet artislari (asgari ucret)",
+            "Enerji ve kira artislari",
+            "Tek seferlik giderler (tasinma, yatirim)",
+            "Enflasyon etkisi"
+          ],
+          "avoid_phrases": [
+            "Normal artis",
+            "Her sey pahalandi"
+          ],
+          "key_documents": ["DOC-TREND-2"],
+          "sample_answer": "2024 yilinda giderlerimiz su kalemlerden dolayi artti: 1) Asgari ucret artisi nedeniyle personel giderleri %[ORAN] artti, 2) Kira sozlesmesi yenilendi, %[ORAN] artis oldu, 3) Enerji maliyetleri %[ORAN] artti. Kalem bazli karsilastirma ektedir."
+        },
+        {
+          "question_index": 3,
+          "question": "Satis kayiplarini aciklayabilir misiniz?",
+          "suggested_approaches": [
+            "Musteri bazli analiz mevcuttur",
+            "Urun/hizmet bazli dagilim belli",
+            "Donemsel karsilastirma yapildi"
+          ],
+          "avoid_phrases": [
+            "Analiz yapmadik",
+            "Sebebini bilmiyoruz"
+          ],
+          "key_documents": ["DOC-TREND-4"],
+          "sample_answer": "Satis kayiplari su kalemlerden kaynaklanmaktadir: 1) [MUSTERI] ile sozlesme bitti: [TUTAR] TL, 2) [URUN] satislari %[ORAN] dustu: [TUTAR] TL, 3) Yeni rakip girisi nedeniyle pazar kaybi: [TUTAR] TL. Detayli rapor ektedir."
+        },
+        {
+          "question_index": 4,
+          "question": "Yeni rakipler mi girdi? Pazar kaybi mi yasandi?",
+          "suggested_approaches": [
+            "Rekabet analizi yapildi",
+            "Pazar payi degisimi izleniyor",
+            "Stratejik onlemler aliniyor"
+          ],
+          "avoid_phrases": [
+            "Rakipleri takip etmiyoruz",
+            "Pazar araştirmasi yapmıyoruz"
+          ],
+          "key_documents": ["DOC-TREND-3"],
+          "sample_answer": "Evet, [FIRMA] ve [FIRMA] sektorumuze yeni girdi ve agresif fiyat politikasi uyguladi. Pazar payimiz %[ORAN]'den %[ORAN]'e geriledi. Bunun karsisinda maliyet optimizasyonu ve yeni urun gelistirme calismalarini basladik."
+        }
+      ],
       "required_documents": [
         {
           "id": "DOC-TREND-1",
@@ -319,6 +712,102 @@
         "Tedarikciyi nasil ve ne zaman tanidiniz?",
         "Referans aldigi firmalar var mi?"
       ],
+      "answer_templates": [
+        {
+          "question_index": 0,
+          "question": "Bu tedarikcilerle nasil tanistiniz?",
+          "suggested_approaches": [
+            "Sektorel fuar/etkinlik",
+            "Mevcut musteri/tedarikci referansi",
+            "Internet arastirmasi ve fiziki ziyaret",
+            "Uzun sureli ticari iliski"
+          ],
+          "avoid_phrases": [
+            "Bilmiyorum, muhasebeci buldu",
+            "Telefon actilar",
+            "Internetten bulduk"
+          ],
+          "key_documents": ["DOC-SAHTE-1", "DOC-SAHTE-6"],
+          "sample_answer": "[FIRMA] ile 20XX yilindan beri calisiyoruz. Ilk tanismamiz [FIRMA/KISI] referansi ile oldu. Firmayi yerinde ziyaret ettik, uretim tesislerini gorduk."
+        },
+        {
+          "question_index": 1,
+          "question": "Mal/hizmet teslimi gercekten yapildi mi?",
+          "suggested_approaches": [
+            "Evet, fiziki teslimat belgelidir",
+            "Sevk irsaliyesi ve teslim tutanagi mevcut",
+            "Mallar depomuzda/stoklarimizda kayitli",
+            "Uretimde kullanildi, ciktisi mevcut"
+          ],
+          "avoid_phrases": [
+            "Sanirim yapildi",
+            "Depocu bilir"
+          ],
+          "key_documents": ["DOC-SAHTE-2", "DOC-SAHTE-5"],
+          "sample_answer": "Evet, tum mal teslimatlari belgelidir. Her teslimat icin sevk irsaliyesi duzenlenmis, teslim alan personel imzalamistir. Mallar stok kayitlarimiza girmis ve uretimde kullanilmistir. Stok hareketleri ektedir."
+        },
+        {
+          "question_index": 2,
+          "question": "Odeme nasil yapildi? Banka kanaliyla mi?",
+          "suggested_approaches": [
+            "Tamami banka havalesi/EFT ile",
+            "Cek ile odeme, cek kayitlari mevcut",
+            "Kredi karti ile odeme"
+          ],
+          "avoid_phrases": [
+            "Nakit odedik",
+            "Karisik odeme yaptik",
+            "Hatirlamiyorum"
+          ],
+          "key_documents": ["DOC-SAHTE-3"],
+          "sample_answer": "Tum odemeler banka kanaliyla yapilmistir. [BANKA] uzerinden havale/EFT dekontlari mevcuttur. Hicbir nakit odeme yapilmamistir. Banka ekstreleri ve dekontlar ektedir."
+        },
+        {
+          "question_index": 3,
+          "question": "Sevk irsaliyesi, tasima belgesi var mi?",
+          "suggested_approaches": [
+            "Tum sevkiyatlar icin irsaliye mevcut",
+            "Nakliye firmasi faturalari var",
+            "CMR/tasima belgesi dosyalanmis"
+          ],
+          "avoid_phrases": [
+            "Irsaliye almadik",
+            "Kendimiz tasidik, belge yok"
+          ],
+          "key_documents": ["DOC-SAHTE-2", "DOC-SAHTE-4"],
+          "sample_answer": "Her teslimat icin sevk irsaliyesi duzenlenmistir. Nakliye [FIRMA] tarafindan yapilmis olup nakliye faturalari mevcuttur. Tum belgeler kronolojik sirayla dosyalanmistir."
+        },
+        {
+          "question_index": 4,
+          "question": "Tedarikciyi nasil ve ne zaman tanidiniz?",
+          "suggested_approaches": [
+            "Uzun sureli ticari iliski",
+            "Referansli tanitim",
+            "Firma arastirmasi yapildi"
+          ],
+          "avoid_phrases": [
+            "Yeni tanidik",
+            "Sadece fatura aldik"
+          ],
+          "key_documents": ["DOC-SAHTE-6"],
+          "sample_answer": "Tedarikci ile [YIL] yilindan beri calisiyoruz. Ilk tanismamiz [REFERANS] vasitasiyla oldu. Firma hakkinda arastirma yapildi, vergi levhasi ve oda kaydi kontrol edildi."
+        },
+        {
+          "question_index": 5,
+          "question": "Referans aldigi firmalar var mi?",
+          "suggested_approaches": [
+            "Sektor firmalari referans verdi",
+            "Onceki tedarikci iliskisi vardi",
+            "Tanidik firmalar onerdi"
+          ],
+          "avoid_phrases": [
+            "Referans almadik",
+            "Gerek gormedik"
+          ],
+          "key_documents": ["DOC-SAHTE-6"],
+          "sample_answer": "[FIRMA1] ve [FIRMA2] bu tedarikci ile calismis ve olumlu referans vermistir. Referans alinan firmalar ile gorusme kayitlari mevcuttur."
+        }
+      ],
       "required_documents": [
         {
           "id": "DOC-SAHTE-1",
@@ -361,7 +850,7 @@
         "VUK Md. 359 - Kacakcilik suclari",
         "KDV Kanunu Md. 29 - Indirilemeyecek KDV",
         "213 sayili VUK Md. 11 - Muteselsil sorumluluk",
-        "VUK Md. 370 - Pişmanlık"
+        "VUK Md. 370 - Pismanlik"
       ],
       "sector_thresholds": {
         "default": 1
@@ -385,6 +874,68 @@
         "Satilan veya hurda edilen varliklar var mi?",
         "Amortisman hesaplamalari dogru mu?",
         "Sabit kiymet kartlari guncel mi?"
+      ],
+      "answer_templates": [
+        {
+          "question_index": 0,
+          "question": "Amortisman hesabi neden aktif bakiyesini asiyor?",
+          "suggested_approaches": [
+            "Eski varliklar tamamen amortismana tabi tutuldu",
+            "Varliklar kullanilmaya devam ediyor",
+            "Kayit duzeltmesi yapilacak"
+          ],
+          "avoid_phrases": [
+            "Bilmiyorum",
+            "Muhasebe hatasi var"
+          ],
+          "key_documents": ["DOC-K24-1", "DOC-K24-2"],
+          "sample_answer": "Firmamizda uzun suredir kullanilan ve tamamen amortisman ayrilmis varliklar mevcuttur. Bu varliklar fiziki olarak kullanilmaya devam etmekte olup, ekonomik omurlerini doldurmus ancak hala faal durumdadir. Sabit kiymet listesi ektedir."
+        },
+        {
+          "question_index": 1,
+          "question": "Satilan veya hurda edilen varliklar var mi?",
+          "suggested_approaches": [
+            "Satis/hurda islemleri belgelenmistir",
+            "Kayittan dusme islemleri yapildi",
+            "Tutanaklar mevcuttur"
+          ],
+          "avoid_phrases": [
+            "Kayit tutmadik",
+            "Belge yok"
+          ],
+          "key_documents": ["DOC-K24-3"],
+          "sample_answer": "Evet, [YIL] yilinda [ADET] adet varlik hurda edilmis/satilmistir. Toplam deger [TUTAR] TL olup, kayittan dusme islemleri yapilmistir. Hurda tutanaklari ve satis belgeleri ektedir."
+        },
+        {
+          "question_index": 2,
+          "question": "Amortisman hesaplamalari dogru mu?",
+          "suggested_approaches": [
+            "VUK'a uygun hesaplama yapildi",
+            "Yasal oranlar uygulanmistir",
+            "Hesaplama tablosu mevcuttur"
+          ],
+          "avoid_phrases": [
+            "Kontrol etmedik",
+            "Yazilim yapiyor"
+          ],
+          "key_documents": ["DOC-K24-2"],
+          "sample_answer": "Evet, amortisman hesaplamalari VUK'un belirlediği oranlara gore yapilmaktadir. Her varlik icin ayri amortisman kartı tutulmakta, normal amortisman yontemi uygulanmaktadir. Hesaplama tablosu ektedir."
+        },
+        {
+          "question_index": 3,
+          "question": "Sabit kiymet kartlari guncel mi?",
+          "suggested_approaches": [
+            "Evet, kartlar guncel tutulmaktadir",
+            "Varlik bazli kayit yapilmaktadir",
+            "Fiziki kontrol yapilmaktadir"
+          ],
+          "avoid_phrases": [
+            "Kart tutmuyoruz",
+            "Guncel degil"
+          ],
+          "key_documents": ["DOC-K24-1"],
+          "sample_answer": "Evet, sabit kiymet kartlari guncel tutulmaktadir. Her varlik icin ayri kart acilmis, satin alma tarihi, maliyet, amortisman orani ve birikmis amortisman tutarlari kayitlidir. Kart ornekleri ektedir."
+        }
       ],
       "required_documents": [
         {
