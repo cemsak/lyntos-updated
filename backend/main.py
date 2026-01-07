@@ -6,6 +6,8 @@ from api.v1.regwatch import router as regwatch_router
 from api.v1.audit import router as audit_router
 from api.v1.documents import router as documents_router
 from api.v1.tenants import router as tenants_router
+from api.v1.tax_certificate import router as tax_certificate_router
+from api.v1.vdk_simulator import router as vdk_simulator_router
 from api.v2.validate_vdk import router as vdk_validate_router
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -79,6 +81,8 @@ app.include_router(regwatch_router, prefix="/api/v1", tags=["RegWatch"])
 app.include_router(audit_router, prefix="/api/v1", tags=["Audit"])
 app.include_router(documents_router, prefix="/api/v1/documents", tags=["Documents"])
 app.include_router(tenants_router, prefix="/api/v1", tags=["Tenants"])
+app.include_router(tax_certificate_router, prefix="/api/v1", tags=["TaxCertificate"])
+app.include_router(vdk_simulator_router, prefix="/api/v1", tags=["VDKSimulator"])
 # --- /LYNTOS v1 API ---
 
 # --- LYNTOS v2 API ---

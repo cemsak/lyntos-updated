@@ -257,6 +257,67 @@ def init_database():
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_migration_tenant ON migration_review_queue(tenant_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_migration_status ON migration_review_queue(status)")
 
+        # ════════════════════════════════════════════════════════════════
+        # NACE CODES TABLE (Sprint 7.4)
+        # ════════════════════════════════════════════════════════════════
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS nace_codes (
+                code TEXT PRIMARY KEY,
+                description_tr TEXT NOT NULL,
+                description_en TEXT,
+                sector_group TEXT NOT NULL,
+                risk_profile TEXT NOT NULL CHECK (risk_profile IN ('low', 'medium', 'high', 'critical')),
+                k_criteria TEXT NOT NULL DEFAULT '[]',
+                avg_margin REAL,
+                risk_weight REAL DEFAULT 1.0,
+                created_at TEXT DEFAULT (datetime('now'))
+            )
+        """)
+
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_nace_sector ON nace_codes(sector_group)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_nace_risk ON nace_codes(risk_profile)")
+
+        # ════════════════════════════════════════════════════════════════
+        # TAX CERTIFICATES TABLE (Sprint 7.4 - Vergi Levhası)
+        # ════════════════════════════════════════════════════════════════
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS tax_certificates (
+                id TEXT PRIMARY KEY,
+                client_id TEXT NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+                year INTEGER NOT NULL,
+                vkn TEXT NOT NULL,
+                company_name TEXT NOT NULL,
+                nace_code TEXT,
+                nace_description TEXT,
+                tax_office TEXT,
+                address TEXT,
+                city TEXT,
+                district TEXT,
+                kv_matrah REAL,
+                kv_paid REAL,
+                file_url TEXT,
+                file_name TEXT,
+                parsed_data TEXT DEFAULT '{}',
+                uploaded_at TEXT DEFAULT (datetime('now')),
+                uploaded_by TEXT,
+                UNIQUE(client_id, year)
+            )
+        """)
+
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_taxcert_client ON tax_certificates(client_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_taxcert_year ON tax_certificates(year)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_taxcert_nace ON tax_certificates(nace_code)")
+
+        # Add nace_code column to clients table if not exists
+        cursor.execute("PRAGMA table_info(clients)")
+        columns = [col[1] for col in cursor.fetchall()]
+        if 'nace_code' not in columns:
+            cursor.execute("ALTER TABLE clients ADD COLUMN nace_code TEXT")
+            cursor.execute("ALTER TABLE clients ADD COLUMN nace_description TEXT")
+            logger.info("Added nace_code columns to clients table")
+
         conn.commit()
         logger.info(f"Database initialized: {DB_PATH}")
 

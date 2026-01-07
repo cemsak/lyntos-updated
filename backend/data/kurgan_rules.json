@@ -1,0 +1,448 @@
+{
+  "version": "2.0",
+  "last_updated": "2025-01-07",
+  "description": "KURGAN VDK Simulator Rules - Inspector Questions & Document Checklist",
+  "rules": [
+    {
+      "id": "K-09",
+      "name": "Yuksek Kasa Bakiyesi",
+      "category": "VARLIK_ANALIZI",
+      "severity": "high",
+      "description": "Kasa hesabinin aktif toplamina oraninin sektor ortalamasini asmasi",
+      "calculation": {
+        "formula": "(account_100 / total_assets) * 100",
+        "threshold_type": "percentage",
+        "default_threshold": 5.0,
+        "comparison": "greater_than"
+      },
+      "accounts": ["100"],
+      "inspector_questions": [
+        "Bu kadar yuksek nakit bakiyesinin kaynagi nedir?",
+        "Neden bu tutar bankaya yatirilmadi?",
+        "Kasa sayimi yapildi mi? Tutanak var mi?",
+        "Buyuk nakit cikislarini belgelendirebilir misiniz?",
+        "Donem sonu kasa sayim tutanaginizi gosterir misiniz?"
+      ],
+      "required_documents": [
+        {
+          "id": "DOC-K09-1",
+          "name": "Kasa sayim tutanagi",
+          "description": "Donem sonu kasa sayim tutanagi (imzali, tarihli)",
+          "priority": "critical"
+        },
+        {
+          "id": "DOC-K09-2",
+          "name": "Gunluk kasa defteri",
+          "description": "Donem ici gunluk kasa hareketleri",
+          "priority": "high"
+        },
+        {
+          "id": "DOC-K09-3",
+          "name": "Buyuk nakit islem aciklamalari",
+          "description": "10.000 TL uzeri nakit islemlerin aciklamasi ve belgeleri",
+          "priority": "medium"
+        },
+        {
+          "id": "DOC-K09-4",
+          "name": "Kasa tahsilat makbuzlari",
+          "description": "Yuksek tutarli kasa tahsilatlarinin makbuzlari",
+          "priority": "medium"
+        }
+      ],
+      "legal_references": [
+        "VUK Md. 30/4 - Re'sen takdir",
+        "GVK Md. 40 - Indirilecek giderler",
+        "KVK Md. 13 - Transfer fiyatlandirmasi"
+      ],
+      "sector_thresholds": {
+        "Perakende Ticaret": 8.0,
+        "Toptan Ticaret": 5.0,
+        "Insaat": 3.0,
+        "Bilisim": 2.0,
+        "Tarim": 6.0,
+        "Gida Imalat": 4.0,
+        "Tekstil": 4.0,
+        "Metal Imalat": 3.0,
+        "default": 5.0
+      }
+    },
+    {
+      "id": "K-15",
+      "name": "Ortaklara Borc/Alacak Dengesi",
+      "category": "ILISKILI_TARAF",
+      "severity": "high",
+      "description": "Ortaklardan alacaklarin sermayeye oraninin yuksek olmasi",
+      "calculation": {
+        "formula": "account_131 / equity_capital",
+        "threshold_type": "ratio",
+        "default_threshold": 1.5,
+        "comparison": "greater_than"
+      },
+      "accounts": ["131", "231", "331", "431"],
+      "inspector_questions": [
+        "Ortaklara verilen borclarin gerekcesi nedir?",
+        "Bu borclara faiz tahakkuk ettirildi mi?",
+        "Transfer fiyatlandirmasi kapsaminda degerlendirme yapildi mi?",
+        "Ortaklarin geri odeme plani var mi?",
+        "Faiz orani nasil belirlendi? TCMB orani mi kullanildi?"
+      ],
+      "required_documents": [
+        {
+          "id": "DOC-K15-1",
+          "name": "Ortaklara borc sozlesmeleri",
+          "description": "Imzali borc sozlesmeleri (tutar, vade, faiz)",
+          "priority": "critical"
+        },
+        {
+          "id": "DOC-K15-2",
+          "name": "Faiz hesaplama tablosu",
+          "description": "TCMB faiz oranina gore faiz hesaplamasi",
+          "priority": "critical"
+        },
+        {
+          "id": "DOC-K15-3",
+          "name": "Yonetim kurulu kararlari",
+          "description": "Borc verme karari tutanaklari",
+          "priority": "high"
+        },
+        {
+          "id": "DOC-K15-4",
+          "name": "Transfer fiyatlandirmasi raporu",
+          "description": "Emsallere uygunluk analizi",
+          "priority": "medium"
+        },
+        {
+          "id": "DOC-K15-5",
+          "name": "Odeme plani",
+          "description": "Ortaklara verilen borclarin geri odeme plani",
+          "priority": "medium"
+        }
+      ],
+      "legal_references": [
+        "KVK Md. 12 - Ortulu sermaye",
+        "KVK Md. 13 - Transfer fiyatlandirmasi",
+        "5520 sayili Kanun",
+        "1 Seri No'lu Transfer Fiyatlandirmasi Tebligi"
+      ],
+      "sector_thresholds": {
+        "default": 1.5
+      }
+    },
+    {
+      "id": "K-22",
+      "name": "Stok Devir Hizi Anomalisi",
+      "category": "STOK_ANALIZI",
+      "severity": "medium",
+      "description": "Stok devir hizinin sektor ortalamasindan sapması",
+      "calculation": {
+        "formula": "cost_of_goods_sold / average_inventory",
+        "threshold_type": "deviation",
+        "default_threshold": 50,
+        "comparison": "deviation_percent"
+      },
+      "accounts": ["150", "151", "152", "153", "620", "621"],
+      "inspector_questions": [
+        "Stok devir hiziniz neden sektor ortalamasindan farkli?",
+        "Fire, zayi veya deger dusukluğu var mi?",
+        "Stok sayimi ne zaman yapildi?",
+        "Fiktif stok kaydi var mi?",
+        "Stok yaslandirma analizi yapiliyor mu?"
+      ],
+      "required_documents": [
+        {
+          "id": "DOC-K22-1",
+          "name": "Stok sayim tutanagi",
+          "description": "Donem sonu fiziki stok sayimi (imzali)",
+          "priority": "critical"
+        },
+        {
+          "id": "DOC-K22-2",
+          "name": "Fire/zayi raporlari",
+          "description": "Varsa fire ve zayi tutanaklari",
+          "priority": "medium"
+        },
+        {
+          "id": "DOC-K22-3",
+          "name": "Deger dusukluğu analizi",
+          "description": "Stok deger dusukluğu hesaplamasi",
+          "priority": "medium"
+        },
+        {
+          "id": "DOC-K22-4",
+          "name": "Stok yaslandirma raporu",
+          "description": "Stok hareket ve yaslandirma analizi",
+          "priority": "low"
+        }
+      ],
+      "legal_references": [
+        "VUK Md. 274 - Emtia degerlmesi",
+        "VUK Md. 278 - Degeri dusen mallar"
+      ],
+      "sector_thresholds": {
+        "Perakende Ticaret": 6.5,
+        "Toptan Ticaret": 8.0,
+        "Gida Imalat": 12.0,
+        "Tekstil": 4.0,
+        "Metal Imalat": 5.0,
+        "default": 6.0
+      }
+    },
+    {
+      "id": "K-31",
+      "name": "Supheli Alacak Orani",
+      "category": "ALACAK_ANALIZI",
+      "severity": "medium",
+      "description": "Supheli alacaklarin toplam alacaklara orani",
+      "calculation": {
+        "formula": "(account_128 + account_129) / total_receivables * 100",
+        "threshold_type": "percentage",
+        "default_threshold": 10.0,
+        "comparison": "greater_than"
+      },
+      "accounts": ["120", "121", "126", "128", "129"],
+      "inspector_questions": [
+        "Supheli alacak karsiligi ayirma kriterleri nelerdir?",
+        "Tahsil edilemeyen alacaklar icin dava acildi mi?",
+        "Icra takibi baslatildi mi?",
+        "Alacak yaslandirma analizi var mi?",
+        "Son 1 yilda ne kadar alacak tahsil edilemedi?"
+      ],
+      "required_documents": [
+        {
+          "id": "DOC-K31-1",
+          "name": "Supheli alacak listesi",
+          "description": "Detayli supheli alacak dokumu",
+          "priority": "high"
+        },
+        {
+          "id": "DOC-K31-2",
+          "name": "Dava/icra belgeleri",
+          "description": "Takip baslatilan alacaklarin belgeleri",
+          "priority": "critical"
+        },
+        {
+          "id": "DOC-K31-3",
+          "name": "Alacak yaslandirma raporu",
+          "description": "Alacaklarin vadelerine gore dagilimi",
+          "priority": "medium"
+        },
+        {
+          "id": "DOC-K31-4",
+          "name": "Tahsilat takip kayitlari",
+          "description": "Tahsilat calismalari ve sonuclari",
+          "priority": "low"
+        }
+      ],
+      "legal_references": [
+        "VUK Md. 323 - Supheli alacaklar",
+        "VUK Md. 324 - Degersi alacaklar"
+      ],
+      "sector_thresholds": {
+        "Insaat": 15.0,
+        "Toptan Ticaret": 12.0,
+        "default": 10.0
+      }
+    },
+    {
+      "id": "TREND-MATRAH",
+      "name": "Matrah Erozyonu",
+      "category": "TREND_ANALIZI",
+      "severity": "high",
+      "description": "KV matrahinda yillar arasi anormal dusus",
+      "calculation": {
+        "formula": "((current_year_matrah - previous_year_matrah) / previous_year_matrah) * 100",
+        "threshold_type": "percentage",
+        "default_threshold": -20.0,
+        "comparison": "less_than"
+      },
+      "accounts": [],
+      "data_source": "tax_certificates",
+      "inspector_questions": [
+        "Matrahiniz neden bu kadar dustu?",
+        "Sektor buyurken sizin kuculmenizin nedeni ne?",
+        "Giderleriniz neden artti?",
+        "Satis kayiplarini aciklayabilir misiniz?",
+        "Yeni rakipler mi girdi? Pazar kaybi mi yasandi?"
+      ],
+      "required_documents": [
+        {
+          "id": "DOC-TREND-1",
+          "name": "Karsilastirmali gelir tablosu",
+          "description": "Yillar arasi gelir tablosu karsilastirmasi",
+          "priority": "critical"
+        },
+        {
+          "id": "DOC-TREND-2",
+          "name": "Gider artis analizi",
+          "description": "Kalem bazli gider artis gerekceleri",
+          "priority": "high"
+        },
+        {
+          "id": "DOC-TREND-3",
+          "name": "Piyasa kosullari raporu",
+          "description": "Sektorel/ekonomik durum aciklamasi",
+          "priority": "medium"
+        },
+        {
+          "id": "DOC-TREND-4",
+          "name": "Satislarin dagilimi analizi",
+          "description": "Musteri ve urun bazli satis analizi",
+          "priority": "medium"
+        }
+      ],
+      "legal_references": [
+        "VUK Md. 134 - Vergi incelemesi",
+        "VUK Md. 135 - Incelemeye alinma"
+      ],
+      "sector_thresholds": {
+        "default": -20.0
+      }
+    },
+    {
+      "id": "K-SAHTE",
+      "name": "Riskli Tedarikci Iliskisi",
+      "category": "TEDARIKCI_ANALIZI",
+      "severity": "critical",
+      "description": "GIB riskli mukellef listesindeki firmalarla ticaret",
+      "calculation": {
+        "formula": "count_risky_suppliers",
+        "threshold_type": "count",
+        "default_threshold": 1,
+        "comparison": "greater_than_equal"
+      },
+      "accounts": ["320", "321", "420", "421"],
+      "inspector_questions": [
+        "Bu tedarikcilerle nasil tanistiniz?",
+        "Mal/hizmet teslimi gercekten yapildi mi?",
+        "Odeme nasil yapildi? Banka kanaliyla mi?",
+        "Sevk irsaliyesi, tasima belgesi var mi?",
+        "Tedarikciyi nasil ve ne zaman tanidiniz?",
+        "Referans aldigi firmalar var mi?"
+      ],
+      "required_documents": [
+        {
+          "id": "DOC-SAHTE-1",
+          "name": "Mal alis faturalari",
+          "description": "Ilgili tedarikciden alinan faturalar",
+          "priority": "critical"
+        },
+        {
+          "id": "DOC-SAHTE-2",
+          "name": "Sevk irsaliyeleri",
+          "description": "Mal teslim belgeleri",
+          "priority": "critical"
+        },
+        {
+          "id": "DOC-SAHTE-3",
+          "name": "Odeme belgeleri",
+          "description": "Banka dekontlari, havale/EFT kayitlari",
+          "priority": "critical"
+        },
+        {
+          "id": "DOC-SAHTE-4",
+          "name": "Tasima/nakliye belgeleri",
+          "description": "Nakliye faturasi, CMR belgesi",
+          "priority": "high"
+        },
+        {
+          "id": "DOC-SAHTE-5",
+          "name": "Tarti fisleri/depo giris kayitlari",
+          "description": "Mal girislerinin fiziki kaniti",
+          "priority": "high"
+        },
+        {
+          "id": "DOC-SAHTE-6",
+          "name": "Tedarikci tanimlama formu",
+          "description": "Tedarikci degerlendirme ve onay formu",
+          "priority": "medium"
+        }
+      ],
+      "legal_references": [
+        "VUK Md. 359 - Kacakcilik suclari",
+        "KDV Kanunu Md. 29 - Indirilemeyecek KDV",
+        "213 sayili VUK Md. 11 - Muteselsil sorumluluk",
+        "VUK Md. 370 - Pişmanlık"
+      ],
+      "sector_thresholds": {
+        "default": 1
+      }
+    },
+    {
+      "id": "K-24",
+      "name": "Amortisman/Sabit Varlik Orani",
+      "category": "VARLIK_ANALIZI",
+      "severity": "medium",
+      "description": "Birikmis amortismanin duran varliklara oraninin anormal olmasi",
+      "calculation": {
+        "formula": "accumulated_depreciation / fixed_assets * 100",
+        "threshold_type": "percentage",
+        "default_threshold": 95.0,
+        "comparison": "greater_than"
+      },
+      "accounts": ["250", "251", "252", "253", "254", "255", "257", "258"],
+      "inspector_questions": [
+        "Amortisman hesabi neden aktif bakiyesini asiyor?",
+        "Satilan veya hurda edilen varliklar var mi?",
+        "Amortisman hesaplamalari dogru mu?",
+        "Sabit kiymet kartlari guncel mi?"
+      ],
+      "required_documents": [
+        {
+          "id": "DOC-K24-1",
+          "name": "Sabit kiymet listesi",
+          "description": "Guncel sabit kiymet envanteri",
+          "priority": "critical"
+        },
+        {
+          "id": "DOC-K24-2",
+          "name": "Amortisman hesaplama tablosu",
+          "description": "Varlik bazli amortisman hesaplamalari",
+          "priority": "high"
+        },
+        {
+          "id": "DOC-K24-3",
+          "name": "Varlik satis/hurda tutanaklari",
+          "description": "Elden cikarilan varliklarin belgeleri",
+          "priority": "medium"
+        }
+      ],
+      "legal_references": [
+        "VUK Md. 315-320 - Amortisman",
+        "333, 339, 365, 389, 458 Sira No.lu VUK Tebligleri"
+      ],
+      "sector_thresholds": {
+        "default": 95.0
+      }
+    }
+  ],
+  "severity_levels": {
+    "critical": {
+      "color": "#cd3d64",
+      "label": "Kritik",
+      "score_weight": 30
+    },
+    "high": {
+      "color": "#e56f4a",
+      "label": "Yuksek",
+      "score_weight": 20
+    },
+    "medium": {
+      "color": "#f5a623",
+      "label": "Orta",
+      "score_weight": 10
+    },
+    "low": {
+      "color": "#0caf60",
+      "label": "Dusuk",
+      "score_weight": 5
+    }
+  },
+  "category_labels": {
+    "VARLIK_ANALIZI": "Varlik Analizi",
+    "ILISKILI_TARAF": "Iliskili Taraf",
+    "STOK_ANALIZI": "Stok Analizi",
+    "ALACAK_ANALIZI": "Alacak Analizi",
+    "TREND_ANALIZI": "Trend Analizi",
+    "TEDARIKCI_ANALIZI": "Tedarikci Analizi"
+  }
+}

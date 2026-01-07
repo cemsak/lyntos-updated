@@ -1,0 +1,340 @@
+{
+  "nace_codes": [
+    {
+      "code": "01.11",
+      "description_tr": "Tahil ve diger bitkisel urunlerin yetistirilmesi",
+      "sector_group": "Tarim",
+      "risk_profile": "medium",
+      "k_criteria": ["K-22", "K-24"]
+    },
+    {
+      "code": "10.11",
+      "description_tr": "Etin islenmesi ve saklanmasi",
+      "sector_group": "Gida Imalat",
+      "risk_profile": "medium",
+      "k_criteria": ["K-22", "K-09"]
+    },
+    {
+      "code": "10.71",
+      "description_tr": "Ekmek, taze pastane urunleri ve taze kek imalati",
+      "sector_group": "Gida Imalat",
+      "risk_profile": "medium",
+      "k_criteria": ["K-09", "K-22"]
+    },
+    {
+      "code": "13.92",
+      "description_tr": "Tekstil urunleri imalati (giyim haric)",
+      "sector_group": "Tekstil",
+      "risk_profile": "medium",
+      "k_criteria": ["K-22", "K-09", "K-15"]
+    },
+    {
+      "code": "25.11",
+      "description_tr": "Metal yapi ve yapi parcalari imalati",
+      "sector_group": "Metal Imalat",
+      "risk_profile": "medium",
+      "k_criteria": ["K-22", "K-09"]
+    },
+    {
+      "code": "41.10",
+      "description_tr": "Insaat projelerinin gelistirilmesi",
+      "sector_group": "Insaat",
+      "risk_profile": "high",
+      "k_criteria": ["K-09", "K-15", "K-22", "K-31"]
+    },
+    {
+      "code": "41.20",
+      "description_tr": "Ikamet amacli ve ikamet amacli olmayan binalarin insaati",
+      "sector_group": "Insaat",
+      "risk_profile": "high",
+      "k_criteria": ["K-09", "K-15", "K-22", "K-31"]
+    },
+    {
+      "code": "42.11",
+      "description_tr": "Karayollari ve otoyollarin insaati",
+      "sector_group": "Insaat",
+      "risk_profile": "high",
+      "k_criteria": ["K-09", "K-15", "K-22"]
+    },
+    {
+      "code": "43.11",
+      "description_tr": "Yikma isleri",
+      "sector_group": "Insaat",
+      "risk_profile": "high",
+      "k_criteria": ["K-09", "K-15"]
+    },
+    {
+      "code": "45.11",
+      "description_tr": "Otomobil ve hafif motorlu araclarin ticareti",
+      "sector_group": "Motorlu Arac Ticareti",
+      "risk_profile": "high",
+      "k_criteria": ["K-09", "K-22", "K-15"]
+    },
+    {
+      "code": "45.20",
+      "description_tr": "Motorlu karayolu tasitlarinin bakimi ve onarimi",
+      "sector_group": "Motorlu Arac Ticareti",
+      "risk_profile": "medium",
+      "k_criteria": ["K-09", "K-22"]
+    },
+    {
+      "code": "46.31",
+      "description_tr": "Meyve ve sebze toptan ticareti",
+      "sector_group": "Toptan Ticaret",
+      "risk_profile": "medium",
+      "k_criteria": ["K-22", "K-09"]
+    },
+    {
+      "code": "46.32",
+      "description_tr": "Et ve et urunleri toptan ticareti",
+      "sector_group": "Toptan Ticaret",
+      "risk_profile": "medium",
+      "k_criteria": ["K-22", "K-09"]
+    },
+    {
+      "code": "46.73",
+      "description_tr": "Kereste, yapi ve sihhi tesisat malzemeleri toptan ticareti",
+      "sector_group": "Toptan Ticaret",
+      "risk_profile": "high",
+      "k_criteria": ["K-22", "K-09", "K-15"]
+    },
+    {
+      "code": "46.90",
+      "description_tr": "Belirli bir mala tahsis edilmemis toptan ticaret",
+      "sector_group": "Toptan Ticaret",
+      "risk_profile": "medium",
+      "k_criteria": ["K-22", "K-09"]
+    },
+    {
+      "code": "47.11",
+      "description_tr": "Belirli bir mala tahsis edilmemis magazalarda gida, icecek ve tutun urunleri agirlikli perakende ticaret",
+      "sector_group": "Perakende Ticaret",
+      "risk_profile": "medium",
+      "k_criteria": ["K-09", "K-22"]
+    },
+    {
+      "code": "47.19",
+      "description_tr": "Belirli bir mala tahsis edilmemis magazalarda diger perakende ticaret",
+      "sector_group": "Perakende Ticaret",
+      "risk_profile": "medium",
+      "k_criteria": ["K-09", "K-22"]
+    },
+    {
+      "code": "47.41",
+      "description_tr": "Bilgisayar, bilgisayar cevre birimleri ve yazilim perakende ticareti",
+      "sector_group": "Perakende Ticaret",
+      "risk_profile": "low",
+      "k_criteria": ["K-22"]
+    },
+    {
+      "code": "47.62",
+      "description_tr": "Gazete, dergi ve kirtasiye urunleri perakende ticareti",
+      "sector_group": "Perakende Ticaret",
+      "risk_profile": "low",
+      "k_criteria": ["K-09", "K-22"]
+    },
+    {
+      "code": "47.71",
+      "description_tr": "Giyim esyasi perakende ticareti",
+      "sector_group": "Perakende Ticaret",
+      "risk_profile": "medium",
+      "k_criteria": ["K-09", "K-22"]
+    },
+    {
+      "code": "49.31",
+      "description_tr": "Sehirici ve banliyo kara yolcu tasimaciligi",
+      "sector_group": "Ulastirma",
+      "risk_profile": "medium",
+      "k_criteria": ["K-09", "K-24"]
+    },
+    {
+      "code": "49.41",
+      "description_tr": "Karayolu ile yuk tasimaciligi",
+      "sector_group": "Ulastirma",
+      "risk_profile": "high",
+      "k_criteria": ["K-09", "K-15", "K-24"]
+    },
+    {
+      "code": "52.10",
+      "description_tr": "Depolama ve ambarlama",
+      "sector_group": "Ulastirma",
+      "risk_profile": "medium",
+      "k_criteria": ["K-22", "K-09"]
+    },
+    {
+      "code": "55.10",
+      "description_tr": "Oteller ve benzeri konaklama yerleri",
+      "sector_group": "Konaklama",
+      "risk_profile": "medium",
+      "k_criteria": ["K-09", "K-22"]
+    },
+    {
+      "code": "56.10",
+      "description_tr": "Lokantalar ve portatif yemek hizmeti faaliyetleri",
+      "sector_group": "Yiyecek Icecek",
+      "risk_profile": "high",
+      "k_criteria": ["K-09", "K-22"]
+    },
+    {
+      "code": "56.30",
+      "description_tr": "Icecek sunum hizmetleri",
+      "sector_group": "Yiyecek Icecek",
+      "risk_profile": "high",
+      "k_criteria": ["K-09"]
+    },
+    {
+      "code": "62.01",
+      "description_tr": "Bilgisayar programlama faaliyetleri",
+      "sector_group": "Bilisim",
+      "risk_profile": "low",
+      "k_criteria": ["K-15"]
+    },
+    {
+      "code": "62.02",
+      "description_tr": "Bilgisayar danismanlik faaliyetleri",
+      "sector_group": "Bilisim",
+      "risk_profile": "low",
+      "k_criteria": ["K-15"]
+    },
+    {
+      "code": "62.09",
+      "description_tr": "Diger bilgi teknolojisi ve bilgisayar hizmet faaliyetleri",
+      "sector_group": "Bilisim",
+      "risk_profile": "low",
+      "k_criteria": ["K-15"]
+    },
+    {
+      "code": "68.10",
+      "description_tr": "Gayrimenkul alim-satimi",
+      "sector_group": "Gayrimenkul",
+      "risk_profile": "high",
+      "k_criteria": ["K-15", "K-31", "K-09"]
+    },
+    {
+      "code": "68.20",
+      "description_tr": "Gayrimenkul kiralama ve isletme faaliyetleri",
+      "sector_group": "Gayrimenkul",
+      "risk_profile": "medium",
+      "k_criteria": ["K-15", "K-31"]
+    },
+    {
+      "code": "69.10",
+      "description_tr": "Hukuk faaliyetleri",
+      "sector_group": "Mesleki Hizmetler",
+      "risk_profile": "low",
+      "k_criteria": ["K-15"]
+    },
+    {
+      "code": "69.20",
+      "description_tr": "Muhasebe, defter tutma ve denetim faaliyetleri; vergi danismanligi",
+      "sector_group": "Mesleki Hizmetler",
+      "risk_profile": "low",
+      "k_criteria": ["K-15"]
+    },
+    {
+      "code": "70.22",
+      "description_tr": "Isletme ve diger idari danismanlik faaliyetleri",
+      "sector_group": "Mesleki Hizmetler",
+      "risk_profile": "low",
+      "k_criteria": ["K-15"]
+    },
+    {
+      "code": "73.11",
+      "description_tr": "Reklam ajanslari faaliyetleri",
+      "sector_group": "Mesleki Hizmetler",
+      "risk_profile": "low",
+      "k_criteria": ["K-15"]
+    },
+    {
+      "code": "82.11",
+      "description_tr": "Kombine buro yonetimi hizmet faaliyetleri",
+      "sector_group": "Idari Hizmetler",
+      "risk_profile": "low",
+      "k_criteria": ["K-15"]
+    },
+    {
+      "code": "85.59",
+      "description_tr": "Baska yerde siniflandirilmamis diger egitim",
+      "sector_group": "Egitim",
+      "risk_profile": "low",
+      "k_criteria": ["K-15"]
+    },
+    {
+      "code": "86.10",
+      "description_tr": "Hastane hizmetleri",
+      "sector_group": "Saglik",
+      "risk_profile": "medium",
+      "k_criteria": ["K-15", "K-22"]
+    },
+    {
+      "code": "86.21",
+      "description_tr": "Genel tip pratisynliği faaliyetleri",
+      "sector_group": "Saglik",
+      "risk_profile": "low",
+      "k_criteria": ["K-15"]
+    },
+    {
+      "code": "86.22",
+      "description_tr": "Uzman hekimlik faaliyetleri",
+      "sector_group": "Saglik",
+      "risk_profile": "low",
+      "k_criteria": ["K-15"]
+    },
+    {
+      "code": "86.23",
+      "description_tr": "Dis hekimligi faaliyetleri",
+      "sector_group": "Saglik",
+      "risk_profile": "low",
+      "k_criteria": ["K-15", "K-09"]
+    },
+    {
+      "code": "93.11",
+      "description_tr": "Spor tesislerinin isletilmesi",
+      "sector_group": "Spor",
+      "risk_profile": "medium",
+      "k_criteria": ["K-09", "K-22"]
+    },
+    {
+      "code": "93.13",
+      "description_tr": "Form tutma ve vucut gelistirme salonlari",
+      "sector_group": "Spor",
+      "risk_profile": "medium",
+      "k_criteria": ["K-09"]
+    },
+    {
+      "code": "96.02",
+      "description_tr": "Kuaforler ve guzellik salonlari",
+      "sector_group": "Kisisel Hizmetler",
+      "risk_profile": "high",
+      "k_criteria": ["K-09"]
+    }
+  ],
+  "sector_groups": {
+    "Tarim": { "avg_margin": 0.12, "risk_weight": 1.0 },
+    "Gida Imalat": { "avg_margin": 0.15, "risk_weight": 1.2 },
+    "Tekstil": { "avg_margin": 0.12, "risk_weight": 1.3 },
+    "Metal Imalat": { "avg_margin": 0.14, "risk_weight": 1.1 },
+    "Insaat": { "avg_margin": 0.08, "risk_weight": 1.8 },
+    "Motorlu Arac Ticareti": { "avg_margin": 0.05, "risk_weight": 1.5 },
+    "Toptan Ticaret": { "avg_margin": 0.10, "risk_weight": 1.3 },
+    "Perakende Ticaret": { "avg_margin": 0.18, "risk_weight": 1.2 },
+    "Ulastirma": { "avg_margin": 0.08, "risk_weight": 1.4 },
+    "Konaklama": { "avg_margin": 0.15, "risk_weight": 1.2 },
+    "Yiyecek Icecek": { "avg_margin": 0.12, "risk_weight": 1.6 },
+    "Bilisim": { "avg_margin": 0.25, "risk_weight": 0.8 },
+    "Gayrimenkul": { "avg_margin": 0.20, "risk_weight": 1.4 },
+    "Mesleki Hizmetler": { "avg_margin": 0.30, "risk_weight": 0.7 },
+    "Idari Hizmetler": { "avg_margin": 0.20, "risk_weight": 0.9 },
+    "Egitim": { "avg_margin": 0.15, "risk_weight": 0.8 },
+    "Saglik": { "avg_margin": 0.18, "risk_weight": 1.0 },
+    "Spor": { "avg_margin": 0.15, "risk_weight": 1.2 },
+    "Kisisel Hizmetler": { "avg_margin": 0.20, "risk_weight": 1.5 }
+  },
+  "k_criteria_descriptions": {
+    "K-09": "Kasa Yogunluk Analizi - Nakit islem yogunlugu",
+    "K-15": "Ortaklara Borc/Alacak - Iliskili taraf islemleri",
+    "K-22": "Stok Devir Hizi - Envanter yonetimi",
+    "K-24": "Amortisman/Sabit Varlik - Yatirim analizi",
+    "K-31": "Gayrimenkul Islemi - Tasinmaz alim-satim"
+  }
+}
