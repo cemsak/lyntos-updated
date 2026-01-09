@@ -12,6 +12,9 @@ import {
   Settings,
   HelpCircle,
   Sparkles,
+  Building2,
+  MessageCircle,
+  Newspaper,
   type LucideIcon
 } from 'lucide-react';
 
@@ -90,6 +93,42 @@ export const NAVIGATION: NavSection[] = [
         label: 'Raporlar',
         href: '/v2/reports',
         icon: BarChart3,
+      },
+    ],
+  },
+  {
+    id: 'regwatch',
+    label: 'Mevzuat Takibi',
+    items: [
+      {
+        id: 'regwatch-chat',
+        label: 'Mevzuat Chat',
+        href: '/v2/regwatch/chat',
+        icon: Newspaper,
+      },
+    ],
+  },
+  {
+    id: 'corporate',
+    label: 'Şirketler Hukuku',
+    items: [
+      {
+        id: 'corporate-law',
+        label: 'Şirket İşlemleri',
+        href: '/v2/corporate',
+        icon: Building2,
+      },
+      {
+        id: 'registry',
+        label: 'Ticaret Sicili',
+        href: '/v2/registry',
+        icon: Building2,
+      },
+      {
+        id: 'corporate-chat',
+        label: 'Chat Asistani',
+        href: '/v2/corporate/chat',
+        icon: MessageCircle,
       },
     ],
   },

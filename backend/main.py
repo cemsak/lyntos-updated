@@ -12,6 +12,11 @@ from api.v1.vdk_simulator import router as vdk_simulator_router
 from api.v1.inspector_prep import router as inspector_prep_router
 from api.v1.document_upload import router as document_upload_router
 from api.v1.tax_strategist import router as tax_strategist_router
+from api.v1.corporate import router as corporate_router
+from api.v1.registry import router as registry_router
+from api.v1.ai import router as ai_router
+from api.v1.notifications import router as notifications_router
+from api.v1.chat import router as chat_router
 from api.v2.validate_vdk import router as vdk_validate_router
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -110,6 +115,11 @@ app.include_router(vdk_simulator_router, prefix="/api/v1", tags=["VDKSimulator"]
 app.include_router(inspector_prep_router, tags=["InspectorPrep"])
 app.include_router(document_upload_router, tags=["DocumentUpload"])
 app.include_router(tax_strategist_router, prefix="/api/v1", tags=["VERGUS"])
+app.include_router(corporate_router, prefix="/api/v1", tags=["Corporate"])
+app.include_router(registry_router, prefix="/api/v1", tags=["Registry"])
+app.include_router(ai_router, prefix="/api/v1", tags=["AI"])
+app.include_router(notifications_router, prefix="/api/v1", tags=["Notifications"])
+app.include_router(chat_router, prefix="/api/v1", tags=["Chat"])
 # --- /LYNTOS v1 API ---
 
 # --- LYNTOS v2 API ---
