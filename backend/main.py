@@ -17,6 +17,7 @@ from api.v1.registry import router as registry_router
 from api.v1.ai import router as ai_router
 from api.v1.notifications import router as notifications_router
 from api.v1.chat import router as chat_router
+from api.v1.user import router as user_router
 from api.v2.validate_vdk import router as vdk_validate_router
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -120,6 +121,7 @@ app.include_router(registry_router, prefix="/api/v1", tags=["Registry"])
 app.include_router(ai_router, prefix="/api/v1", tags=["AI"])
 app.include_router(notifications_router, prefix="/api/v1", tags=["Notifications"])
 app.include_router(chat_router, prefix="/api/v1", tags=["Chat"])
+app.include_router(user_router, prefix="/api/v1", tags=["User"])
 # --- /LYNTOS v1 API ---
 
 # --- LYNTOS v2 API ---

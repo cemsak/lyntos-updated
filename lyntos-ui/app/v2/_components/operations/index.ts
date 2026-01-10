@@ -11,11 +11,14 @@ export { OperationsRow } from './OperationsRow';
 
 // Hooks
 export { useRegWatchState } from './useRegWatchState';
+export { useAksiyonlar } from './useAksiyonlar';
+export { useRegWatchScan, TRUSTED_SOURCES } from './useRegWatchScan';
 export type {
   RegWatchStatus,
   RegWatchItemState,
   UseRegWatchStateReturn,
 } from './useRegWatchState';
+export type { ScanResult } from './useRegWatchScan';
 
 // Types
 export type {
@@ -33,6 +36,3 @@ export {
   ONCELIK_CONFIG,
   KAYNAK_ICONS,
 } from './types';
-
-// Mock Data (for testing)
-export { MOCK_AKSIYONLAR } from './mockData';

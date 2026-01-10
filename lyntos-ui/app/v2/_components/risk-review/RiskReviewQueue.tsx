@@ -1,17 +1,19 @@
 'use client';
+/**
+ * LYNTOS Risk Review Queue Component
+ * Sprint MOCK-006: Connected to real API via useRiskReviewQueue hook
+ */
 
 import React, { useState } from 'react';
-import { AlertCircle, RefreshCw, Download } from 'lucide-react';
+import { AlertCircle, RefreshCw, Download, Loader2 } from 'lucide-react';
 import { Card } from '../shared/Card';
 import { RiskReviewList } from './RiskReviewList';
-import { MOCK_RISK_QUEUE, MOCK_QUEUE_STATS } from './mockData';
+import { useRiskReviewQueue } from './useRiskReviewQueue';
 import type { RiskReviewItem, RiskQueueStats } from './types';
 import { RISK_LEVEL_CONFIG } from './types';
 
 interface RiskReviewQueueProps {
   onItemSelect?: (item: RiskReviewItem) => void;
-  items?: RiskReviewItem[];
-  stats?: RiskQueueStats;
 }
 
 function QueueStats({ stats }: { stats: RiskQueueStats }) {
@@ -19,9 +21,9 @@ function QueueStats({ stats }: { stats: RiskQueueStats }) {
     <div className="grid grid-cols-5 gap-2 p-4 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
       {[
         { key: 'kritik', label: 'Kritik', count: stats.kritik, cfg: RISK_LEVEL_CONFIG.kritik },
-        { key: 'yuksek', label: 'Yüksek', count: stats.yuksek, cfg: RISK_LEVEL_CONFIG.yuksek },
+        { key: 'yuksek', label: 'Yuksek', count: stats.yuksek, cfg: RISK_LEVEL_CONFIG.yuksek },
         { key: 'orta', label: 'Orta', count: stats.orta, cfg: RISK_LEVEL_CONFIG.orta },
-        { key: 'dusuk', label: 'Düşük', count: stats.dusuk, cfg: RISK_LEVEL_CONFIG.dusuk },
+        { key: 'dusuk', label: 'Dusuk', count: stats.dusuk, cfg: RISK_LEVEL_CONFIG.dusuk },
         { key: 'bekleyen', label: 'Bekleyen', count: stats.bekleyen, cfg: null },
       ].map(({ key, label, count, cfg }) => (
         <div key={key} className="text-center p-2 rounded-lg bg-white dark:bg-slate-700">
@@ -36,7 +38,56 @@ function QueueStats({ stats }: { stats: RiskQueueStats }) {
   );
 }
 
-export function RiskReviewQueue({ onItemSelect, items = MOCK_RISK_QUEUE, stats = MOCK_QUEUE_STATS }: RiskReviewQueueProps) {
+function LoadingSkeleton() {
+  return (
+    <div className="p-4 space-y-3">
+      {[...Array(5)].map((_, i) => (
+        <div key={i} className="animate-pulse flex items-center gap-4 p-4 bg-slate-100 dark:bg-slate-700 rounded-lg">
+          <div className="w-12 h-12 bg-slate-200 dark:bg-slate-600 rounded-full" />
+          <div className="flex-1 space-y-2">
+            <div className="h-4 bg-slate-200 dark:bg-slate-600 rounded w-3/4" />
+            <div className="h-3 bg-slate-200 dark:bg-slate-600 rounded w-1/2" />
+          </div>
+          <div className="w-16 h-8 bg-slate-200 dark:bg-slate-600 rounded" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div className="p-8 text-center">
+      <AlertCircle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
+      <p className="text-slate-600 dark:text-slate-400 mb-4">{message}</p>
+      <button
+        onClick={onRetry}
+        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+      >
+        Tekrar Dene
+      </button>
+    </div>
+  );
+}
+
+function EmptyState() {
+  return (
+    <div className="p-8 text-center">
+      <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+        <span className="text-2xl">✓</span>
+      </div>
+      <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-2">
+        Inceleme Kuyrugu Bos
+      </h3>
+      <p className="text-slate-600 dark:text-slate-400">
+        Su anda inceleme bekleyen risk bulgusu yok.
+      </p>
+    </div>
+  );
+}
+
+export function RiskReviewQueue({ onItemSelect }: RiskReviewQueueProps) {
+  const { items, stats, isLoading, error, refresh } = useRiskReviewQueue();
   const [selectedId, setSelectedId] = useState<string>();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -47,20 +98,32 @@ export function RiskReviewQueue({ onItemSelect, items = MOCK_RISK_QUEUE, stats =
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    await new Promise(r => setTimeout(r, 1000));
+    await refresh();
     setIsRefreshing(false);
   };
 
   return (
     <Card
-      title={<span className="flex items-center gap-2"><AlertCircle className="w-5 h-5 text-amber-500" />VDK Risk İnceleme Kuyruğu</span>}
-      subtitle={`${stats.bekleyen} mükellef inceleme bekliyor`}
+      title={<span className="flex items-center gap-2"><AlertCircle className="w-5 h-5 text-amber-500" />VDK Risk Inceleme Kuyrugu</span>}
+      subtitle={isLoading ? 'Yukleniyor...' : `${stats.bekleyen} mukellef inceleme bekliyor`}
       headerAction={
         <div className="flex items-center gap-2">
-          <button onClick={handleRefresh} disabled={isRefreshing} className="p-2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg disabled:opacity-50" title="Yenile">
-            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          <button
+            onClick={handleRefresh}
+            disabled={isLoading || isRefreshing}
+            className="p-2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg disabled:opacity-50"
+            title="Yenile"
+          >
+            {isRefreshing ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+            )}
           </button>
-          <button className="p-2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg" title="Excel'e Aktar">
+          <button
+            className="p-2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
+            title="Excel'e Aktar"
+          >
             <Download className="w-4 h-4" />
           </button>
         </div>
@@ -69,7 +132,15 @@ export function RiskReviewQueue({ onItemSelect, items = MOCK_RISK_QUEUE, stats =
     >
       <QueueStats stats={stats} />
       <div className="h-[500px]">
-        <RiskReviewList items={items} onItemClick={handleItemClick} selectedId={selectedId} keyboardNav />
+        {isLoading ? (
+          <LoadingSkeleton />
+        ) : error ? (
+          <ErrorState message={error} onRetry={refresh} />
+        ) : items.length === 0 ? (
+          <EmptyState />
+        ) : (
+          <RiskReviewList items={items} onItemClick={handleItemClick} selectedId={selectedId} keyboardNav />
+        )}
       </div>
     </Card>
   );

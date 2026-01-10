@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
@@ -11,6 +11,8 @@ import {
   Building,
   Users,
   Banknote,
+  Loader2,
+  FileX,
 } from 'lucide-react';
 import { Card } from '../../_components/shared/Card';
 import { Badge } from '../../_components/shared/Badge';
@@ -25,55 +27,78 @@ interface CariHesap {
   sonMutabakat?: string;
 }
 
-const MOCK_CARI_HESAPLAR: CariHesap[] = [
-  {
-    hesapKodu: '120',
-    hesapAdi: 'Alicilar',
-    kayitBakiye: 850000,
-    mutabakatBakiye: 765000,
-    fark: 85000,
-    durum: 'farkli',
-    sonMutabakat: '2025-12-15',
-  },
-  {
-    hesapKodu: '320',
-    hesapAdi: 'Saticilar',
-    kayitBakiye: 620000,
-    mutabakatBakiye: 580000,
-    fark: 40000,
-    durum: 'farkli',
-    sonMutabakat: '2025-12-10',
-  },
-  {
-    hesapKodu: '131',
-    hesapAdi: 'Ortaklardan Alacaklar',
-    kayitBakiye: 150000,
-    mutabakatBakiye: 150000,
-    fark: 0,
-    durum: 'uyumlu',
-    sonMutabakat: '2025-12-20',
-  },
-  {
-    hesapKodu: '331',
-    hesapAdi: 'Ortaklara Borclar',
-    kayitBakiye: 75000,
-    mutabakatBakiye: 75000,
-    fark: 0,
-    durum: 'uyumlu',
-    sonMutabakat: '2025-12-20',
-  },
-];
-
 export default function CariMutabakatPage() {
   const router = useRouter();
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [hesaplar, setHesaplar] = useState(MOCK_CARI_HESAPLAR);
+  const [hesaplar, setHesaplar] = useState<CariHesap[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch cari hesaplar from API
+  useEffect(() => {
+    const fetchCariHesaplar = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const token = localStorage.getItem('lyntos_token') || 'DEV_HKOZKAN';
+        const response = await fetch('/api/v1/contracts/data-quality?type=cari', {
+          headers: {
+            'Authorization': token,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        // Map API response to CariHesap format if data exists
+        if (data.data?.items && Array.isArray(data.data.items)) {
+          setHesaplar(data.data.items);
+        } else {
+          setHesaplar([]);
+        }
+      } catch (err) {
+        console.error('[CariMutabakat] Fetch failed:', err);
+        setHesaplar([]);
+        setError('Cari hesap verileri yuklenemedi');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCariHesaplar();
+  }, []);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setIsRefreshing(false);
+    setError(null);
+    try {
+      const token = localStorage.getItem('lyntos_token') || 'DEV_HKOZKAN';
+      const response = await fetch('/api/v1/contracts/data-quality?type=cari', {
+        headers: {
+          'Authorization': token,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data.data?.items && Array.isArray(data.data.items)) {
+        setHesaplar(data.data.items);
+      } else {
+        setHesaplar([]);
+      }
+    } catch (err) {
+      console.error('[CariMutabakat] Refresh failed:', err);
+      setError('Veriler yenilenemedi');
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   const toplamFark = hesaplar.reduce((acc, h) => acc + Math.abs(h.fark), 0);
@@ -167,6 +192,29 @@ export default function CariMutabakatPage() {
 
         {/* Table */}
         <Card>
+          {loading ? (
+            <div className="p-8 text-center">
+              <Loader2 className="w-8 h-8 text-blue-600 animate-spin mx-auto mb-4" />
+              <p className="text-slate-600">Cari hesaplar yukleniyor...</p>
+            </div>
+          ) : error ? (
+            <div className="p-8 text-center">
+              <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
+              <p className="text-slate-600 mb-4">{error}</p>
+              <button
+                onClick={handleRefresh}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Tekrar Dene
+              </button>
+            </div>
+          ) : hesaplar.length === 0 ? (
+            <div className="p-8 text-center">
+              <FileX className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-slate-700 mb-2">Cari Hesap Bulunamadi</h3>
+              <p className="text-slate-500 text-sm">Mutabakat kontrolu icin cari hesap verisi yukleyin.</p>
+            </div>
+          ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -217,6 +265,7 @@ export default function CariMutabakatPage() {
               </tbody>
             </table>
           </div>
+          )}
         </Card>
 
         {/* Info */}

@@ -27,6 +27,3 @@ export type { NavItem, NavSection } from './navigation';
 // Types
 export type { User, Client, Period, LayoutContextType } from './types';
 export { RISK_COLORS } from './types';
-
-// Mock Data (for development)
-export { MOCK_USER, MOCK_CLIENTS, MOCK_PERIODS } from './mockData';

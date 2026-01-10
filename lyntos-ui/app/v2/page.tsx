@@ -1,13 +1,13 @@
 'use client';
 import React, { useState } from 'react';
-import { ListTodo, FolderOpen, BarChart3, Radio, Layers, Calculator } from 'lucide-react';
+import { ListTodo, FolderOpen, BarChart3, Radio, Layers, Calculator, AlertCircle } from 'lucide-react';
 import { useDashboardScope, useScopeComplete } from './_components/scope/useDashboardScope';
 import { Card } from './_components/shared/Card';
 import { Badge } from './_components/shared/Badge';
 import { DashboardSection, scrollToSection } from './_components/layout';
 
 // P0: Bugunku Islerim
-import { AksiyonKuyruguPanel, MOCK_AKSIYONLAR } from './_components/operations';
+import { AksiyonKuyruguPanel, useAksiyonlar } from './_components/operations';
 import type { AksiyonItem } from './_components/operations';
 
 // P0: Donem Verileri
@@ -23,7 +23,10 @@ import { KpiStrip } from './_components/kpi/KpiStrip';
 // P2: Mevzuat Takibi
 import { RegWatchPanel } from './_components/operations/RegWatchPanel';
 
-// Deep Dive (Uzman Modu)
+// Deep Dive (Uzman Modu) - V3: Individual panels for 3-column layout
+import { MizanOmurgaPanel } from './_components/deepdive/MizanOmurgaPanel';
+import { CrossCheckPanel } from './_components/deepdive/CrossCheckPanel';
+import { InflationPanel } from './_components/deepdive/InflationPanel';
 import { DeepDiveSection } from './_components/deepdive/DeepDiveSection';
 
 // P1: Vergi Analizi
@@ -50,6 +53,9 @@ export default function V2DashboardPage() {
 
   // Donem Verileri Hook
   const { markAsUploaded } = useDonemVerileri();
+
+  // Aksiyonlar Hook - Real API data with fail-soft fallback
+  const { aksiyonlar, loading: aksiyonlarLoading } = useAksiyonlar();
 
   // Handlers
   const handleUploadClick = (belgeTipi: BelgeTipi) => {
@@ -121,16 +127,23 @@ export default function V2DashboardPage() {
       </Card>
 
       {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* BOLUM 1: BUGUN NE YAPMALIYIM? (P0) */}
+      {/* BOLUM 1: BUGUN NE YAPMALIYIM? (P0) - V3 Urgent Gradient Style */}
       {/* ═══════════════════════════════════════════════════════════════════ */}
       <DashboardSection
         id="aksiyonlar-section"
         title="Bugun Ne Yapmaliyim?"
-        icon={<ListTodo className="w-5 h-5 text-blue-600" />}
-        priority="P0"
+        icon={<AlertCircle className="w-7 h-7 text-white" />}
+        variant="urgent"
+        badge={
+          aksiyonlar.filter(a => a.oncelik === 'acil').length > 0 && (
+            <span className="bg-red-500 text-white text-sm font-bold px-5 py-2 rounded-full shadow-lg animate-pulse">
+              {aksiyonlar.filter(a => a.oncelik === 'acil').length} Acil Is
+            </span>
+          )
+        }
       >
         <AksiyonKuyruguPanel
-          aksiyonlar={MOCK_AKSIYONLAR}
+          aksiyonlar={aksiyonlar}
           onProblemCozmeClick={handleProblemCozmeClick}
         />
       </DashboardSection>
@@ -173,47 +186,82 @@ export default function V2DashboardPage() {
       </DashboardSection>
 
       {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* BOLUM 4: VERGI ANALIZI (P1) */}
+      {/* BOLUM 4: VERGI ANALIZI (P1) - V3 Dark Panel Style */}
       {/* ═══════════════════════════════════════════════════════════════════ */}
-      <DashboardSection
-        id="vergi-analizi-section"
-        title="Vergi Analizi"
-        icon={<Calculator className="w-5 h-5 text-indigo-600" />}
-        priority="P1"
-      >
-        <div className="space-y-6">
-          {/* Gecici Vergi - Ceyreklik */}
+      <div className="space-y-6">
+        {/* Gecici Vergi - Dark Panel Wrapper */}
+        <div className="bg-gradient-to-br from-slate-800 via-slate-900 to-indigo-950 rounded-2xl p-6 shadow-xl">
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center">
+                <span className="text-2xl">📊</span>
+              </div>
+              <div>
+                <h2 className="text-xl font-black text-white">Gecici Vergi Analizi</h2>
+                <p className="text-slate-400 text-sm">{scope.period} - 12 Kritik Kontrol</p>
+              </div>
+            </div>
+          </div>
           <GeciciVergiPanel donem={scope.period} onKontrolClick={handleKontrolBaslat} />
-
-          {/* Kurumlar Vergisi - Yillik */}
-          <KurumlarVergisiPanel yil={2024} onKontrolClick={handleKontrolBaslat} />
         </div>
-      </DashboardSection>
+
+        {/* Kurumlar Vergisi - Already has dark header, keep as is */}
+        <KurumlarVergisiPanel yil={2024} onKontrolClick={handleKontrolBaslat} />
+      </div>
 
       {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* BOLUM 5: MEVZUAT TAKIBI (P2) */}
+      {/* BOLUM 5: V3 3-COLUMN BOTTOM LAYOUT */}
+      {/* Derin Analiz | Enflasyon | Mevzuat Takibi */}
       {/* ═══════════════════════════════════════════════════════════════════ */}
-      <DashboardSection
-        id="regwatch-section"
-        title="Mevzuat Takibi"
-        icon={<Radio className="w-5 h-5 text-purple-600" />}
-        priority="P2"
-      >
-        <RegWatchPanel />
-      </DashboardSection>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6" id="bottom-section">
+        {/* Column 1: Derin Analiz */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-black text-slate-800 flex items-center gap-2">
+              <span>🔍</span> Derin Analiz
+            </h2>
+          </div>
+          <div className="space-y-3">
+            <MizanOmurgaPanel />
+            <CrossCheckPanel />
+          </div>
+        </div>
+
+        {/* Column 2: Enflasyon Muhasebesi */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-black text-slate-800 flex items-center gap-2">
+              <span>📈</span> Enflasyon Muhasebesi
+            </h2>
+          </div>
+          <InflationPanel />
+        </div>
+
+        {/* Column 3: Mevzuat Takibi */}
+        <div id="regwatch-section" className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-black text-slate-800 flex items-center gap-2">
+              <span>📡</span> Mevzuat Takibi
+            </h2>
+          </div>
+          <RegWatchPanel />
+        </div>
+      </div>
 
       {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* BOLUM 6: DEEP DIVE - Uzman Modu veya Collapsed */}
+      {/* BOLUM 6: DEEP DIVE - Uzman Modu (Full panels when advanced mode) */}
       {/* ═══════════════════════════════════════════════════════════════════ */}
-      <DashboardSection
-        id="deep-dive-section"
-        title="Detayli Analizler"
-        icon={<Layers className="w-5 h-5 text-slate-600" />}
-        collapsible={true}
-        defaultCollapsed={!scope.advanced}
-      >
-        <DeepDiveSection />
-      </DashboardSection>
+      {scope.advanced && (
+        <DashboardSection
+          id="deep-dive-section"
+          title="Tum Detayli Analizler"
+          icon={<Layers className="w-5 h-5 text-slate-600" />}
+          collapsible={true}
+          defaultCollapsed={false}
+        >
+          <DeepDiveSection />
+        </DashboardSection>
+      )}
 
       {/* ═══════════════════════════════════════════════════════════════════ */}
       {/* SPRINT STATUS - Dev only */}
@@ -230,6 +278,7 @@ export default function V2DashboardPage() {
             <StatusRow label="Sprint 5.7: Dashboard Layout" status="ok" />
             <StatusRow label="Sprint 5.8: Full Functionality + Design" status="ok" />
             <StatusRow label="Sprint 5.9: Vergi Analiz Sistemi" status="ok" />
+            <StatusRow label="Sprint 9.1: V3 Dashboard Design" status="ok" />
           </div>
         </Card>
       )}

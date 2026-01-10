@@ -476,18 +476,8 @@ export function KurumlarVergisiPanel({
   const [activeTab, setActiveTab] = useState<'tumu' | 'risk' | 'avantaj' | 'zorunlu'>('tumu');
   const [selectedCategory, setSelectedCategory] = useState<'risk' | 'avantaj' | 'zorunlu' | null>(null);
 
-  // Mock matrah verileri (gercekte props'tan gelecek)
-  const veriler: MatrahVerileri = matrahVerileri || {
-    ticariBilancoKari: 12_500_000,
-    kkegToplam: 1_850_000,
-    vergiyeTabiOlmayanGelirler: 500_000,
-    istisnalar: 1_200_000,
-    gecmisYilZararlari: 650_000,
-    indirimler: 450_000,
-    ihracatKazanci: 2_000_000,
-    geciciVergiMahsup: 1_800_000,
-    kesilenStopajlar: 120_000,
-  };
+  // Matrah verileri props'tan gelir - mock yok
+  const hasMatrahData = matrahVerileri !== undefined;
 
   const kontrollerWithDurum = useMemo(() => {
     return KURUMLAR_VERGISI_KONTROLLER.map(kontrol => ({
@@ -856,7 +846,15 @@ export function KurumlarVergisiPanel({
 
         {/* Sag: Matrah Hesaplama (1/3) */}
         <div className="lg:col-span-1">
-          <MatrahHesaplama veriler={veriler} yil={yil} />
+          {hasMatrahData && matrahVerileri ? (
+            <MatrahHesaplama veriler={matrahVerileri} yil={yil} />
+          ) : (
+            <div className="bg-white border border-slate-200 rounded-lg p-6 text-center">
+              <Calculator className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-slate-700 mb-2">Matrah Verisi Bekleniyor</h3>
+              <p className="text-slate-500 text-sm">Matrah hesaplama icin analiz verisi yukleyin.</p>
+            </div>
+          )}
         </div>
       </div>
 

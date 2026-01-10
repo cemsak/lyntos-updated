@@ -8,57 +8,9 @@ import { useFailSoftFetch } from '../hooks/useFailSoftFetch';
 import { ENDPOINTS } from '../contracts/endpoints';
 import { normalizeToEnvelope } from '../contracts/map';
 import type { PanelEnvelope } from '../contracts/envelope';
+import { useRegWatchScan, TRUSTED_SOURCES, type ScanResult } from './useRegWatchScan';
 
 const REGWATCH_ACTIVE_KEY = 'lyntos-regwatch-active';
-
-// Trusted sources for regulatory monitoring
-const TRUSTED_SOURCES = [
-  { id: 'resmi-gazete', name: 'Resmi Gazete', url: 'https://www.resmigazete.gov.tr', icon: '📜' },
-  { id: 'gib', name: 'Gelir Idaresi Baskanligi', url: 'https://www.gib.gov.tr', icon: '🏛️' },
-  { id: 'turmob', name: 'TURMOB', url: 'https://www.turmob.org.tr', icon: '📊' },
-  { id: 'vdk', name: 'Vergi Denetim Kurulu', url: 'https://www.vdk.gov.tr', icon: '🔍' },
-  { id: 'kgk', name: 'KGK', url: 'https://www.kgk.gov.tr', icon: '📋' },
-  { id: 'sgk', name: 'SGK', url: 'https://www.sgk.gov.tr', icon: '👥' },
-  { id: 'ticaret', name: 'Ticaret Bakanligi', url: 'https://www.ticaret.gov.tr', icon: '🏢' },
-  { id: 'hazine', name: 'Hazine ve Maliye', url: 'https://www.hmb.gov.tr', icon: '💰' },
-];
-
-// Mock scan results for demo
-const MOCK_SCAN_RESULTS = [
-  {
-    id: 'scan-001',
-    title: 'KDV Genel Uygulama Tebligi Degisikligi',
-    source: 'Gelir Idaresi Baskanligi',
-    date: new Date().toISOString().split('T')[0],
-    priority: 'high' as const,
-    summary: 'Iade sureleri ve belge gereksinimleri guncellendi',
-  },
-  {
-    id: 'scan-002',
-    title: 'Enflasyon Muhasebesi Uygulama Esaslari',
-    source: 'TURMOB',
-    date: new Date().toISOString().split('T')[0],
-    priority: 'medium' as const,
-    summary: 'TMS 29 uygulamasina iliskin aciklamalar',
-  },
-  {
-    id: 'scan-003',
-    title: 'E-Fatura Zorunluluk Siniri Degisikligi',
-    source: 'Resmi Gazete',
-    date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
-    priority: 'high' as const,
-    summary: 'Brut satis hasilati siniri 2M TL olarak belirlendi',
-  },
-];
-
-interface ScanResult {
-  id: string;
-  title: string;
-  source: string;
-  date: string;
-  priority: 'high' | 'medium' | 'low';
-  summary: string;
-}
 
 interface RegWatchEvent {
   id: string;
@@ -121,16 +73,19 @@ export function RegWatchPanel() {
   const envelope = useFailSoftFetch<RegWatchResult>(ENDPOINTS.REGWATCH_STATUS, normalizeRegWatch);
   const { status, reason_tr, data } = envelope;
 
+  // Use the RegWatch scan hook for real API integration
+  const {
+    scanResults,
+    isScanning,
+    scanProgress,
+    currentSourceIndex,
+    lastScanTime: hookLastScanTime,
+    triggerScan,
+  } = useRegWatchScan();
+
   // Local state for activation (persisted to localStorage)
   const [localActive, setLocalActive] = useState<boolean | null>(null);
   const [isStarting, setIsStarting] = useState(false);
-
-  // Scan state
-  const [isScanning, setIsScanning] = useState(false);
-  const [scanProgress, setScanProgress] = useState(0);
-  const [currentSourceIndex, setCurrentSourceIndex] = useState(-1);
-  const [scanResults, setScanResults] = useState<ScanResult[]>([]);
-  const [lastScanTime, setLastScanTime] = useState<string | null>(null);
   const [showSources, setShowSources] = useState(false);
 
   // Hydrate from localStorage
@@ -140,15 +95,14 @@ export function RegWatchPanel() {
       if (stored === 'true') {
         setLocalActive(true);
       }
-      const storedLastScan = localStorage.getItem('lyntos-regwatch-last-scan');
-      if (storedLastScan) {
-        setLastScanTime(storedLastScan);
-      }
     }
   }, []);
 
   // Determine effective active state (local override or backend)
   const isActive = localActive === true || data?.is_active === true;
+
+  // Use hook's last scan time or backend's last_check
+  const lastScanTime = hookLastScanTime || data?.last_scan;
 
   const handleStartTracking = async () => {
     setIsStarting(true);
@@ -164,27 +118,8 @@ export function RegWatchPanel() {
     localStorage.removeItem(REGWATCH_ACTIVE_KEY);
   };
 
-  const handleScan = async () => {
-    setIsScanning(true);
-    setScanProgress(0);
-    setCurrentSourceIndex(0);
-    setScanResults([]);
-
-    // Simulate scanning each source
-    for (let i = 0; i < TRUSTED_SOURCES.length; i++) {
-      setCurrentSourceIndex(i);
-      setScanProgress(Math.round(((i + 1) / TRUSTED_SOURCES.length) * 100));
-      // Random delay between 300-800ms per source
-      await new Promise(resolve => setTimeout(resolve, 300 + Math.random() * 500));
-    }
-
-    // Complete scan
-    setCurrentSourceIndex(-1);
-    setScanResults(MOCK_SCAN_RESULTS);
-    const now = new Date().toISOString();
-    setLastScanTime(now);
-    localStorage.setItem('lyntos-regwatch-last-scan', now);
-    setIsScanning(false);
+  const handleScan = () => {
+    triggerScan();
   };
 
   return (
@@ -257,7 +192,9 @@ export function RegWatchPanel() {
                   {scanResults.map((result) => (
                     <a
                       key={result.id}
-                      href={`/v2/regwatch/${result.id}`}
+                      href={result.url || `/v2/regwatch/${result.id}`}
+                      target={result.url?.startsWith('http') ? '_blank' : undefined}
+                      rel={result.url?.startsWith('http') ? 'noopener noreferrer' : undefined}
                       className="block p-3 bg-slate-50 rounded-lg border border-slate-100 hover:border-blue-300 hover:bg-blue-50/50 transition-colors"
                     >
                       <div className="flex items-start justify-between gap-2">

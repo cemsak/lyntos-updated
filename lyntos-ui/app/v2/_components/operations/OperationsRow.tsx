@@ -2,10 +2,13 @@
 import React from 'react';
 import { AksiyonKuyruguPanel } from './AksiyonKuyruguPanel';
 import { RegWatchPanel } from './RegWatchPanel';
-import { MOCK_AKSIYONLAR } from './mockData';
+import { useAksiyonlar } from './useAksiyonlar';
 import type { AksiyonItem } from './types';
 
 export function OperationsRow() {
+  // Fetch aksiyonlar from API with fail-soft fallback
+  const { aksiyonlar } = useAksiyonlar();
+
   const handleProblemCozmeClick = (aksiyon: AksiyonItem) => {
     // Open 5 Why wizard
     console.log('Problem cozme:', aksiyon.id);
@@ -19,7 +22,7 @@ export function OperationsRow() {
         {/* Aksiyon Kuyrugu - 2/3 genislik */}
         <div className="lg:col-span-2">
           <AksiyonKuyruguPanel
-            aksiyonlar={MOCK_AKSIYONLAR}
+            aksiyonlar={aksiyonlar}
             onProblemCozmeClick={handleProblemCozmeClick}
           />
         </div>

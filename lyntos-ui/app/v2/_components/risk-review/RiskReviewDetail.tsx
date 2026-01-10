@@ -1,4 +1,8 @@
 'use client';
+/**
+ * LYNTOS Risk Review Detail Component
+ * Sprint MOCK-006: Mock data removed, accepts data via props
+ */
 
 import React from 'react';
 import { ArrowLeft, Download, MoreHorizontal, Check, Flag, MessageSquare } from 'lucide-react';
@@ -8,30 +12,43 @@ import { RiskScoreGauge } from './RiskScoreGauge';
 import { RiskInsightsPanel } from './RiskInsightsPanel';
 import { RelatedDataPanel } from './RelatedDataPanel';
 
+// Types for related data
+export interface PastPeriodData {
+  donem: string;
+  skor: number;
+  riskLevel: 'kritik' | 'yuksek' | 'orta' | 'dusuk';
+  duzeltme?: boolean;
+}
+
+export interface PartnerData {
+  ad: string;
+  oran: number;
+}
+
 interface RiskReviewDetailProps {
   item: RiskReviewItem;
   onBack?: () => void;
   onStatusChange?: (status: ReviewStatus) => void;
+  // Related data - fetched by parent or passed from selection
+  pastPeriods?: PastPeriodData[];
+  partners?: PartnerData[];
+  aiOnerisi?: string;
+  legalRefs?: string[];
 }
 
-// Mock data for demonstration
-const MOCK_PAST_PERIODS = [
-  { donem: '2025-Q1', skor: 71, riskLevel: 'yuksek' as const },
-  { donem: '2024-Q4', skor: 65, riskLevel: 'yuksek' as const },
-  { donem: '2024-Q3', skor: 82, riskLevel: 'kritik' as const, duzeltme: true },
-];
-
-const MOCK_PARTNERS = [
-  { ad: 'Ahmet Ozkan', oran: 51 },
-  { ad: 'Mehmet Ozkan', oran: 49 },
-];
-
-const MOCK_AI = 'Kasa bakiyesi ve ortaklara borc birlikte degerlendirildiginde, nakit sayim tutanagi hazirlanmali ve 131 hesabi icin faiz tahakkuku yapilmalidir.';
-
-const MOCK_LEGAL = ['VUK Md.30', 'GVK Md.40', 'KVK Md.13'];
-
-export function RiskReviewDetail({ item, onBack, onStatusChange }: RiskReviewDetailProps) {
+export function RiskReviewDetail({
+  item,
+  onBack,
+  onStatusChange,
+  pastPeriods = [],
+  partners = [],
+  aiOnerisi,
+  legalRefs = [],
+}: RiskReviewDetailProps) {
   const statusConfig = REVIEW_STATUS_CONFIG[item.status];
+
+  // Use item's aiOnerisi if available, otherwise use prop
+  const displayAiOnerisi = item.aiOnerisi || aiOnerisi || '';
 
   return (
     <div className="min-h-screen bg-[#f6f9fc] dark:bg-[#0a0d14]">
@@ -106,12 +123,14 @@ export function RiskReviewDetail({ item, onBack, onStatusChange }: RiskReviewDet
               </div>
 
               {/* Related Data */}
-              <div className="mt-6 pt-4 border-t border-[#e3e8ee] dark:border-[#2d3343]">
-                <RelatedDataPanel
-                  pastPeriods={MOCK_PAST_PERIODS}
-                  partners={MOCK_PARTNERS}
-                />
-              </div>
+              {(pastPeriods.length > 0 || partners.length > 0) && (
+                <div className="mt-6 pt-4 border-t border-[#e3e8ee] dark:border-[#2d3343]">
+                  <RelatedDataPanel
+                    pastPeriods={pastPeriods}
+                    partners={partners}
+                  />
+                </div>
+              )}
             </div>
           </div>
 
@@ -120,8 +139,8 @@ export function RiskReviewDetail({ item, onBack, onStatusChange }: RiskReviewDet
             <div className="bg-white dark:bg-[#1a1f2e] border border-[#e3e8ee] dark:border-[#2d3343] rounded-lg p-6">
               <RiskInsightsPanel
                 factors={item.topRiskFactors}
-                aiOnerisi={MOCK_AI}
-                legalRefs={MOCK_LEGAL}
+                aiOnerisi={displayAiOnerisi}
+                legalRefs={legalRefs}
               />
             </div>
 

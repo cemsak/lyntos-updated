@@ -38,229 +38,49 @@ interface RegWatchItem {
   ilgiliMaddeler: string[];
 }
 
-// Mock data - in production, this would come from API
-const MOCK_REGWATCH_DATA: Record<string, RegWatchItem> = {
-  'REG-2024-001': {
-    id: 'REG-2024-001',
-    baslik: 'Enflasyon Düzeltmesi Uygulama Tebliği',
-    ozet: 'VUK Mükerrer 298. madde kapsamında enflasyon düzeltmesi uygulamasına ilişkin usul ve esaslar',
-    detay: `2024 yılı ve sonraki dönemler için enflasyon düzeltmesi uygulaması zorunlu hale getirilmiştir.
+// API response type
+interface ApiRegWatchEvent {
+  id: number | string;
+  title: string;
+  summary?: string;
+  detail?: string;
+  published_date?: string;
+  deadline?: string;
+  source?: string;
+  source_url?: string;
+  event_type?: string;
+  priority?: string;
+  affected_areas?: string[];
+  required_actions?: Array<{
+    id: string;
+    title: string;
+    description: string;
+    completed: boolean;
+  }>;
+  related_articles?: string[];
+}
 
-Tebliğ kapsamında:
-- Parasal olmayan kalemlerin belirlenmesi
-- Düzeltme katsayılarının hesaplanması
-- Düzeltme farklarının muhasebeleştirilmesi
-- Vergi matrahına etkileri
-
-detaylı olarak açıklanmıştır.`,
-    yayinTarihi: '2024-01-15',
-    sonTarih: '2025-04-30',
-    kaynak: 'Resmi Gazete',
-    kaynakUrl: 'https://www.resmigazete.gov.tr',
-    kategori: 'teblig',
-    oncelik: 'kritik',
-    etkilenenAlanlar: ['Muhasebe', 'Vergi', 'Mali Tablolar', 'Beyanname'],
-    gerekliAksiyonlar: [
-      {
-        id: 'A1',
-        baslik: 'Parasal/Parasal Olmayan Ayrımı',
-        aciklama: 'Bilanço kalemlerinin parasal ve parasal olmayan olarak sınıflandırılması',
-        tamamlandi: false,
-      },
-      {
-        id: 'A2',
-        baslik: 'Düzeltme Katsayıları Hesaplama',
-        aciklama: 'Her kalem için edinme tarihi bazlı düzeltme katsayılarının belirlenmesi',
-        tamamlandi: false,
-      },
-      {
-        id: 'A3',
-        baslik: 'Muhasebe Kayıtları',
-        aciklama: 'Düzeltme farklarının 698 hesapta izlenmesi',
-        tamamlandi: false,
-      },
-      {
-        id: 'A4',
-        baslik: 'Beyanname Hazırlığı',
-        aciklama: 'Düzeltilmiş değerler üzerinden beyanname hazırlanması',
-        tamamlandi: false,
-      },
-    ],
-    ilgiliMaddeler: ['VUK Mük. 298', 'GVK 38', 'KVK 6'],
-  },
-  'REG-2024-002': {
-    id: 'REG-2024-002',
-    baslik: 'E-Fatura Zorunluluk Sınırı Değişikliği',
-    ozet: '2025 yılı için e-fatura zorunluluk haddi güncellendi',
-    detay: `1 Ocak 2025 tarihinden itibaren e-fatura uygulamasına dahil olma zorunluluğu için brüt satış hasılatı sınırı değiştirilmiştir.
-
-Yeni sınırlar:
-- Mal satışı yapanlar için: 2.000.000 TL
-- Hizmet satışı yapanlar için: 1.000.000 TL
-
-Bu sınırların aşılması halinde takip eden yılın başından itibaren e-fatura uygulamasına geçiş zorunludur.`,
-    yayinTarihi: '2024-12-01',
-    sonTarih: '2025-01-31',
-    kaynak: 'GİB',
-    kaynakUrl: 'https://www.gib.gov.tr',
-    kategori: 'duyuru',
-    oncelik: 'yuksek',
-    etkilenenAlanlar: ['E-Belge', 'Faturalama', 'IT Sistemleri'],
-    gerekliAksiyonlar: [
-      {
-        id: 'A1',
-        baslik: 'Ciro Kontrolü',
-        aciklama: '2024 yılı brüt satış hasılatının kontrol edilmesi',
-        tamamlandi: false,
-      },
-      {
-        id: 'A2',
-        baslik: 'Sistem Entegrasyonu',
-        aciklama: 'E-fatura entegratörü ile anlaşma yapılması',
-        tamamlandi: false,
-      },
-    ],
-    ilgiliMaddeler: ['VUK 232', 'E-Fatura Genel Tebliği'],
-  },
-  // Dashboard mockData'dan gelen ID: teblig-123
-  'teblig-123': {
-    id: 'teblig-123',
-    baslik: 'KDV Genel Uygulama Tebliğinde Değişiklik',
-    ozet: 'KDV iade süreleri ve belge ibraz süreleri güncellendi. Bu değişiklik KDV iade taleplerini etkileyebilir.',
-    detay: `KDV Genel Uygulama Tebliğinde yapılan değişiklikler:
-
-1. İade Talep Süreleri:
-   - İndirimli orana tabi işlemlerden doğan iade talepleri için süre 2 aydan 3 aya uzatıldı
-   - İstisna kapsamındaki işlemler için belge ibraz süresi 1 ay olarak belirlendi
-
-2. Belge İbraz Zorunlulukları:
-   - Elektronik ortamda belge ibrazı zorunlu hale getirildi
-   - YMM raporu için ek süre tanındı
-
-3. Özel Esaslar:
-   - Sahte belge düzenleme riski olan mükelleflere yönelik ek tedbirler getirildi`,
-    yayinTarihi: '2025-12-20',
-    sonTarih: '2026-02-28',
-    kaynak: 'Resmi Gazete',
-    kaynakUrl: 'https://www.resmigazete.gov.tr',
-    kategori: 'teblig',
-    oncelik: 'yuksek',
-    etkilenenAlanlar: ['KDV', 'İade İşlemleri', 'Beyanname', 'YMM Raporu'],
-    gerekliAksiyonlar: [
-      {
-        id: 'A1',
-        baslik: 'Mevcut İade Taleplerini Gözden Geçir',
-        aciklama: 'Bekleyen KDV iade taleplerinin yeni sürelere uygunluğunu kontrol edin',
-        tamamlandi: false,
-      },
-      {
-        id: 'A2',
-        baslik: 'Mükellefleri Bilgilendir',
-        aciklama: 'İade talebinde bulunan mükelleflere yeni süreleri bildirin',
-        tamamlandi: false,
-      },
-      {
-        id: 'A3',
-        baslik: 'Sistem Güncellemesi',
-        aciklama: 'Takip sistemindeki hatırlatma sürelerini güncelleyin',
-        tamamlandi: false,
-      },
-    ],
-    ilgiliMaddeler: ['KDVK 29', 'KDVK 32', 'KDV Genel Tebliği'],
-  },
-  // Ek mevzuat örnekleri
-  'REG-2025-001': {
-    id: 'REG-2025-001',
-    baslik: 'Asgari Kurumlar Vergisi Uygulaması',
-    ozet: '7524 sayılı Kanun ile getirilen asgari kurumlar vergisi 2025 yılından itibaren uygulanacak.',
-    detay: `Asgari Kurumlar Vergisi (AKV) Uygulaması:
-
-2025 yılından itibaren kurumlar vergisi mükellefleri için asgari vergi uygulaması başlıyor.
-
-Hesaplama:
-- Matrah = Ticari Bilanço Karı (indirim ve istisnalar öncesi)
-- AKV Oranı = %10
-- Hesaplanan KV < AKV ise, AKV ödenir
-
-İstisnalar:
-- İlk 5 yıl için yeni kurulan şirketler muaf
-- Serbest bölge kazançları muaf
-- AR-GE indirimleri %50 oranında dikkate alınır`,
-    yayinTarihi: '2025-01-01',
-    sonTarih: '2025-04-30',
-    kaynak: 'Resmi Gazete',
-    kaynakUrl: 'https://www.resmigazete.gov.tr',
-    kategori: 'kanun',
-    oncelik: 'kritik',
-    etkilenenAlanlar: ['Kurumlar Vergisi', 'Vergi Planlaması', 'Mali Tablolar'],
-    gerekliAksiyonlar: [
-      {
-        id: 'A1',
-        baslik: 'AKV Simülasyonu',
-        aciklama: 'Tüm mükelleflerin AKV durumunu simüle edin',
-        tamamlandi: false,
-      },
-      {
-        id: 'A2',
-        baslik: 'İstisna Analizi',
-        aciklama: 'Hangi mükelleflerin istisnadan yararlanabileceğini belirleyin',
-        tamamlandi: false,
-      },
-      {
-        id: 'A3',
-        baslik: 'Strateji Geliştirme',
-        aciklama: 'Vergi optimizasyonu için strateji önerileri hazırlayın',
-        tamamlandi: false,
-      },
-    ],
-    ilgiliMaddeler: ['KVK 32/C', '7524 sayılı Kanun'],
-  },
-};
-
-// Fallback for unknown IDs - creates a generic item
-function createFallbackItem(id: string): RegWatchItem {
+// Map API response to internal type
+function mapApiEventToItem(event: ApiRegWatchEvent): RegWatchItem {
   return {
-    id: id,
-    baslik: `Mevzuat Değişikliği: ${id}`,
-    ozet: 'Bu mevzuat değişikliği henüz detaylandırılmamış. Lütfen resmi kaynakları kontrol edin.',
-    detay: `Mevzuat ID: ${id}
-
-Bu düzenleme hakkında detaylı bilgi henüz sisteme girilmemiş.
-
-Yapmanız gerekenler:
-1. Resmi Gazete'yi kontrol edin
-2. İlgili kurumun web sitesini ziyaret edin
-3. SMMM/YMM'nize danışın
-
-Not: Bu sayfa otomatik olarak oluşturulmuştur.`,
-    yayinTarihi: new Date().toISOString().split('T')[0],
-    sonTarih: null,
-    kaynak: 'Belirlenmedi',
-    kaynakUrl: 'https://www.resmigazete.gov.tr',
-    kategori: 'duyuru',
-    oncelik: 'orta',
-    etkilenenAlanlar: ['Genel'],
-    gerekliAksiyonlar: [
-      {
-        id: 'A1',
-        baslik: 'Resmi Kaynağı İncele',
-        aciklama: 'Düzenlemenin tam metnini resmi kaynaktan okuyun',
-        tamamlandi: false,
-      },
-      {
-        id: 'A2',
-        baslik: 'Etki Analizi Yap',
-        aciklama: 'Mükelleflere etkisini değerlendirin',
-        tamamlandi: false,
-      },
-      {
-        id: 'A3',
-        baslik: 'Gerekli Aksiyonları Belirle',
-        aciklama: 'Yapılması gereken işlemleri listeleyin',
-        tamamlandi: false,
-      },
-    ],
-    ilgiliMaddeler: ['Belirlenmedi'],
+    id: String(event.id),
+    baslik: event.title,
+    ozet: event.summary || 'Detay icin inceleyin',
+    detay: event.detail || event.summary || '',
+    yayinTarihi: event.published_date || new Date().toISOString().split('T')[0],
+    sonTarih: event.deadline || null,
+    kaynak: event.source || 'Belirlenmedi',
+    kaynakUrl: event.source_url || 'https://www.resmigazete.gov.tr',
+    kategori: (event.event_type as RegWatchItem['kategori']) || 'duyuru',
+    oncelik: (event.priority as RegWatchItem['oncelik']) || 'orta',
+    etkilenenAlanlar: event.affected_areas || ['Genel'],
+    gerekliAksiyonlar: event.required_actions?.map(a => ({
+      id: a.id,
+      baslik: a.title,
+      aciklama: a.description,
+      tamamlandi: a.completed,
+    })) || [],
+    ilgiliMaddeler: event.related_articles || [],
   };
 }
 
@@ -274,28 +94,57 @@ export default function RegWatchDetailPage() {
   const [aksiyonlar, setAksiyonlar] = useState<RegWatchItem['gerekliAksiyonlar']>([]);
 
   useEffect(() => {
-    // Simulate API fetch
     const fetchData = async () => {
       setLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 300));
+      try {
+        const token = localStorage.getItem('lyntos_token') || 'DEV_HKOZKAN';
 
-      // Use mock data or fallback for unknown IDs
-      const data = MOCK_REGWATCH_DATA[regId] || createFallbackItem(regId);
-      setItem(data);
+        // Try to fetch from API
+        const response = await fetch(`/api/v1/regwatch/changes?id=${regId}`, {
+          headers: {
+            'Authorization': token,
+            'Content-Type': 'application/json',
+          },
+        });
 
-      // Load saved state from localStorage
-      const savedState = localStorage.getItem(`regwatch-${regId}`);
-      if (savedState) {
-        try {
-          const parsed = JSON.parse(savedState);
-          setAksiyonlar(parsed.aksiyonlar || data.gerekliAksiyonlar);
-        } catch {
-          setAksiyonlar(data.gerekliAksiyonlar);
+        if (response.ok) {
+          const apiData = await response.json();
+          // Handle both single item and array response
+          const eventData = Array.isArray(apiData.data)
+            ? apiData.data.find((e: ApiRegWatchEvent) => String(e.id) === regId)
+            : apiData.data;
+
+          if (eventData) {
+            const data = mapApiEventToItem(eventData);
+            setItem(data);
+
+            // Load saved state from localStorage
+            const savedState = localStorage.getItem(`regwatch-${regId}`);
+            if (savedState) {
+              try {
+                const parsed = JSON.parse(savedState);
+                setAksiyonlar(parsed.aksiyonlar || data.gerekliAksiyonlar);
+              } catch {
+                setAksiyonlar(data.gerekliAksiyonlar);
+              }
+            } else {
+              setAksiyonlar(data.gerekliAksiyonlar);
+            }
+          } else {
+            // Event not found in API
+            setItem(null);
+          }
+        } else {
+          // API failed - show not found
+          console.error('[RegWatch] API fetch failed:', response.status);
+          setItem(null);
         }
-      } else {
-        setAksiyonlar(data.gerekliAksiyonlar);
+      } catch (err) {
+        console.error('[RegWatch] Fetch error:', err);
+        setItem(null);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     fetchData();

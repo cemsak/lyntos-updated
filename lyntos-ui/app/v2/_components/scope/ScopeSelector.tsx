@@ -1,10 +1,15 @@
 'use client';
+/**
+ * LYNTOS Scope Selector Component
+ * Sprint MOCK-006: Mock data removed, uses only API data from useLayoutContext
+ */
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown, User, Building2, Calendar, Check } from 'lucide-react';
+import { ChevronDown, User, Building2, Calendar, Check, Loader2, AlertCircle } from 'lucide-react';
 import { useDashboardScope } from './ScopeProvider';
+import { useLayoutContext } from '../layout/useLayoutContext';
 
 // ═══════════════════════════════════════════════════════════════════════════
-// MOCK DATA - Gerçek API entegrasyonunda değiştirilecek
+// TYPES
 // ═══════════════════════════════════════════════════════════════════════════
 
 interface SmmmData {
@@ -26,29 +31,6 @@ interface DonemData {
   tip: 'aylik' | 'ceyreklik' | 'yillik';
 }
 
-const MOCK_SMMMLER: SmmmData[] = [
-  { id: 'smmm-001', ad: 'Ahmet Yılmaz', unvan: 'SMMM' },
-  { id: 'smmm-002', ad: 'Fatma Demir', unvan: 'SMMM' },
-  { id: 'smmm-003', ad: 'Mehmet Kaya', unvan: 'YMM' },
-];
-
-const MOCK_MUKELLEFLER: MukellefData[] = [
-  { id: 'muk-001', unvan: 'ABC Teknoloji A.Ş.', vkn: '1234567890', smmmId: 'smmm-001' },
-  { id: 'muk-002', unvan: 'XYZ Yazılım Ltd.Şti.', vkn: '0987654321', smmmId: 'smmm-001' },
-  { id: 'muk-003', unvan: 'Demo Ticaret A.Ş.', vkn: '5555555555', smmmId: 'smmm-001' },
-  { id: 'muk-004', unvan: 'Test Holding A.Ş.', vkn: '6666666666', smmmId: 'smmm-002' },
-  { id: 'muk-005', unvan: 'Örnek İnşaat Ltd.', vkn: '7777777777', smmmId: 'smmm-002' },
-];
-
-const MOCK_DONEMLER: DonemData[] = [
-  { id: '2025-Q4', label: '2025 Q4 (Ekim-Aralık)', tip: 'ceyreklik' },
-  { id: '2025-Q3', label: '2025 Q3 (Temmuz-Eylül)', tip: 'ceyreklik' },
-  { id: '2025-Q2', label: '2025 Q2 (Nisan-Haziran)', tip: 'ceyreklik' },
-  { id: '2025-Q1', label: '2025 Q1 (Ocak-Mart)', tip: 'ceyreklik' },
-  { id: '2024-Q4', label: '2024 Q4 (Ekim-Aralık)', tip: 'ceyreklik' },
-  { id: '2024', label: '2024 Yıllık', tip: 'yillik' },
-];
-
 // ═══════════════════════════════════════════════════════════════════════════
 // DROPDOWN COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════
@@ -64,6 +46,9 @@ interface DropdownProps<T> {
   onChange: (id: string) => void;
   placeholder?: string;
   disabled?: boolean;
+  loading?: boolean;
+  error?: string | null;
+  emptyMessage?: string;
 }
 
 function Dropdown<T>({
@@ -75,8 +60,11 @@ function Dropdown<T>({
   getOptionLabel,
   getOptionSublabel,
   onChange,
-  placeholder = 'Seçiniz...',
+  placeholder = 'Seciniz...',
   disabled = false,
+  loading = false,
+  error = null,
+  emptyMessage = 'Kayit bulunamadi',
 }: DropdownProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -127,25 +115,29 @@ function Dropdown<T>({
       <button
         type="button"
         onClick={() => {
-          if (!disabled) {
+          if (!disabled && !loading) {
             setIsOpen(!isOpen);
             if (!isOpen) setTimeout(() => inputRef.current?.focus(), 50);
           }
         }}
-        disabled={disabled}
+        disabled={disabled || loading}
         className={`
           w-full flex items-center gap-2 px-3 py-2 rounded-lg border transition-all duration-200
-          ${disabled
+          ${disabled || loading
             ? 'bg-lyntos-bg-elevated border-lyntos-border cursor-not-allowed opacity-50'
             : isOpen
               ? 'bg-lyntos-bg-input border-lyntos-accent ring-2 ring-lyntos-accent/20'
-              : 'bg-lyntos-bg-input border-lyntos-border hover:border-lyntos-border-light'
+              : error
+                ? 'bg-lyntos-bg-input border-red-300 hover:border-red-400'
+                : 'bg-lyntos-bg-input border-lyntos-border hover:border-lyntos-border-light'
           }
         `}
       >
-        <span className="text-lyntos-text-muted">{icon}</span>
-        <span className={`flex-1 text-left text-sm truncate ${selectedOption ? 'text-lyntos-text-primary' : 'text-lyntos-text-muted'}`}>
-          {selectedOption ? getOptionLabel(selectedOption) : placeholder}
+        <span className="text-lyntos-text-muted">
+          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : error ? <AlertCircle className="w-4 h-4 text-red-500" /> : icon}
+        </span>
+        <span className={`flex-1 text-left text-sm truncate ${selectedOption ? 'text-lyntos-text-primary' : error ? 'text-red-500' : 'text-lyntos-text-muted'}`}>
+          {loading ? 'Yukleniyor...' : error ? 'Yuklenemedi' : (selectedOption ? getOptionLabel(selectedOption) : placeholder)}
         </span>
         <ChevronDown className={`w-4 h-4 text-lyntos-text-muted transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
@@ -171,7 +163,7 @@ function Dropdown<T>({
           <div className="max-h-48 overflow-y-auto">
             {filteredOptions.length === 0 ? (
               <div className="px-3 py-4 text-sm text-lyntos-text-muted text-center">
-                Sonuç bulunamadı
+                {emptyMessage}
               </div>
             ) : (
               filteredOptions.map(opt => {
@@ -220,28 +212,57 @@ function Dropdown<T>({
 
 export function ScopeSelector() {
   const { scope, setScope } = useDashboardScope();
+  const { user, clients, periods, loading, error, refreshPeriods } = useLayoutContext();
 
-  // Filter mükellefer based on selected SMMM
-  const filteredMukellefler = scope.smmm_id
-    ? MOCK_MUKELLEFLER.filter(m => m.smmmId === scope.smmm_id)
-    : MOCK_MUKELLEFLER;
+  // Convert layout data to dropdown format - NO fallback to mock data
+  const smmmList: SmmmData[] = user
+    ? [{ id: user.id, ad: user.name, unvan: user.title }]
+    : [];
+
+  const mukellefList: MukellefData[] = clients.map(c => ({
+    id: c.id,
+    unvan: c.name,
+    vkn: c.vkn,
+    smmmId: user?.id || '',
+  }));
+
+  const donemList: DonemData[] = periods.map(p => ({
+    id: p.id,
+    label: p.description || p.label,
+    tip: 'ceyreklik' as const,
+  }));
+
+  // Auto-select SMMM if only one option and not already selected
+  useEffect(() => {
+    if (smmmList.length === 1 && !scope.smmm_id) {
+      setScope({ smmm_id: smmmList[0].id });
+    }
+  }, [smmmList, scope.smmm_id, setScope]);
 
   // Handle SMMM change - reset dependent fields
   const handleSmmmChange = (smmmId: string) => {
     setScope({
       smmm_id: smmmId,
-      client_id: '', // Reset mükellef
-      period: '',    // Reset dönem
+      client_id: '', // Reset mukellef
+      period: '',    // Reset donem
     });
   };
 
-  // Handle Mükellef change - reset period
-  const handleMukellefChange = (mukellefId: string) => {
+  // Handle Mukellef change - reset period and fetch new periods
+  const handleMukellefChange = async (mukellefId: string) => {
     setScope({
       client_id: mukellefId,
-      period: '', // Reset dönem
+      period: '', // Reset donem
     });
+
+    // Fetch periods for the selected client
+    await refreshPeriods(mukellefId);
   };
+
+  // Determine loading states for each dropdown
+  const smmmLoading = loading && !user;
+  const mukellefLoading = loading && clients.length === 0 && !!scope.smmm_id;
+  const donemLoading = loading && periods.length === 0 && !!scope.client_id;
 
   return (
     <div className="flex items-end gap-3">
@@ -251,42 +272,52 @@ export function ScopeSelector() {
           label="SMMM"
           icon={<User className="w-4 h-4" />}
           value={scope.smmm_id}
-          options={MOCK_SMMMLER}
+          options={smmmList}
           getOptionId={s => s.id}
           getOptionLabel={s => s.ad}
           getOptionSublabel={s => s.unvan}
           onChange={handleSmmmChange}
-          placeholder="SMMM Seçin"
+          placeholder="SMMM Secin"
+          loading={smmmLoading}
+          error={error && !user ? error : null}
+          emptyMessage="SMMM bulunamadi"
+          disabled={smmmList.length <= 1}
         />
       </div>
 
-      {/* Mükellef Selector */}
+      {/* Mukellef Selector */}
       <div className="w-56">
         <Dropdown
-          label="Mükellef"
+          label="Mukellef"
           icon={<Building2 className="w-4 h-4" />}
           value={scope.client_id}
-          options={filteredMukellefler}
+          options={mukellefList}
           getOptionId={m => m.id}
           getOptionLabel={m => m.unvan}
           getOptionSublabel={m => `VKN: ${m.vkn}`}
           onChange={handleMukellefChange}
-          placeholder="Mükellef Seçin"
+          placeholder="Mukellef Secin"
+          loading={mukellefLoading}
+          error={error && clients.length === 0 && scope.smmm_id ? error : null}
+          emptyMessage="Mukellef bulunamadi"
           disabled={!scope.smmm_id}
         />
       </div>
 
-      {/* Dönem Selector */}
+      {/* Donem Selector */}
       <div className="w-52">
         <Dropdown
-          label="Dönem"
+          label="Donem"
           icon={<Calendar className="w-4 h-4" />}
           value={scope.period}
-          options={MOCK_DONEMLER}
+          options={donemList}
           getOptionId={d => d.id}
           getOptionLabel={d => d.label}
           onChange={period => setScope({ period })}
-          placeholder="Dönem Seçin"
+          placeholder="Donem Secin"
+          loading={donemLoading}
+          error={error && periods.length === 0 && scope.client_id ? error : null}
+          emptyMessage="Donem bulunamadi"
           disabled={!scope.client_id}
         />
       </div>

@@ -62,16 +62,35 @@ interface OranAnalizi {
   yorum: string;
 }
 
+interface ApiAccount {
+  hesap: string;
+  ad: string;
+  bakiye: number;
+  status: 'ok' | 'warning' | 'error';
+  reason_tr?: string;
+  required_actions?: string[];
+  oran_ciro?: number;
+  oran_sermaye?: number;
+  devir_hizi?: number;
+  tahsilat_suresi_gun?: number;
+  odeme_suresi_gun?: number;
+  stok_gun?: number;
+  kar_marji?: number;
+  iade_orani?: number;
+  esik?: number;
+}
+
 interface MizanResult {
-  accounts: Array<{
-    hesap_kodu: string;
-    hesap_adi: string;
-    borc: number;
-    alacak: number;
-    bakiye: number;
-    kritik: boolean;
-    anomali_tr?: string;
-  }>;
+  hesaplar: MizanHesap[];
+  accounts_raw: Record<string, ApiAccount>;
+  summary: {
+    total_accounts: number;
+    ok: number;
+    warning: number;
+    error: number;
+    overall_status: string;
+    total_actions: number;
+  };
   totals: {
     toplam_borc: number;
     toplam_alacak: number;
@@ -108,37 +127,6 @@ const MIZAN_SMMM_INFO = {
     'Donem kapanisi oncesi tum anomalileri giderin',
   ],
 };
-
-// ════════════════════════════════════════════════════════════════════════════
-// MOCK DATA
-// ════════════════════════════════════════════════════════════════════════════
-
-const MOCK_MIZAN_DATA: MizanHesap[] = [
-  // DONEN VARLIKLAR
-  { kod: '100', ad: 'Kasa', grup: 'Donen Varliklar', borc: 2500000, alacak: 0, bakiye: 2500000, bakiyeYonu: 'B', oncekiDonem: 1800000, degisimOrani: 38.9 },
-  { kod: '102', ad: 'Bankalar', grup: 'Donen Varliklar', borc: 8500000, alacak: 0, bakiye: 8500000, bakiyeYonu: 'B', oncekiDonem: 6200000, degisimOrani: 37.1 },
-  { kod: '120', ad: 'Alicilar', grup: 'Donen Varliklar', borc: 12500000, alacak: 850000, bakiye: 11650000, bakiyeYonu: 'B', oncekiDonem: 9800000, degisimOrani: 18.9 },
-  { kod: '153', ad: 'Ticari Mallar', grup: 'Donen Varliklar', borc: 4200000, alacak: 0, bakiye: 4200000, bakiyeYonu: 'B', oncekiDonem: 3500000, degisimOrani: 20.0 },
-  { kod: '191', ad: 'Indirilecek KDV', grup: 'Donen Varliklar', borc: 1850000, alacak: 1650000, bakiye: 200000, bakiyeYonu: 'B' },
-  // DURAN VARLIKLAR
-  { kod: '253', ad: 'Tesis Makine Cihaz', grup: 'Duran Varliklar', borc: 15000000, alacak: 0, bakiye: 15000000, bakiyeYonu: 'B' },
-  { kod: '257', ad: 'Birikmis Amortisman', grup: 'Duran Varliklar', borc: 0, alacak: 4500000, bakiye: -4500000, bakiyeYonu: 'A' },
-  // KISA VADELI YABANCI KAYNAKLAR
-  { kod: '320', ad: 'Saticilar', grup: 'Kisa Vadeli Yabanci Kaynaklar', borc: 650000, alacak: 8200000, bakiye: -7550000, bakiyeYonu: 'A', oncekiDonem: 6100000, degisimOrani: 23.8 },
-  { kod: '360', ad: 'Odenecek Vergi ve Fonlar', grup: 'Kisa Vadeli Yabanci Kaynaklar', borc: 0, alacak: 1250000, bakiye: -1250000, bakiyeYonu: 'A' },
-  { kod: '391', ad: 'Hesaplanan KDV', grup: 'Kisa Vadeli Yabanci Kaynaklar', borc: 1200000, alacak: 3450000, bakiye: -2250000, bakiyeYonu: 'A' },
-  // UZUN VADELI YABANCI KAYNAKLAR
-  { kod: '400', ad: 'Banka Kredileri', grup: 'Uzun Vadeli Yabanci Kaynaklar', borc: 0, alacak: 5000000, bakiye: -5000000, bakiyeYonu: 'A' },
-  // OZKAYNAKLAR
-  { kod: '500', ad: 'Sermaye', grup: 'Ozkaynaklar', borc: 0, alacak: 10000000, bakiye: -10000000, bakiyeYonu: 'A' },
-  { kod: '570', ad: 'Gecmis Yillar Karlari', grup: 'Ozkaynaklar', borc: 0, alacak: 3500000, bakiye: -3500000, bakiyeYonu: 'A' },
-  // GELIR TABLOSU
-  { kod: '600', ad: 'Yurtici Satislar', grup: 'Gelirler', borc: 0, alacak: 45000000, bakiye: -45000000, bakiyeYonu: 'A', oncekiDonem: 38000000, degisimOrani: 18.4 },
-  { kod: '602', ad: 'Diger Gelirler', grup: 'Gelirler', borc: 0, alacak: 2500000, bakiye: -2500000, bakiyeYonu: 'A' },
-  { kod: '621', ad: 'Satilan Ticari Mallar Maliyeti', grup: 'Giderler', borc: 32000000, alacak: 0, bakiye: 32000000, bakiyeYonu: 'B' },
-  { kod: '770', ad: 'Genel Yonetim Giderleri', grup: 'Giderler', borc: 5500000, alacak: 0, bakiye: 5500000, bakiyeYonu: 'B' },
-  { kod: '780', ad: 'Finansman Giderleri', grup: 'Giderler', borc: 1200000, alacak: 0, bakiye: 1200000, bakiyeYonu: 'B' },
-];
 
 // ════════════════════════════════════════════════════════════════════════════
 // ANALYSIS FUNCTIONS
@@ -291,6 +279,61 @@ function calculateOranlar(mizan: MizanHesap[]): OranAnalizi[] {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
+// ACCOUNT GROUP MAPPING
+// ════════════════════════════════════════════════════════════════════════════
+
+function getAccountGroup(kod: string): string {
+  const prefix = kod.charAt(0);
+  switch (prefix) {
+    case '1': return 'Donen Varliklar';
+    case '2': return 'Duran Varliklar';
+    case '3': return 'Kisa Vadeli Yabanci Kaynaklar';
+    case '4': return 'Uzun Vadeli Yabanci Kaynaklar';
+    case '5': return 'Ozkaynaklar';
+    case '6': return 'Gelirler';
+    case '7': return 'Giderler';
+    case '8': return 'Maliyet Hesaplari';
+    case '9': return 'Nazim Hesaplar';
+    default: return 'Diger';
+  }
+}
+
+function getBakiyeYonu(kod: string, bakiye: number): 'B' | 'A' {
+  // Aktif hesaplar (1xx, 2xx) normalde borc bakiye verir
+  // Pasif hesaplar (3xx, 4xx, 5xx) normalde alacak bakiye verir
+  // Gelir hesaplari (6xx) normalde alacak bakiye verir
+  // Gider hesaplari (7xx) normalde borc bakiye verir
+  const prefix = kod.charAt(0);
+
+  if (['1', '2', '7', '8'].includes(prefix)) {
+    // Aktif ve gider hesaplari - normalde borc
+    return bakiye >= 0 ? 'B' : 'A';
+  } else {
+    // Pasif, ozkaynak ve gelir hesaplari - normalde alacak
+    return bakiye <= 0 ? 'A' : 'B';
+  }
+}
+
+function mapApiAccountToMizanHesap(account: ApiAccount): MizanHesap {
+  const bakiye = account.bakiye;
+  const bakiyeYonu = getBakiyeYonu(account.hesap, bakiye);
+
+  // Approximate borc/alacak from bakiye (API doesn't provide separate values)
+  const borc = bakiyeYonu === 'B' ? Math.abs(bakiye) : 0;
+  const alacak = bakiyeYonu === 'A' ? Math.abs(bakiye) : 0;
+
+  return {
+    kod: account.hesap,
+    ad: account.ad,
+    grup: getAccountGroup(account.hesap),
+    borc,
+    alacak,
+    bakiye: bakiyeYonu === 'B' ? Math.abs(bakiye) : -Math.abs(bakiye),
+    bakiyeYonu,
+  };
+}
+
+// ════════════════════════════════════════════════════════════════════════════
 // NORMALIZE API RESPONSE
 // ════════════════════════════════════════════════════════════════════════════
 
@@ -299,32 +342,61 @@ function normalizeMizan(raw: unknown): PanelEnvelope<MizanResult> {
     const obj = r as Record<string, unknown>;
     const data = obj.data as Record<string, unknown> | undefined;
 
-    const accountsRaw = data?.accounts || data?.hesaplar || data?.items || [];
-    const accounts = Array.isArray(accountsRaw)
-      ? accountsRaw.map((a: Record<string, unknown>) => ({
-          hesap_kodu: String(a.hesap_kodu || a.code || a.account_code || ''),
-          hesap_adi: String(a.hesap_adi || a.name || a.account_name || ''),
-          borc: typeof a.borc === 'number' ? a.borc : typeof a.debit === 'number' ? a.debit : 0,
-          alacak: typeof a.alacak === 'number' ? a.alacak : typeof a.credit === 'number' ? a.credit : 0,
-          bakiye: typeof a.bakiye === 'number' ? a.bakiye : typeof a.balance === 'number' ? a.balance : 0,
-          kritik: Boolean(a.kritik || a.critical || a.is_critical),
-          anomali_tr: a.anomali_tr ? String(a.anomali_tr) : a.anomaly ? String(a.anomaly) : undefined,
-        }))
-      : [];
+    // Handle object-based accounts (keyed by account code)
+    const accountsObj = (data?.accounts || {}) as Record<string, unknown>;
+    const summaryRaw = (data?.summary || {}) as Record<string, unknown>;
 
-    const totalsRaw = (data?.totals || data?.toplam) as Record<string, unknown> | undefined;
-    const toplamBorc = accounts.reduce((sum, a) => sum + a.borc, 0);
-    const toplamAlacak = accounts.reduce((sum, a) => sum + a.alacak, 0);
+    // Convert object to array and map to MizanHesap
+    const accountsRaw: ApiAccount[] = Object.values(accountsObj).map((a) => {
+      const acc = a as Record<string, unknown>;
+      return {
+        hesap: String(acc.hesap || ''),
+        ad: String(acc.ad || ''),
+        bakiye: typeof acc.bakiye === 'number' ? acc.bakiye : 0,
+        status: (acc.status as 'ok' | 'warning' | 'error') || 'ok',
+        reason_tr: acc.reason_tr ? String(acc.reason_tr) : undefined,
+        required_actions: Array.isArray(acc.required_actions) ? acc.required_actions as string[] : [],
+        oran_ciro: typeof acc.oran_ciro === 'number' ? acc.oran_ciro : undefined,
+        oran_sermaye: typeof acc.oran_sermaye === 'number' ? acc.oran_sermaye : undefined,
+        devir_hizi: typeof acc.devir_hizi === 'number' ? acc.devir_hizi : undefined,
+        tahsilat_suresi_gun: typeof acc.tahsilat_suresi_gun === 'number' ? acc.tahsilat_suresi_gun : undefined,
+        odeme_suresi_gun: typeof acc.odeme_suresi_gun === 'number' ? acc.odeme_suresi_gun : undefined,
+        stok_gun: typeof acc.stok_gun === 'number' ? acc.stok_gun : undefined,
+        kar_marji: typeof acc.kar_marji === 'number' ? acc.kar_marji : undefined,
+        iade_orani: typeof acc.iade_orani === 'number' ? acc.iade_orani : undefined,
+        esik: typeof acc.esik === 'number' ? acc.esik : undefined,
+      };
+    });
+
+    // Sort by account code
+    accountsRaw.sort((a, b) => a.hesap.localeCompare(b.hesap));
+
+    // Map to MizanHesap[]
+    const hesaplar = accountsRaw.map(mapApiAccountToMizanHesap);
+
+    // Calculate totals
+    const toplamBorc = hesaplar.reduce((sum, h) => sum + h.borc, 0);
+    const toplamAlacak = hesaplar.reduce((sum, h) => sum + h.alacak, 0);
+    const criticalCount = accountsRaw.filter(a => a.status === 'error').length;
 
     return {
-      accounts: accounts.slice(0, 20),
-      totals: {
-        toplam_borc: typeof totalsRaw?.toplam_borc === 'number' ? totalsRaw.toplam_borc : toplamBorc,
-        toplam_alacak: typeof totalsRaw?.toplam_alacak === 'number' ? totalsRaw.toplam_alacak : toplamAlacak,
-        fark: typeof totalsRaw?.fark === 'number' ? totalsRaw.fark : Math.abs(toplamBorc - toplamAlacak),
-        denge_ok: typeof totalsRaw?.denge_ok === 'boolean' ? totalsRaw.denge_ok : Math.abs(toplamBorc - toplamAlacak) < 1,
+      hesaplar,
+      accounts_raw: accountsObj as Record<string, ApiAccount>,
+      summary: {
+        total_accounts: typeof summaryRaw.total_accounts === 'number' ? summaryRaw.total_accounts : hesaplar.length,
+        ok: typeof summaryRaw.ok === 'number' ? summaryRaw.ok : 0,
+        warning: typeof summaryRaw.warning === 'number' ? summaryRaw.warning : 0,
+        error: typeof summaryRaw.error === 'number' ? summaryRaw.error : 0,
+        overall_status: String(summaryRaw.overall_status || 'ok'),
+        total_actions: typeof summaryRaw.total_actions === 'number' ? summaryRaw.total_actions : 0,
       },
-      critical_count: accounts.filter(a => a.kritik).length,
+      totals: {
+        toplam_borc: toplamBorc,
+        toplam_alacak: toplamAlacak,
+        fark: Math.abs(toplamBorc - toplamAlacak),
+        denge_ok: Math.abs(toplamBorc - toplamAlacak) < 1,
+      },
+      critical_count: criticalCount,
     };
   });
 }
@@ -423,12 +495,13 @@ export function MizanOmurgaPanel() {
   const envelope = useFailSoftFetch<MizanResult>(ENDPOINTS.MIZAN_ANALYSIS, normalizeMizan);
   const { status, reason_tr, data, analysis, trust, legal_basis_refs, evidence_refs, meta } = envelope;
 
-  // Use mock data for analysis (backend may not have full data)
-  const mizanData = MOCK_MIZAN_DATA;
-  const kritikAnalizler = useMemo(() => analyzeKritikHesaplar(mizanData), []);
-  const oranAnalizleri = useMemo(() => calculateOranlar(mizanData), []);
+  // Use API data only - no mock fallback
+  const mizanData = data?.hesaplar || [];
+  const hasData = mizanData.length > 0;
+  const kritikAnalizler = useMemo(() => hasData ? analyzeKritikHesaplar(mizanData) : [], [mizanData, hasData]);
+  const oranAnalizleri = useMemo(() => hasData ? calculateOranlar(mizanData) : [], [mizanData, hasData]);
 
-  // Calculate totals from mock data
+  // Calculate totals from data
   const toplamBorc = mizanData.reduce((sum, h) => sum + h.borc, 0);
   const toplamAlacak = mizanData.reduce((sum, h) => sum + h.alacak, 0);
   const fark = Math.abs(toplamBorc - toplamAlacak);
@@ -439,7 +512,7 @@ export function MizanOmurgaPanel() {
     if (!searchTerm) return mizanData;
     const term = searchTerm.toLowerCase();
     return mizanData.filter(h => h.kod.includes(term) || h.ad.toLowerCase().includes(term));
-  }, [searchTerm]);
+  }, [searchTerm, mizanData]);
 
   const formatCurrency = (n: number) => new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 0 }).format(n);
 
@@ -472,6 +545,13 @@ export function MizanOmurgaPanel() {
         }
       >
         <PanelState status={status} reason_tr={reason_tr}>
+          {!hasData && status === 'ok' ? (
+            <div className="p-8 text-center">
+              <Info className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-slate-700 mb-2">Mizan Verisi Bulunamadi</h3>
+              <p className="text-slate-500 text-sm">Analiz icin mizan verisi yukleyin veya donem secimini kontrol edin.</p>
+            </div>
+          ) : (
           <div className="space-y-4">
             {/* Tab Buttons */}
             <div className="flex gap-2 border-b border-slate-200 pb-2">
@@ -711,6 +791,7 @@ export function MizanOmurgaPanel() {
               </div>
             </div>
           </div>
+          )}
         </PanelState>
       </Card>
 

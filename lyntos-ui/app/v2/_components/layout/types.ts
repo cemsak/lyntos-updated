@@ -46,8 +46,11 @@ export interface LayoutContextType {
   selectedPeriod: Period | null;
   clients: Client[];
   periods: Period[];
+  loading: boolean;
+  error: string | null;
   setSelectedClient: (client: Client | null) => void;
   setSelectedPeriod: (period: Period | null) => void;
+  refreshPeriods: (clientId: string) => Promise<void>;
 }
 
 // Risk level colors (Stripe palette)
