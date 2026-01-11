@@ -74,8 +74,8 @@ export function DocumentCard({
     <div
       className={`
         p-4 rounded-lg border-2 transition-all
-        ${isDragOver ? 'border-[#635bff] bg-[#635bff]/5' : 'border-[#e3e8ee] dark:border-[#2d3343]'}
-        ${isUploaded ? 'bg-[#0caf60]/5' : 'bg-white dark:bg-[#1a1f2e]'}
+        ${isDragOver ? 'border-[#635bff] bg-[#635bff]/5' : 'border-[#e3e8ee]'}
+        ${isUploaded ? 'bg-[#0caf60]/5' : 'bg-white'}
       `}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -90,7 +90,7 @@ export function DocumentCard({
               className={`text-[13px] font-medium ${
                 isUploaded
                   ? 'text-[#697386] line-through'
-                  : 'text-[#1a1f36] dark:text-white'
+                  : 'text-[#1a1f36]'
               }`}
             >
               {document.name}
@@ -154,7 +154,7 @@ export function DocumentCard({
             <div
               className={`
               p-3 border-2 border-dashed rounded-lg text-center transition-colors
-              ${isDragOver ? 'border-[#635bff] bg-[#635bff]/5' : 'border-[#e3e8ee] dark:border-[#2d3343]'}
+              ${isDragOver ? 'border-[#635bff] bg-[#635bff]/5' : 'border-[#e3e8ee]'}
             `}
             >
               {isUploading ? (
@@ -194,7 +194,7 @@ export function DocumentCard({
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Belge hakkinda not..."
-                className="mt-2 w-full px-2 py-1.5 text-[12px] bg-[#f6f9fc] dark:bg-[#0a0d14] border border-[#e3e8ee] dark:border-[#2d3343] rounded resize-none h-16 text-[#1a1f36] dark:text-white placeholder:text-[#697386] focus:outline-none focus:ring-2 focus:ring-[#635bff]/20"
+                className="mt-2 w-full px-2 py-1.5 text-[12px] bg-[#f6f9fc] border border-[#e3e8ee] rounded resize-none h-16 text-[#1a1f36] placeholder:text-[#697386] focus:outline-none focus:ring-2 focus:ring-[#635bff]/20"
               />
             )}
 

@@ -49,8 +49,8 @@ export default function HelpPage() {
   return (
     <div className="space-y-6 max-w-4xl">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Yardim Merkezi</h1>
-        <p className="text-slate-600 dark:text-slate-400 mt-1">
+        <h1 className="text-2xl font-bold text-slate-900">Yardim Merkezi</h1>
+        <p className="text-slate-600 mt-1">
           LYNTOS hakkinda sorularinizi cevaplayalim
         </p>
       </div>
@@ -61,14 +61,14 @@ export default function HelpPage() {
           <a
             key={topic.title}
             href={topic.href}
-            className="group bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5 hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-lg transition-all"
+            className="group bg-white rounded-xl border border-slate-200 p-5 hover:border-blue-300 hover:shadow-lg transition-all"
           >
             <div className="flex items-start gap-4">
-              <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
                 <topic.icon className="w-5 h-5 text-blue-600" />
               </div>
               <div>
-                <h3 className="font-semibold text-slate-900 dark:text-white group-hover:text-blue-600">
+                <h3 className="font-semibold text-slate-900 group-hover:text-blue-600">
                   {topic.title}
                 </h3>
                 <p className="text-sm text-slate-500 mt-1">{topic.description}</p>
@@ -79,36 +79,36 @@ export default function HelpPage() {
       </div>
 
       {/* FAQ Section */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6">
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
+      <div className="bg-white rounded-xl border border-slate-200 p-6">
+        <h2 className="text-lg font-semibold text-slate-900 mb-4">
           Sikca Sorulan Sorular
         </h2>
         <div className="space-y-4">
           {FAQS.map((faq, idx) => (
-            <div key={idx} className="border-b border-slate-100 dark:border-slate-700 pb-4 last:border-0">
-              <h3 className="font-medium text-slate-900 dark:text-white mb-2">{faq.question}</h3>
-              <p className="text-sm text-slate-600 dark:text-slate-400">{faq.answer}</p>
+            <div key={idx} className="border-b border-slate-100 pb-4 last:border-0">
+              <h3 className="font-medium text-slate-900 mb-2">{faq.question}</h3>
+              <p className="text-sm text-slate-600">{faq.answer}</p>
             </div>
           ))}
         </div>
       </div>
 
       {/* Contact Section */}
-      <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800 p-6">
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
+      <div className="bg-blue-50 rounded-xl border border-blue-200 p-6">
+        <h2 className="text-lg font-semibold text-slate-900 mb-4">
           Hala Yardima mi Ihtiyaciniz Var?
         </h2>
         <div className="flex flex-wrap gap-4">
           <a
             href="mailto:destek@lyntos.com"
-            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-blue-300 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg border border-slate-200 hover:border-blue-300 transition-colors"
           >
             <Mail className="w-4 h-4 text-blue-600" />
             <span className="text-sm font-medium">E-posta Gonder</span>
           </a>
           <a
             href="/v2/corporate/chat"
-            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-blue-300 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg border border-slate-200 hover:border-blue-300 transition-colors"
           >
             <MessageCircle className="w-4 h-4 text-blue-600" />
             <span className="text-sm font-medium">Canli Destek</span>
@@ -117,7 +117,7 @@ export default function HelpPage() {
             href="https://docs.lyntos.com"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-blue-300 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg border border-slate-200 hover:border-blue-300 transition-colors"
           >
             <ExternalLink className="w-4 h-4 text-blue-600" />
             <span className="text-sm font-medium">Dokumantasyon</span>

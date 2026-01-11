@@ -26,7 +26,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="tr" suppressHydrationWarning className={`${ibmSans.variable} ${ibmMono.variable}`}>
+    <html lang="tr" suppressHydrationWarning className={`light ${ibmSans.variable} ${ibmMono.variable}`}>
       <body className="font-sans bg-background text-foreground">
         <ThemeProvider>
           <QueryProvider>

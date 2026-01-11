@@ -171,7 +171,7 @@ export function InspectorPrepPanel({
 
   if (isLoading) {
     return (
-      <div className="bg-white dark:bg-[#1a1f2e] rounded-xl border border-[#e3e8ee] dark:border-[#2d3343] p-8">
+      <div className="bg-white rounded-xl border border-[#e3e8ee] p-8">
         <div className="flex flex-col items-center justify-center gap-4">
           <div className="w-12 h-12 border-4 border-[#635bff] border-t-transparent rounded-full animate-spin" />
           <p className="text-[14px] text-[#697386]">Hazirlik yukl&rsquo;eniyor...</p>
@@ -182,9 +182,9 @@ export function InspectorPrepPanel({
 
   if (triggeredAlarms.length === 0) {
     return (
-      <div className="bg-white dark:bg-[#1a1f2e] rounded-xl border border-[#e3e8ee] dark:border-[#2d3343] p-8 text-center">
+      <div className="bg-white rounded-xl border border-[#e3e8ee] p-8 text-center">
         <FileCheck className="w-12 h-12 text-[#0caf60] mx-auto mb-4" />
-        <p className="text-[14px] font-medium text-[#1a1f36] dark:text-white">
+        <p className="text-[14px] font-medium text-[#1a1f36]">
           Hazirlik gerektiren alarm yok
         </p>
         <p className="text-[13px] text-[#697386] mt-1">
@@ -195,14 +195,14 @@ export function InspectorPrepPanel({
   }
 
   return (
-    <div className="bg-white dark:bg-[#1a1f2e] rounded-xl border border-[#e3e8ee] dark:border-[#2d3343] overflow-hidden">
+    <div className="bg-white rounded-xl border border-[#e3e8ee] overflow-hidden">
       {/* Header */}
-      <div className="p-4 border-b border-[#e3e8ee] dark:border-[#2d3343]">
+      <div className="p-4 border-b border-[#e3e8ee]">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <MessageSquare className="w-6 h-6 text-[#635bff]" />
             <div>
-              <h2 className="text-[16px] font-semibold text-[#1a1f36] dark:text-white">
+              <h2 className="text-[16px] font-semibold text-[#1a1f36]">
                 Mufettis Sorulari Hazirlik
               </h2>
               <p className="text-[12px] text-[#697386]">
@@ -215,7 +215,7 @@ export function InspectorPrepPanel({
       </div>
 
       {/* Alarm Tabs */}
-      <div className="p-2 border-b border-[#e3e8ee] dark:border-[#2d3343] flex gap-2 overflow-x-auto">
+      <div className="p-2 border-b border-[#e3e8ee] flex gap-2 overflow-x-auto">
         {triggeredAlarms.map((alarm, index) => (
           <button
             key={alarm.rule_id}
@@ -226,7 +226,7 @@ export function InspectorPrepPanel({
             className={`px-3 py-1.5 text-[12px] font-medium rounded-lg whitespace-nowrap transition-colors ${
               index === selectedAlarmIndex
                 ? 'bg-[#635bff] text-white'
-                : 'bg-[#f6f9fc] dark:bg-[#0a0d14] text-[#697386] hover:text-[#1a1f36] dark:hover:text-white'
+                : 'bg-[#f6f9fc] text-[#697386] hover:text-[#1a1f36]'
             }`}
           >
             {alarm.rule_id}: {alarm.rule_name}
@@ -235,11 +235,11 @@ export function InspectorPrepPanel({
       </div>
 
       {/* Question Navigation */}
-      <div className="p-4 border-b border-[#e3e8ee] dark:border-[#2d3343] flex items-center justify-between">
+      <div className="p-4 border-b border-[#e3e8ee] flex items-center justify-between">
         <button
           onClick={handlePrevQuestion}
           disabled={selectedAlarmIndex === 0 && selectedQuestionIndex === 0}
-          className="flex items-center gap-1 px-3 py-1.5 text-[12px] font-medium text-[#697386] hover:text-[#1a1f36] dark:hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="flex items-center gap-1 px-3 py-1.5 text-[12px] font-medium text-[#697386] hover:text-[#1a1f36] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
         >
           <ChevronLeft className="w-4 h-4" />
           Onceki Soru
@@ -257,7 +257,7 @@ export function InspectorPrepPanel({
             selectedQuestionIndex ===
               (currentAlarm?.inspector_questions.length || 0) - 1
           }
-          className="flex items-center gap-1 px-3 py-1.5 text-[12px] font-medium text-[#697386] hover:text-[#1a1f36] dark:hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="flex items-center gap-1 px-3 py-1.5 text-[12px] font-medium text-[#697386] hover:text-[#1a1f36] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
         >
           Sonraki Soru
           <ChevronRight className="w-4 h-4" />
@@ -281,7 +281,7 @@ export function InspectorPrepPanel({
       </div>
 
       {/* Progress Footer */}
-      <div className="p-4 border-t border-[#e3e8ee] dark:border-[#2d3343]">
+      <div className="p-4 border-t border-[#e3e8ee]">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-4 text-[12px] text-[#697386]">
             <span>Toplam Soru: {totalQuestions}</span>
@@ -296,7 +296,7 @@ export function InspectorPrepPanel({
         </div>
 
         {/* Progress Bar */}
-        <div className="h-2 bg-[#e3e8ee] dark:bg-[#2d3343] rounded-full overflow-hidden">
+        <div className="h-2 bg-[#e3e8ee] rounded-full overflow-hidden">
           <div
             className="h-full bg-[#635bff] rounded-full transition-all duration-300"
             style={{ width: `${(notesCount / totalQuestions) * 100 || 0}%` }}
@@ -308,7 +308,7 @@ export function InspectorPrepPanel({
           <button
             onClick={handleExportPDF}
             disabled={isExporting}
-            className="flex items-center gap-1.5 px-4 py-2 text-[13px] font-medium text-[#697386] hover:text-[#1a1f36] dark:hover:text-white border border-[#e3e8ee] dark:border-[#2d3343] rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-1.5 px-4 py-2 text-[13px] font-medium text-[#697386] hover:text-[#1a1f36] border border-[#e3e8ee] rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isExporting ? (
               <>

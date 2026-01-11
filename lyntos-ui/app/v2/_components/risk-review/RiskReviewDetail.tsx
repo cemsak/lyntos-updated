@@ -51,23 +51,23 @@ export function RiskReviewDetail({
   const displayAiOnerisi = item.aiOnerisi || aiOnerisi || '';
 
   return (
-    <div className="min-h-screen bg-[#f6f9fc] dark:bg-[#0a0d14]">
+    <div className="min-h-screen bg-[#f6f9fc]">
       {/* Top Bar - Stripe style */}
-      <div className="bg-white dark:bg-[#1a1f2e] border-b border-[#e3e8ee] dark:border-[#2d3343]">
+      <div className="bg-white border-b border-[#e3e8ee]">
         <div className="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between">
           <button
             onClick={onBack}
             className="flex items-center gap-2 text-[14px] text-[#635bff] hover:text-[#5851ea] font-medium"
           >
             <ArrowLeft className="w-4 h-4" />
-            Risk Kuyrugu
+            Bekleyen Islemler
           </button>
 
           <div className="flex items-center gap-2">
-            <button className="p-2 text-[#697386] hover:text-[#1a1f36] dark:hover:text-white hover:bg-[#f6f9fc] dark:hover:bg-[#0a0d14] rounded-md">
+            <button className="p-2 text-[#697386] hover:text-[#1a1f36] hover:bg-[#f6f9fc] rounded-md">
               <Download className="w-4 h-4" />
             </button>
-            <button className="p-2 text-[#697386] hover:text-[#1a1f36] dark:hover:text-white hover:bg-[#f6f9fc] dark:hover:bg-[#0a0d14] rounded-md">
+            <button className="p-2 text-[#697386] hover:text-[#1a1f36] hover:bg-[#f6f9fc] rounded-md">
               <MoreHorizontal className="w-4 h-4" />
             </button>
           </div>
@@ -80,7 +80,7 @@ export function RiskReviewDetail({
 
           {/* Left Column - Summary Card */}
           <div className="lg:col-span-4">
-            <div className="bg-white dark:bg-[#1a1f2e] border border-[#e3e8ee] dark:border-[#2d3343] rounded-lg p-6">
+            <div className="bg-white border border-[#e3e8ee] rounded-lg p-6">
               {/* Score Gauge */}
               <div className="flex justify-center mb-6">
                 <RiskScoreGauge
@@ -92,7 +92,7 @@ export function RiskReviewDetail({
 
               {/* Company Name */}
               <div className="text-center mb-6">
-                <h1 className="text-[18px] font-semibold text-[#1a1f36] dark:text-white mb-1">
+                <h1 className="text-[18px] font-semibold text-[#1a1f36] mb-1">
                   {item.mukellefAdi}
                 </h1>
                 {item.mukellefVkn && (
@@ -103,16 +103,16 @@ export function RiskReviewDetail({
               </div>
 
               {/* Meta - Stripe style key-value */}
-              <div className="space-y-3 pt-4 border-t border-[#e3e8ee] dark:border-[#2d3343]">
+              <div className="space-y-3 pt-4 border-t border-[#e3e8ee]">
                 {item.sektor && (
                   <div className="flex justify-between text-[14px]">
                     <span className="text-[#697386]">Sektor</span>
-                    <span className="text-[#1a1f36] dark:text-white font-medium">{item.sektor}</span>
+                    <span className="text-[#1a1f36] font-medium">{item.sektor}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-[14px]">
                   <span className="text-[#697386]">Donem</span>
-                  <span className="text-[#1a1f36] dark:text-white font-medium">{item.donem}</span>
+                  <span className="text-[#1a1f36] font-medium">{item.donem}</span>
                 </div>
                 <div className="flex justify-between text-[14px] items-center">
                   <span className="text-[#697386]">Durum</span>
@@ -124,7 +124,7 @@ export function RiskReviewDetail({
 
               {/* Related Data */}
               {(pastPeriods.length > 0 || partners.length > 0) && (
-                <div className="mt-6 pt-4 border-t border-[#e3e8ee] dark:border-[#2d3343]">
+                <div className="mt-6 pt-4 border-t border-[#e3e8ee]">
                   <RelatedDataPanel
                     pastPeriods={pastPeriods}
                     partners={partners}
@@ -136,7 +136,7 @@ export function RiskReviewDetail({
 
           {/* Right Column - Risk Insights */}
           <div className="lg:col-span-8">
-            <div className="bg-white dark:bg-[#1a1f2e] border border-[#e3e8ee] dark:border-[#2d3343] rounded-lg p-6">
+            <div className="bg-white border border-[#e3e8ee] rounded-lg p-6">
               <RiskInsightsPanel
                 factors={item.topRiskFactors}
                 aiOnerisi={displayAiOnerisi}
@@ -145,7 +145,7 @@ export function RiskReviewDetail({
             </div>
 
             {/* Actions Bar */}
-            <div className="mt-4 bg-white dark:bg-[#1a1f2e] border border-[#e3e8ee] dark:border-[#2d3343] rounded-lg p-4">
+            <div className="mt-4 bg-white border border-[#e3e8ee] rounded-lg p-4">
               <div className="flex items-center gap-3">
                 <span className="text-[12px] text-[#697386] font-medium uppercase tracking-wider">
                   Islemler
@@ -170,7 +170,7 @@ export function RiskReviewDetail({
                 </button>
 
                 <button
-                  className="flex items-center gap-2 px-4 py-2 border border-[#e3e8ee] dark:border-[#2d3343] hover:bg-[#f6f9fc] dark:hover:bg-[#0a0d14] text-[#1a1f36] dark:text-white rounded-md text-[14px] font-medium transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 border border-[#e3e8ee] hover:bg-[#f6f9fc] text-[#1a1f36] rounded-md text-[14px] font-medium transition-colors"
                 >
                   <MessageSquare className="w-4 h-4" />
                   Not

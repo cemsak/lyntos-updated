@@ -23,7 +23,7 @@ interface QuickAccessWidgetProps {
 const QUICK_ACCESS_ITEMS: QuickAccessItem[] = [
   { id: 'vdk', label: 'VDK Analiz', icon: Shield, color: 'bg-violet-100 text-violet-600' },
   { id: 'kurgan', label: 'KURGAN Radar', icon: FileSearch, color: 'bg-orange-100 text-orange-600', badge: 'Yeni' },
-  { id: 'mizan', label: 'Mizan Omurga', icon: Calculator, color: 'bg-blue-100 text-blue-600' },
+  { id: 'mizan', label: 'Mizan Analizi', icon: Calculator, color: 'bg-blue-100 text-blue-600' },
   { id: 'oranlar', label: 'Oran Analizi', icon: TrendingUp, color: 'bg-green-100 text-green-600' },
   { id: 'rapor', label: 'PDF Rapor', icon: FileText, color: 'bg-slate-100 text-slate-600' },
   { id: 'export', label: 'Disa Aktar', icon: Download, color: 'bg-slate-100 text-slate-600' },

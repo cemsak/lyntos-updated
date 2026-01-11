@@ -104,18 +104,18 @@ export function TaxCertificateUploadModal({
       <div className="absolute inset-0 bg-black/50" onClick={handleClose} />
 
       {/* Modal */}
-      <div className="relative bg-white dark:bg-[#1a1f2e] rounded-xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-hidden">
+      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#e3e8ee] dark:border-[#2d3343]">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#e3e8ee]">
           <div>
-            <h2 className="text-[16px] font-semibold text-[#1a1f36] dark:text-white">
+            <h2 className="text-[16px] font-semibold text-[#1a1f36]">
               {step === 'upload' && 'Vergi Levhasi Yukle'}
               {step === 'preview' && 'Bilgileri Kontrol Edin'}
               {step === 'success' && 'Basariyla Kaydedildi'}
             </h2>
             <p className="text-[13px] text-[#697386] mt-0.5">{clientName}</p>
           </div>
-          <button onClick={handleClose} className="p-2 text-[#697386] hover:text-[#1a1f36] dark:hover:text-white rounded-lg hover:bg-[#f6f9fc] dark:hover:bg-[#0a0d14]">
+          <button onClick={handleClose} className="p-2 text-[#697386] hover:text-[#1a1f36] rounded-lg hover:bg-[#f6f9fc]">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -134,12 +134,12 @@ export function TaxCertificateUploadModal({
                   border-2 border-dashed rounded-xl p-8 text-center transition-colors
                   ${dragActive
                     ? 'border-[#635bff] bg-[#635bff]/5'
-                    : 'border-[#e3e8ee] dark:border-[#2d3343] hover:border-[#635bff]'
+                    : 'border-[#e3e8ee] hover:border-[#635bff]'
                   }
                 `}
               >
                 <Upload className="w-12 h-12 text-[#697386] mx-auto mb-4" />
-                <p className="text-[14px] font-medium text-[#1a1f36] dark:text-white mb-2">
+                <p className="text-[14px] font-medium text-[#1a1f36] mb-2">
                   PDF veya Gorsel Surukleyin
                 </p>
                 <p className="text-[13px] text-[#697386] mb-4">
@@ -181,7 +181,7 @@ export function TaxCertificateUploadModal({
                 </div>
               )}
 
-              <div className="mt-6 p-4 bg-[#f6f9fc] dark:bg-[#0a0d14] rounded-lg">
+              <div className="mt-6 p-4 bg-[#f6f9fc] rounded-lg">
                 <p className="text-[12px] text-[#697386]">
                   GIB'den indirdiginiz Vergi Levhasi PDF'ini dogrudan yukleyebilirsiniz.
                   Bilgiler otomatik olarak okunacaktir.
@@ -215,7 +215,7 @@ export function TaxCertificateUploadModal({
               {/* Parsed Data */}
               <div className="space-y-3">
                 <DataRow label="Unvan" value={editedData.companyName || '-'} />
-                <div className="border-t border-[#e3e8ee] dark:border-[#2d3343]" />
+                <div className="border-t border-[#e3e8ee]" />
 
                 <DataRow
                   label="NACE Kodu"
@@ -226,11 +226,11 @@ export function TaxCertificateUploadModal({
                 {uploadResult.naceInfo && (
                   <DataRow label="Sektor Grubu" value={uploadResult.naceInfo.sectorGroup} />
                 )}
-                <div className="border-t border-[#e3e8ee] dark:border-[#2d3343]" />
+                <div className="border-t border-[#e3e8ee]" />
 
                 <DataRow label="Vergi Dairesi" value={editedData.taxOffice || '-'} />
                 <DataRow label="Adres" value={editedData.address || '-'} />
-                <div className="border-t border-[#e3e8ee] dark:border-[#2d3343]" />
+                <div className="border-t border-[#e3e8ee]" />
 
                 <DataRow
                   label={`${editedData.year || ''} KV Matrahi`}
@@ -258,7 +258,7 @@ export function TaxCertificateUploadModal({
                     ) : (
                       <TrendingUp className="w-4 h-4 text-[#0caf60]" />
                     )}
-                    <span className="text-[13px] font-medium text-[#1a1f36] dark:text-white">
+                    <span className="text-[13px] font-medium text-[#1a1f36]">
                       Gecen Yila Gore: %{Math.abs(uploadResult.comparison.matrahChangePercent).toFixed(1)}
                       {uploadResult.comparison.matrahChangePercent < 0 ? ' dusus' : ' artis'}
                     </span>
@@ -292,13 +292,13 @@ export function TaxCertificateUploadModal({
               <div className="w-16 h-16 bg-[#0caf60]/10 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Check className="w-8 h-8 text-[#0caf60]" />
               </div>
-              <h3 className="text-[16px] font-semibold text-[#1a1f36] dark:text-white mb-2">
+              <h3 className="text-[16px] font-semibold text-[#1a1f36] mb-2">
                 Vergi Levhasi Kaydedildi
               </h3>
 
               {uploadResult?.naceInfo && (
-                <div className="mt-6 p-4 bg-[#f6f9fc] dark:bg-[#0a0d14] rounded-lg text-left">
-                  <p className="text-[13px] font-medium text-[#1a1f36] dark:text-white mb-2">
+                <div className="mt-6 p-4 bg-[#f6f9fc] rounded-lg text-left">
+                  <p className="text-[13px] font-medium text-[#1a1f36] mb-2">
                     Sektor Profili Guncellendi
                   </p>
                   <p className="text-[12px] text-[#697386]">
@@ -307,7 +307,7 @@ export function TaxCertificateUploadModal({
 
                   {confirmedResult.activatedKCriteria && confirmedResult.activatedKCriteria.length > 0 && (
                     <div className="mt-4">
-                      <p className="text-[13px] font-medium text-[#1a1f36] dark:text-white mb-2">
+                      <p className="text-[13px] font-medium text-[#1a1f36] mb-2">
                         Aktif K-Kriterleri
                       </p>
                       <div className="flex flex-wrap gap-2">
@@ -326,12 +326,12 @@ export function TaxCertificateUploadModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[#e3e8ee] dark:border-[#2d3343]">
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[#e3e8ee]">
           {step === 'preview' && (
             <>
               <button
                 onClick={() => setStep('upload')}
-                className="px-4 py-2 text-[13px] font-medium text-[#697386] hover:text-[#1a1f36] dark:hover:text-white"
+                className="px-4 py-2 text-[13px] font-medium text-[#697386] hover:text-[#1a1f36]"
               >
                 Geri
               </button>
@@ -369,7 +369,7 @@ function DataRow({ label, value, badge, highlight }: {
     <div className="flex items-start justify-between gap-4">
       <span className="text-[13px] text-[#697386] flex-shrink-0">{label}</span>
       <div className="flex items-center gap-2 text-right">
-        <span className={`text-[13px] ${highlight ? 'font-semibold text-[#1a1f36] dark:text-white' : 'text-[#1a1f36] dark:text-white'}`}>
+        <span className={`text-[13px] ${highlight ? 'font-semibold text-[#1a1f36]' : 'text-[#1a1f36]'}`}>
           {value}
         </span>
         {badge && (

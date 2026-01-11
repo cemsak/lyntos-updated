@@ -43,11 +43,11 @@ export function DocumentChecklist({ event, onClose }: DocumentChecklistProps) {
   };
 
   return (
-    <div className="bg-white dark:bg-[#1a1f2e] rounded-xl border-2 border-[#635bff]/30 p-6">
+    <div className="bg-white rounded-xl border-2 border-[#635bff]/30 p-6">
       {/* Header */}
       <div className="flex justify-between items-start mb-4">
         <div>
-          <h3 className="text-[16px] font-semibold text-[#1a1f36] dark:text-white">
+          <h3 className="text-[16px] font-semibold text-[#1a1f36]">
             {event.event_name}
           </h3>
           <p className="text-[12px] text-[#697386] mt-1">{event.legal_basis}</p>
@@ -55,7 +55,7 @@ export function DocumentChecklist({ event, onClose }: DocumentChecklistProps) {
         {onClose && (
           <button
             onClick={onClose}
-            className="text-[#697386] hover:text-[#1a1f36] dark:hover:text-white transition-colors p-1"
+            className="text-[#697386] hover:text-[#1a1f36] transition-colors p-1"
           >
             <X className="w-5 h-5" />
           </button>
@@ -66,11 +66,11 @@ export function DocumentChecklist({ event, onClose }: DocumentChecklistProps) {
       <div className="mb-4">
         <div className="flex justify-between text-[12px] mb-1">
           <span className="text-[#697386]">Ilerleme</span>
-          <span className="font-medium text-[#1a1f36] dark:text-white">
+          <span className="font-medium text-[#1a1f36]">
             {checkedCount}/{documents.length}
           </span>
         </div>
-        <div className="h-2 bg-[#e3e8ee] dark:bg-[#2d3343] rounded-full overflow-hidden">
+        <div className="h-2 bg-[#e3e8ee] rounded-full overflow-hidden">
           <div
             className="h-full bg-[#635bff] transition-all duration-300"
             style={{ width: `${progress}%` }}
@@ -146,7 +146,7 @@ export function DocumentChecklist({ event, onClose }: DocumentChecklistProps) {
       <div className="space-y-2">
         <div className="flex items-center gap-2 mb-2">
           <FileCheck className="w-4 h-4 text-[#635bff]" />
-          <span className="text-[13px] font-medium text-[#1a1f36] dark:text-white">
+          <span className="text-[13px] font-medium text-[#1a1f36]">
             Gerekli Belgeler
           </span>
         </div>
@@ -156,20 +156,20 @@ export function DocumentChecklist({ event, onClose }: DocumentChecklistProps) {
             className={`flex items-start gap-3 p-2 rounded-lg cursor-pointer transition-colors ${
               checkedDocs[doc]
                 ? 'bg-[#0caf60]/10'
-                : 'hover:bg-[#f6f9fc] dark:hover:bg-[#0a0d14]'
+                : 'hover:bg-[#f6f9fc]'
             }`}
           >
             <input
               type="checkbox"
               checked={checkedDocs[doc] || false}
               onChange={() => toggleDoc(doc)}
-              className="mt-0.5 h-4 w-4 text-[#635bff] rounded border-[#e3e8ee] dark:border-[#2d3343] focus:ring-[#635bff]"
+              className="mt-0.5 h-4 w-4 text-[#635bff] rounded border-[#e3e8ee] focus:ring-[#635bff]"
             />
             <span
               className={`text-[13px] ${
                 checkedDocs[doc]
                   ? 'line-through text-[#697386]'
-                  : 'text-[#1a1f36] dark:text-white'
+                  : 'text-[#1a1f36]'
               }`}
             >
               {doc}
@@ -180,7 +180,7 @@ export function DocumentChecklist({ event, onClose }: DocumentChecklistProps) {
 
       {/* Notes */}
       {event.notes && (
-        <div className="mt-4 p-3 bg-[#f6f9fc] dark:bg-[#0a0d14] border border-[#e3e8ee] dark:border-[#2d3343] rounded-lg">
+        <div className="mt-4 p-3 bg-[#f6f9fc] border border-[#e3e8ee] rounded-lg">
           <div className="flex items-start gap-2">
             <AlertCircle className="w-4 h-4 text-[#697386] mt-0.5" />
             <span className="text-[12px] text-[#697386]">{event.notes}</span>

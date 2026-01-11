@@ -64,20 +64,20 @@ export function MinCapitalBanner() {
 
           <p className="text-[13px] text-[#697386] mt-1">
             7511 sayili Kanun geregi, mevcut sirketlerin asgari sermayelerini{' '}
-            <strong className="text-[#1a1f36] dark:text-white">{data.deadline_for_existing}</strong>{' '}
+            <strong className="text-[#1a1f36]">{data.deadline_for_existing}</strong>{' '}
             tarihine kadar tamamlamasi gerekmektedir.
           </p>
 
           <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div className="bg-white/70 dark:bg-black/20 rounded-lg p-2">
+            <div className="bg-white/70 rounded-lg p-2">
               <div className="text-[11px] text-[#697386]">A.S. Asgari Sermaye</div>
-              <div className="text-[14px] font-bold text-[#1a1f36] dark:text-white">
+              <div className="text-[14px] font-bold text-[#1a1f36]">
                 {formatCurrency(data.requirements.as.min_capital)} TL
               </div>
             </div>
-            <div className="bg-white/70 dark:bg-black/20 rounded-lg p-2">
+            <div className="bg-white/70 rounded-lg p-2">
               <div className="text-[11px] text-[#697386]">Ltd. Asgari Sermaye</div>
-              <div className="text-[14px] font-bold text-[#1a1f36] dark:text-white">
+              <div className="text-[14px] font-bold text-[#1a1f36]">
                 {formatCurrency(data.requirements.ltd.min_capital)} TL
               </div>
             </div>
@@ -87,7 +87,7 @@ export function MinCapitalBanner() {
                   ? 'bg-[#cd3d64]/20'
                   : isUrgent
                     ? 'bg-[#f5a623]/20'
-                    : 'bg-white/70 dark:bg-black/20'
+                    : 'bg-white/70'
               }`}
             >
               <div className="text-[11px] text-[#697386] flex items-center gap-1">
@@ -100,7 +100,7 @@ export function MinCapitalBanner() {
                     ? 'text-[#cd3d64]'
                     : isUrgent
                       ? 'text-[#f5a623]'
-                      : 'text-[#1a1f36] dark:text-white'
+                      : 'text-[#1a1f36]'
                 }`}
               >
                 {daysRemaining} gun

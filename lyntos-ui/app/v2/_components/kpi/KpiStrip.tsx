@@ -226,11 +226,12 @@ function normalizeRegwatch(raw: unknown, requestId?: string): PanelEnvelope<KpiD
     if (!data) return undefined;
     const isActive = data.is_active === true || data.status === 'ACTIVE';
     const pending = typeof data.pending_count === 'number' ? data.pending_count : 0;
+    // Show next declaration deadline - currently static, will be dynamic with backend
     return {
-      value: isActive ? 'Aktif' : 'Pasif',
-      label: isActive ? `${pending} bekleyen` : 'Tikla ve baslat',
+      value: '26 Şub',
+      label: 'KDV beyanı son gün',
     };
-  }, undefined, requestId, 'Mevzuat takibi icin tiklayin');
+  }, undefined, requestId, 'Beyan takvimini görüntüle');
 }
 
 interface KpiStripProps {
@@ -257,15 +258,15 @@ export function KpiStrip({ onRegWatchClick }: KpiStripProps) {
   });
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-      <KpiCard title="KURGAN Risk" icon="🎯" envelope={kurgan} />
+    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+      <KpiCard title="Vergi Risk Skoru" icon="🎯" envelope={kurgan} />
       <KpiCard title="Veri Kalitesi" icon="📊" envelope={dataQuality} />
-      <KpiCard title="Cross-Check" icon="✓" envelope={crossCheck} />
+      <KpiCard title="Mutabakat" icon="✓" envelope={crossCheck} />
       <KpiCard title="Gecici Vergi" icon="💰" envelope={quarterlyTax} />
       <KpiCard title="Kurumlar Vergisi" icon="🏢" envelope={corporateTax} />
-      <KpiCard title="KV Forecast" icon="📈" envelope={corporateTaxForecast} />
+      <KpiCard title="KV Tahmini" icon="📈" envelope={corporateTaxForecast} />
       <KpiCard title="Enflasyon" icon="📉" envelope={inflation} />
-      <KpiCard title="RegWatch" icon="📡" envelope={regwatch} onClick={handleRegWatchClick} />
+      <KpiCard title="Beyan Takvimi" icon="📅" envelope={regwatch} onClick={handleRegWatchClick} />
     </div>
   );
 }

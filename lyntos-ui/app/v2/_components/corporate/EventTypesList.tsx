@@ -44,11 +44,11 @@ export function EventTypesList({ onSelectEvent, selectedEventCode }: EventTypesL
 
   if (loading) {
     return (
-      <div className="bg-white dark:bg-[#1a1f2e] rounded-xl border border-[#e3e8ee] dark:border-[#2d3343] p-6">
+      <div className="bg-white rounded-xl border border-[#e3e8ee] p-6">
         <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-[#e3e8ee] dark:bg-[#2d3343] rounded w-1/3"></div>
-          <div className="h-12 bg-[#e3e8ee] dark:bg-[#2d3343] rounded"></div>
-          <div className="h-32 bg-[#e3e8ee] dark:bg-[#2d3343] rounded"></div>
+          <div className="h-8 bg-[#e3e8ee] rounded w-1/3"></div>
+          <div className="h-12 bg-[#e3e8ee] rounded"></div>
+          <div className="h-32 bg-[#e3e8ee] rounded"></div>
         </div>
       </div>
     );
@@ -56,15 +56,15 @@ export function EventTypesList({ onSelectEvent, selectedEventCode }: EventTypesL
 
   if (error) {
     return (
-      <div className="bg-white dark:bg-[#1a1f2e] rounded-xl border border-[#cd3d64] p-6">
+      <div className="bg-white rounded-xl border border-[#cd3d64] p-6">
         <div className="text-[13px] text-[#cd3d64]">Hata: {error}</div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white dark:bg-[#1a1f2e] rounded-xl border border-[#e3e8ee] dark:border-[#2d3343] p-6">
-      <h2 className="text-[16px] font-semibold text-[#1a1f36] dark:text-white mb-4 flex items-center gap-2">
+    <div className="bg-white rounded-xl border border-[#e3e8ee] p-6">
+      <h2 className="text-[16px] font-semibold text-[#1a1f36] mb-4 flex items-center gap-2">
         <FileText className="w-5 h-5 text-[#635bff]" />
         Sirket Islem Tipleri
       </h2>
@@ -78,14 +78,14 @@ export function EventTypesList({ onSelectEvent, selectedEventCode }: EventTypesL
             placeholder="Islem ara..."
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            className="w-full pl-10 pr-3 py-2 text-[13px] border border-[#e3e8ee] dark:border-[#2d3343] rounded-lg bg-white dark:bg-[#0a0d14] text-[#1a1f36] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#635bff] focus:border-transparent"
+            className="w-full pl-10 pr-3 py-2 text-[13px] border border-[#e3e8ee] rounded-lg bg-white text-[#1a1f36] focus:outline-none focus:ring-2 focus:ring-[#635bff] focus:border-transparent"
           />
         </div>
 
         <select
           value={companyTypeFilter}
           onChange={(e) => setCompanyTypeFilter(e.target.value)}
-          className="px-3 py-2 text-[13px] border border-[#e3e8ee] dark:border-[#2d3343] rounded-lg bg-white dark:bg-[#0a0d14] text-[#1a1f36] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#635bff] focus:border-transparent"
+          className="px-3 py-2 text-[13px] border border-[#e3e8ee] rounded-lg bg-white text-[#1a1f36] focus:outline-none focus:ring-2 focus:ring-[#635bff] focus:border-transparent"
         >
           <option value="">Tum Sirket Tipleri</option>
           <option value="as">Anonim Sirket (A.S.)</option>
@@ -99,25 +99,25 @@ export function EventTypesList({ onSelectEvent, selectedEventCode }: EventTypesL
         {groupedEvents.map((group) => (
           <div
             key={group.key}
-            className="border border-[#e3e8ee] dark:border-[#2d3343] rounded-lg overflow-hidden"
+            className="border border-[#e3e8ee] rounded-lg overflow-hidden"
           >
-            <div className="bg-[#f6f9fc] dark:bg-[#0a0d14] px-4 py-2 text-[13px] font-medium text-[#697386]">
+            <div className="bg-[#f6f9fc] px-4 py-2 text-[13px] font-medium text-[#697386]">
               {group.label}
             </div>
-            <div className="divide-y divide-[#e3e8ee] dark:divide-[#2d3343]">
+            <div className="divide-y divide-[#e3e8ee]">
               {group.events.map((event) => (
                 <div
                   key={event.event_code}
                   className={`px-4 py-3 cursor-pointer transition-colors ${
                     selectedEventCode === event.event_code
                       ? 'bg-[#635bff]/10 border-l-2 border-l-[#635bff]'
-                      : 'hover:bg-[#f6f9fc] dark:hover:bg-[#0a0d14]'
+                      : 'hover:bg-[#f6f9fc]'
                   }`}
                   onClick={() => onSelectEvent?.(event)}
                 >
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
-                      <div className="text-[13px] font-medium text-[#1a1f36] dark:text-white flex items-center gap-2">
+                      <div className="text-[13px] font-medium text-[#1a1f36] flex items-center gap-2">
                         {event.event_name}
                         <ChevronRight className="w-4 h-4 text-[#697386]" />
                       </div>
@@ -135,7 +135,7 @@ export function EventTypesList({ onSelectEvent, selectedEventCode }: EventTypesL
                         )}
                       </div>
                     </div>
-                    <div className="text-[10px] text-[#697386] bg-[#f6f9fc] dark:bg-[#0a0d14] px-2 py-1 rounded">
+                    <div className="text-[10px] text-[#697386] bg-[#f6f9fc] px-2 py-1 rounded">
                       {event.legal_basis}
                     </div>
                   </div>

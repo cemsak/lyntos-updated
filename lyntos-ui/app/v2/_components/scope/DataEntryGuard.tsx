@@ -37,14 +37,14 @@ export function DataEntryGuard({
     return (
       <div className="relative">
         {/* Overlay */}
-        <div className="absolute inset-0 bg-lyntos-bg-primary/80 backdrop-blur-sm z-10 rounded-lg flex items-center justify-center">
+        <div className="absolute inset-0 bg-slate-50-primary/80 backdrop-blur-sm z-10 rounded-lg flex items-center justify-center">
           <div className={`text-center ${compact ? 'p-4' : 'p-8'}`}>
-            <AlertTriangle className="w-8 h-8 text-lyntos-warning mx-auto mb-2" />
-            <p className="text-sm font-medium text-lyntos-text-primary">
+            <AlertTriangle className="w-8 h-8 text-amber-600 mx-auto mb-2" />
+            <p className="text-sm font-medium text-slate-900">
               Scope Secimi Gerekli
             </p>
             {!compact && (
-              <p className="text-xs text-lyntos-text-muted mt-1 max-w-xs">
+              <p className="text-xs text-slate-400 mt-1 max-w-xs">
                 Islem yapmak icin SMMM, Mukellef ve Donem seciniz.
               </p>
             )}
@@ -64,14 +64,14 @@ export function DataEntryGuard({
     return (
       <div className="relative">
         {/* Overlay */}
-        <div className="absolute inset-0 bg-lyntos-bg-primary/80 backdrop-blur-sm z-10 rounded-lg flex items-center justify-center">
+        <div className="absolute inset-0 bg-slate-50-primary/80 backdrop-blur-sm z-10 rounded-lg flex items-center justify-center">
           <div className={`text-center ${compact ? 'p-4' : 'p-8'}`}>
-            <Lock className="w-8 h-8 text-lyntos-text-muted mx-auto mb-2" />
-            <p className="text-sm font-medium text-lyntos-text-primary">
+            <Lock className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+            <p className="text-sm font-medium text-slate-900">
               Donem Kilitli
             </p>
             {!compact && (
-              <p className="text-xs text-lyntos-text-muted mt-1 max-w-xs">
+              <p className="text-xs text-slate-400 mt-1 max-w-xs">
                 {lockedMessage}
               </p>
             )}
@@ -99,7 +99,7 @@ export function DataEntryStatus({ locked = false }: { locked?: boolean }) {
 
   if (!scopeComplete) {
     return (
-      <span className="inline-flex items-center gap-1 text-xs text-lyntos-warning">
+      <span className="inline-flex items-center gap-1 text-xs text-amber-600">
         <AlertTriangle className="w-3 h-3" />
         Scope bekleniyor
       </span>
@@ -108,7 +108,7 @@ export function DataEntryStatus({ locked = false }: { locked?: boolean }) {
 
   if (locked) {
     return (
-      <span className="inline-flex items-center gap-1 text-xs text-lyntos-text-muted">
+      <span className="inline-flex items-center gap-1 text-xs text-slate-400">
         <Lock className="w-3 h-3" />
         Kilitli
       </span>
@@ -116,7 +116,7 @@ export function DataEntryStatus({ locked = false }: { locked?: boolean }) {
   }
 
   return (
-    <span className="inline-flex items-center gap-1 text-xs text-lyntos-success">
+    <span className="inline-flex items-center gap-1 text-xs text-emerald-600">
       <Unlock className="w-3 h-3" />
       Duzenlenebilir
     </span>

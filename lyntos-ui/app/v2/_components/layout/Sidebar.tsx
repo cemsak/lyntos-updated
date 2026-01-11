@@ -24,16 +24,16 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
       <aside
         className={`
           hidden lg:flex flex-col fixed left-0 top-0 h-full z-40
-          bg-[#f6f9fc] dark:bg-[#0a0d14]
-          border-r border-[#e3e8ee] dark:border-[#2d3343]
+          bg-[#f6f9fc]
+          border-r border-[#e3e8ee]
           transition-all duration-200 ease-in-out
           ${collapsed ? 'w-[72px]' : 'w-[240px]'}
         `}
       >
         {/* Logo */}
-        <div className="h-[64px] flex items-center justify-between px-4 border-b border-[#e3e8ee] dark:border-[#2d3343]">
+        <div className="h-[64px] flex items-center justify-between px-4 border-b border-[#e3e8ee]">
           {!collapsed && (
-            <span className="text-[20px] font-bold text-[#1a1f36] dark:text-white tracking-tight">
+            <span className="text-[20px] font-bold text-[#1a1f36] tracking-tight">
               LYNTOS
             </span>
           )}
@@ -43,7 +43,7 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
 
           <button
             onClick={onToggleCollapse}
-            className={`p-1.5 rounded-md text-[#697386] hover:bg-[#e3e8ee] dark:hover:bg-[#2d3343] transition-colors ${collapsed ? 'mx-auto' : ''}`}
+            className={`p-1.5 rounded-md text-[#697386] hover:bg-[#e3e8ee] transition-colors ${collapsed ? 'mx-auto' : ''}`}
           >
             {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
           </button>
@@ -69,7 +69,7 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
 
         {/* Footer */}
         {!collapsed && (
-          <div className="p-4 border-t border-[#e3e8ee] dark:border-[#2d3343]">
+          <div className="p-4 border-t border-[#e3e8ee]">
             <div className="text-[11px] text-[#697386]">
               LYNTOS v2.0 © 2025
             </div>
@@ -81,20 +81,20 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
       <aside
         className={`
           lg:hidden fixed left-0 top-0 h-full z-50 w-[280px]
-          bg-[#f6f9fc] dark:bg-[#0a0d14]
-          border-r border-[#e3e8ee] dark:border-[#2d3343]
+          bg-[#f6f9fc]
+          border-r border-[#e3e8ee]
           transform transition-transform duration-200 ease-in-out
           ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
       >
         {/* Mobile Header */}
-        <div className="h-[64px] flex items-center justify-between px-4 border-b border-[#e3e8ee] dark:border-[#2d3343]">
-          <span className="text-[20px] font-bold text-[#1a1f36] dark:text-white tracking-tight">
+        <div className="h-[64px] flex items-center justify-between px-4 border-b border-[#e3e8ee]">
+          <span className="text-[20px] font-bold text-[#1a1f36] tracking-tight">
             LYNTOS
           </span>
           <button
             onClick={onCloseMobile}
-            className="p-1.5 rounded-md text-[#697386] hover:bg-[#e3e8ee] dark:hover:bg-[#2d3343] transition-colors"
+            className="p-1.5 rounded-md text-[#697386] hover:bg-[#e3e8ee] transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -119,7 +119,7 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
         </nav>
 
         {/* Mobile Footer */}
-        <div className="p-4 border-t border-[#e3e8ee] dark:border-[#2d3343]">
+        <div className="p-4 border-t border-[#e3e8ee]">
           <div className="text-[11px] text-[#697386]">
             LYNTOS v2.0 © 2025
           </div>

@@ -41,11 +41,11 @@ export function KurganAlarmCard({
   // Non-triggered alarm: show as passed check
   if (!alarm.triggered) {
     return (
-      <div className="p-4 rounded-lg border border-[#e3e8ee] dark:border-[#2d3343] bg-[#0caf60]/5">
+      <div className="p-4 rounded-lg border border-[#e3e8ee] bg-[#0caf60]/5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <CheckCircle2 className="w-5 h-5 text-[#0caf60]" />
-            <span className="text-[13px] font-medium text-[#1a1f36] dark:text-white">
+            <span className="text-[13px] font-medium text-[#1a1f36]">
               {alarm.rule_name}
             </span>
             <span className="px-2 py-0.5 text-[10px] font-medium bg-[#0caf60]/10 text-[#0caf60] rounded">
@@ -74,7 +74,7 @@ export function KurganAlarmCard({
       {/* Header - Clickable */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full p-4 flex items-center justify-between text-left hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+        className="w-full p-4 flex items-center justify-between text-left hover:bg-black/5 transition-colors"
       >
         <div className="flex items-center gap-3">
           <AlertTriangle
@@ -83,7 +83,7 @@ export function KurganAlarmCard({
           />
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[14px] font-semibold text-[#1a1f36] dark:text-white">
+              <span className="text-[14px] font-semibold text-[#1a1f36]">
                 {alarm.rule_name}
               </span>
               <span
@@ -118,8 +118,8 @@ export function KurganAlarmCard({
       {isExpanded && (
         <div className="px-4 pb-4 space-y-4">
           {/* Finding Summary */}
-          <div className="p-3 bg-white dark:bg-[#1a1f2e] rounded-lg">
-            <p className="text-[13px] font-medium text-[#1a1f36] dark:text-white mb-2">
+          <div className="p-3 bg-white rounded-lg">
+            <p className="text-[13px] font-medium text-[#1a1f36] mb-2">
               Tespit:
             </p>
             <p className="text-[13px] text-[#697386]">
@@ -134,7 +134,7 @@ export function KurganAlarmCard({
                       <span className="text-[#697386] truncate">
                         {formatDetailKey(key)}:
                       </span>
-                      <span className="font-medium text-[#1a1f36] dark:text-white">
+                      <span className="font-medium text-[#1a1f36]">
                         {formatDetailValue(value)}
                       </span>
                     </div>
@@ -145,13 +145,13 @@ export function KurganAlarmCard({
 
           {/* Inspector Questions */}
           {alarm.inspector_questions.length > 0 && (
-            <div className="p-3 bg-white dark:bg-[#1a1f2e] rounded-lg">
+            <div className="p-3 bg-white rounded-lg">
               <div className="flex items-center gap-2 mb-3">
                 <MessageSquare
                   className="w-4 h-4"
                   style={{ color: severity.color }}
                 />
-                <p className="text-[13px] font-medium text-[#1a1f36] dark:text-white">
+                <p className="text-[13px] font-medium text-[#1a1f36]">
                   Mufettis Sorulari:
                 </p>
               </div>
@@ -176,13 +176,13 @@ export function KurganAlarmCard({
 
           {/* Required Documents */}
           {alarm.required_documents.length > 0 && (
-            <div className="p-3 bg-white dark:bg-[#1a1f2e] rounded-lg">
+            <div className="p-3 bg-white rounded-lg">
               <div className="flex items-center gap-2 mb-3">
                 <FileText
                   className="w-4 h-4"
                   style={{ color: severity.color }}
                 />
-                <p className="text-[13px] font-medium text-[#1a1f36] dark:text-white">
+                <p className="text-[13px] font-medium text-[#1a1f36]">
                   Hazirlanacak Belgeler:
                 </p>
               </div>
@@ -200,10 +200,10 @@ export function KurganAlarmCard({
 
           {/* Legal References */}
           {alarm.legal_references.length > 0 && (
-            <div className="p-3 bg-white dark:bg-[#1a1f2e] rounded-lg">
+            <div className="p-3 bg-white rounded-lg">
               <div className="flex items-center gap-2 mb-2">
                 <Scale className="w-4 h-4 text-[#697386]" />
-                <p className="text-[13px] font-medium text-[#1a1f36] dark:text-white">
+                <p className="text-[13px] font-medium text-[#1a1f36]">
                   Yasal Dayanak:
                 </p>
               </div>
@@ -211,7 +211,7 @@ export function KurganAlarmCard({
                 {alarm.legal_references.map((ref, i) => (
                   <span
                     key={i}
-                    className="px-2 py-1 text-[11px] bg-[#f6f9fc] dark:bg-[#0a0d14] text-[#697386] rounded"
+                    className="px-2 py-1 text-[11px] bg-[#f6f9fc] text-[#697386] rounded"
                   >
                     {ref}
                   </span>
@@ -254,7 +254,7 @@ function DocumentItem({
             className={`block truncate ${
               document.uploaded
                 ? 'text-[#697386] line-through'
-                : 'text-[#1a1f36] dark:text-white'
+                : 'text-[#1a1f36]'
             }`}
           >
             {document.name}

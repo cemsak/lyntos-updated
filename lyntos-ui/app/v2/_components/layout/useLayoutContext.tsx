@@ -8,7 +8,7 @@
  * Provides global layout state: user, client, period
  * Fetches real data from backend - no mock fallback
  */
-import React, { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef, type ReactNode } from 'react';
 import type { User, Client, Period, LayoutContextType } from './types';
 import { useLayoutData } from './useLayoutData';
 
@@ -32,6 +32,11 @@ export function LayoutProvider({ children }: LayoutProviderProps) {
   const [selectedPeriod, setSelectedPeriodState] = useState<Period | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
 
+  // Track initialization to prevent infinite loops
+  const initializedRef = useRef(false);
+  const refreshPeriodsRef = useRef(refreshPeriods);
+  refreshPeriodsRef.current = refreshPeriods;
+
   // Update periods when fetched periods change
   useEffect(() => {
     if (fetchedPeriods.length > 0) {
@@ -39,35 +44,42 @@ export function LayoutProvider({ children }: LayoutProviderProps) {
     }
   }, [fetchedPeriods]);
 
-  // Load from localStorage on mount
+  // Load from localStorage on mount (runs only once when clients are ready)
   useEffect(() => {
+    if (initializedRef.current || clients.length === 0) return;
+    initializedRef.current = true;
     setIsHydrated(true);
 
     try {
       const storedClientId = localStorage.getItem(STORAGE_KEYS.selectedClient);
       const storedPeriodId = localStorage.getItem(STORAGE_KEYS.selectedPeriod);
 
-      if (storedClientId && clients.length > 0) {
+      if (storedClientId) {
         const client = clients.find(c => c.id === storedClientId);
         if (client) {
           setSelectedClientState(client);
           // Fetch periods for this client
-          refreshPeriods(client.id);
+          refreshPeriodsRef.current(client.id);
         }
       }
 
-      if (storedPeriodId && periods.length > 0) {
-        const period = periods.find(p => p.id === storedPeriodId);
+      if (storedPeriodId && fetchedPeriods.length > 0) {
+        const period = fetchedPeriods.find(p => p.id === storedPeriodId);
         if (period) setSelectedPeriodState(period);
-      } else if (periods.length > 0) {
+      } else if (fetchedPeriods.length > 0) {
         // Default to current period
-        const currentPeriod = periods.find(p => p.isCurrent);
+        const currentPeriod = fetchedPeriods.find(p => p.isCurrent);
         if (currentPeriod) setSelectedPeriodState(currentPeriod);
       }
     } catch {
       // localStorage not available (SSR)
     }
-  }, [clients, periods, refreshPeriods]);
+  }, [clients, fetchedPeriods]);
+
+  // Handle hydration separately
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
 
   // When client changes, refresh periods for that client
   const setSelectedClient = useCallback((client: Client | null) => {

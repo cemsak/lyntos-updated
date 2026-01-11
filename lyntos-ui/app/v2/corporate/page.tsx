@@ -24,7 +24,7 @@ export default function CorporatePage() {
     <div className="p-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-[24px] font-semibold text-[#1a1f36] dark:text-white flex items-center gap-2">
+        <h1 className="text-[24px] font-semibold text-[#1a1f36] flex items-center gap-2">
           <Building2 className="w-7 h-7 text-[#635bff]" />
           Sirketler Hukuku
         </h1>
@@ -52,9 +52,9 @@ export default function CorporatePage() {
           {selectedEvent ? (
             <DocumentChecklist event={selectedEvent} onClose={() => setSelectedEvent(null)} />
           ) : (
-            <div className="bg-white dark:bg-[#1a1f2e] rounded-xl border border-[#e3e8ee] dark:border-[#2d3343] p-6 text-center">
+            <div className="bg-white rounded-xl border border-[#e3e8ee] p-6 text-center">
               <FileText className="w-12 h-12 text-[#697386] mx-auto mb-3" />
-              <p className="text-[14px] text-[#1a1f36] dark:text-white">Sol taraftan bir islem secin</p>
+              <p className="text-[14px] text-[#1a1f36]">Sol taraftan bir islem secin</p>
               <p className="text-[12px] text-[#697386] mt-1">
                 Gerekli belgeler ve detaylar burada gorunecek
               </p>

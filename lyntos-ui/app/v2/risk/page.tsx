@@ -40,46 +40,46 @@ export default function RiskQueuePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Risk Kuyrugu</h1>
-        <p className="text-slate-600 dark:text-slate-400 mt-1">
+        <h1 className="text-2xl font-bold text-slate-900">Bekleyen Islemler</h1>
+        <p className="text-slate-600 mt-1">
           Cozum bekleyen risk uyarilari
         </p>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-4 border border-red-200 dark:border-red-800">
+        <div className="bg-red-50 rounded-xl p-4 border border-red-200">
           <div className="flex items-center gap-3">
             <AlertTriangle className="w-8 h-8 text-red-600" />
             <div>
-              <p className="text-2xl font-bold text-red-700 dark:text-red-400">1</p>
+              <p className="text-2xl font-bold text-red-700">1</p>
               <p className="text-sm text-red-600">Kritik</p>
             </div>
           </div>
         </div>
-        <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 border border-amber-200 dark:border-amber-800">
+        <div className="bg-amber-50 rounded-xl p-4 border border-amber-200">
           <div className="flex items-center gap-3">
             <Clock className="w-8 h-8 text-amber-600" />
             <div>
-              <p className="text-2xl font-bold text-amber-700 dark:text-amber-400">1</p>
+              <p className="text-2xl font-bold text-amber-700">1</p>
               <p className="text-sm text-amber-600">Orta</p>
             </div>
           </div>
         </div>
-        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800">
+        <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
           <div className="flex items-center gap-3">
             <CheckCircle2 className="w-8 h-8 text-blue-600" />
             <div>
-              <p className="text-2xl font-bold text-blue-700 dark:text-blue-400">1</p>
+              <p className="text-2xl font-bold text-blue-700">1</p>
               <p className="text-sm text-blue-600">Dusuk</p>
             </div>
           </div>
         </div>
-        <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-4 border border-green-200 dark:border-green-800">
+        <div className="bg-green-50 rounded-xl p-4 border border-green-200">
           <div className="flex items-center gap-3">
             <CheckCircle2 className="w-8 h-8 text-green-600" />
             <div>
-              <p className="text-2xl font-bold text-green-700 dark:text-green-400">0</p>
+              <p className="text-2xl font-bold text-green-700">0</p>
               <p className="text-sm text-green-600">Cozuldu</p>
             </div>
           </div>
@@ -91,18 +91,18 @@ export default function RiskQueuePage() {
         {RISK_ITEMS.map((risk) => (
           <div
             key={risk.id}
-            className={`bg-white dark:bg-slate-800 rounded-xl border p-4 hover:shadow-md transition-shadow ${
-              risk.severity === 'high' ? 'border-red-200 dark:border-red-800' :
-              risk.severity === 'medium' ? 'border-amber-200 dark:border-amber-800' :
-              'border-slate-200 dark:border-slate-700'
+            className={`bg-white rounded-xl border p-4 hover:shadow-md transition-shadow ${
+              risk.severity === 'high' ? 'border-red-200' :
+              risk.severity === 'medium' ? 'border-amber-200' :
+              'border-slate-200'
             }`}
           >
             <div className="flex items-start justify-between">
               <div className="flex items-start gap-4">
                 <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                  risk.severity === 'high' ? 'bg-red-100 dark:bg-red-900/30' :
-                  risk.severity === 'medium' ? 'bg-amber-100 dark:bg-amber-900/30' :
-                  'bg-blue-100 dark:bg-blue-900/30'
+                  risk.severity === 'high' ? 'bg-red-100' :
+                  risk.severity === 'medium' ? 'bg-amber-100' :
+                  'bg-blue-100'
                 }`}>
                   <AlertTriangle className={`w-5 h-5 ${
                     risk.severity === 'high' ? 'text-red-600' :
@@ -121,14 +121,14 @@ export default function RiskQueuePage() {
                       {risk.category}
                     </span>
                   </div>
-                  <h3 className="font-semibold text-slate-900 dark:text-white">{risk.title}</h3>
+                  <h3 className="font-semibold text-slate-900">{risk.title}</h3>
                   <p className="text-sm text-slate-500 mt-1">{risk.client}</p>
-                  <p className="text-sm text-slate-600 dark:text-slate-400 mt-2">{risk.description}</p>
+                  <p className="text-sm text-slate-600 mt-2">{risk.description}</p>
                 </div>
               </div>
               <div className="text-right">
                 <p className="text-xs text-slate-500">Son Tarih</p>
-                <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{risk.deadline}</p>
+                <p className="text-sm font-medium text-slate-700">{risk.deadline}</p>
                 <a
                   href={`/v2/vdk/${risk.id}`}
                   className="inline-flex items-center gap-1 mt-2 text-sm text-blue-600 hover:text-blue-800"

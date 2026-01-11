@@ -119,7 +119,7 @@ export function AksiyonKuyruguPanel({
 
   return (
     <Card
-      title="Bugunku Islerim"
+      title="Bugünkü İşlerim"
       subtitle={`${hesaplananStats.toplam} is | ${formatToplamSure(hesaplananStats.tahminiToplamDakika)}`}
       headerAction={
         hesaplananStats.acil > 0 && (
@@ -129,7 +129,7 @@ export function AksiyonKuyruguPanel({
     >
       {/* Acil uyari */}
       {hesaplananStats.acil > 0 && (
-        <div className="flex items-center gap-2 mb-4 p-2 bg-red-50 border border-red-200 rounded-md">
+        <div className="flex items-center gap-2 mb-4 p-2 bg-red-50 border-l-4 border-red-400 rounded-md">
           <span className="text-red-600 font-medium">
             🔴 {hesaplananStats.acil} acil is bekliyor!
           </span>

@@ -36,7 +36,7 @@ export function RiskInsightsPanel({ factors, aiOnerisi, legalRefs }: RiskInsight
             />
           ))
         ) : (
-          <div className="p-4 text-center text-[#697386] bg-[#f6f9fc] dark:bg-[#0a0d14] rounded-md text-[14px]">
+          <div className="p-4 text-center text-[#697386] bg-[#f6f9fc] rounded-md text-[14px]">
             Risk faktoru tespit edilmedi
           </div>
         )}
@@ -51,7 +51,7 @@ export function RiskInsightsPanel({ factors, aiOnerisi, legalRefs }: RiskInsight
               <div className="text-[11px] font-semibold uppercase tracking-wider text-[#635bff] mb-1">
                 VERGUS Onerisi
               </div>
-              <p className="text-[14px] text-[#1a1f36] dark:text-white leading-relaxed">
+              <p className="text-[14px] text-[#1a1f36] leading-relaxed">
                 {aiOnerisi}
               </p>
             </div>

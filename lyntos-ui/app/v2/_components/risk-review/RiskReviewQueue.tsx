@@ -18,7 +18,7 @@ interface RiskReviewQueueProps {
 
 function QueueStats({ stats }: { stats: RiskQueueStats }) {
   return (
-    <div className="grid grid-cols-5 gap-2 p-4 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
+    <div className="grid grid-cols-5 gap-2 p-4 bg-slate-50 border-b border-slate-200">
       {[
         { key: 'kritik', label: 'Kritik', count: stats.kritik, cfg: RISK_LEVEL_CONFIG.kritik },
         { key: 'yuksek', label: 'Yuksek', count: stats.yuksek, cfg: RISK_LEVEL_CONFIG.yuksek },
@@ -26,12 +26,12 @@ function QueueStats({ stats }: { stats: RiskQueueStats }) {
         { key: 'dusuk', label: 'Dusuk', count: stats.dusuk, cfg: RISK_LEVEL_CONFIG.dusuk },
         { key: 'bekleyen', label: 'Bekleyen', count: stats.bekleyen, cfg: null },
       ].map(({ key, label, count, cfg }) => (
-        <div key={key} className="text-center p-2 rounded-lg bg-white dark:bg-slate-700">
+        <div key={key} className="text-center p-2 rounded-lg bg-white">
           <div className="flex items-center justify-center gap-1.5 mb-1">
             {cfg && <span className={`w-2 h-2 rounded-full ${cfg.dotColor}`} />}
-            <span className="text-xs text-slate-500 dark:text-slate-400">{label}</span>
+            <span className="text-xs text-slate-500">{label}</span>
           </div>
-          <div className={`text-2xl font-bold ${cfg?.color || 'text-slate-700 dark:text-slate-200'}`}>{count}</div>
+          <div className={`text-2xl font-bold ${cfg?.color || 'text-slate-700'}`}>{count}</div>
         </div>
       ))}
     </div>
@@ -42,13 +42,13 @@ function LoadingSkeleton() {
   return (
     <div className="p-4 space-y-3">
       {[...Array(5)].map((_, i) => (
-        <div key={i} className="animate-pulse flex items-center gap-4 p-4 bg-slate-100 dark:bg-slate-700 rounded-lg">
-          <div className="w-12 h-12 bg-slate-200 dark:bg-slate-600 rounded-full" />
+        <div key={i} className="animate-pulse flex items-center gap-4 p-4 bg-slate-100 rounded-lg">
+          <div className="w-12 h-12 bg-slate-200 rounded-full" />
           <div className="flex-1 space-y-2">
-            <div className="h-4 bg-slate-200 dark:bg-slate-600 rounded w-3/4" />
-            <div className="h-3 bg-slate-200 dark:bg-slate-600 rounded w-1/2" />
+            <div className="h-4 bg-slate-200 rounded w-3/4" />
+            <div className="h-3 bg-slate-200 rounded w-1/2" />
           </div>
-          <div className="w-16 h-8 bg-slate-200 dark:bg-slate-600 rounded" />
+          <div className="w-16 h-8 bg-slate-200 rounded" />
         </div>
       ))}
     </div>
@@ -59,7 +59,7 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
   return (
     <div className="p-8 text-center">
       <AlertCircle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
-      <p className="text-slate-600 dark:text-slate-400 mb-4">{message}</p>
+      <p className="text-slate-600 mb-4">{message}</p>
       <button
         onClick={onRetry}
         className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -73,13 +73,13 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
 function EmptyState() {
   return (
     <div className="p-8 text-center">
-      <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+      <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
         <span className="text-2xl">✓</span>
       </div>
-      <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-2">
+      <h3 className="text-lg font-semibold text-slate-800 mb-2">
         Inceleme Kuyrugu Bos
       </h3>
-      <p className="text-slate-600 dark:text-slate-400">
+      <p className="text-slate-600">
         Su anda inceleme bekleyen risk bulgusu yok.
       </p>
     </div>
@@ -111,7 +111,7 @@ export function RiskReviewQueue({ onItemSelect }: RiskReviewQueueProps) {
           <button
             onClick={handleRefresh}
             disabled={isLoading || isRefreshing}
-            className="p-2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg disabled:opacity-50"
+            className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg disabled:opacity-50"
             title="Yenile"
           >
             {isRefreshing ? (
@@ -121,7 +121,7 @@ export function RiskReviewQueue({ onItemSelect }: RiskReviewQueueProps) {
             )}
           </button>
           <button
-            className="p-2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
+            className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg"
             title="Excel'e Aktar"
           >
             <Download className="w-4 h-4" />

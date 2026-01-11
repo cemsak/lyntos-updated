@@ -14,8 +14,8 @@ export default function ClientsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Mukellefler</h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-1">
+          <h1 className="text-2xl font-bold text-slate-900">Mukellefler</h1>
+          <p className="text-slate-600 mt-1">
             Tum mukelleflerinizi yonetin
           </p>
         </div>
@@ -31,14 +31,14 @@ export default function ClientsPage() {
         <input
           type="text"
           placeholder="Mukellef ara (isim, VKN)..."
-          className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
 
       {/* Client List */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
         <table className="w-full">
-          <thead className="bg-slate-50 dark:bg-slate-900">
+          <thead className="bg-slate-50">
             <tr>
               <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 Mukellef
@@ -55,35 +55,35 @@ export default function ClientsPage() {
               <th className="px-6 py-3"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+          <tbody className="divide-y divide-slate-200">
             {SAMPLE_CLIENTS.map((client) => (
-              <tr key={client.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+              <tr key={client.id} className="hover:bg-slate-50">
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
                       <Building2 className="w-5 h-5 text-blue-600" />
                     </div>
                     <div>
-                      <p className="font-medium text-slate-900 dark:text-white">{client.name}</p>
+                      <p className="font-medium text-slate-900">{client.name}</p>
                       <p className="text-sm text-slate-500">{client.id}</p>
                     </div>
                   </div>
                 </td>
-                <td className="px-6 py-4 text-slate-600 dark:text-slate-400 font-mono">
+                <td className="px-6 py-4 text-slate-600 font-mono">
                   {client.vkn}
                 </td>
                 <td className="px-6 py-4">
                   <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
                     client.status === 'active'
-                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                      : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                      ? 'bg-green-100 text-green-700'
+                      : 'bg-amber-100 text-amber-700'
                   }`}>
                     {client.status === 'active' ? 'Aktif' : 'Beklemede'}
                   </span>
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-2">
-                    <div className="w-16 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                    <div className="w-16 h-2 bg-slate-200 rounded-full overflow-hidden">
                       <div
                         className={`h-full rounded-full ${
                           client.riskScore >= 90 ? 'bg-green-500' :
@@ -92,7 +92,7 @@ export default function ClientsPage() {
                         style={{ width: `${client.riskScore}%` }}
                       />
                     </div>
-                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                    <span className="text-sm font-medium text-slate-700">
                       {client.riskScore}
                     </span>
                   </div>

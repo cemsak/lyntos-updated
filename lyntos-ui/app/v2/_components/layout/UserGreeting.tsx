@@ -30,7 +30,7 @@ export function UserGreeting() {
     <div className="hidden lg:block">
       <span className="text-[14px] text-[#697386]">
         {greeting},{' '}
-        <span className="font-medium text-[#1a1f36] dark:text-white">
+        <span className="font-medium text-[#1a1f36]">
           {firstName} {honorific}
         </span>
       </span>

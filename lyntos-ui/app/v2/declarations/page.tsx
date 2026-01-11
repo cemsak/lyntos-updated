@@ -42,37 +42,37 @@ export default function DeclarationsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Beyannameler</h1>
-        <p className="text-slate-600 dark:text-slate-400 mt-1">
+        <h1 className="text-2xl font-bold text-slate-900">Beyannameler</h1>
+        <p className="text-slate-600 mt-1">
           Vergi beyannamelerinizi yonetin
         </p>
       </div>
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 border border-amber-200 dark:border-amber-800">
+        <div className="bg-amber-50 rounded-xl p-4 border border-amber-200">
           <div className="flex items-center gap-3">
             <Clock className="w-8 h-8 text-amber-600" />
             <div>
-              <p className="text-2xl font-bold text-amber-700 dark:text-amber-400">2</p>
+              <p className="text-2xl font-bold text-amber-700">2</p>
               <p className="text-sm text-amber-600">Bekleyen</p>
             </div>
           </div>
         </div>
-        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800">
+        <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
           <div className="flex items-center gap-3">
             <FileText className="w-8 h-8 text-blue-600" />
             <div>
-              <p className="text-2xl font-bold text-blue-700 dark:text-blue-400">1</p>
+              <p className="text-2xl font-bold text-blue-700">1</p>
               <p className="text-sm text-blue-600">Taslak</p>
             </div>
           </div>
         </div>
-        <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-4 border border-green-200 dark:border-green-800">
+        <div className="bg-green-50 rounded-xl p-4 border border-green-200">
           <div className="flex items-center gap-3">
             <CheckCircle2 className="w-8 h-8 text-green-600" />
             <div>
-              <p className="text-2xl font-bold text-green-700 dark:text-green-400">1</p>
+              <p className="text-2xl font-bold text-green-700">1</p>
               <p className="text-sm text-green-600">Gonderildi</p>
             </div>
           </div>
@@ -80,9 +80,9 @@ export default function DeclarationsPage() {
       </div>
 
       {/* Declarations List */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
         <table className="w-full">
-          <thead className="bg-slate-50 dark:bg-slate-900">
+          <thead className="bg-slate-50">
             <tr>
               <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase">
                 Beyanname
@@ -99,25 +99,25 @@ export default function DeclarationsPage() {
               <th className="px-6 py-3"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+          <tbody className="divide-y divide-slate-200">
             {DECLARATIONS.map((dec) => (
-              <tr key={dec.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+              <tr key={dec.id} className="hover:bg-slate-50">
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
                     <FileText className="w-5 h-5 text-slate-400" />
                     <div>
-                      <p className="font-medium text-slate-900 dark:text-white">{dec.type}</p>
+                      <p className="font-medium text-slate-900">{dec.type}</p>
                       <p className="text-sm text-slate-500">{dec.client}</p>
                     </div>
                   </div>
                 </td>
-                <td className="px-6 py-4 text-slate-600 dark:text-slate-400">
+                <td className="px-6 py-4 text-slate-600">
                   {dec.period}
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4 text-slate-400" />
-                    <span className="text-slate-600 dark:text-slate-400">{dec.dueDate}</span>
+                    <span className="text-slate-600">{dec.dueDate}</span>
                   </div>
                 </td>
                 <td className="px-6 py-4">

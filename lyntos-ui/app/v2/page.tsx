@@ -117,11 +117,10 @@ export default function V2DashboardPage() {
       {/* ═══════════════════════════════════════════════════════════════════ */}
       <Card>
         <div className="flex flex-wrap items-center gap-4">
-          <Badge variant="success">Scope Hazir</Badge>
+          <Badge variant="success">Donem Kapsami Hazir</Badge>
           <span className="text-sm text-slate-600">
             {scope.smmm_id} / {scope.client_id} / {scope.period}
           </span>
-          <Badge variant="info">V2</Badge>
           {scope.advanced && <Badge variant="warning">Uzman Modu</Badge>}
         </div>
       </Card>
@@ -132,12 +131,12 @@ export default function V2DashboardPage() {
       <DashboardSection
         id="aksiyonlar-section"
         title="Bugun Ne Yapmaliyim?"
-        icon={<AlertCircle className="w-7 h-7 text-white" />}
+        icon={<AlertCircle className="w-6 h-6 text-amber-600" />}
         variant="urgent"
         badge={
           aksiyonlar.filter(a => a.oncelik === 'acil').length > 0 && (
-            <span className="bg-red-500 text-white text-sm font-bold px-5 py-2 rounded-full shadow-lg animate-pulse">
-              {aksiyonlar.filter(a => a.oncelik === 'acil').length} Acil Is
+            <span className="bg-red-100 text-red-700 text-sm font-semibold px-4 py-1.5 rounded-full">
+              {aksiyonlar.filter(a => a.oncelik === 'acil').length} Acil İş
             </span>
           )
         }
@@ -155,14 +154,13 @@ export default function V2DashboardPage() {
         id="donem-verileri-section"
         title="Donem Verileri"
         icon={<FolderOpen className="w-5 h-5 text-green-600" />}
-        priority="P0"
       >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-[2fr,1fr] gap-4">
           <DonemVerileriPanel onUploadClick={handleUploadClick} />
           <button
             id="upload-section"
             onClick={() => handleUploadClick('MIZAN')}
-            className="bg-white border-2 border-dashed border-slate-300 rounded-lg p-6 flex items-center justify-center min-h-[200px] hover:border-blue-400 hover:bg-blue-50/50 transition-colors cursor-pointer"
+            className="bg-white border-2 border-dashed border-slate-300 rounded-lg p-6 flex items-center justify-center min-h-[120px] hover:border-blue-400 hover:bg-blue-50/50 transition-colors cursor-pointer"
           >
             <div className="text-center text-slate-400">
               <span className="text-3xl block mb-2">+</span>
@@ -180,25 +178,24 @@ export default function V2DashboardPage() {
         id="risk-ozeti-section"
         title="Risk Ozeti"
         icon={<BarChart3 className="w-5 h-5 text-amber-600" />}
-        priority="P1"
       >
         <KpiStrip onRegWatchClick={handleRegWatchClick} />
       </DashboardSection>
 
       {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* BOLUM 4: VERGI ANALIZI (P1) - V3 Dark Panel Style */}
+      {/* BOLUM 4: VERGI ANALIZI (P1) - White Card Style */}
       {/* ═══════════════════════════════════════════════════════════════════ */}
       <div className="space-y-6">
-        {/* Gecici Vergi - Dark Panel Wrapper */}
-        <div className="bg-gradient-to-br from-slate-800 via-slate-900 to-indigo-950 rounded-2xl p-6 shadow-xl">
+        {/* Gecici Vergi - White Card */}
+        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center">
+              <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center">
                 <span className="text-2xl">📊</span>
               </div>
               <div>
-                <h2 className="text-xl font-black text-white">Gecici Vergi Analizi</h2>
-                <p className="text-slate-400 text-sm">{scope.period} - 12 Kritik Kontrol</p>
+                <h2 className="text-xl font-black text-slate-800">Gecici Vergi Analizi</h2>
+                <p className="text-slate-500 text-sm">{scope.period} - 12 Kritik Kontrol</p>
               </div>
             </div>
           </div>
@@ -211,40 +208,44 @@ export default function V2DashboardPage() {
 
       {/* ═══════════════════════════════════════════════════════════════════ */}
       {/* BOLUM 5: V3 3-COLUMN BOTTOM LAYOUT */}
-      {/* Derin Analiz | Enflasyon | Mevzuat Takibi */}
+      {/* Detayli Analiz | Enflasyon | Mevzuat Takibi */}
       {/* ═══════════════════════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6" id="bottom-section">
-        {/* Column 1: Derin Analiz */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-black text-slate-800 flex items-center gap-2">
-              <span>🔍</span> Derin Analiz
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4" id="bottom-section">
+        {/* Column 1: Detayli Analiz */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm h-[320px] overflow-hidden flex flex-col">
+          <div className="flex items-center justify-between p-4 border-b border-slate-100">
+            <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
+              <span>🔍</span> Detaylı Analiz
             </h2>
           </div>
-          <div className="space-y-3">
+          <div className="flex-1 overflow-y-auto p-4 space-y-3">
             <MizanOmurgaPanel />
             <CrossCheckPanel />
           </div>
         </div>
 
         {/* Column 2: Enflasyon Muhasebesi */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-black text-slate-800 flex items-center gap-2">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm h-[320px] overflow-hidden flex flex-col">
+          <div className="flex items-center justify-between p-4 border-b border-slate-100">
+            <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
               <span>📈</span> Enflasyon Muhasebesi
             </h2>
           </div>
-          <InflationPanel />
+          <div className="flex-1 overflow-y-auto p-4">
+            <InflationPanel />
+          </div>
         </div>
 
         {/* Column 3: Mevzuat Takibi */}
-        <div id="regwatch-section" className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-black text-slate-800 flex items-center gap-2">
+        <div id="regwatch-section" className="bg-white rounded-xl border border-slate-200 shadow-sm h-[320px] overflow-hidden flex flex-col">
+          <div className="flex items-center justify-between p-4 border-b border-slate-100">
+            <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
               <span>📡</span> Mevzuat Takibi
             </h2>
           </div>
-          <RegWatchPanel />
+          <div className="flex-1 overflow-y-auto p-4">
+            <RegWatchPanel />
+          </div>
         </div>
       </div>
 
@@ -254,33 +255,13 @@ export default function V2DashboardPage() {
       {scope.advanced && (
         <DashboardSection
           id="deep-dive-section"
-          title="Tum Detayli Analizler"
+          title="Tüm Detaylı Analizler"
           icon={<Layers className="w-5 h-5 text-slate-600" />}
           collapsible={true}
           defaultCollapsed={false}
         >
           <DeepDiveSection />
         </DashboardSection>
-      )}
-
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* SPRINT STATUS - Dev only */}
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      {process.env.NODE_ENV === 'development' && (
-        <Card title="Sprint Durumu" subtitle="V2 Dashboard gelistirme (DEV only)">
-          <div className="space-y-2 text-sm">
-            <StatusRow label="Sprint 0: Contract & Scope" status="ok" />
-            <StatusRow label="Sprint 1: KPI Strip + ExplainModal" status="ok" />
-            <StatusRow label="Sprint 2: Operations Row" status="ok" />
-            <StatusRow label="Sprint 3: Deep Dive Panels" status="ok" />
-            <StatusRow label="Sprint 5.5: Donem Verileri Panel" status="ok" />
-            <StatusRow label="Sprint 5.6: Operations Kaizen" status="ok" />
-            <StatusRow label="Sprint 5.7: Dashboard Layout" status="ok" />
-            <StatusRow label="Sprint 5.8: Full Functionality + Design" status="ok" />
-            <StatusRow label="Sprint 5.9: Vergi Analiz Sistemi" status="ok" />
-            <StatusRow label="Sprint 9.1: V3 Dashboard Design" status="ok" />
-          </div>
-        </Card>
       )}
 
       {/* Upload Modal */}
@@ -346,19 +327,6 @@ export default function V2DashboardPage() {
             </div>
           </div>
         </div>
-      )}
-    </div>
-  );
-}
-
-function StatusRow({ label, status }: { label: string; status: 'ok' | 'pending' }) {
-  return (
-    <div className="flex items-center justify-between py-1">
-      <span className="text-slate-600">{label}</span>
-      {status === 'ok' ? (
-        <Badge variant="success">Tamamlandi</Badge>
-      ) : (
-        <Badge variant="default">Bekliyor</Badge>
       )}
     </div>
   );

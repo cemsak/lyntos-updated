@@ -124,7 +124,7 @@ export function RegWatchPanel() {
 
   return (
     <Card
-      title="RegWatch Radar"
+      title="Mevzuat Radarı"
       subtitle={isActive ? 'Mevzuat takibi aktif' : 'Takip baslatilmadi'}
       headerAction={
         isActive ? (

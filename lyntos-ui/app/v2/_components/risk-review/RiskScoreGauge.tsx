@@ -76,7 +76,7 @@ export function RiskScoreGauge({ score, riskLevel, size = 'md' }: RiskScoreGauge
         className="absolute inset-0 flex flex-col items-center justify-center"
       >
         <span
-          className="font-semibold text-[#1a1f36] dark:text-white"
+          className="font-semibold text-[#1a1f36]"
           style={{ fontSize: config.fontSize }}
         >
           {score}

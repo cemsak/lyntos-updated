@@ -55,7 +55,7 @@ export function VDKSimulatorPanel({
   // Loading state
   if (isLoading) {
     return (
-      <div className="bg-white dark:bg-[#1a1f2e] rounded-xl border border-[#e3e8ee] dark:border-[#2d3343] p-8">
+      <div className="bg-white rounded-xl border border-[#e3e8ee] p-8">
         <div className="flex flex-col items-center justify-center gap-4">
           <div className="w-12 h-12 border-4 border-[#635bff] border-t-transparent rounded-full animate-spin" />
           <p className="text-[14px] text-[#697386]">
@@ -72,7 +72,7 @@ export function VDKSimulatorPanel({
   // Error state
   if (error) {
     return (
-      <div className="bg-white dark:bg-[#1a1f2e] rounded-xl border border-[#cd3d64] p-6">
+      <div className="bg-white rounded-xl border border-[#cd3d64] p-6">
         <div className="flex items-center gap-3 text-[#cd3d64]">
           <AlertTriangle className="w-5 h-5" />
           <p className="text-[14px]">{error}</p>
@@ -90,10 +90,10 @@ export function VDKSimulatorPanel({
   // Empty state
   if (!result) {
     return (
-      <div className="bg-white dark:bg-[#1a1f2e] rounded-xl border border-[#e3e8ee] dark:border-[#2d3343] p-8">
+      <div className="bg-white rounded-xl border border-[#e3e8ee] p-8">
         <div className="text-center">
           <Shield className="w-12 h-12 text-[#697386] mx-auto mb-4" />
-          <h3 className="text-[16px] font-semibold text-[#1a1f36] dark:text-white mb-2">
+          <h3 className="text-[16px] font-semibold text-[#1a1f36] mb-2">
             VDK Simulatoru
           </h3>
           <p className="text-[14px] text-[#697386] mb-4">
@@ -115,16 +115,16 @@ export function VDKSimulatorPanel({
   const riskConfig = RISK_LEVEL_CONFIG[result.risk_level];
 
   return (
-    <div className="bg-white dark:bg-[#1a1f2e] rounded-xl border border-[#e3e8ee] dark:border-[#2d3343] overflow-hidden">
+    <div className="bg-white rounded-xl border border-[#e3e8ee] overflow-hidden">
       {/* Header */}
-      <div className="p-4 border-b border-[#e3e8ee] dark:border-[#2d3343]">
+      <div className="p-4 border-b border-[#e3e8ee]">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-[#635bff]/10 flex items-center justify-center">
               <Target className="w-5 h-5 text-[#635bff]" />
             </div>
             <div>
-              <h2 className="text-[16px] font-semibold text-[#1a1f36] dark:text-white">
+              <h2 className="text-[16px] font-semibold text-[#1a1f36]">
                 VDK Simulatoru
               </h2>
               <p className="text-[12px] text-[#697386]">
@@ -135,7 +135,7 @@ export function VDKSimulatorPanel({
           <button
             onClick={handleRefresh}
             disabled={isLoading}
-            className="p-2 text-[#697386] hover:text-[#1a1f36] dark:hover:text-white hover:bg-[#f6f9fc] dark:hover:bg-[#0a0d14] rounded-lg transition-colors disabled:opacity-50"
+            className="p-2 text-[#697386] hover:text-[#1a1f36] hover:bg-[#f6f9fc] rounded-lg transition-colors disabled:opacity-50"
           >
             <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
           </button>
@@ -143,7 +143,7 @@ export function VDKSimulatorPanel({
       </div>
 
       {/* Risk Summary */}
-      <div className="p-4 border-b border-[#e3e8ee] dark:border-[#2d3343]">
+      <div className="p-4 border-b border-[#e3e8ee]">
         <div className="flex items-center gap-6">
           {/* Risk Score Circle */}
           <div className="flex items-center gap-3">
@@ -188,7 +188,7 @@ export function VDKSimulatorPanel({
         {result.nace_code && (
           <div className="mt-4 flex items-center gap-2 text-[12px] text-[#697386]">
             <span>Sektor:</span>
-            <span className="font-medium text-[#1a1f36] dark:text-white">
+            <span className="font-medium text-[#1a1f36]">
               {result.sector_group} (NACE {result.nace_code})
             </span>
           </div>
@@ -246,14 +246,14 @@ export function VDKSimulatorPanel({
       </div>
 
       {/* Actions Footer */}
-      <div className="p-4 border-t border-[#e3e8ee] dark:border-[#2d3343] bg-[#f6f9fc] dark:bg-[#0a0d14]">
+      <div className="p-4 border-t border-[#e3e8ee] bg-[#f6f9fc]">
         <div className="flex items-center justify-between">
           <p className="text-[11px] text-[#697386]">
             Son simulasyon:{' '}
             {new Date(result.simulated_at).toLocaleString('tr-TR')}
           </p>
           <div className="flex items-center gap-2">
-            <button className="px-3 py-2 text-[12px] font-medium text-[#697386] hover:text-[#1a1f36] dark:hover:text-white border border-[#e3e8ee] dark:border-[#2d3343] bg-white dark:bg-[#1a1f2e] rounded-lg flex items-center gap-1.5 transition-colors">
+            <button className="px-3 py-2 text-[12px] font-medium text-[#697386] hover:text-[#1a1f36] border border-[#e3e8ee] bg-white rounded-lg flex items-center gap-1.5 transition-colors">
               <Send className="w-3.5 h-3.5" />
               Mukellefe Gonder
             </button>

@@ -23,7 +23,7 @@ export function PdfPreviewModal({ isOpen, onClose, onExport }: PdfPreviewModalPr
     { name: 'KPI Ozeti (8 gosterge)', icon: 'K', included: true },
     { name: 'VDK Risk Analizi (13 kriter)', icon: 'R', included: true },
     { name: 'Capraz Kontrol Sonuclari', icon: 'C', included: true },
-    { name: 'Mizan Omurga Analizi', icon: 'M', included: true },
+    { name: 'Mizan Analizi', icon: 'M', included: true },
     { name: 'Enflasyon Muhasebesi', icon: 'E', included: true },
     { name: 'Eksik Veri Listesi', icon: '!', included: true },
     { name: 'Yasal Dayanaklar', icon: 'Y', included: true },

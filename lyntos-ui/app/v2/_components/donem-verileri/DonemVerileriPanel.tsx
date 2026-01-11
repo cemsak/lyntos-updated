@@ -88,7 +88,7 @@ export function DonemVerileriPanel({ onUploadClick }: DonemVerileriPanelProps) {
     return (
       <Card title="Dönem Verileri" accent>
         <div className="flex items-center justify-center py-8">
-          <div className="w-6 h-6 border-2 border-lyntos-accent border-t-transparent rounded-full animate-spin" />
+          <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
         </div>
       </Card>
     );
@@ -110,16 +110,16 @@ export function DonemVerileriPanel({ onUploadClick }: DonemVerileriPanelProps) {
     >
       <div className="space-y-4">
         {/* Progress Bar */}
-        <div className="w-full bg-lyntos-bg-elevated rounded-full h-2 overflow-hidden">
+        <div className="w-full bg-slate-50-elevated rounded-full h-2 overflow-hidden">
           <div
-            className="bg-lyntos-accent h-2 rounded-full transition-all duration-500"
+            className="bg-blue-500 h-2 rounded-full transition-all duration-500"
             style={{ width: `${data.tamamlanmaYuzdesi}%` }}
           />
         </div>
 
         {/* Required Categories */}
         <div>
-          <h4 className="text-xs font-medium text-lyntos-text-muted uppercase tracking-wide mb-2">
+          <h4 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-2">
             GEREKLİ BELGELER
           </h4>
           <div className="space-y-2">
@@ -139,23 +139,23 @@ export function DonemVerileriPanel({ onUploadClick }: DonemVerileriPanelProps) {
                     className={`
                       w-full flex items-center gap-3 p-3 rounded-lg border transition-all duration-200 text-left
                       ${isComplete
-                        ? 'bg-lyntos-success-bg/30 border-lyntos-success-muted hover:bg-lyntos-success-bg/40'
-                        : 'bg-lyntos-risk-bg/30 border-lyntos-risk-muted hover:bg-lyntos-risk-bg/40'
+                        ? 'bg-emerald-50/30 border-emerald-200 hover:bg-emerald-50/40'
+                        : 'bg-red-50/30 border-red-200 hover:bg-red-50/40'
                       }
                     `}
                   >
                     {/* Icon */}
-                    <div className={`p-2 rounded-lg ${isComplete ? 'bg-lyntos-success-bg' : 'bg-lyntos-risk-bg'}`}>
-                      <IconComponent className={`w-4 h-4 ${isComplete ? 'text-lyntos-success' : 'text-lyntos-risk'}`} />
+                    <div className={`p-2 rounded-lg ${isComplete ? 'bg-emerald-50' : 'bg-red-50'}`}>
+                      <IconComponent className={`w-4 h-4 ${isComplete ? 'text-emerald-600' : 'text-red-600'}`} />
                     </div>
 
                     {/* Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-lyntos-text-primary">{tanim.ad}</span>
-                        <span className="text-lyntos-risk text-xs">*</span>
+                        <span className="font-medium text-slate-900">{tanim.ad}</span>
+                        <span className="text-red-600 text-xs">*</span>
                       </div>
-                      <p className="text-xs text-lyntos-text-muted truncate">{tanim.aciklama}</p>
+                      <p className="text-xs text-slate-400 truncate">{tanim.aciklama}</p>
                     </div>
 
                     {/* Status */}
@@ -167,15 +167,15 @@ export function DonemVerileriPanel({ onUploadClick }: DonemVerileriPanelProps) {
                       )}
                       {hasUploadedDocs && (
                         isExpanded
-                          ? <ChevronDown className="w-4 h-4 text-lyntos-text-muted" />
-                          : <ChevronRight className="w-4 h-4 text-lyntos-text-muted" />
+                          ? <ChevronDown className="w-4 h-4 text-slate-400" />
+                          : <ChevronRight className="w-4 h-4 text-slate-400" />
                       )}
                     </div>
                   </button>
 
                   {/* Expanded Document List */}
                   {isExpanded && hasUploadedDocs && (
-                    <div className="ml-4 mt-2 pl-4 border-l-2 border-lyntos-border space-y-1 animate-fade-in">
+                    <div className="ml-4 mt-2 pl-4 border-l-2 border-slate-200 space-y-1 animate-fade-in">
                       {durum.belgeler.map(belge => (
                         <BelgeKarti
                           key={belge.tip}
@@ -195,7 +195,7 @@ export function DonemVerileriPanel({ onUploadClick }: DonemVerileriPanelProps) {
         {/* Optional Categories */}
         {opsiyonelKategoriler.length > 0 && (
           <details className="group">
-            <summary className="text-xs font-medium text-lyntos-text-muted uppercase tracking-wide cursor-pointer hover:text-lyntos-text-secondary flex items-center gap-1">
+            <summary className="text-xs font-medium text-slate-400 uppercase tracking-wide cursor-pointer hover:text-slate-600 flex items-center gap-1">
               <ChevronRight className="w-3 h-3 group-open:rotate-90 transition-transform" />
               OPSİYONEL BELGELER (
               {opsiyonelKategoriler.reduce((acc, k) => acc + kategoriDurumu[k].yuklenen, 0)}/
@@ -211,11 +211,11 @@ export function DonemVerileriPanel({ onUploadClick }: DonemVerileriPanelProps) {
                   <button
                     key={kategori}
                     onClick={() => handleKategoriClick(kategori)}
-                    className="w-full flex items-center gap-3 p-2 rounded-lg border border-lyntos-border
-                               bg-lyntos-bg-elevated/50 hover:bg-lyntos-bg-elevated transition-colors text-left"
+                    className="w-full flex items-center gap-3 p-2 rounded-lg border border-slate-200
+                               bg-slate-50-elevated/50 hover:bg-slate-50-elevated transition-colors text-left"
                   >
-                    <IconComponent className="w-4 h-4 text-lyntos-text-muted" />
-                    <span className="flex-1 text-sm text-lyntos-text-secondary">{tanim.ad}</span>
+                    <IconComponent className="w-4 h-4 text-slate-400" />
+                    <span className="flex-1 text-sm text-slate-600">{tanim.ad}</span>
                     {durum.yuklenen > 0 && (
                       <Badge variant="success" size="sm">{durum.yuklenen}</Badge>
                     )}
@@ -227,18 +227,18 @@ export function DonemVerileriPanel({ onUploadClick }: DonemVerileriPanelProps) {
         )}
 
         {/* Stats Row */}
-        <div className="flex gap-4 pt-3 border-t border-lyntos-border">
+        <div className="flex gap-4 pt-3 border-t border-slate-200">
           <div className="flex-1 text-center">
-            <span className="text-xl font-bold text-lyntos-success">{data.varSayisi}</span>
-            <p className="text-xs text-lyntos-text-muted">Yüklendi</p>
+            <span className="text-xl font-bold text-emerald-600">{data.varSayisi}</span>
+            <p className="text-xs text-slate-400">Yüklendi</p>
           </div>
           <div className="flex-1 text-center">
-            <span className="text-xl font-bold text-lyntos-risk">{data.eksikSayisi}</span>
-            <p className="text-xs text-lyntos-text-muted">Eksik</p>
+            <span className="text-xl font-bold text-red-600">{data.eksikSayisi}</span>
+            <p className="text-xs text-slate-400">Eksik</p>
           </div>
           <div className="flex-1 text-center">
-            <span className="text-xl font-bold text-lyntos-warning">{data.bekleyenSayisi}</span>
-            <p className="text-xs text-lyntos-text-muted">Bekliyor</p>
+            <span className="text-xl font-bold text-amber-600">{data.bekleyenSayisi}</span>
+            <p className="text-xs text-slate-400">Bekliyor</p>
           </div>
         </div>
       </div>

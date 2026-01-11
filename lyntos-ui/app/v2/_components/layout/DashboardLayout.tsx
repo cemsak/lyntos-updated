@@ -30,14 +30,14 @@ const VARIANT_STYLES: Record<Variant, { container: string; title: string; iconBo
     iconBox: '',
   },
   urgent: {
-    container: 'bg-gradient-to-r from-red-50 via-orange-50 to-amber-50 border-2 border-red-200 rounded-2xl p-6 shadow-lg',
-    title: 'text-slate-800 text-2xl font-black',
-    iconBox: 'w-14 h-14 bg-gradient-to-br from-red-500 to-orange-500 rounded-2xl flex items-center justify-center shadow-xl',
+    container: 'bg-amber-50 border-l-4 border-amber-500 rounded-xl p-5 shadow-sm',
+    title: 'text-amber-900 text-xl font-bold',
+    iconBox: 'w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center',
   },
   dark: {
-    container: 'bg-gradient-to-br from-slate-800 via-slate-900 to-indigo-950 rounded-2xl p-6 shadow-xl',
-    title: 'text-white text-xl font-black',
-    iconBox: 'w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center',
+    container: 'bg-white border border-slate-200 rounded-2xl p-6 shadow-sm',
+    title: 'text-slate-800 text-xl font-black',
+    iconBox: 'w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center',
   },
 };
 
@@ -76,7 +76,7 @@ export function DashboardSection({
             <div>
               <h2 className={variantStyle.title}>{title}</h2>
               {variant === 'urgent' && (
-                <p className="text-slate-500">Acil isler ve bekleyen gorevler</p>
+                <p className="text-slate-500">Acil işler ve bekleyen görevler</p>
               )}
             </div>
           </div>

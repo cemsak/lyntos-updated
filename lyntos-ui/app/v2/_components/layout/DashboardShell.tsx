@@ -20,7 +20,7 @@ function DashboardShellInner({ children }: DashboardShellProps) {
   const { collapsed, mobileOpen, toggleCollapsed, toggleMobile, closeMobile } = useSidebarState();
 
   return (
-    <div className="min-h-screen bg-[#f6f9fc] dark:bg-[#0a0d14]">
+    <div className="min-h-screen bg-[#f6f9fc]">
       {/* Sidebar */}
       <Sidebar
         collapsed={collapsed}

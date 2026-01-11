@@ -48,21 +48,21 @@ export function OpportunityCard({ opportunity, rank }: OpportunityCardProps) {
   return (
     <div
       className={`
-        bg-white dark:bg-[#1a1f2e] rounded-xl border-2 transition-all overflow-hidden
-        ${rank <= 3 ? 'border-[#635bff]/30' : 'border-[#e3e8ee] dark:border-[#2d3343]'}
+        bg-white rounded-xl border-2 transition-all overflow-hidden
+        ${rank <= 3 ? 'border-[#635bff]/30' : 'border-[#e3e8ee]'}
       `}
     >
       {/* Header - Always Visible */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full p-4 flex items-start justify-between text-left hover:bg-[#f6f9fc] dark:hover:bg-[#0a0d14] transition-colors"
+        className="w-full p-4 flex items-start justify-between text-left hover:bg-[#f6f9fc] transition-colors"
       >
         <div className="flex items-start gap-3">
           {/* Rank Badge */}
           <div
             className={`
               w-8 h-8 rounded-lg flex items-center justify-center text-[14px] font-bold
-              ${rank <= 3 ? 'bg-[#635bff] text-white' : 'bg-[#e3e8ee] dark:bg-[#2d3343] text-[#697386]'}
+              ${rank <= 3 ? 'bg-[#635bff] text-white' : 'bg-[#e3e8ee] text-[#697386]'}
             `}
           >
             {rank}
@@ -72,7 +72,7 @@ export function OpportunityCard({ opportunity, rank }: OpportunityCardProps) {
             {/* Strategy Name */}
             <div className="flex items-center gap-2">
               <span className="text-[16px]">{category.icon}</span>
-              <h3 className="text-[15px] font-semibold text-[#1a1f36] dark:text-white">
+              <h3 className="text-[15px] font-semibold text-[#1a1f36]">
                 {opportunity.strategy_name}
               </h3>
             </div>
@@ -127,11 +127,11 @@ export function OpportunityCard({ opportunity, rank }: OpportunityCardProps) {
 
       {/* Expanded Details */}
       {isExpanded && (
-        <div className="px-4 pb-4 border-t border-[#e3e8ee] dark:border-[#2d3343]">
+        <div className="px-4 pb-4 border-t border-[#e3e8ee]">
           {/* Calculation Details */}
           {opportunity.calculation_details && (
-            <div className="mt-4 p-3 bg-[#f6f9fc] dark:bg-[#0a0d14] rounded-lg">
-              <h4 className="text-[12px] font-medium text-[#1a1f36] dark:text-white mb-2 flex items-center gap-2">
+            <div className="mt-4 p-3 bg-[#f6f9fc] rounded-lg">
+              <h4 className="text-[12px] font-medium text-[#1a1f36] mb-2 flex items-center gap-2">
                 <Scale className="w-4 h-4" />
                 Hesaplama Detayi
               </h4>
@@ -144,7 +144,7 @@ export function OpportunityCard({ opportunity, rank }: OpportunityCardProps) {
           {/* Conditions */}
           {opportunity.conditions.length > 0 && (
             <div className="mt-4">
-              <h4 className="text-[12px] font-medium text-[#1a1f36] dark:text-white mb-2 flex items-center gap-2">
+              <h4 className="text-[12px] font-medium text-[#1a1f36] mb-2 flex items-center gap-2">
                 <CheckCircle className="w-4 h-4 text-[#0caf60]" />
                 Kosullar
               </h4>
@@ -165,7 +165,7 @@ export function OpportunityCard({ opportunity, rank }: OpportunityCardProps) {
           {/* Actions */}
           {opportunity.actions.length > 0 && (
             <div className="mt-4">
-              <h4 className="text-[12px] font-medium text-[#1a1f36] dark:text-white mb-2 flex items-center gap-2">
+              <h4 className="text-[12px] font-medium text-[#1a1f36] mb-2 flex items-center gap-2">
                 <Clock className="w-4 h-4 text-[#635bff]" />
                 Uygulama Adimlari
               </h4>

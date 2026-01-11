@@ -35,7 +35,7 @@ export function SidebarItem({ item, collapsed = false, onClick }: SidebarItemPro
         flex items-center gap-3 px-3 py-2 rounded-md text-[14px] font-medium transition-colors
         ${isActive
           ? 'bg-[#635bff] text-white'
-          : 'text-[#1a1f36] dark:text-[#f6f9fc] hover:bg-[#e3e8ee] dark:hover:bg-[#2d3343]'
+          : 'text-[#1a1f36] hover:bg-[#e3e8ee]'
         }
         ${collapsed ? 'justify-center' : ''}
       `}

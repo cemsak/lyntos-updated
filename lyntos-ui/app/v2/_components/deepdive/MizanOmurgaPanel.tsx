@@ -105,7 +105,7 @@ interface MizanResult {
 // ════════════════════════════════════════════════════════════════════════════
 
 const MIZAN_SMMM_INFO = {
-  title: 'Mizan Omurga Analizi Nedir?',
+  title: 'Mizan Analizi Nedir?',
   description: 'YMM seviyesinde mizan kontrolu ve oran analizleri',
   context: [
     'Mizan, isletmenin tum hesaplarinin donem sonu bakiyelerini gosterir.',
@@ -525,7 +525,7 @@ export function MizanOmurgaPanel() {
       <Card
         title={
           <span className="flex items-center gap-2">
-            Mizan Omurga
+            Mizan Analizi
             <button onClick={() => setShowSmmmInfo(true)} className="text-slate-400 hover:text-teal-600 transition-colors" title="SMMM Rehberi">
               <HelpCircle className="w-4 h-4" />
             </button>

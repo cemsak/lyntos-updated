@@ -15,6 +15,14 @@ import {
   Building2,
   MessageCircle,
   Newspaper,
+  Calculator,
+  Percent,
+  Scale,
+  Shield,
+  Clock,
+  AlertCircle,
+  Calendar,
+  BookOpen,
   type LucideIcon
 } from 'lucide-react';
 
@@ -64,7 +72,7 @@ export const NAVIGATION: NavSection[] = [
     items: [
       {
         id: 'risk-queue',
-        label: 'Risk Kuyruğu',
+        label: 'Bekleyen Islemler',
         href: '/v2/risk',
         icon: AlertTriangle,
         badge: 3,
@@ -78,7 +86,7 @@ export const NAVIGATION: NavSection[] = [
     items: [
       {
         id: 'vergus',
-        label: 'VERGUS Stratejist',
+        label: 'Vergi Stratejisti',
         href: '/v2/vergus',
         icon: Sparkles,
       },
@@ -93,6 +101,60 @@ export const NAVIGATION: NavSection[] = [
         label: 'Raporlar',
         href: '/v2/reports',
         icon: BarChart3,
+      },
+    ],
+  },
+  {
+    id: 'pratik-bilgiler',
+    label: 'Pratik Bilgiler',
+    items: [
+      {
+        id: 'pratik-bilgiler-main',
+        label: 'Tüm Bilgiler',
+        href: '/v2/pratik-bilgiler',
+        icon: BookOpen,
+      },
+      {
+        id: 'hesaplamalar',
+        label: 'Hesaplamalar',
+        href: '/v2/pratik-bilgiler/hesaplamalar',
+        icon: Calculator,
+      },
+      {
+        id: 'oranlar',
+        label: 'Oranlar',
+        href: '/v2/pratik-bilgiler/oranlar',
+        icon: Percent,
+      },
+      {
+        id: 'hadler',
+        label: 'Hadler',
+        href: '/v2/pratik-bilgiler/hadler',
+        icon: Scale,
+      },
+      {
+        id: 'sgk',
+        label: 'SGK',
+        href: '/v2/pratik-bilgiler/sgk',
+        icon: Shield,
+      },
+      {
+        id: 'gecikme',
+        label: 'Gecikme Faizi',
+        href: '/v2/pratik-bilgiler/gecikme',
+        icon: Clock,
+      },
+      {
+        id: 'cezalar',
+        label: 'Cezalar',
+        href: '/v2/pratik-bilgiler/cezalar',
+        icon: AlertCircle,
+      },
+      {
+        id: 'beyan-tarihleri',
+        label: 'Beyan Tarihleri',
+        href: '/v2/pratik-bilgiler/beyan-tarihleri',
+        icon: Calendar,
       },
     ],
   },

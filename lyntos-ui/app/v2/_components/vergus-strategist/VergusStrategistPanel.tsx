@@ -66,7 +66,7 @@ export function VergusStrategistPanel({
 
   if (isLoading && !analysis) {
     return (
-      <div className="bg-white dark:bg-[#1a1f2e] rounded-xl border border-[#e3e8ee] dark:border-[#2d3343] p-8">
+      <div className="bg-white rounded-xl border border-[#e3e8ee] p-8">
         <div className="flex flex-col items-center justify-center gap-4">
           <div className="w-12 h-12 border-4 border-[#635bff] border-t-transparent rounded-full animate-spin" />
           <p className="text-[14px] text-[#697386]">
@@ -79,7 +79,7 @@ export function VergusStrategistPanel({
 
   if (error) {
     return (
-      <div className="bg-white dark:bg-[#1a1f2e] rounded-xl border border-[#cd3d64] p-6">
+      <div className="bg-white rounded-xl border border-[#cd3d64] p-6">
         <div className="flex items-center gap-3 text-[#cd3d64]">
           <AlertCircle className="w-5 h-5" />
           <p className="text-[14px]">{error}</p>
@@ -104,7 +104,7 @@ export function VergusStrategistPanel({
               <Sparkles className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-[18px] font-bold">VERGUS Vergi Stratejisti</h2>
+              <h2 className="text-[18px] font-bold">Vergi Stratejisti</h2>
               <p className="text-[13px] text-white/80">
                 {clientName} &bull; {period}
               </p>
@@ -154,16 +154,16 @@ export function VergusStrategistPanel({
 
       {/* Financial Data Form */}
       {showForm && (
-        <div className="bg-white dark:bg-[#1a1f2e] rounded-xl border border-[#e3e8ee] dark:border-[#2d3343] p-6">
+        <div className="bg-white rounded-xl border border-[#e3e8ee] p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-[15px] font-semibold text-[#1a1f36] dark:text-white flex items-center gap-2">
+            <h3 className="text-[15px] font-semibold text-[#1a1f36] flex items-center gap-2">
               <FileText className="w-5 h-5 text-[#635bff]" />
               Mali Veri Girisi
             </h3>
             {analysis && (
               <button
                 onClick={() => setShowForm(false)}
-                className="text-[12px] text-[#697386] hover:text-[#1a1f36] dark:hover:text-white"
+                className="text-[12px] text-[#697386] hover:text-[#1a1f36]"
               >
                 Kapat
               </button>
@@ -200,7 +200,7 @@ export function VergusStrategistPanel({
               className={`px-3 py-1.5 text-[12px] font-medium rounded-lg whitespace-nowrap transition-colors ${
                 !selectedCategory
                   ? 'bg-[#635bff] text-white'
-                  : 'bg-[#f6f9fc] dark:bg-[#0a0d14] text-[#697386] hover:text-[#1a1f36] dark:hover:text-white'
+                  : 'bg-[#f6f9fc] text-[#697386] hover:text-[#1a1f36]'
               }`}
             >
               Tumu ({analysis.opportunities.length})
@@ -217,7 +217,7 @@ export function VergusStrategistPanel({
                     className={`flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium rounded-lg whitespace-nowrap transition-colors ${
                       selectedCategory === category
                         ? 'bg-[#635bff] text-white'
-                        : 'bg-[#f6f9fc] dark:bg-[#0a0d14] text-[#697386] hover:text-[#1a1f36] dark:hover:text-white'
+                        : 'bg-[#f6f9fc] text-[#697386] hover:text-[#1a1f36]'
                     }`}
                   >
                     <span>{config.icon}</span>
@@ -240,27 +240,27 @@ export function VergusStrategistPanel({
           </div>
 
           {/* Client Profile Summary */}
-          <div className="bg-white dark:bg-[#1a1f2e] rounded-xl border border-[#e3e8ee] dark:border-[#2d3343] p-4">
-            <h3 className="text-[14px] font-semibold text-[#1a1f36] dark:text-white mb-3 flex items-center gap-2">
+          <div className="bg-white rounded-xl border border-[#e3e8ee] p-4">
+            <h3 className="text-[14px] font-semibold text-[#1a1f36] mb-3 flex items-center gap-2">
               <Zap className="w-4 h-4 text-[#635bff]" />
               Musteri Profili
             </h3>
             <div className="grid grid-cols-3 gap-4 text-[12px]">
               <div>
                 <span className="text-[#697386]">Faaliyet Turu:</span>{' '}
-                <span className="text-[#1a1f36] dark:text-white font-medium">
+                <span className="text-[#1a1f36] font-medium">
                   {analysis.profile.faaliyet_turu}
                 </span>
               </div>
               <div>
                 <span className="text-[#697386]">Ihracat Orani:</span>{' '}
-                <span className="text-[#1a1f36] dark:text-white font-medium">
+                <span className="text-[#1a1f36] font-medium">
                   %{analysis.profile.ihracat_orani.toFixed(1)}
                 </span>
               </div>
               <div>
                 <span className="text-[#697386]">Personel:</span>{' '}
-                <span className="text-[#1a1f36] dark:text-white font-medium">
+                <span className="text-[#1a1f36] font-medium">
                   {analysis.profile.personel_sayisi} kisi
                 </span>
               </div>

@@ -59,8 +59,8 @@ export function FinancialDataForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Revenue Section */}
-      <div className="bg-white dark:bg-[#1a1f2e] rounded-xl border border-[#e3e8ee] dark:border-[#2d3343] p-4">
-        <h3 className="text-[14px] font-semibold text-[#1a1f36] dark:text-white mb-4 flex items-center gap-2">
+      <div className="bg-white rounded-xl border border-[#e3e8ee] p-4">
+        <h3 className="text-[14px] font-semibold text-[#1a1f36] mb-4 flex items-center gap-2">
           <Calculator className="w-4 h-4 text-[#635bff]" />
           Gelir Bilgileri
         </h3>
@@ -76,7 +76,7 @@ export function FinancialDataForm({
               onChange={(e) =>
                 handleChange('toplam_hasilat', Number(e.target.value))
               }
-              className="w-full px-3 py-2 text-[13px] bg-[#f6f9fc] dark:bg-[#0a0d14] border border-[#e3e8ee] dark:border-[#2d3343] rounded-lg text-[#1a1f36] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#635bff]/20"
+              className="w-full px-3 py-2 text-[13px] bg-[#f6f9fc] border border-[#e3e8ee] rounded-lg text-[#1a1f36] focus:outline-none focus:ring-2 focus:ring-[#635bff]/20"
               placeholder="0"
             />
           </div>
@@ -90,7 +90,7 @@ export function FinancialDataForm({
               onChange={(e) =>
                 handleChange('ihracat_hasilat', Number(e.target.value))
               }
-              className="w-full px-3 py-2 text-[13px] bg-[#f6f9fc] dark:bg-[#0a0d14] border border-[#e3e8ee] dark:border-[#2d3343] rounded-lg text-[#1a1f36] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#635bff]/20"
+              className="w-full px-3 py-2 text-[13px] bg-[#f6f9fc] border border-[#e3e8ee] rounded-lg text-[#1a1f36] focus:outline-none focus:ring-2 focus:ring-[#635bff]/20"
               placeholder="0"
             />
           </div>
@@ -104,7 +104,7 @@ export function FinancialDataForm({
               onChange={(e) =>
                 handleChange('kv_matrahi', Number(e.target.value))
               }
-              className="w-full px-3 py-2 text-[13px] bg-[#f6f9fc] dark:bg-[#0a0d14] border border-[#e3e8ee] dark:border-[#2d3343] rounded-lg text-[#1a1f36] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#635bff]/20"
+              className="w-full px-3 py-2 text-[13px] bg-[#f6f9fc] border border-[#e3e8ee] rounded-lg text-[#1a1f36] focus:outline-none focus:ring-2 focus:ring-[#635bff]/20"
               placeholder="0"
             />
           </div>
@@ -118,7 +118,7 @@ export function FinancialDataForm({
               onChange={(e) =>
                 handleChange('hesaplanan_kv', Number(e.target.value))
               }
-              className="w-full px-3 py-2 text-[13px] bg-[#f6f9fc] dark:bg-[#0a0d14] border border-[#e3e8ee] dark:border-[#2d3343] rounded-lg text-[#1a1f36] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#635bff]/20"
+              className="w-full px-3 py-2 text-[13px] bg-[#f6f9fc] border border-[#e3e8ee] rounded-lg text-[#1a1f36] focus:outline-none focus:ring-2 focus:ring-[#635bff]/20"
               placeholder="0"
             />
           </div>
@@ -126,8 +126,8 @@ export function FinancialDataForm({
       </div>
 
       {/* Personnel Section */}
-      <div className="bg-white dark:bg-[#1a1f2e] rounded-xl border border-[#e3e8ee] dark:border-[#2d3343] p-4">
-        <h3 className="text-[14px] font-semibold text-[#1a1f36] dark:text-white mb-4 flex items-center gap-2">
+      <div className="bg-white rounded-xl border border-[#e3e8ee] p-4">
+        <h3 className="text-[14px] font-semibold text-[#1a1f36] mb-4 flex items-center gap-2">
           <Users className="w-4 h-4 text-[#635bff]" />
           Personel Bilgileri
         </h3>
@@ -143,7 +143,7 @@ export function FinancialDataForm({
               onChange={(e) =>
                 handleChange('personel_sayisi', Number(e.target.value))
               }
-              className="w-full px-3 py-2 text-[13px] bg-[#f6f9fc] dark:bg-[#0a0d14] border border-[#e3e8ee] dark:border-[#2d3343] rounded-lg text-[#1a1f36] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#635bff]/20"
+              className="w-full px-3 py-2 text-[13px] bg-[#f6f9fc] border border-[#e3e8ee] rounded-lg text-[#1a1f36] focus:outline-none focus:ring-2 focus:ring-[#635bff]/20"
               placeholder="0"
             />
           </div>
@@ -157,7 +157,7 @@ export function FinancialDataForm({
               onChange={(e) =>
                 handleChange('arge_personel', Number(e.target.value))
               }
-              className="w-full px-3 py-2 text-[13px] bg-[#f6f9fc] dark:bg-[#0a0d14] border border-[#e3e8ee] dark:border-[#2d3343] rounded-lg text-[#1a1f36] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#635bff]/20"
+              className="w-full px-3 py-2 text-[13px] bg-[#f6f9fc] border border-[#e3e8ee] rounded-lg text-[#1a1f36] focus:outline-none focus:ring-2 focus:ring-[#635bff]/20"
               placeholder="0"
             />
           </div>
@@ -171,7 +171,7 @@ export function FinancialDataForm({
               onChange={(e) =>
                 handleChange('ortalama_maas', Number(e.target.value))
               }
-              className="w-full px-3 py-2 text-[13px] bg-[#f6f9fc] dark:bg-[#0a0d14] border border-[#e3e8ee] dark:border-[#2d3343] rounded-lg text-[#1a1f36] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#635bff]/20"
+              className="w-full px-3 py-2 text-[13px] bg-[#f6f9fc] border border-[#e3e8ee] rounded-lg text-[#1a1f36] focus:outline-none focus:ring-2 focus:ring-[#635bff]/20"
               placeholder="22104"
             />
           </div>
@@ -179,8 +179,8 @@ export function FinancialDataForm({
       </div>
 
       {/* Activity Flags */}
-      <div className="bg-white dark:bg-[#1a1f2e] rounded-xl border border-[#e3e8ee] dark:border-[#2d3343] p-4">
-        <h3 className="text-[14px] font-semibold text-[#1a1f36] dark:text-white mb-4 flex items-center gap-2">
+      <div className="bg-white rounded-xl border border-[#e3e8ee] p-4">
+        <h3 className="text-[14px] font-semibold text-[#1a1f36] mb-4 flex items-center gap-2">
           <Building2 className="w-4 h-4 text-[#635bff]" />
           Faaliyet Ozellikleri
         </h3>
@@ -208,9 +208,9 @@ export function FinancialDataForm({
                     e.target.checked
                   )
                 }
-                className="w-4 h-4 rounded border-[#e3e8ee] dark:border-[#2d3343] text-[#635bff] focus:ring-[#635bff]/20"
+                className="w-4 h-4 rounded border-[#e3e8ee] text-[#635bff] focus:ring-[#635bff]/20"
               />
-              <span className="text-[12px] text-[#1a1f36] dark:text-white">
+              <span className="text-[12px] text-[#1a1f36]">
                 {label}
               </span>
             </label>
@@ -219,8 +219,8 @@ export function FinancialDataForm({
       </div>
 
       {/* Additional Income */}
-      <div className="bg-white dark:bg-[#1a1f2e] rounded-xl border border-[#e3e8ee] dark:border-[#2d3343] p-4">
-        <h3 className="text-[14px] font-semibold text-[#1a1f36] dark:text-white mb-4 flex items-center gap-2">
+      <div className="bg-white rounded-xl border border-[#e3e8ee] p-4">
+        <h3 className="text-[14px] font-semibold text-[#1a1f36] mb-4 flex items-center gap-2">
           <Globe className="w-4 h-4 text-[#635bff]" />
           Diger Gelirler
         </h3>
@@ -236,7 +236,7 @@ export function FinancialDataForm({
               onChange={(e) =>
                 handleChange('istirak_temettu', Number(e.target.value))
               }
-              className="w-full px-3 py-2 text-[13px] bg-[#f6f9fc] dark:bg-[#0a0d14] border border-[#e3e8ee] dark:border-[#2d3343] rounded-lg text-[#1a1f36] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#635bff]/20"
+              className="w-full px-3 py-2 text-[13px] bg-[#f6f9fc] border border-[#e3e8ee] rounded-lg text-[#1a1f36] focus:outline-none focus:ring-2 focus:ring-[#635bff]/20"
               placeholder="0"
             />
           </div>
@@ -250,7 +250,7 @@ export function FinancialDataForm({
               onChange={(e) =>
                 handleChange('yurt_disi_hizmet', Number(e.target.value))
               }
-              className="w-full px-3 py-2 text-[13px] bg-[#f6f9fc] dark:bg-[#0a0d14] border border-[#e3e8ee] dark:border-[#2d3343] rounded-lg text-[#1a1f36] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#635bff]/20"
+              className="w-full px-3 py-2 text-[13px] bg-[#f6f9fc] border border-[#e3e8ee] rounded-lg text-[#1a1f36] focus:outline-none focus:ring-2 focus:ring-[#635bff]/20"
               placeholder="0"
             />
           </div>

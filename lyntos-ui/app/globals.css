@@ -1,3 +1,15 @@
+/* === FORCE LIGHT MODE === */
+html {
+  color-scheme: light only !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: light only !important;
+  }
+}
+/* === END FORCE LIGHT === */
+
 @import "tailwindcss";
 
 /* Google Fonts - IBM Plex Sans (Enterprise typography) */
@@ -37,11 +49,11 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
-/* LYNTOS CSS VARIABLES (for var-based surface colors)                         */
+/* LYNTOS CSS VARIABLES - LIGHT MODE                                            */
 /* ═══════════════════════════════════════════════════════════════════════════ */
 
 :root {
-  /* Light mode surface colors (legacy support) */
+  /* Light mode surface colors */
   --lyntos-surface: #ffffff;
   --lyntos-surface-muted: #f8fafc;
   --lyntos-surface-elevated: #ffffff;
@@ -60,40 +72,11 @@
   --stripe-danger: #cd3d64;
 }
 
-/* Dark mode already active for V2 */
+/* Light mode - V2 Dashboard */
 html, :root {
-  --lyntos-surface: #0f172a;
-  --lyntos-surface-muted: #1e293b;
-  --lyntos-surface-elevated: #1e293b;
-}
-
-.dark {
-  /* Stripe Design Tokens - Dark mode */
-  --stripe-bg: #0a0d14;
-  --stripe-card: #1a1f2e;
-  --stripe-border: #2d3343;
-  --stripe-text: #f6f9fc;
-  --stripe-text-secondary: #a3acb9;
-  --stripe-text-tertiary: #6b7280;
-}
-
-/* Dark theme */
-.dark {
-  --color-background: 222.2 84% 4.9%;
-  --color-foreground: 210 40% 98%;
-  --color-card: 222.2 84% 4.9%;
-  --color-card-foreground: 210 40% 98%;
-  --color-popover: 222.2 84% 4.9%;
-  --color-popover-foreground: 210 40% 98%;
-  --color-muted: 217.2 32.6% 17.5%;
-  --color-muted-foreground: 215 20.2% 65.1%;
-  --color-accent: 217.2 32.6% 17.5%;
-  --color-accent-foreground: 210 40% 98%;
-  --color-destructive: 0 62.8% 30.6%;
-  --color-destructive-foreground: 210 40% 98%;
-  --color-border: 217.2 32.6% 17.5%;
-  --color-input: 217.2 32.6% 17.5%;
-  --color-ring: 224.3 76.3% 48%;
+  --lyntos-surface: #f8fafc;
+  --lyntos-surface-muted: #f1f5f9;
+  --lyntos-surface-elevated: #ffffff;
 }
 
 /* Base styles */
@@ -107,6 +90,7 @@ html {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: #f8fafc;
 }
 
 body {
@@ -157,7 +141,7 @@ body {
 .badge-info { background-color: #eff6ff; color: #2563eb; }
 .badge-neutral { background-color: #f1f5f9; color: #64748b; }
 
-/* Scrollbar styling */
+/* Scrollbar styling - LIGHT */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -243,7 +227,7 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
-/* LYNTOS DESIGN SYSTEM - Professional Accounting Software Palette           */
+/* LYNTOS DESIGN SYSTEM - Professional Accounting Software Palette - LIGHT     */
 /* ═══════════════════════════════════════════════════════════════════════════ */
 
 :root {
@@ -293,69 +277,23 @@ body {
   --lyntos-font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════ */
-/* LYNTOS V2 DARK THEME SYSTEM                                                  */
-/* ═══════════════════════════════════════════════════════════════════════════ */
-
-/* Force dark mode */
-:root {
-  color-scheme: dark;
-}
-
-html {
-  background-color: #09090b;
-}
-
-body {
-  background-color: #09090b;
-  color: #fafafa;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
 /* ─────────────────────────────────────────────────────────────────────────── */
-/* GLOBAL OVERRIDES - Convert all light mode classes to dark                   */
-/* ─────────────────────────────────────────────────────────────────────────── */
-
-/* Backgrounds */
-.bg-white { background-color: #27272a !important; }
-.bg-slate-50 { background-color: #09090b !important; }
-.bg-slate-100 { background-color: #18181b !important; }
-.bg-gray-50 { background-color: #09090b !important; }
-.bg-gray-100 { background-color: #18181b !important; }
-
-/* Text */
-.text-slate-900 { color: #fafafa !important; }
-.text-slate-800 { color: #e4e4e7 !important; }
-.text-slate-700 { color: #d4d4d8 !important; }
-.text-slate-600 { color: #a1a1aa !important; }
-.text-gray-900 { color: #fafafa !important; }
-.text-gray-800 { color: #e4e4e7 !important; }
-.text-gray-700 { color: #d4d4d8 !important; }
-
-/* Borders */
-.border-slate-200 { border-color: #3f3f46 !important; }
-.border-slate-300 { border-color: #52525b !important; }
-.border-gray-200 { border-color: #3f3f46 !important; }
-.border-gray-300 { border-color: #52525b !important; }
-
-/* ─────────────────────────────────────────────────────────────────────────── */
-/* LYNTOS COMPONENT CLASSES                                                    */
+/* LYNTOS COMPONENT CLASSES - LIGHT MODE                                        */
 /* ─────────────────────────────────────────────────────────────────────────── */
 
 /* Card with accent bar */
 .lyntos-card {
-  background-color: #27272a;
-  border: 1px solid #3f3f46;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
   border-radius: 0.75rem;
-  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
 }
 
 /* Panel with left accent bar */
 .lyntos-panel {
   position: relative;
-  background-color: #27272a;
-  border: 1px solid #3f3f46;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
   border-radius: 0.75rem;
   overflow: hidden;
 }
@@ -367,7 +305,7 @@ body {
   top: 0;
   bottom: 0;
   width: 0.25rem;
-  background-color: #f59e0b;
+  background-color: #3b82f6;
 }
 
 /* Section header */
@@ -381,27 +319,27 @@ body {
 .lyntos-section-title {
   font-size: 1.125rem;
   font-weight: 600;
-  color: #fafafa;
+  color: #1e293b;
 }
 
 /* Input fields */
 .lyntos-input {
   width: 100%;
   padding: 0.5rem 0.75rem;
-  background-color: #18181b;
-  border: 1px solid #3f3f46;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
   border-radius: 0.5rem;
-  color: #fafafa;
+  color: #1e293b;
   transition: all 0.2s;
 }
 
 .lyntos-input::placeholder {
-  color: #71717a;
+  color: #94a3b8;
 }
 
 .lyntos-input:focus {
   outline: none;
-  box-shadow: 0 0 0 2px #f59e0b;
+  box-shadow: 0 0 0 2px #3b82f6;
   border-color: transparent;
 }
 
@@ -409,14 +347,14 @@ body {
 .lyntos-select {
   width: 100%;
   padding: 0.5rem 2.5rem 0.5rem 0.75rem;
-  background-color: #18181b;
-  border: 1px solid #3f3f46;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
   border-radius: 0.5rem;
-  color: #fafafa;
+  color: #1e293b;
   cursor: pointer;
   transition: all 0.2s;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23a1a1aa'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 0.75rem center;
   background-size: 1rem;
@@ -424,15 +362,15 @@ body {
 
 .lyntos-select:focus {
   outline: none;
-  box-shadow: 0 0 0 2px #f59e0b;
+  box-shadow: 0 0 0 2px #3b82f6;
   border-color: transparent;
 }
 
 /* Button variants */
 .lyntos-btn-primary {
   padding: 0.5rem 1rem;
-  background-color: #f59e0b;
-  color: #09090b;
+  background-color: #3b82f6;
+  color: #ffffff;
   font-weight: 500;
   border-radius: 0.5rem;
   transition: all 0.2s;
@@ -440,32 +378,32 @@ body {
 
 .lyntos-btn-primary:hover,
 .lyntos-btn-primary:active {
-  background-color: #d97706;
+  background-color: #2563eb;
 }
 
 .lyntos-btn-primary:focus {
   outline: none;
-  box-shadow: 0 0 0 2px #09090b, 0 0 0 4px #f59e0b;
+  box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #3b82f6;
 }
 
 .lyntos-btn-secondary {
   padding: 0.5rem 1rem;
-  background-color: #3f3f46;
-  color: #fafafa;
+  background-color: #ffffff;
+  color: #1e293b;
   font-weight: 500;
   border-radius: 0.5rem;
-  border: 1px solid #3f3f46;
+  border: 1px solid #e2e8f0;
   transition: all 0.2s;
 }
 
 .lyntos-btn-secondary:hover,
 .lyntos-btn-secondary:active {
-  background-color: #3f3f46;
+  background-color: #f8fafc;
 }
 
 .lyntos-btn-secondary:focus {
   outline: none;
-  box-shadow: 0 0 0 2px #09090b, 0 0 0 4px #f59e0b;
+  box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #3b82f6;
 }
 
 /* Status badges */
@@ -479,51 +417,28 @@ body {
 }
 
 .lyntos-badge-risk {
-  background-color: #7f1d1d;
-  color: #fca5a5;
+  background-color: #fef2f2;
+  color: #dc2626;
 }
 
 .lyntos-badge-success {
-  background-color: #14532d;
-  color: #86efac;
+  background-color: #ecfdf5;
+  color: #059669;
 }
 
 .lyntos-badge-warning {
-  background-color: #78350f;
-  color: #fcd34d;
+  background-color: #fffbeb;
+  color: #d97706;
 }
 
 .lyntos-badge-info {
-  background-color: #1e3a8a;
-  color: #93c5fd;
+  background-color: #eff6ff;
+  color: #2563eb;
 }
 
 .lyntos-badge-neutral {
-  background-color: #3f3f46;
-  color: #a1a1aa;
-}
-
-/* ─────────────────────────────────────────────────────────────────────────── */
-/* SCROLLBAR STYLING (DARK)                                                    */
-/* ─────────────────────────────────────────────────────────────────────────── */
-
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: #18181b;
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #3f3f46;
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #52525b;
+  background-color: #f1f5f9;
+  color: #64748b;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────── */
@@ -536,16 +451,7 @@ body {
 }
 
 .lyntos-skeleton {
-  background: linear-gradient(to right, #27272a, #3f3f46, #27272a);
+  background: linear-gradient(to right, #f1f5f9, #e2e8f0, #f1f5f9);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
-}
-
-/* ─────────────────────────────────────────────────────────────────────────── */
-/* FOCUS VISIBLE (Accessibility)                                               */
-/* ─────────────────────────────────────────────────────────────────────────── */
-
-*:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px #09090b, 0 0 0 4px #f59e0b;
 }

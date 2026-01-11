@@ -76,9 +76,9 @@ export function QuestionCard({
   const severityColor = severityColors[severity] || '#697386';
 
   return (
-    <div className="bg-white dark:bg-[#1a1f2e] rounded-xl border border-[#e3e8ee] dark:border-[#2d3343] overflow-hidden">
+    <div className="bg-white rounded-xl border border-[#e3e8ee] overflow-hidden">
       {/* Question Header */}
-      <div className="p-4 border-b border-[#e3e8ee] dark:border-[#2d3343]">
+      <div className="p-4 border-b border-[#e3e8ee]">
         <div className="flex items-start gap-3">
           <div
             className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[12px] font-bold flex-shrink-0"
@@ -87,7 +87,7 @@ export function QuestionCard({
             {question.index + 1}
           </div>
           <div className="flex-1">
-            <p className="text-[14px] font-medium text-[#1a1f36] dark:text-white leading-relaxed">
+            <p className="text-[14px] font-medium text-[#1a1f36] leading-relaxed">
               &quot;{question.question}&quot;
             </p>
             <p className="text-[11px] text-[#697386] mt-1">
@@ -99,7 +99,7 @@ export function QuestionCard({
 
       {/* Answer Suggestions */}
       {question.template && (
-        <div className="p-4 border-b border-[#e3e8ee] dark:border-[#2d3343]">
+        <div className="p-4 border-b border-[#e3e8ee]">
           <button
             onClick={() => setShowSuggestions(!showSuggestions)}
             className="flex items-center gap-2 text-[13px] font-medium text-[#635bff] mb-3 w-full"
@@ -152,8 +152,8 @@ export function QuestionCard({
               </div>
 
               {/* Sample Answer */}
-              <div className="p-3 bg-[#f6f9fc] dark:bg-[#0a0d14] rounded-lg">
-                <p className="text-[11px] font-medium text-[#1a1f36] dark:text-white mb-2">
+              <div className="p-3 bg-[#f6f9fc] rounded-lg">
+                <p className="text-[11px] font-medium text-[#1a1f36] mb-2">
                   Ornek cevap sablonu:
                 </p>
                 <p className="text-[12px] text-[#697386] italic leading-relaxed">
@@ -166,11 +166,11 @@ export function QuestionCard({
       )}
 
       {/* Preparation Notes */}
-      <div className="p-4 border-b border-[#e3e8ee] dark:border-[#2d3343]">
+      <div className="p-4 border-b border-[#e3e8ee]">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <MessageSquare className="w-4 h-4 text-[#697386]" />
-            <p className="text-[13px] font-medium text-[#1a1f36] dark:text-white">
+            <p className="text-[13px] font-medium text-[#1a1f36]">
               Hazirlik Notlariniz
             </p>
           </div>
@@ -184,7 +184,7 @@ export function QuestionCard({
           value={note}
           onChange={(e) => handleNoteChange(e.target.value)}
           placeholder="Bu soru icin kendi hazirlik notlarinizi yazin..."
-          className="w-full h-24 px-3 py-2 text-[13px] bg-[#f6f9fc] dark:bg-[#0a0d14] border border-[#e3e8ee] dark:border-[#2d3343] rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-[#635bff]/20 text-[#1a1f36] dark:text-white placeholder:text-[#697386]"
+          className="w-full h-24 px-3 py-2 text-[13px] bg-[#f6f9fc] border border-[#e3e8ee] rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-[#635bff]/20 text-[#1a1f36] placeholder:text-[#697386]"
         />
         <div className="flex justify-end mt-2">
           <button
@@ -212,7 +212,7 @@ export function QuestionCard({
         <div className="p-4">
           <div className="flex items-center gap-2 mb-3">
             <FileText className="w-4 h-4 text-[#697386]" />
-            <p className="text-[13px] font-medium text-[#1a1f36] dark:text-white">
+            <p className="text-[13px] font-medium text-[#1a1f36]">
               Ilgili Belgeler
             </p>
           </div>
@@ -220,7 +220,7 @@ export function QuestionCard({
             {question.relatedDocuments.map((doc) => (
               <div
                 key={doc.id}
-                className="flex items-center justify-between p-2 bg-[#f6f9fc] dark:bg-[#0a0d14] rounded-lg"
+                className="flex items-center justify-between p-2 bg-[#f6f9fc] rounded-lg"
               >
                 <div className="flex items-center gap-2">
                   <span
@@ -235,7 +235,7 @@ export function QuestionCard({
                   <span
                     className={`text-[12px] ${
                       doc.status === 'pending'
-                        ? 'text-[#1a1f36] dark:text-white'
+                        ? 'text-[#1a1f36]'
                         : 'text-[#697386] line-through'
                     }`}
                   >

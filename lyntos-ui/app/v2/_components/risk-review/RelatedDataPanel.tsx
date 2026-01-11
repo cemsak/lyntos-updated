@@ -40,18 +40,18 @@ export function RelatedDataPanel({ pastPeriods, partners }: RelatedDataPanelProp
             {pastPeriods.map((p) => (
               <div
                 key={p.donem}
-                className="flex items-center justify-between py-2 border-b border-[#e3e8ee] dark:border-[#2d3343] last:border-0"
+                className="flex items-center justify-between py-2 border-b border-[#e3e8ee] last:border-0"
               >
                 <div className="flex items-center gap-2">
                   <span className={`w-1.5 h-1.5 rounded-full ${RISK_DOT[p.riskLevel]}`} />
-                  <span className="text-[14px] text-[#1a1f36] dark:text-white">{p.donem}</span>
+                  <span className="text-[14px] text-[#1a1f36]">{p.donem}</span>
                   {p.duzeltme && (
                     <span className="text-[10px] px-1.5 py-0.5 bg-[#635bff]/10 text-[#635bff] rounded font-medium">
                       duzeltme
                     </span>
                   )}
                 </div>
-                <span className="text-[14px] font-semibold text-[#1a1f36] dark:text-white">
+                <span className="text-[14px] font-semibold text-[#1a1f36]">
                   {p.skor}
                 </span>
               </div>
@@ -70,9 +70,9 @@ export function RelatedDataPanel({ pastPeriods, partners }: RelatedDataPanelProp
             {partners.map((p) => (
               <div
                 key={p.ad}
-                className="flex items-center justify-between py-2 border-b border-[#e3e8ee] dark:border-[#2d3343] last:border-0"
+                className="flex items-center justify-between py-2 border-b border-[#e3e8ee] last:border-0"
               >
-                <span className="text-[14px] text-[#1a1f36] dark:text-white">{p.ad}</span>
+                <span className="text-[14px] text-[#1a1f36]">{p.ad}</span>
                 <span className="text-[14px] text-[#697386]">%{p.oran}</span>
               </div>
             ))}

@@ -55,8 +55,8 @@ export function TTK376Widget() {
   const statusConfig = result ? TTK376_STATUS_CONFIG[result.status] : null;
 
   return (
-    <div className="bg-white dark:bg-[#1a1f2e] rounded-xl border border-[#e3e8ee] dark:border-[#2d3343] p-6">
-      <h2 className="text-[16px] font-semibold text-[#1a1f36] dark:text-white mb-4 flex items-center gap-2">
+    <div className="bg-white rounded-xl border border-[#e3e8ee] p-6">
+      <h2 className="text-[16px] font-semibold text-[#1a1f36] mb-4 flex items-center gap-2">
         <AlertTriangle className="w-5 h-5 text-[#635bff]" />
         TTK 376 Sermaye Kaybi Analizi
       </h2>
@@ -72,7 +72,7 @@ export function TTK376Widget() {
               value={capital}
               onChange={(e) => setCapital(e.target.value)}
               placeholder="1.000.000"
-              className="w-full px-3 py-2 text-[13px] border border-[#e3e8ee] dark:border-[#2d3343] rounded-lg bg-white dark:bg-[#0a0d14] text-[#1a1f36] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#635bff] focus:border-transparent"
+              className="w-full px-3 py-2 text-[13px] border border-[#e3e8ee] rounded-lg bg-white text-[#1a1f36] focus:outline-none focus:ring-2 focus:ring-[#635bff] focus:border-transparent"
               required
             />
           </div>
@@ -86,7 +86,7 @@ export function TTK376Widget() {
               value={legalReserves}
               onChange={(e) => setLegalReserves(e.target.value)}
               placeholder="200.000"
-              className="w-full px-3 py-2 text-[13px] border border-[#e3e8ee] dark:border-[#2d3343] rounded-lg bg-white dark:bg-[#0a0d14] text-[#1a1f36] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#635bff] focus:border-transparent"
+              className="w-full px-3 py-2 text-[13px] border border-[#e3e8ee] rounded-lg bg-white text-[#1a1f36] focus:outline-none focus:ring-2 focus:ring-[#635bff] focus:border-transparent"
             />
           </div>
 
@@ -99,7 +99,7 @@ export function TTK376Widget() {
               value={equity}
               onChange={(e) => setEquity(e.target.value)}
               placeholder="500.000"
-              className="w-full px-3 py-2 text-[13px] border border-[#e3e8ee] dark:border-[#2d3343] rounded-lg bg-white dark:bg-[#0a0d14] text-[#1a1f36] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#635bff] focus:border-transparent"
+              className="w-full px-3 py-2 text-[13px] border border-[#e3e8ee] rounded-lg bg-white text-[#1a1f36] focus:outline-none focus:ring-2 focus:ring-[#635bff] focus:border-transparent"
               required
             />
           </div>
@@ -119,7 +119,7 @@ export function TTK376Widget() {
             <button
               type="button"
               onClick={handleReset}
-              className="px-4 py-2 text-[13px] font-medium text-[#697386] bg-[#f6f9fc] dark:bg-[#0a0d14] rounded-lg hover:bg-[#e3e8ee] dark:hover:bg-[#1a1f2e] transition-colors"
+              className="px-4 py-2 text-[13px] font-medium text-[#697386] bg-[#f6f9fc] rounded-lg hover:bg-[#e3e8ee] transition-colors"
             >
               Temizle
             </button>
@@ -139,43 +139,43 @@ export function TTK376Widget() {
         >
           <div className="flex items-center gap-2 mb-3">
             {STATUS_ICONS[result.status]}
-            <h3 className="text-[15px] font-semibold text-[#1a1f36] dark:text-white">
+            <h3 className="text-[15px] font-semibold text-[#1a1f36]">
               {statusConfig.title}
             </h3>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-            <div className="bg-white/50 dark:bg-black/20 p-3 rounded-lg">
+            <div className="bg-white/50 p-3 rounded-lg">
               <div className="text-[11px] text-[#697386]">Kayip Orani</div>
-              <div className="text-[16px] font-bold text-[#1a1f36] dark:text-white">
+              <div className="text-[16px] font-bold text-[#1a1f36]">
                 %{result.loss_percentage}
               </div>
             </div>
-            <div className="bg-white/50 dark:bg-black/20 p-3 rounded-lg">
+            <div className="bg-white/50 p-3 rounded-lg">
               <div className="text-[11px] text-[#697386]">1/2 Esik</div>
-              <div className="text-[16px] font-bold text-[#1a1f36] dark:text-white">
+              <div className="text-[16px] font-bold text-[#1a1f36]">
                 {formatCurrency(result.half_threshold)}
               </div>
             </div>
-            <div className="bg-white/50 dark:bg-black/20 p-3 rounded-lg">
+            <div className="bg-white/50 p-3 rounded-lg">
               <div className="text-[11px] text-[#697386]">1/3 Esik</div>
-              <div className="text-[16px] font-bold text-[#1a1f36] dark:text-white">
+              <div className="text-[16px] font-bold text-[#1a1f36]">
                 {formatCurrency(result.twothirds_threshold)}
               </div>
             </div>
-            <div className="bg-white/50 dark:bg-black/20 p-3 rounded-lg">
+            <div className="bg-white/50 p-3 rounded-lg">
               <div className="text-[11px] text-[#697386]">Yasal Dayanak</div>
-              <div className="text-[16px] font-bold text-[#1a1f36] dark:text-white">
+              <div className="text-[16px] font-bold text-[#1a1f36]">
                 {result.legal_basis}
               </div>
             </div>
           </div>
 
-          <div className="bg-white/70 dark:bg-black/30 p-3 rounded-lg">
+          <div className="bg-white/70 p-3 rounded-lg">
             <div className="text-[12px] font-medium text-[#697386] mb-1">
               Oneri:
             </div>
-            <div className="text-[13px] text-[#1a1f36] dark:text-white whitespace-pre-line">
+            <div className="text-[13px] text-[#1a1f36] whitespace-pre-line">
               {result.recommendation}
             </div>
           </div>

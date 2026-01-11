@@ -11,11 +11,11 @@ interface BadgeProps {
 }
 
 const variantClasses: Record<BadgeVariant, string> = {
-  default: 'bg-lyntos-bg-elevated text-lyntos-text-secondary',
-  success: 'bg-lyntos-success-bg text-lyntos-success-light',
-  warning: 'bg-lyntos-warning-bg text-lyntos-warning-light',
-  error: 'bg-lyntos-risk-bg text-lyntos-risk-light',
-  info: 'bg-lyntos-info-bg text-lyntos-info-light',
+  default: 'bg-slate-100 text-slate-600',
+  success: 'bg-emerald-50 text-emerald-600-light',
+  warning: 'bg-amber-50 text-amber-600-light',
+  error: 'bg-red-50 text-red-600-light',
+  info: 'bg-blue-100 text-blue-700',
 };
 
 const sizeClasses: Record<BadgeSize, string> = {

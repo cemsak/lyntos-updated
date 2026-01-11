@@ -27,24 +27,24 @@ export function BelgeKarti({ belge, onUploadClick, compact = false }: BelgeKarti
       case 'VAR':
         return {
           icon: <Check className="w-3.5 h-3.5" />,
-          bgClass: 'bg-lyntos-success-bg/50',
-          borderClass: 'border-lyntos-success-muted',
-          iconClass: 'text-lyntos-success',
+          bgClass: 'bg-emerald-50/50',
+          borderClass: 'border-emerald-200',
+          iconClass: 'text-emerald-600',
         };
       case 'BEKLIYOR':
         return {
           icon: <Clock className="w-3.5 h-3.5" />,
-          bgClass: 'bg-lyntos-warning-bg/50',
-          borderClass: 'border-lyntos-warning-muted',
-          iconClass: 'text-lyntos-warning',
+          bgClass: 'bg-amber-50/50',
+          borderClass: 'border-amber-200',
+          iconClass: 'text-amber-600',
         };
       case 'EKSIK':
       default:
         return {
           icon: <AlertTriangle className="w-3.5 h-3.5" />,
-          bgClass: 'bg-lyntos-risk-bg/50',
-          borderClass: 'border-lyntos-risk-muted',
-          iconClass: 'text-lyntos-risk',
+          bgClass: 'bg-red-50/50',
+          borderClass: 'border-red-200',
+          iconClass: 'text-red-600',
         };
     }
   };
@@ -63,11 +63,11 @@ export function BelgeKarti({ belge, onUploadClick, compact = false }: BelgeKarti
         onClick={handleClick}
       >
         <span className={status.iconClass}>{status.icon}</span>
-        <span className="flex-1 text-lyntos-text-primary truncate text-xs">
+        <span className="flex-1 text-slate-900 truncate text-xs">
           {tanim.kisaAd}
         </span>
         {belge.dosyaAdi && (
-          <span className="text-xs text-lyntos-text-muted truncate max-w-[100px]">
+          <span className="text-xs text-slate-400 truncate max-w-[100px]">
             {belge.dosyaAdi}
           </span>
         )}
@@ -86,25 +86,25 @@ export function BelgeKarti({ belge, onUploadClick, compact = false }: BelgeKarti
       onClick={handleClick}
     >
       {/* Icon */}
-      <div className={`p-1.5 rounded ${belge.durum === 'VAR' ? 'bg-lyntos-success-bg' : 'bg-lyntos-risk-bg'}`}>
+      <div className={`p-1.5 rounded ${belge.durum === 'VAR' ? 'bg-emerald-50' : 'bg-red-50'}`}>
         <span className={status.iconClass}>{status.icon}</span>
       </div>
 
       {/* Info */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="font-medium text-lyntos-text-primary text-sm">
+          <span className="font-medium text-slate-900 text-sm">
             {tanim.ad}
           </span>
-          {tanim.zorunlu && <span className="text-lyntos-risk text-xs">*</span>}
+          {tanim.zorunlu && <span className="text-red-600 text-xs">*</span>}
         </div>
         {belge.yuklemeTarihi && (
-          <p className="text-xs text-lyntos-text-muted truncate">
+          <p className="text-xs text-slate-400 truncate">
             {belge.yuklemeTarihi} - {belge.dosyaAdi}
           </p>
         )}
         {belge.durum === 'EKSIK' && (
-          <p className="text-xs text-lyntos-risk">Tıkla ve yükle</p>
+          <p className="text-xs text-red-600">Tıkla ve yükle</p>
         )}
       </div>
 

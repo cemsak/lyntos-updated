@@ -112,7 +112,7 @@ export function KpiCard({ title, envelope, icon, onClick }: KpiCardProps) {
   return (
     <>
       <div
-        className={`${styles.bg} rounded-xl p-4 border-2 ${styles.border} transition-all duration-200 hover:-translate-y-1 hover:shadow-lg ${onClick ? 'cursor-pointer' : ''}`}
+        className={`${styles.bg} rounded-xl p-4 border-2 ${styles.border} transition-all duration-200 hover:-translate-y-1 hover:shadow-lg h-[120px] overflow-hidden ${onClick ? 'cursor-pointer' : ''}`}
         onClick={onClick}
         role={onClick ? 'button' : undefined}
         tabIndex={onClick ? 0 : undefined}

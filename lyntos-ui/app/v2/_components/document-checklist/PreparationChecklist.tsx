@@ -85,7 +85,7 @@ export function PreparationChecklist({
 
   if (isLoading) {
     return (
-      <div className="bg-white dark:bg-[#1a1f2e] rounded-xl border border-[#e3e8ee] dark:border-[#2d3343] p-8">
+      <div className="bg-white rounded-xl border border-[#e3e8ee] p-8">
         <div className="flex flex-col items-center justify-center gap-4">
           <div className="w-12 h-12 border-4 border-[#635bff] border-t-transparent rounded-full animate-spin" />
           <p className="text-[14px] text-[#697386]">
@@ -98,7 +98,7 @@ export function PreparationChecklist({
 
   if (error) {
     return (
-      <div className="bg-white dark:bg-[#1a1f2e] rounded-xl border border-[#cd3d64] p-6">
+      <div className="bg-white rounded-xl border border-[#cd3d64] p-6">
         <div className="flex items-center gap-3 text-[#cd3d64]">
           <AlertTriangle className="w-5 h-5" />
           <p className="text-[14px]">{error}</p>
@@ -115,9 +115,9 @@ export function PreparationChecklist({
 
   if (!checklist || checklist.checklist.length === 0) {
     return (
-      <div className="bg-white dark:bg-[#1a1f2e] rounded-xl border border-[#e3e8ee] dark:border-[#2d3343] p-8 text-center">
+      <div className="bg-white rounded-xl border border-[#e3e8ee] p-8 text-center">
         <FileCheck className="w-12 h-12 text-[#0caf60] mx-auto mb-4" />
-        <p className="text-[14px] font-medium text-[#1a1f36] dark:text-white">
+        <p className="text-[14px] font-medium text-[#1a1f36]">
           Hazirlanacak belge yok
         </p>
         <p className="text-[13px] text-[#697386] mt-1">
@@ -130,14 +130,14 @@ export function PreparationChecklist({
   const { stats } = checklist;
 
   return (
-    <div className="bg-white dark:bg-[#1a1f2e] rounded-xl border border-[#e3e8ee] dark:border-[#2d3343] overflow-hidden">
+    <div className="bg-white rounded-xl border border-[#e3e8ee] overflow-hidden">
       {/* Header */}
-      <div className="p-4 border-b border-[#e3e8ee] dark:border-[#2d3343]">
+      <div className="p-4 border-b border-[#e3e8ee]">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <FileCheck className="w-6 h-6 text-[#635bff]" />
             <div>
-              <h2 className="text-[16px] font-semibold text-[#1a1f36] dark:text-white">
+              <h2 className="text-[16px] font-semibold text-[#1a1f36]">
                 Hazirlik Kontrol Listesi
               </h2>
               <p className="text-[12px] text-[#697386]">
@@ -147,7 +147,7 @@ export function PreparationChecklist({
           </div>
           <button
             onClick={loadChecklist}
-            className="p-2 text-[#697386] hover:text-[#1a1f36] dark:hover:text-white hover:bg-[#f6f9fc] dark:hover:bg-[#0a0d14] rounded-lg transition-colors"
+            className="p-2 text-[#697386] hover:text-[#1a1f36] hover:bg-[#f6f9fc] rounded-lg transition-colors"
           >
             <RefreshCw className="w-4 h-4" />
           </button>
@@ -155,7 +155,7 @@ export function PreparationChecklist({
       </div>
 
       {/* Stats */}
-      <div className="p-4 border-b border-[#e3e8ee] dark:border-[#2d3343]">
+      <div className="p-4 border-b border-[#e3e8ee]">
         <div className="grid grid-cols-4 gap-4">
           <div className="text-center p-3 bg-[#0caf60]/10 rounded-lg">
             <p className="text-[24px] font-bold text-[#0caf60]">
@@ -184,7 +184,7 @@ export function PreparationChecklist({
         </div>
 
         {/* Progress Bar */}
-        <div className="mt-4 h-2 bg-[#e3e8ee] dark:bg-[#2d3343] rounded-full overflow-hidden">
+        <div className="mt-4 h-2 bg-[#e3e8ee] rounded-full overflow-hidden">
           <div
             className="h-full bg-[#0caf60] rounded-full transition-all duration-500"
             style={{ width: `${stats.progress_percent}%` }}
@@ -193,7 +193,7 @@ export function PreparationChecklist({
       </div>
 
       {/* Checklist by Rule */}
-      <div className="divide-y divide-[#e3e8ee] dark:divide-[#2d3343]">
+      <div className="divide-y divide-[#e3e8ee]">
         {checklist.checklist.map((alarm) => {
           const isExpanded = expandedRules.has(alarm.rule_id);
           const readyCount = alarm.documents.filter(
@@ -206,14 +206,14 @@ export function PreparationChecklist({
               {/* Rule Header */}
               <button
                 onClick={() => toggleRule(alarm.rule_id)}
-                className="w-full p-4 flex items-center justify-between text-left hover:bg-[#f6f9fc] dark:hover:bg-[#0a0d14] transition-colors"
+                className="w-full p-4 flex items-center justify-between text-left hover:bg-[#f6f9fc] transition-colors"
               >
                 <div className="flex items-center gap-3">
                   <span className="text-[14px]">
                     {readyCount === totalCount ? '✅' : '🔴'}
                   </span>
                   <div>
-                    <p className="text-[14px] font-medium text-[#1a1f36] dark:text-white">
+                    <p className="text-[14px] font-medium text-[#1a1f36]">
                       {alarm.rule_id}: {alarm.rule_name}
                     </p>
                     <p className="text-[11px] text-[#697386]">
@@ -267,13 +267,13 @@ export function PreparationChecklist({
       </div>
 
       {/* Actions */}
-      <div className="p-4 border-t border-[#e3e8ee] dark:border-[#2d3343]">
+      <div className="p-4 border-t border-[#e3e8ee]">
         <div className="flex items-center justify-between">
           <p className="text-[11px] text-[#697386]">
             {stats.ready} / {stats.total} belge hazir
           </p>
           <div className="flex items-center gap-2">
-            <button className="flex items-center gap-1.5 px-4 py-2 text-[13px] font-medium text-[#697386] hover:text-[#1a1f36] dark:hover:text-white border border-[#e3e8ee] dark:border-[#2d3343] rounded-lg transition-colors">
+            <button className="flex items-center gap-1.5 px-4 py-2 text-[13px] font-medium text-[#697386] hover:text-[#1a1f36] border border-[#e3e8ee] rounded-lg transition-colors">
               <Mail className="w-4 h-4" />
               Eksik Liste Gonder
             </button>

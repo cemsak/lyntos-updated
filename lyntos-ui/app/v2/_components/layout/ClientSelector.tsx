@@ -50,16 +50,16 @@ export function ClientSelector() {
           flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors
           ${isOpen
             ? 'border-[#635bff] bg-[#635bff]/5'
-            : 'border-[#e3e8ee] dark:border-[#2d3343] hover:border-[#635bff]'
+            : 'border-[#e3e8ee] hover:border-[#635bff]'
           }
-          bg-white dark:bg-[#1a1f2e]
+          bg-white
           min-w-[200px] max-w-[280px]
         `}
       >
         {selectedClient ? (
           <>
             <span className={`w-2 h-2 rounded-full flex-shrink-0 ${RISK_COLORS[selectedClient.riskLevel].dot}`} />
-            <span className="flex-1 text-left text-[14px] text-[#1a1f36] dark:text-white truncate">
+            <span className="flex-1 text-left text-[14px] text-[#1a1f36] truncate">
               {selectedClient.shortName}
             </span>
           </>
@@ -76,9 +76,9 @@ export function ClientSelector() {
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute top-full left-0 mt-1 w-[320px] bg-white dark:bg-[#1a1f2e] border border-[#e3e8ee] dark:border-[#2d3343] rounded-lg shadow-lg z-50">
+        <div className="absolute top-full left-0 mt-1 w-[320px] bg-white border border-[#e3e8ee] rounded-lg shadow-lg z-50">
           {/* Search */}
-          <div className="p-2 border-b border-[#e3e8ee] dark:border-[#2d3343]">
+          <div className="p-2 border-b border-[#e3e8ee]">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#697386]" />
               <input
@@ -86,7 +86,7 @@ export function ClientSelector() {
                 placeholder="İsim veya VKN ile ara..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 text-[14px] bg-[#f6f9fc] dark:bg-[#0a0d14] border-0 rounded-md text-[#1a1f36] dark:text-white placeholder-[#697386] focus:outline-none focus:ring-2 focus:ring-[#635bff]"
+                className="w-full pl-9 pr-3 py-2 text-[14px] bg-[#f6f9fc] border-0 rounded-md text-[#1a1f36] placeholder-[#697386] focus:outline-none focus:ring-2 focus:ring-[#635bff]"
                 autoFocus
               />
             </div>
@@ -104,7 +104,7 @@ export function ClientSelector() {
                     setSearch('');
                   }}
                   className={`
-                    w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-[#f6f9fc] dark:hover:bg-[#0a0d14] transition-colors
+                    w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-[#f6f9fc] transition-colors
                     ${selectedClient?.id === client.id ? 'bg-[#635bff]/5' : ''}
                   `}
                 >
@@ -115,7 +115,7 @@ export function ClientSelector() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1">
                       {client.isFavorite && <Star className="w-3 h-3 text-[#f5a623] fill-[#f5a623]" />}
-                      <span className="text-[14px] font-medium text-[#1a1f36] dark:text-white truncate">
+                      <span className="text-[14px] font-medium text-[#1a1f36] truncate">
                         {client.shortName}
                       </span>
                     </div>

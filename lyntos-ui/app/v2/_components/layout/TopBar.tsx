@@ -32,7 +32,7 @@ function useBreadcrumbs(): Breadcrumb[] {
   const labels: Record<string, string> = {
     'v2': 'Ana Sayfa',
     'upload': 'Veri Yükleme',
-    'risk': 'Risk Kuyruğu',
+    'risk': 'Bekleyen Islemler',
     'clients': 'Mükellefler',
     'declarations': 'Beyannameler',
     'reports': 'Raporlar',
@@ -53,7 +53,7 @@ export function TopBar({ sidebarCollapsed, onMobileMenuToggle }: TopBarProps) {
 
   return (
     <header
-      className="fixed top-0 right-0 h-[64px] z-30 bg-white dark:bg-[#1a1f2e] border-b border-[#e3e8ee] dark:border-[#2d3343] transition-all duration-200"
+      className="fixed top-0 right-0 h-[64px] z-30 bg-white border-b border-[#e3e8ee] transition-all duration-200"
       style={{
         left: sidebarCollapsed ? '72px' : '240px',
       }}
@@ -62,7 +62,7 @@ export function TopBar({ sidebarCollapsed, onMobileMenuToggle }: TopBarProps) {
         {/* Mobile menu button */}
         <button
           onClick={onMobileMenuToggle}
-          className="lg:hidden p-2 text-[#697386] hover:bg-[#f6f9fc] dark:hover:bg-[#0a0d14] rounded-md"
+          className="lg:hidden p-2 text-[#697386] hover:bg-[#f6f9fc] rounded-md"
         >
           <Menu className="w-5 h-5" />
         </button>
@@ -82,13 +82,13 @@ export function TopBar({ sidebarCollapsed, onMobileMenuToggle }: TopBarProps) {
             <React.Fragment key={crumb.href}>
               {idx > 0 && <ChevronRight className="w-3 h-3 text-[#697386]" />}
               {crumb.isLast ? (
-                <span className="text-[#1a1f36] dark:text-white font-medium">
+                <span className="text-[#1a1f36] font-medium">
                   {crumb.label}
                 </span>
               ) : (
                 <Link
                   href={crumb.href}
-                  className="text-[#697386] hover:text-[#1a1f36] dark:hover:text-white transition-colors"
+                  className="text-[#697386] hover:text-[#1a1f36] transition-colors"
                 >
                   {crumb.label}
                 </Link>
@@ -100,18 +100,18 @@ export function TopBar({ sidebarCollapsed, onMobileMenuToggle }: TopBarProps) {
         {/* Right section */}
         <div className="flex items-center gap-2">
           {/* Notifications */}
-          <button className="relative p-2 text-[#697386] hover:bg-[#f6f9fc] dark:hover:bg-[#0a0d14] rounded-md">
+          <button className="relative p-2 text-[#697386] hover:bg-[#f6f9fc] rounded-md">
             <Bell className="w-5 h-5" />
             <span className="absolute top-1 right-1 w-2 h-2 bg-[#cd3d64] rounded-full" />
           </button>
 
           {/* User Avatar */}
           {user && (
-            <button className="flex items-center gap-2 px-2 py-1.5 hover:bg-[#f6f9fc] dark:hover:bg-[#0a0d14] rounded-md">
+            <button className="flex items-center gap-2 px-2 py-1.5 hover:bg-[#f6f9fc] rounded-md">
               <div className="w-8 h-8 rounded-full bg-[#635bff] flex items-center justify-center text-white text-[12px] font-semibold">
                 {user.initials}
               </div>
-              <span className="hidden md:block text-[14px] font-medium text-[#1a1f36] dark:text-white">
+              <span className="hidden md:block text-[14px] font-medium text-[#1a1f36]">
                 {user.name.split(' ')[0]}
               </span>
             </button>
@@ -127,24 +127,24 @@ export function MobileTopBar({ onMobileMenuToggle }: { onMobileMenuToggle: () =>
   const { user } = useLayoutContext();
 
   return (
-    <header className="lg:hidden fixed top-0 left-0 right-0 h-[64px] z-30 bg-white dark:bg-[#1a1f2e] border-b border-[#e3e8ee] dark:border-[#2d3343]">
+    <header className="lg:hidden fixed top-0 left-0 right-0 h-[64px] z-30 bg-white border-b border-[#e3e8ee]">
       <div className="h-full px-4 flex items-center gap-4">
         {/* Mobile menu button */}
         <button
           onClick={onMobileMenuToggle}
-          className="p-2 text-[#697386] hover:bg-[#f6f9fc] dark:hover:bg-[#0a0d14] rounded-md"
+          className="p-2 text-[#697386] hover:bg-[#f6f9fc] rounded-md"
         >
           <Menu className="w-5 h-5" />
         </button>
 
         {/* Logo */}
-        <span className="text-[18px] font-bold text-[#1a1f36] dark:text-white">LYNTOS</span>
+        <span className="text-[18px] font-bold text-[#1a1f36]">LYNTOS</span>
 
         {/* Spacer */}
         <div className="flex-1" />
 
         {/* Notifications */}
-        <button className="relative p-2 text-[#697386] hover:bg-[#f6f9fc] dark:hover:bg-[#0a0d14] rounded-md">
+        <button className="relative p-2 text-[#697386] hover:bg-[#f6f9fc] rounded-md">
           <Bell className="w-5 h-5" />
           <span className="absolute top-1 right-1 w-2 h-2 bg-[#cd3d64] rounded-full" />
         </button>

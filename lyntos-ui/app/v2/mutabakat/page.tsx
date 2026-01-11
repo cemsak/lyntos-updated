@@ -22,7 +22,7 @@ export default function MutabakatPage() {
           </button>
           <div>
             <h1 className="text-2xl font-bold text-slate-800">Mutabakat Kontrolu</h1>
-            <p className="text-slate-600">Cross-check ve mutabakat islemleri</p>
+            <p className="text-slate-600">Kaynak ve beyanname mutabakat islemleri</p>
           </div>
         </div>
 
@@ -34,7 +34,7 @@ export default function MutabakatPage() {
               Mutabakat Modulu
             </h2>
             <p className="text-slate-500 mb-6 max-w-md">
-              Cross-check ve mutabakat modulu Sprint 7'de aktif olacaktir.
+              Mutabakat modulu yakin zamanda aktif olacaktir.
             </p>
             <button
               onClick={() => router.back()}
