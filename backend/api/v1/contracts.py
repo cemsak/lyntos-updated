@@ -3042,7 +3042,7 @@ async def get_actionable_tasks(
             # Email template varsa button ekle
             if task.get("email_template"):
                 enriched["buttons"].insert(0, {
-                    "label": "Email At",
+                    "label": "Belge Talep Et",
                     "action": "send_email",
                     "style": "primary"
                 })
