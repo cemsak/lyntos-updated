@@ -21,22 +21,22 @@ const VDK_SMMM_INFO = {
   title: 'VDK Risk Analizi Nedir?',
   description: 'Vergi Denetim Kurulu inceleme kriterleri analizi',
   context: [
-    'Bu analiz, VDK\'nin vergi incelemelerinde kullandigi KURGAN ve RAM kriterlerine gore mukellefin risk profilini degerlendirir.',
-    'KURGAN: Kurumsal Risk Analiz Modeli - Makro duzeyde firma analizi. Sahte belge ile mucadele kapsaminda degerlendirilir.',
-    'RAM: Risk Analiz Modeli - Detayli islem bazli inceleme kriterleri.',
-    'Yuksek risk skoru, vergi incelemesine alinma olasiliginin yuksek oldugunu gosterir.',
+    'Bu analiz, VDK\'nin vergi incelemelerinde kullandığı KURGAN ve RAM kriterlerine göre mükellefin risk profilini değerlendirir.',
+    'KURGAN: Kurumsal Risk Analiz Modeli - Makro düzeyde firma analizi. Sahte belge ile mücadele kapsamında değerlendirilir.',
+    'RAM: Risk Analiz Modeli - Detaylı işlem bazlı inceleme kriterleri.',
+    'Yüksek risk skoru, vergi incelemesine alınma olasılığının yüksek olduğunu gösterir.',
   ],
   actions: [
     'Kritik seviyedeki kontrolleri hemen inceleyin',
-    '5 Why analizi ile kok nedeni bulun',
-    'Duzeltici islem plani olusturun',
-    'Belgelendirmeyi tamamlayin',
+    '5 Why analizi ile kök nedeni bulun',
+    'Düzeltici işlem planı oluşturun',
+    'Belgelendirmeyi tamamlayın',
   ],
   riskLevels: {
-    LOW: 'Dusuk risk - Rutin kontrol yeterli',
-    MEDIUM: 'Orta risk - Yakin takip oneriliyor',
-    HIGH: 'Yuksek risk - Acil aksiyon gerekli',
-    CRITICAL: 'Kritik risk - Oncelikli mudahale sart',
+    LOW: 'Düşük risk - Rutin kontrol yeterli',
+    MEDIUM: 'Orta risk - Yakın takip öneriliyor',
+    HIGH: 'Yüksek risk - Acil aksiyon gerekli',
+    CRITICAL: 'Kritik risk - Öncelikli müdahale şart',
   },
 };
 

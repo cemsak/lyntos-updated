@@ -106,25 +106,25 @@ interface MizanResult {
 
 const MIZAN_SMMM_INFO = {
   title: 'Mizan Analizi Nedir?',
-  description: 'YMM seviyesinde mizan kontrolu ve oran analizleri',
+  description: 'YMM seviyesinde mizan kontrolü ve oran analizleri',
   context: [
-    'Mizan, isletmenin tum hesaplarinin donem sonu bakiyelerini gosterir.',
-    'Denge Kontrolu: Toplam Borc = Toplam Alacak (temel muhasebe kurali)',
-    'Kritik Hesap Bakiyeleri: Anormal bakiyeler VDK incelemesinde sorun olusturabilir.',
-    'Oran Analizleri: Likidite, finansal yapiyi ve operasyonel verimliligi olcer.',
+    'Mizan, işletmenin tüm hesaplarının dönem sonu bakiyelerini gösterir.',
+    'Denge Kontrolü: Toplam Borç = Toplam Alacak (temel muhasebe kuralı)',
+    'Kritik Hesap Bakiyeleri: Anormal bakiyeler VDK incelemesinde sorun oluşturabilir.',
+    'Oran Analizleri: Likidite, finansal yapıyı ve operasyonel verimliliği ölçer.',
   ],
   kontrolNoktlari: [
-    '100 Kasa: Negatif olamaz, aktifin %5\'ini gecmemeli (VDK K-09)',
-    '102 Bankalar: Negatif bakiye = Kredili mevduat hesabi',
-    '120 Alicilar: 90 gunun uzeri = Supheli alacak riski',
-    '320 Saticilar: Borc bakiye = Fazla odeme veya avans',
-    '131 Ortaklardan Alacaklar: Ortulu kazanc riski kontrolu',
+    '100 Kasa: Negatif olamaz, aktifin %5\'ini geçmemeli (VDK K-09)',
+    '102 Bankalar: Negatif bakiye = Kredili mevduat hesabı',
+    '120 Alıcılar: 90 günün üzeri = Şüpheli alacak riski',
+    '320 Satıcılar: Borç bakiye = Fazla ödeme veya avans',
+    '131 Ortaklardan Alacaklar: Örtülü kazanç riski kontrolü',
   ],
   actions: [
-    'Kritik hesap uyarilarini oncelikli inceleyin',
-    'Oran analizlerinde kirmizi olanlara odaklanin',
-    'VDK riski olan hesaplari duzeltme plani olusturun',
-    'Donem kapanisi oncesi tum anomalileri giderin',
+    'Kritik hesap uyarılarını öncelikli inceleyin',
+    'Oran analizlerinde kırmızı olanlara odaklanın',
+    'VDK riski olan hesapları düzeltme planı oluşturun',
+    'Dönem kapanışı öncesi tüm anomalileri giderin',
   ],
 };
 
@@ -616,7 +616,7 @@ export function MizanOmurgaPanel() {
                   {showKritik && (
                     <div className="mt-2 space-y-2 max-h-48 overflow-y-auto">
                       {kritikAnalizler.length === 0 ? (
-                        <p className="text-sm text-green-600 p-2 bg-green-50 rounded">Kritik hesap sorunu bulunamadi.</p>
+                        <p className="text-sm text-green-600 p-2 bg-green-50 rounded">Kritik hesap sorunu bulunamadı.</p>
                       ) : (
                         kritikAnalizler.map((analiz, i) => (
                           <div key={i} className={`p-3 rounded-lg border ${

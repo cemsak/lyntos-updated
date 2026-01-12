@@ -106,49 +106,49 @@ const CATEGORY_INFO: Record<'risk' | 'avantaj' | 'zorunlu', CategoryInfo> = {
   risk: {
     title: 'Risk Kontrolleri',
     icon: TrendingDown,
-    description: 'VDK incelemelerinde sikca tespit edilen riskli durumlar',
+    description: 'VDK incelemelerinde sıkça tespit edilen riskli durumlar',
     details: [
-      'Bu kontroller, vergi incelemelerinde elestiri konusu olabilecek alanlari gosterir.',
-      'Her kontrol, potansiyel vergi riski ve ceza ihtimalini azaltmak icin onemlidir.',
-      'Yuksek riskli kontroller oncelikli olarak ele alinmalidir.',
+      'Bu kontroller, vergi incelemelerinde eleştiri konusu olabilecek alanları gösterir.',
+      'Her kontrol, potansiyel vergi riski ve ceza ihtimalini azaltmak için önemlidir.',
+      'Yüksek riskli kontroller öncelikli olarak ele alınmalıdır.',
     ],
-    action: 'Risk kontrollerini gozden gecirin ve gerekli duzeltmeleri yapin.',
+    action: 'Risk kontrollerini gözden geçirin ve gerekli düzeltmeleri yapın.',
     examples: [
-      'Ortulu Sermaye Kontrolu - Ortaklara borc/sermaye orani',
-      'Transfer Fiyatlandirmasi - Iliskili taraf islemleri',
+      'Örtülü Sermaye Kontrolü - Ortaklara borç/sermaye oranı',
+      'Transfer Fiyatlandırması - İlişkili taraf işlemleri',
       'KKEG Analizi - Kanunen kabul edilmeyen giderler',
     ],
   },
   avantaj: {
-    title: 'Vergi Avantajlari',
+    title: 'Vergi Avantajları',
     icon: Sparkles,
-    description: 'Yasal vergi avantajlari ve tasarruf firsatlari',
+    description: 'Yasal vergi avantajları ve tasarruf fırsatları',
     details: [
-      'Bu kontroller, mukelleflerin yararlanabilecegi yasal vergi avantajlarini gosterir.',
-      'Her avantaj, vergi yukunu azaltmak icin kullanilabilecek bir firsattir.',
-      'Bazi avantajlar belirli kosullara baglidir, sartlari kontrol edin.',
+      'Bu kontroller, mükelleflerin yararlanabileceği yasal vergi avantajlarını gösterir.',
+      'Her avantaj, vergi yükünü azaltmak için kullanılabilecek bir fırsattır.',
+      'Bazı avantajlar belirli koşullara bağlıdır, şartları kontrol edin.',
     ],
-    action: 'Vergi avantajlarini degerlendirin ve uygun olanlari uygulayin.',
+    action: 'Vergi avantajlarını değerlendirin ve uygun olanları uygulayın.',
     examples: [
-      'Ar-Ge Indirimi - %100 ek indirim hakki',
-      'Ihracat Indirimi - %5 kurumlar vergisi indirimi',
-      'Istihdam Tesvikleri - SGK prim destekleri',
+      'Ar-Ge İndirimi - %100 ek indirim hakkı',
+      'İhracat İndirimi - %5 kurumlar vergisi indirimi',
+      'İstihdam Teşvikleri - SGK prim destekleri',
     ],
   },
   zorunlu: {
     title: 'Zorunlu Kontroller',
     icon: FileText,
-    description: 'Yasal olarak yapilmasi zorunlu kontroller ve beyanlar',
+    description: 'Yasal olarak yapılması zorunlu kontroller ve beyanlar',
     details: [
-      'Bu kontroller, vergi mevzuati geregi yapilmasi zorunlu olan islemlerdir.',
-      'Eksik veya hatali beyan durumunda cezai muyyeide uygulanabilir.',
-      'Tum zorunlu kontrollerin eksiksiz tamamlanmasi gerekir.',
+      'Bu kontroller, vergi mevzuatı gereği yapılması zorunlu olan işlemlerdir.',
+      'Eksik veya hatalı beyan durumunda cezai müeyyide uygulanabilir.',
+      'Tüm zorunlu kontrollerin eksiksiz tamamlanması gerekir.',
     ],
-    action: 'Tum zorunlu kontrolleri tamamlayin ve belgendirin.',
+    action: 'Tüm zorunlu kontrolleri tamamlayın ve belgelendirin.',
     examples: [
-      'Kurumlar Vergisi Beyannamesi - Yillik beyan',
-      'Gecici Vergi Beyannamesi - Uc aylik beyan',
-      'E-Defter Berat - Aylik yukleme zorunlulugu',
+      'Kurumlar Vergisi Beyannamesi - Yıllık beyan',
+      'Geçici Vergi Beyannamesi - Üç aylık beyan',
+      'E-Defter Berat - Aylık yükleme zorunluluğu',
     ],
   },
 };
@@ -312,7 +312,7 @@ function MatrahHesaplama({ veriler, yil }: MatrahHesaplamaProps) {
 
   const hesaplananKV = (normalOranliMatrah * 0.25) + (ihracatKazanci * 0.20);
 
-  // AKV Kontrolu (2025'ten itibaren)
+  // AKV Kontrolü (2025'ten itibaren)
   const akvMatrah = veriler.ticariBilancoKari + veriler.kkegToplam;
   const asgariKV = akvMatrah * 0.10;
   const akvUyari = yil >= 2025 && hesaplananKV < asgariKV;
@@ -416,7 +416,7 @@ function MatrahHesaplama({ veriler, yil }: MatrahHesaplamaProps) {
                   <CheckCircle2 className="w-4 h-4 text-green-600" />
                 )}
                 <span className={`text-sm font-medium ${akvUyari ? 'text-amber-700' : 'text-green-700'}`}>
-                  Asgari KV Kontrolu
+                  Asgari KV Kontrolü
                 </span>
               </div>
               <span className={`text-sm ${akvUyari ? 'text-amber-700' : 'text-green-700'}`}>
@@ -425,7 +425,7 @@ function MatrahHesaplama({ veriler, yil }: MatrahHesaplamaProps) {
             </div>
             {akvUyari && (
               <p className="text-xs text-amber-600 mt-2">
-                Hesaplanan KV asgari KV'nin altinda! Asgari KV uygulanacak.
+                Hesaplanan KV asgari KV'nin altında! Asgari KV uygulanacak.
               </p>
             )}
           </div>
@@ -810,7 +810,7 @@ export function KurumlarVergisiPanel({
                               }}
                               className="px-3 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
                             >
-                              Kontrolu Baslat
+                              Kontrolü Başlat
                             </button>
                           </div>
                         </div>
