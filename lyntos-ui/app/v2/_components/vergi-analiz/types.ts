@@ -125,7 +125,7 @@ export const GECICI_VERGI_KONTROLLER: GeciciVergiKontrol[] = [
     sira: 3,
     baslik: 'Stok & Maliyet (SMM)',
     aciklama: 'Satilan malin maliyeti ve stok degerlemesi',
-    detayliAciklama: 'Donem sonu stok sayimi yapilmali, SMM dogru hesaplanmalidir.',
+    detayliAciklama: 'Dönem sonu stok sayımı yapılmalı, SMM doğru hesaplanmalıdır.',
     kontrolNoktasi: [
       'Donem sonu stok sayimi yapildi mi?',
       'Stok degerleme yontemi tutarli mi?',
@@ -361,7 +361,7 @@ export const GECICI_VERGI_KONTROLLER: GeciciVergiKontrol[] = [
     sira: 12,
     baslik: 'Adat & Transfer Fiyatlandirmasi',
     aciklama: 'Iliskili taraf islemleri ve emsallere uygunluk',
-    detayliAciklama: 'Ortaklarla, iliskili sirketlerle yapilan islemler emsallere uygun fiyatlarla yapilmalidir.',
+    detayliAciklama: 'Ortaklarla, ilişkili şirketlerle yapılan işlemler emsallere uygun fiyatlarla yapılmalıdır.',
     kontrolNoktasi: [
       '131 Ortaklardan Alacaklar',
       '231 Ortaklara Borclar',

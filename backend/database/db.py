@@ -823,14 +823,14 @@ def seed_pilot_data():
         # Pilot SMMM user (password hash for 'lyntos2025')
         cursor.execute("""
             INSERT OR IGNORE INTO users (id, name, email, password_hash, role)
-            VALUES ('HKOZKAN', 'Hakki Ozkan', 'hakki@ozkan.com',
+            VALUES ('HKOZKAN', 'Hakkı Özkan', 'hakki@ozkan.com',
                     '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5jtK9xvq0Ej.u', 'smmm')
         """)
 
         # Pilot client
         cursor.execute("""
             INSERT OR IGNORE INTO clients (id, smmm_id, name, tax_id, sector)
-            VALUES ('OZKAN_KIRTASIYE', 'HKOZKAN', 'Ozkan Kirtasiye Ltd. Sti.', '1234567890', 'Perakende')
+            VALUES ('OZKAN_KIRTASIYE', 'HKOZKAN', 'Özkan Kırtasiye Ltd. Şti.', '1234567890', 'Perakende')
         """)
 
         # Pilot periods

@@ -90,24 +90,24 @@ export interface AksiyonStats {
   buHaftaHedef: number;
 }
 
-// 8D Badge renkleri - Dark mode aware
+// 8D Badge renkleri - LIGHT MODE ONLY
 export const PROBLEM_DURUMU_CONFIG: Record<ProblemDurumu, {
   label: string;
   color: string;
   bgColor: string;
 }> = {
-  d0_farkedildi: { label: 'D0', color: 'text-gray-600', bgColor: 'bg-gray-100' },
-  d1_ekip: { label: 'D1', color: 'text-red-600', bgColor: 'bg-red-100' },
-  d2_tanimlandi: { label: 'D2', color: 'text-orange-600', bgColor: 'bg-orange-100' },
-  d3_gecici: { label: 'D3', color: 'text-amber-600', bgColor: 'bg-amber-100' },
-  d4_kok_neden: { label: 'D4', color: 'text-yellow-600', bgColor: 'bg-yellow-100' },
-  d5_cozum_secildi: { label: 'D5', color: 'text-lime-600', bgColor: 'bg-lime-100' },
-  d6_uygulandi: { label: 'D6', color: 'text-green-600', bgColor: 'bg-green-100' },
-  d7_onleme: { label: 'D7', color: 'text-teal-600', bgColor: 'bg-teal-100' },
-  d8_kapandi: { label: 'D8', color: 'text-emerald-600', bgColor: 'bg-emerald-100' },
+  d0_farkedildi: { label: 'D0', color: 'text-slate-600', bgColor: 'bg-slate-100' },
+  d1_ekip: { label: 'D1', color: 'text-red-700', bgColor: 'bg-red-50' },
+  d2_tanimlandi: { label: 'D2', color: 'text-orange-700', bgColor: 'bg-orange-50' },
+  d3_gecici: { label: 'D3', color: 'text-amber-700', bgColor: 'bg-amber-50' },
+  d4_kok_neden: { label: 'D4', color: 'text-yellow-700', bgColor: 'bg-yellow-50' },
+  d5_cozum_secildi: { label: 'D5', color: 'text-lime-700', bgColor: 'bg-lime-50' },
+  d6_uygulandi: { label: 'D6', color: 'text-green-700', bgColor: 'bg-green-50' },
+  d7_onleme: { label: 'D7', color: 'text-teal-700', bgColor: 'bg-teal-50' },
+  d8_kapandi: { label: 'D8', color: 'text-emerald-700', bgColor: 'bg-emerald-50' },
 };
 
-// Oncelik config - Dark mode aware
+// Oncelik config - LIGHT MODE ONLY - BEYAZ TEMALI
 export const ONCELIK_CONFIG: Record<AksiyonOncelik, {
   label: string;
   labelTr: string;
@@ -118,26 +118,26 @@ export const ONCELIK_CONFIG: Record<AksiyonOncelik, {
 }> = {
   acil: {
     label: 'ACIL',
-    labelTr: 'Hemen yapilmali',
+    labelTr: 'Hemen yapılmalı',
     icon: '🔴',
     color: 'text-red-700',
-    bgColor: 'bg-red-50',
-    borderColor: 'border-red-200',
+    bgColor: 'bg-white',
+    borderColor: 'border-red-300',
   },
   normal: {
     label: 'NORMAL',
     labelTr: 'Bu hafta',
     icon: '🟡',
-    color: 'text-amber-700',
-    bgColor: 'bg-amber-50',
-    borderColor: 'border-amber-200',
+    color: 'text-slate-700',
+    bgColor: 'bg-white',
+    borderColor: 'border-slate-200',
   },
   bilgi: {
     label: 'BILGI',
     labelTr: 'Bilginize',
     icon: '🔵',
     color: 'text-blue-700',
-    bgColor: 'bg-blue-50',
+    bgColor: 'bg-white',
     borderColor: 'border-blue-200',
   },
 };

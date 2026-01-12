@@ -3018,14 +3018,14 @@ async def get_actionable_tasks(
                 "id": task.get("id", f"TASK_{i}"),
                 "priority": priority,
                 "icon": icon,
-                "title": task.get("title", "Gorev"),
+                "title": task.get("title", "Görev"),
                 "what": task.get("description", ""),
-                "why_important": f"Bu is yapilmazsa compliance skoru duser",
+                "why_important": f"Bu iş yapılmazsa uyum skoru düşer",
                 "what_happens": task.get("kurgan_impact", "Risk artar"),
                 "what_to_do": [
-                    f"1. {task.get('smmm_button', 'Detay Gor')} butonuna tikla",
-                    f"2. {task.get('action', 'Gereken islemi yap')}",
-                    "3. Tamamlandigini kontrol et"
+                    f"1. {task.get('smmm_button', 'Detay Gör')} butonuna tıkla",
+                    f"2. {task.get('action', 'Gereken işlemi yap')}",
+                    "3. Tamamlandığını kontrol et"
                 ],
                 "buttons": [
                     {
