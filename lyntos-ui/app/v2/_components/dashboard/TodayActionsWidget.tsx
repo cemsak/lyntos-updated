@@ -44,12 +44,12 @@ export const TodayActionsWidget: React.FC<TodayActionsWidgetProps> = ({
               <ClipboardList className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <h3 className="font-semibold text-slate-800">Bugun Yapilacaklar</h3>
-              <p className="text-sm text-slate-500">Oncelik sirasina gore</p>
+              <h3 className="font-semibold text-slate-800">Bugün Yapılacaklar</h3>
+              <p className="text-sm text-slate-500">Öncelik sırasına göre</p>
             </div>
           </div>
           <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
-            {actions.length} islem
+            {actions.length} işlem
           </span>
         </div>
       </div>
@@ -59,8 +59,8 @@ export const TodayActionsWidget: React.FC<TodayActionsWidgetProps> = ({
         {visibleActions.length === 0 ? (
           <div className="text-center py-8">
             <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto mb-3" />
-            <p className="text-slate-600 font-medium">Tebrikler! Bekleyen islem yok.</p>
-            <p className="text-sm text-slate-500">Tum kontroller basarili.</p>
+            <p className="text-slate-600 font-medium">Tebrikler! Bekleyen işlem yok.</p>
+            <p className="text-sm text-slate-500">Tüm kontroller başarılı.</p>
           </div>
         ) : (
           visibleActions.map((action, index) => (
@@ -91,7 +91,7 @@ export const TodayActionsWidget: React.FC<TodayActionsWidgetProps> = ({
             className="w-full text-slate-600"
             onClick={onViewAll}
           >
-            +{remainingCount} islem daha
+            +{remainingCount} işlem daha
             <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
         </div>

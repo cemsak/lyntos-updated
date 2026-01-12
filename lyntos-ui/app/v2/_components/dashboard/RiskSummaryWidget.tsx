@@ -29,7 +29,7 @@ export const RiskSummaryWidget: React.FC<RiskSummaryWidgetProps> = ({
       <StatCard
         title="Kritik"
         value={kritikCount}
-        subtitle="Acil islem gerekli"
+        subtitle="Acil işlem gerekli"
         icon={AlertTriangle}
         riskLevel="KRITIK"
         onClick={onKritikClick}

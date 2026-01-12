@@ -87,9 +87,9 @@ export function EventTypesList({ onSelectEvent, selectedEventCode }: EventTypesL
           onChange={(e) => setCompanyTypeFilter(e.target.value)}
           className="px-3 py-2 text-[13px] border border-[#e3e8ee] rounded-lg bg-white text-[#1a1f36] focus:outline-none focus:ring-2 focus:ring-[#635bff] focus:border-transparent"
         >
-          <option value="">Tum Sirket Tipleri</option>
-          <option value="as">Anonim Sirket (A.S.)</option>
-          <option value="ltd">Limited Sirket (Ltd.S.)</option>
+          <option value="">Tüm Şirket Tipleri</option>
+          <option value="as">Anonim Şirket (A.Ş.)</option>
+          <option value="ltd">Limited Şirket (Ltd.Ş.)</option>
           <option value="koop">Kooperatif</option>
         </select>
       </div>
@@ -130,7 +130,7 @@ export function EventTypesList({ onSelectEvent, selectedEventCode }: EventTypesL
                           <>
                             <span className="mx-1">•</span>
                             <Clock className="w-3 h-3" />
-                            {event.registration_deadline} gun
+                            {event.registration_deadline} gün
                           </>
                         )}
                       </div>
@@ -144,11 +144,11 @@ export function EventTypesList({ onSelectEvent, selectedEventCode }: EventTypesL
                   {event.tax_implications?.kv_istisna && (
                     <div className="mt-2 flex gap-2 flex-wrap">
                       <span className="text-[10px] bg-[#0caf60]/10 text-[#0caf60] px-2 py-0.5 rounded">
-                        KV Istisna
+                        KV İstisna
                       </span>
                       {event.tax_implications?.kdv_istisna && (
                         <span className="text-[10px] bg-[#0caf60]/10 text-[#0caf60] px-2 py-0.5 rounded">
-                          KDV Istisna
+                          KDV İstisna
                         </span>
                       )}
                     </div>
@@ -161,7 +161,7 @@ export function EventTypesList({ onSelectEvent, selectedEventCode }: EventTypesL
       </div>
 
       <div className="mt-4 text-[11px] text-[#697386] text-right">
-        Toplam: {filteredEvents.length} islem tipi
+        Toplam: {filteredEvents.length} işlem tipi
       </div>
     </div>
   );

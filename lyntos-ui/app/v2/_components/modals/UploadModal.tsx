@@ -80,7 +80,7 @@ export function UploadModal({
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-slate-800">
-            Belge Yukle: {belgeTanimi?.label_tr || belgeTipi}
+            Belge Yükle: {belgeTanimi?.label_tr || belgeTipi}
           </h3>
           <button onClick={handleClose} className="text-slate-400 hover:text-slate-600">
             <X className="w-5 h-5" />

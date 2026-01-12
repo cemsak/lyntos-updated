@@ -53,7 +53,7 @@ function LoadingState({ minHeight = '200px' }: { minHeight?: string }) {
       style={{ minHeight }}
     >
       <Loader2 className="w-8 h-8 animate-spin mb-3" />
-      <p className="text-sm">Yukleniyor...</p>
+      <p className="text-sm">Yükleniyor...</p>
     </div>
   );
 }
@@ -67,8 +67,8 @@ function ErrorState({ message, action, minHeight = '200px' }: StateRendererProps
       <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mb-3">
         <AlertCircle className="w-6 h-6 text-red-500" />
       </div>
-      <p className="text-sm font-medium text-slate-700 mb-1">Bir hata olustu</p>
-      <p className="text-xs text-slate-500 mb-3">{message || 'Lutfen tekrar deneyin'}</p>
+      <p className="text-sm font-medium text-slate-700 mb-1">Bir hata oluştu</p>
+      <p className="text-xs text-slate-500 mb-3">{message || 'Lütfen tekrar deneyin'}</p>
       {action && (
         <button
           onClick={action.onClick}
@@ -91,8 +91,8 @@ function EmptyState({ message, minHeight = '200px' }: StateRendererProps) {
       <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-3">
         <Inbox className="w-6 h-6 text-slate-400" />
       </div>
-      <p className="text-sm font-medium text-slate-600 mb-1">Veri bulunamadi</p>
-      <p className="text-xs text-slate-400">{message || 'Bu donem icin kayit yok'}</p>
+      <p className="text-sm font-medium text-slate-600 mb-1">Veri bulunamadı</p>
+      <p className="text-xs text-slate-400">{message || 'Bu dönem için kayıt yok'}</p>
     </div>
   );
 }
@@ -107,7 +107,7 @@ function MissingState({ message, action, minHeight = '200px' }: StateRendererPro
         <FileQuestion className="w-6 h-6 text-amber-500" />
       </div>
       <p className="text-sm font-medium text-slate-700 mb-1">Eksik Veri</p>
-      <p className="text-xs text-slate-500 mb-3">{message || 'Gerekli belgeler yuklenmemis'}</p>
+      <p className="text-xs text-slate-500 mb-3">{message || 'Gerekli belgeler yüklenmemiş'}</p>
       {action && (
         <button
           onClick={action.onClick}
@@ -130,7 +130,7 @@ function AuthState({ message, minHeight = '200px' }: StateRendererProps) {
         <Lock className="w-6 h-6 text-slate-400" />
       </div>
       <p className="text-sm font-medium text-slate-600 mb-1">Yetki Gerekli</p>
-      <p className="text-xs text-slate-400">{message || 'Bu icerigi goruntuleme yetkiniz yok'}</p>
+      <p className="text-xs text-slate-400">{message || 'Bu içeriği görüntüleme yetkiniz yok'}</p>
     </div>
   );
 }
