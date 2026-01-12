@@ -134,10 +134,13 @@ export function DonemVerileriPanel({ onUploadClick }: DonemVerileriPanelProps) {
               return (
                 <div key={kategori}>
                   {/* Category Row */}
-                  <button
+                  <div
+                    role="button"
+                    tabIndex={0}
                     onClick={() => handleKategoriClick(kategori)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleKategoriClick(kategori); } }}
                     className={`
-                      w-full flex items-center gap-3 p-3 rounded-lg border transition-all duration-200 text-left
+                      w-full flex items-center gap-3 p-3 rounded-lg border transition-all duration-200 text-left cursor-pointer
                       ${isComplete
                         ? 'bg-emerald-50/30 border-emerald-200 hover:bg-emerald-50/40'
                         : 'bg-red-50/30 border-red-200 hover:bg-red-50/40'
@@ -198,7 +201,7 @@ export function DonemVerileriPanel({ onUploadClick }: DonemVerileriPanelProps) {
                           : <ChevronRight className="w-4 h-4 text-slate-400" />
                       )}
                     </div>
-                  </button>
+                  </div>
 
                   {/* Expanded Document List */}
                   {isExpanded && hasUploadedDocs && (
