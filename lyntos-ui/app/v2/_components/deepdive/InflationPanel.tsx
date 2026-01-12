@@ -201,8 +201,8 @@ export function InflationPanel() {
   const formatCurrency = (n: number) => n.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' });
   const formatPct = (n: number) => `%${(n * 100).toFixed(2)}`;
 
-  // Use demo data if no real data
-  const isDemo = status === 'empty' || status === 'error' || !data;
+  // Check if we have real data
+  const hasData = data && data.items && data.items.length > 0;
 
   return (
     <>
@@ -221,14 +221,17 @@ export function InflationPanel() {
         }
         subtitle="TMS 29 & VUK Geçici 33"
         headerAction={
-          <div className="flex items-center gap-2">
-            {isDemo && <Badge variant="warning">Demo Veri</Badge>}
-            {data?.applicable ? (
-              <Badge variant="info">Uygulanabilir</Badge>
-            ) : (
-              <Badge variant="default">Uygulanamaz</Badge>
-            )}
-          </div>
+          hasData ? (
+            <div className="flex items-center gap-2">
+              {data?.applicable ? (
+                <Badge variant="info">Uygulanabilir</Badge>
+              ) : (
+                <Badge variant="default">Uygulanamaz</Badge>
+              )}
+            </div>
+          ) : (
+            <Badge variant="default">Veri Bekleniyor</Badge>
+          )
         }
       >
         {/* Yİ-ÜFE Indicators - Always Show */}
@@ -256,33 +259,81 @@ export function InflationPanel() {
           </div>
         </div>
 
-        <PanelState status={isDemo ? 'ok' : status} reason_tr={reason_tr}>
-          {(data || isDemo) && (
+        <PanelState status={status} reason_tr={reason_tr}>
+          {!hasData && status === 'ok' ? (
+            <div className="p-4">
+              <div className="flex items-center gap-2 mb-4">
+                <Info className="w-5 h-5 text-slate-400" />
+                <h3 className="text-sm font-semibold text-slate-600">Enflasyon Düzeltmesi (Örnek Yapı)</h3>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="text-left text-slate-500 border-b border-slate-200">
+                      <th className="pb-2 font-medium">Hesap Grubu</th>
+                      <th className="pb-2 text-right font-medium">Düzeltme Öncesi</th>
+                      <th className="pb-2 text-right font-medium">Katsayı</th>
+                      <th className="pb-2 text-right font-medium">Düzeltme Sonrası</th>
+                      <th className="pb-2 text-right font-medium">Fark</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-slate-400">
+                    <tr className="border-b border-slate-50">
+                      <td className="py-2">Parasal Olmayan Aktifler</td>
+                      <td className="text-right">₺---</td>
+                      <td className="text-right">---</td>
+                      <td className="text-right">₺---</td>
+                      <td className="text-right">₺---</td>
+                    </tr>
+                    <tr className="border-b border-slate-50">
+                      <td className="py-2">Parasal Olmayan Pasifler</td>
+                      <td className="text-right">₺---</td>
+                      <td className="text-right">---</td>
+                      <td className="text-right">₺---</td>
+                      <td className="text-right">₺---</td>
+                    </tr>
+                    <tr className="border-b border-slate-50">
+                      <td className="py-2">Özkaynaklar</td>
+                      <td className="text-right">₺---</td>
+                      <td className="text-right">---</td>
+                      <td className="text-right">₺---</td>
+                      <td className="text-right">₺---</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <p className="text-xs text-blue-600 mt-4 text-center">
+                📤 Bilanço yüklendiğinde enflasyon düzeltmesi hesaplanır
+              </p>
+            </div>
+          ) : hasData && (
             <div className="space-y-3">
               {/* Summary */}
               <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-lg">
                 <div>
                   <p className="text-xs text-slate-500">Düzeltme Öncesi</p>
                   <p className="text-lg font-bold text-slate-900">
-                    {data ? formatCurrency(data.summary.total_original) : '₺1.250.000'}
+                    {formatCurrency(data!.summary.total_original)}
                   </p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-500">Düzeltme Sonrası</p>
                   <p className="text-lg font-bold text-indigo-700">
-                    {data ? formatCurrency(data.summary.total_adjusted) : '₺3.558.750'}
+                    {formatCurrency(data!.summary.total_adjusted)}
                   </p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-500">Toplam Etki</p>
                   <p className="text-sm font-bold text-green-600">
-                    {data ? (data.summary.total_difference >= 0 ? '+' : '') + formatCurrency(data.summary.total_difference) : '+₺2.308.750'}
+                    {(data!.summary.total_difference >= 0 ? '+' : '') + formatCurrency(data!.summary.total_difference)}
                   </p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-500">Efektif Oran</p>
                   <p className="text-sm font-bold text-slate-700">
-                    {data ? formatPct(data.summary.effective_rate) : '%184.7'}
+                    {formatPct(data!.summary.effective_rate)}
                   </p>
                 </div>
               </div>

@@ -10,44 +10,14 @@ import { ENDPOINTS } from '../contracts/endpoints';
 import { normalizeToEnvelope } from '../contracts/map';
 import type { PanelEnvelope } from '../contracts/envelope';
 
-// Demo data with real source labels
-const DEMO_CHECKS: CrossCheckItem[] = [
-  {
-    id: 'kdv-mizan',
-    check_type: 'kdv',
-    source_label: 'KDV Beyannamesi',
-    target_label: 'Mizan 391 Hesap',
-    source_amount: 1250000,
-    target_amount: 1250000,
-    difference: 0,
-    difference_pct: 0,
-    status: 'match',
-    explanation_tr: 'KDV beyannamesi ile mizan 391 hesabı tam eşleşiyor.',
-  },
-  {
-    id: 'efatura-mizan',
-    check_type: 'e_fatura',
-    source_label: 'e-Fatura Toplamı',
-    target_label: 'Mizan 600 Hesap',
-    source_amount: 3855280,
-    target_amount: 3420000,
-    difference: 435280,
-    difference_pct: 11.3,
-    status: 'major',
-    explanation_tr: 'UYUMSUZLUK NEDENİ: 5 adet Aralık faturası Ocak ayına kaydedilmiş. ÖNERİ: 600 Yurtiçi Satışlar hesabını kontrol edin.',
-  },
-  {
-    id: 'banka-mizan',
-    check_type: 'banka',
-    source_label: 'Banka Hesap Özeti',
-    target_label: 'Mizan 102 Hesap',
-    source_amount: 890000,
-    target_amount: 890000,
-    difference: 0,
-    difference_pct: 0,
-    status: 'match',
-    explanation_tr: 'Banka hesap özeti ile mizan 102 hesabı eşleşiyor.',
-  },
+import { Info } from 'lucide-react';
+
+// Empty state placeholder structure for cross-check matrix
+const EMPTY_STATE_STRUCTURE = [
+  { source: 'Mizan', target: 'KDV Beyanı', icon: '📋' },
+  { source: 'Mizan', target: 'Muhtasar Beyan', icon: '📄' },
+  { source: 'e-Fatura', target: 'Mizan', icon: '🧾' },
+  { source: 'Banka', target: 'Mizan', icon: '🏦' },
 ];
 
 // SMMM Context Info for Cross-Check Panel
@@ -256,15 +226,10 @@ export function CrossCheckPanel() {
 
   const formatAmount = (n: number) => n.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
-  // Use demo data if no real data
-  const isDemo = status === 'empty' || status === 'error' || !data || data.checks.length === 0;
-  const displayChecks = isDemo ? DEMO_CHECKS : data?.checks || [];
-  const displaySummary = isDemo ? {
-    total: DEMO_CHECKS.length,
-    matched: DEMO_CHECKS.filter(c => c.status === 'match').length,
-    discrepancies: DEMO_CHECKS.filter(c => c.status !== 'match').length,
-    critical: DEMO_CHECKS.filter(c => c.status === 'critical').length,
-  } : data?.summary || { total: 0, matched: 0, discrepancies: 0, critical: 0 };
+  // Check if we have real data
+  const hasData = data && data.checks && data.checks.length > 0;
+  const displayChecks = hasData ? data.checks : [];
+  const displaySummary = hasData ? data.summary : { total: 0, matched: 0, discrepancies: 0, critical: 0 };
 
   const handleRowClick = (check: CrossCheckItem) => {
     if (check.difference !== 0 && check.explanation_tr) {
@@ -289,19 +254,60 @@ export function CrossCheckPanel() {
         }
         subtitle="Mizan vs KDV / e-Fatura / Banka"
         headerAction={
-          <div className="flex items-center gap-2">
-            {isDemo && (
-              <Badge variant="default">Demo Veri</Badge>
-            )}
-            <Badge variant="success">{displaySummary.matched} eşleşti</Badge>
-            {displaySummary.discrepancies > 0 && (
-              <Badge variant="warning">{displaySummary.discrepancies} fark</Badge>
-            )}
-          </div>
+          hasData ? (
+            <div className="flex items-center gap-2">
+              <Badge variant="success">{displaySummary.matched} eşleşti</Badge>
+              {displaySummary.discrepancies > 0 && (
+                <Badge variant="warning">{displaySummary.discrepancies} fark</Badge>
+              )}
+            </div>
+          ) : (
+            <Badge variant="default">Veri Bekleniyor</Badge>
+          )
         }
       >
-        <PanelState status={isDemo ? 'ok' : status} reason_tr={reason_tr}>
-          <div className="space-y-2">
+        <PanelState status={status} reason_tr={reason_tr}>
+          {!hasData && status === 'ok' ? (
+            <div className="p-4">
+              <div className="flex items-center gap-2 mb-4">
+                <Info className="w-5 h-5 text-slate-400" />
+                <h3 className="text-sm font-semibold text-slate-600">Mutabakat Kontrolleri (Örnek Yapı)</h3>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="text-left text-slate-500 border-b border-slate-200">
+                      <th className="pb-2 font-medium">Karşılaştırma</th>
+                      <th className="pb-2 text-right font-medium">Kaynak Tutar</th>
+                      <th className="pb-2 text-right font-medium">Hedef Tutar</th>
+                      <th className="pb-2 text-right font-medium">Fark</th>
+                      <th className="pb-2 text-center font-medium">Durum</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-slate-400">
+                    {EMPTY_STATE_STRUCTURE.map((item, idx) => (
+                      <tr key={idx} className="border-b border-slate-50">
+                        <td className="py-2">
+                          <span className="mr-1">{item.icon}</span>
+                          {item.source} ↔ {item.target}
+                        </td>
+                        <td className="text-right">₺---</td>
+                        <td className="text-right">₺---</td>
+                        <td className="text-right">₺---</td>
+                        <td className="text-center">---</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <p className="text-xs text-blue-600 mt-4 text-center">
+                📤 Mizan ve Beyanname yüklendiğinde mutabakat analizi yapılır
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
             {/* Dense Comparison Table */}
             <div className="overflow-x-auto">
               <table className="w-full text-xs border-collapse">
@@ -397,7 +403,8 @@ export function CrossCheckPanel() {
                 )}
               </div>
             </div>
-          </div>
+            </div>
+          )}
         </PanelState>
       </Card>
 
