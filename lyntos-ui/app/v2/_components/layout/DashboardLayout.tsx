@@ -23,6 +23,7 @@ const PRIORITY_STYLES: Record<Priority, { border: string; badge: string }> = {
   P2: { border: 'border-l-blue-500', badge: 'bg-blue-100 text-blue-700' },
 };
 
+// TÜM VARIANT'LAR BEYAZ TEMALI
 const VARIANT_STYLES: Record<Variant, { container: string; title: string; iconBox: string }> = {
   default: {
     container: '',
@@ -30,9 +31,9 @@ const VARIANT_STYLES: Record<Variant, { container: string; title: string; iconBo
     iconBox: '',
   },
   urgent: {
-    container: 'bg-amber-50 border-l-4 border-amber-500 rounded-xl p-5 shadow-sm',
-    title: 'text-amber-900 text-xl font-bold',
-    iconBox: 'w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center',
+    container: 'bg-white border border-slate-200 rounded-xl p-5 shadow-sm',
+    title: 'text-slate-800 text-xl font-bold',
+    iconBox: 'w-12 h-12 bg-red-50 rounded-xl flex items-center justify-center',
   },
   dark: {
     container: 'bg-white border border-slate-200 rounded-2xl p-6 shadow-sm',
@@ -76,15 +77,15 @@ export function DashboardSection({
             <div>
               <h2 className={variantStyle.title}>{title}</h2>
               {variant === 'urgent' && (
-                <p className="text-slate-500">Acil işler ve bekleyen görevler</p>
+                <p className="text-slate-500 text-sm">Acil işler ve bekleyen görevler</p>
               )}
             </div>
           </div>
           <div className="flex items-center gap-3">
             {badge}
             {collapsible && (
-              <span className={variant === 'dark' ? 'text-slate-400 text-sm' : 'text-slate-500 text-sm'}>
-                {collapsed ? '▼ Goster' : '▲ Gizle'}
+              <span className="text-slate-400 text-sm">
+                {collapsed ? '▼ Göster' : '▲ Gizle'}
               </span>
             )}
           </div>
@@ -121,7 +122,7 @@ export function DashboardSection({
 
         {collapsible && (
           <span className="text-slate-500 text-sm">
-            {collapsed ? '▼ Goster' : '▲ Gizle'}
+            {collapsed ? '▼ Göster' : '▲ Gizle'}
           </span>
         )}
       </div>

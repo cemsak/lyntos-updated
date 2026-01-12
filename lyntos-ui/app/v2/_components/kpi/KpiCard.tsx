@@ -77,14 +77,14 @@ function getVariantStyles(variant: 'success' | 'warning' | 'danger' | 'info' | '
 
 // Get badge text based on status and risk level
 function getBadgeText(status: string, riskLevel?: string): string {
-  if (status === 'loading') return 'Yukleniyor';
+  if (status === 'loading') return 'Yükleniyor';
   if (status === 'error') return 'Hata';
   if (status === 'empty') return 'Veri Yok';
   if (riskLevel) {
     const level = riskLevel.toLowerCase();
-    if (level === 'dusuk' || level === 'low') return 'Dusuk';
+    if (level === 'dusuk' || level === 'low') return 'Düşük';
     if (level === 'orta' || level === 'medium') return 'Orta';
-    if (level === 'yuksek' || level === 'high') return 'Yuksek';
+    if (level === 'yuksek' || level === 'high') return 'Yüksek';
     if (level === 'tamam' || level === 'ok') return 'Tamam';
     if (level === 'eksik') return 'Eksik';
     if (level === 'bekliyor') return 'Bekliyor';

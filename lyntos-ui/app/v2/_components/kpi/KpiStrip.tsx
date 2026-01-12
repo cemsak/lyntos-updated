@@ -82,7 +82,7 @@ function createKpiEnvelope<T>(
   if (!raw || typeof raw !== 'object') {
     return {
       status: 'error',
-      reason_tr: 'Gecersiz yanit formati',
+      reason_tr: 'Geçersiz yanıt formatı',
       legal_basis_refs: [],
       evidence_refs: [],
       analysis: {},
@@ -98,11 +98,11 @@ function createKpiEnvelope<T>(
   const data = extractData(raw);
 
   let status: PanelEnvelope<T>['status'] = 'ok';
-  let reason_tr = 'Veri basariyla yuklendi.';
+  let reason_tr = 'Veri başarıyla yüklendi.';
 
   if (data === undefined || data === null) {
     status = 'empty';
-    reason_tr = emptyMessage || 'Goruntulenecek veri yok.';
+    reason_tr = emptyMessage || 'Görüntülenecek veri yok.';
   }
 
   return {
@@ -127,11 +127,11 @@ function normalizeKurganRisk(raw: unknown, requestId?: string): PanelEnvelope<Kp
     if (!kurgan || typeof kurgan.score !== 'number') return undefined;
     return {
       value: kurgan.score,
-      label: 'VDK 13 Kriter',
+      label: '100 üzerinden · VDK 13 Kriter',
       unit: 'puan',
       risk_level: typeof kurgan.risk_level === 'string' ? kurgan.risk_level : undefined,
     };
-  }, 'kurgan_risk', requestId, 'Risk analizi icin mizan yukleyin');
+  }, 'kurgan_risk', requestId, 'Risk analizi için mizan yükleyin');
 }
 
 function normalizeDataQuality(raw: unknown, requestId?: string): PanelEnvelope<KpiData> {
@@ -144,7 +144,7 @@ function normalizeDataQuality(raw: unknown, requestId?: string): PanelEnvelope<K
       label: 'Veri Tamam',
       unit: '%',
     };
-  }, undefined, requestId, 'Veri kalitesi icin belge yukleyin');
+  }, undefined, requestId, 'Veri kalitesi için belge yükleyin');
 }
 
 function normalizeCrossCheck(raw: unknown, requestId?: string): PanelEnvelope<KpiData> {
@@ -157,10 +157,10 @@ function normalizeCrossCheck(raw: unknown, requestId?: string): PanelEnvelope<Kp
     const warnings = typeof summary.warnings === 'number' ? summary.warnings : 0;
     return {
       value: errors + warnings,
-      label: `${errors} hata, ${warnings} uyari`,
-      risk_level: errors > 0 ? 'Yuksek' : warnings > 0 ? 'Orta' : 'Dusuk',
+      label: `${errors} hata, ${warnings} uyarı`,
+      risk_level: errors > 0 ? 'Yüksek' : warnings > 0 ? 'Orta' : 'Düşük',
     };
-  }, undefined, requestId, 'Capraz kontrol icin mizan ve beyanname yukleyin');
+  }, undefined, requestId, 'Çapraz kontrol için mizan ve beyanname yükleyin');
 }
 
 function normalizeQuarterlyTax(raw: unknown, requestId?: string): PanelEnvelope<KpiData> {
@@ -171,10 +171,10 @@ function normalizeQuarterlyTax(raw: unknown, requestId?: string): PanelEnvelope<
     if (typeof amount !== 'number') return undefined;
     return {
       value: amount.toLocaleString('tr-TR'),
-      label: 'Gecici Vergi',
+      label: 'Geçici Vergi',
       unit: 'TL',
     };
-  }, undefined, requestId, 'Gecici vergi hesabi icin mizan yukleyin');
+  }, undefined, requestId, 'Geçici vergi hesabı için mizan yükleyin');
 }
 
 function normalizeCorporateTax(raw: unknown, requestId?: string): PanelEnvelope<KpiData> {
@@ -188,7 +188,7 @@ function normalizeCorporateTax(raw: unknown, requestId?: string): PanelEnvelope<
       label: 'Kurumlar Vergisi',
       unit: 'TL',
     };
-  }, undefined, requestId, 'Kurumlar vergisi hesaplamasi icin mizan yukleyin');
+  }, undefined, requestId, 'Kurumlar vergisi hesaplaması için mizan yükleyin');
 }
 
 function normalizeCorporateTaxForecast(raw: unknown, requestId?: string): PanelEnvelope<KpiData> {
@@ -202,7 +202,7 @@ function normalizeCorporateTaxForecast(raw: unknown, requestId?: string): PanelE
       label: 'KV Tahmini',
       unit: 'TL',
     };
-  }, undefined, requestId, 'Tahmin icin en az 3 donem mizan verisi gerekli');
+  }, undefined, requestId, 'Tahmin için en az 3 dönem mizan verisi gerekli');
 }
 
 function normalizeInflation(raw: unknown, requestId?: string): PanelEnvelope<KpiData> {
@@ -213,10 +213,10 @@ function normalizeInflation(raw: unknown, requestId?: string): PanelEnvelope<Kpi
     if (typeof adjustment !== 'number') return undefined;
     return {
       value: adjustment.toLocaleString('tr-TR'),
-      label: 'Enflasyon Duzeltmesi',
+      label: 'Enflasyon Düzeltmesi',
       unit: 'TL',
     };
-  }, undefined, requestId, 'Enflasyon duzeltmesi icin bilanco yukleyin');
+  }, undefined, requestId, 'Enflasyon düzeltmesi için bilanço yükleyin');
 }
 
 function normalizeRegwatch(raw: unknown, requestId?: string): PanelEnvelope<KpiData> {
