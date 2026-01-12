@@ -140,7 +140,7 @@ export function AksiyonKuyruguPanel({
       {aksiyonlar.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-8 text-center">
           <span className="text-4xl mb-2">✅</span>
-          <p className="text-green-700 font-medium">Tum isler tamamlandi!</p>
+          <p className="text-green-700 font-medium">Tum isler tamamlandı!</p>
           <p className="text-sm text-slate-500">
             Bugun icin bekleyen is yok
           </p>

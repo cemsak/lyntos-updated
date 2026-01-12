@@ -16,14 +16,14 @@ const YIUFE_DEMO_DATA = {
   son3YilEsik: 100,
   son12Ay: 44.2,
   son12AyEsik: 10,
-  duzeltmeKatsayisi: 2.847,
+  düzeltmeKatsayisi: 2.847,
   referansTarih: 'Aralık 2024',
 };
 
 // VUK Geçici Madde 33 Açıklaması
 const VUK_GEC33_INFO = {
   baslik: 'VUK Geçici Madde 33 Nedir?',
-  aciklama: `Vergi Usul Kanunu Geçici Madde 33, yüksek enflasyon dönemlerinde mali tabloların düzeltilmesini düzenler.`,
+  açıklama: `Vergi Usul Kanunu Geçici Madde 33, yüksek enflasyon dönemlerinde mali tabloların düzeltilmesini düzenler.`,
   kosullar: [
     'Yİ-ÜFE son 3 yılda %100\'ü aşmalı (Mevcut: %284.7 ✓)',
     'Yİ-ÜFE son 12 ayda %10\'u aşmalı (Mevcut: %44.2 ✓)',
@@ -146,7 +146,7 @@ function VukInfoModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
         </div>
 
         <div className="p-4 space-y-4 max-h-[60vh] overflow-y-auto">
-          <p className="text-sm text-slate-600">{VUK_GEC33_INFO.aciklama}</p>
+          <p className="text-sm text-slate-600">{VUK_GEC33_INFO.açıklama}</p>
 
           <div>
             <h3 className="text-sm font-semibold text-slate-700 mb-2">Uygulama Koşulları</h3>
@@ -250,7 +250,7 @@ export function InflationPanel() {
             </div>
             <div className="p-2 bg-white rounded border border-indigo-100">
               <p className="text-[10px] text-slate-500 mb-0.5">Düzeltme Katsayısı</p>
-              <p className="text-lg font-bold text-purple-700">{YIUFE_DEMO_DATA.duzeltmeKatsayisi}</p>
+              <p className="text-lg font-bold text-purple-700">{YIUFE_DEMO_DATA.düzeltmeKatsayisi}</p>
               <p className="text-[10px] text-slate-400">TÜİK Kaynak</p>
             </div>
           </div>
