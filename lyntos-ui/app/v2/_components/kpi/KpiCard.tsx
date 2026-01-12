@@ -79,7 +79,7 @@ function getVariantStyles(variant: 'success' | 'warning' | 'danger' | 'info' | '
 function getBadgeText(status: string, riskLevel?: string): string {
   if (status === 'loading') return 'Yükleniyor';
   if (status === 'error') return 'Hata';
-  if (status === 'empty') return 'Veri Yok';
+  if (status === 'empty') return '---';
   if (riskLevel) {
     const level = riskLevel.toLowerCase();
     if (level === 'dusuk' || level === 'low') return 'Düşük';

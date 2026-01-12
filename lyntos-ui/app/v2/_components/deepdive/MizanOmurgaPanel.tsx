@@ -546,10 +546,60 @@ export function MizanOmurgaPanel() {
       >
         <PanelState status={status} reason_tr={reason_tr}>
           {!hasData && status === 'ok' ? (
-            <div className="p-8 text-center">
-              <Info className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-slate-700 mb-2">Mizan Verisi Bulunamadi</h3>
-              <p className="text-slate-500 text-sm">Analiz icin mizan verisi yukleyin veya donem secimini kontrol edin.</p>
+            <div className="p-4">
+              <div className="flex items-center gap-2 mb-4">
+                <Info className="w-5 h-5 text-slate-400" />
+                <h3 className="text-sm font-semibold text-slate-600">VDK Kritik Hesaplar (Örnek Yapı)</h3>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="text-left text-slate-500 border-b border-slate-200">
+                      <th className="pb-2 font-medium">Hesap</th>
+                      <th className="pb-2 font-medium">Açıklama</th>
+                      <th className="pb-2 text-right font-medium">Borç</th>
+                      <th className="pb-2 text-right font-medium">Alacak</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-slate-400">
+                    <tr className="border-b border-slate-50">
+                      <td className="py-2 font-mono">100</td>
+                      <td>Kasa</td>
+                      <td className="text-right">---</td>
+                      <td className="text-right">---</td>
+                    </tr>
+                    <tr className="border-b border-slate-50">
+                      <td className="py-2 font-mono">120</td>
+                      <td>Alıcılar</td>
+                      <td className="text-right">---</td>
+                      <td className="text-right">---</td>
+                    </tr>
+                    <tr className="border-b border-slate-50">
+                      <td className="py-2 font-mono">131</td>
+                      <td>Ortaklardan Alacaklar</td>
+                      <td className="text-right">---</td>
+                      <td className="text-right">---</td>
+                    </tr>
+                    <tr className="border-b border-slate-50">
+                      <td className="py-2 font-mono">320</td>
+                      <td>Satıcılar</td>
+                      <td className="text-right">---</td>
+                      <td className="text-right">---</td>
+                    </tr>
+                    <tr className="border-b border-slate-50">
+                      <td className="py-2 font-mono">600</td>
+                      <td>Yurtiçi Satışlar</td>
+                      <td className="text-right">---</td>
+                      <td className="text-right">---</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <p className="text-xs text-slate-400 mt-4 text-center">
+                Mizan yüklendiğinde VDK kritik hesap analizi yapılır
+              </p>
             </div>
           ) : (
           <div className="space-y-4">

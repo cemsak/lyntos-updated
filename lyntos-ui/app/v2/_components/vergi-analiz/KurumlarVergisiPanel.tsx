@@ -849,10 +849,38 @@ export function KurumlarVergisiPanel({
           {hasMatrahData && matrahVerileri ? (
             <MatrahHesaplama veriler={matrahVerileri} yil={yil} />
           ) : (
-            <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 text-center">
-              <Calculator className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-              <p className="text-sm font-medium text-slate-600">Matrah Verisi Bekleniyor</p>
-              <p className="text-xs text-slate-400 mt-1">Analiz verisi yukleyin</p>
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Calculator className="w-5 h-5 text-slate-400" />
+                <p className="text-sm font-medium text-slate-600">Kurumlar Vergisi Matrah</p>
+              </div>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between py-1 border-b border-slate-100">
+                  <span className="text-slate-500">Ticari Bilanço Kârı</span>
+                  <span className="text-slate-300">₺---</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-slate-100">
+                  <span className="text-slate-500">+ KKEG Toplamı</span>
+                  <span className="text-slate-300">₺---</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-slate-100">
+                  <span className="text-slate-500">- İstisna Kazançlar</span>
+                  <span className="text-slate-300">₺---</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-slate-100">
+                  <span className="text-slate-500">- Geçmiş Yıl Zararları</span>
+                  <span className="text-slate-300">₺---</span>
+                </div>
+                <div className="flex justify-between py-2 border-t-2 border-slate-200 font-medium">
+                  <span className="text-slate-600">= Vergi Matrahı</span>
+                  <span className="text-slate-300">₺---</span>
+                </div>
+                <div className="flex justify-between py-1">
+                  <span className="text-slate-500">Hesaplanan Vergi (%25)</span>
+                  <span className="text-slate-300">₺---</span>
+                </div>
+              </div>
+              <p className="text-xs text-slate-400 mt-3 text-center">Mizan yüklendiğinde otomatik hesaplanır</p>
             </div>
           )}
         </div>

@@ -137,18 +137,46 @@ export function RegWatchPanel() {
       <PanelState status={status} reason_tr={reason_tr}>
         {!isActive ? (
           // NOT ACTIVE - Single CTA
-          <div className="text-center py-6">
-            <span className="text-4xl mb-3 block">📡</span>
-            <p className="text-sm text-slate-600 mb-4">
-              Mevzuat degisikliklerini otomatik takip etmek icin RegWatch'i baslatin.
-            </p>
-            <button
-              onClick={handleStartTracking}
-              disabled={isStarting}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isStarting ? 'Baslatiliyor...' : 'Takibi Baslat'}
-            </button>
+          <div className="py-4">
+            <div className="text-center mb-4">
+              <span className="text-3xl mb-2 block">📡</span>
+              <p className="text-sm text-slate-600">
+                Mevzuat değişikliklerini otomatik takip edin
+              </p>
+            </div>
+
+            {/* Preview Section */}
+            <div className="mb-4 p-3 bg-slate-50 rounded-lg">
+              <p className="text-xs font-medium text-slate-500 mb-2">Takip Edilecek Kaynaklar</p>
+              <div className="space-y-2 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 bg-slate-300 rounded-full"></span>
+                  <span className="text-slate-400">GİB - Vergi Mevzuatı</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 bg-slate-300 rounded-full"></span>
+                  <span className="text-slate-400">Resmi Gazete - Tebliğler</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 bg-slate-300 rounded-full"></span>
+                  <span className="text-slate-400">SGK - Genelgeler</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 bg-slate-300 rounded-full"></span>
+                  <span className="text-slate-400">TÜRMOB - Duyurular</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="text-center">
+              <button
+                onClick={handleStartTracking}
+                disabled={isStarting}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isStarting ? 'Başlatılıyor...' : 'Takibi Başlat'}
+              </button>
+            </div>
           </div>
         ) : (
           // ACTIVE - Show scan UI and results
