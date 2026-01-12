@@ -21,21 +21,21 @@ interface ChatInterfaceProps {
 }
 
 const SUGGESTED_QUESTIONS_CORPORATE = [
-  "A.S. nasil kurulur?",
-  "Sermaye artirimi icin ne gerekli?",
+  "A.Ş. nasıl kurulur?",
+  "Sermaye artırımı için ne gerekli?",
   "TTK 376 nedir?",
-  "Birlesme vergisiz yapilabilir mi?",
-  "Tasfiye sureci nasil isler?",
-  "GK nisaplari nedir?",
+  "Birleşme vergisiz yapılabilir mi?",
+  "Tasfiye süreci nasıl işler?",
+  "GK nisapları nedir?",
 ];
 
 const SUGGESTED_QUESTIONS_REGWATCH = [
-  "Kurumlar vergisi orani nedir?",
-  "KDV oranlari nelerdir?",
+  "Kurumlar vergisi oranı nedir?",
+  "KDV oranları nelerdir?",
   "Bu ay hangi beyannameler var?",
-  "Asgari ucret ne kadar?",
-  "SGK prim oranlari?",
-  "Son vergi degisiklikleri neler?",
+  "Asgari ücret ne kadar?",
+  "SGK prim oranları?",
+  "Son vergi değişiklikleri neler?",
 ];
 
 export default function ChatInterface({
@@ -55,12 +55,12 @@ export default function ChatInterface({
     : SUGGESTED_QUESTIONS_CORPORATE;
 
   const headerTitle = agentType === 'regwatch'
-    ? 'Mevzuat Asistani'
-    : 'Sirketler Hukuku Asistani';
+    ? 'Mevzuat Asistanı'
+    : 'Şirketler Hukuku Asistanı';
 
   const headerDescription = agentType === 'regwatch'
-    ? 'Vergi oranlari, beyanname tarihleri ve mevzuat degisiklikleri'
-    : 'TTK, sirket islemleri ve vergi konularinda yardimci olabilirim';
+    ? 'Vergi oranları, beyanname tarihleri ve mevzuat değişiklikleri'
+    : 'TTK, şirket işlemleri ve vergi konularında yardımcı olabilirim';
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -127,7 +127,7 @@ export default function ChatInterface({
       console.error('Chat error:', err);
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: 'Uzgunum, bir hata olustu. Lutfen tekrar deneyin.'
+        content: 'Üzgünüm, bir hata oluştu. Lütfen tekrar deneyin.'
       }]);
     } finally {
       setLoading(false);

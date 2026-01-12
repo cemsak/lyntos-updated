@@ -139,10 +139,10 @@ export function ExplainModal({ isOpen, onClose, title, analysis, trust, legalBas
                         <p className="text-xs text-slate-500 mt-0.5">{ref.code}</p>
                       )}
                       {ref.title_tr === ref.id && !sourcesLoaded && (
-                        <p className="text-xs text-amber-600 mt-0.5">Kaynak detayi yukleniyor...</p>
+                        <p className="text-xs text-amber-600 mt-0.5">Kaynak detayı yükleniyor...</p>
                       )}
                       {ref.title_tr === ref.id && sourcesLoaded && (
-                        <p className="text-xs text-slate-500 mt-0.5">Kaynak bulunamadi</p>
+                        <p className="text-xs text-slate-500 mt-0.5">Kaynak bulunamadı</p>
                       )}
                     </div>
                     {ref.url ? (

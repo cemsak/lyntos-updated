@@ -20,7 +20,7 @@ interface EvidenceViewerProps {
   title?: string;
 }
 
-export function EvidenceViewer({ isOpen, onClose, evidenceRefs, title = 'Kanit Dosyalari' }: EvidenceViewerProps) {
+export function EvidenceViewer({ isOpen, onClose, evidenceRefs, title = 'Kanıt Dosyaları' }: EvidenceViewerProps) {
   const [selectedEvidence, setSelectedEvidence] = useState<EvidenceItem | null>(null);
 
   useEffect(() => {
@@ -157,7 +157,7 @@ LYNTOS - Muhasebe ve Vergi Analiz Platformu
             {evidenceRefs.length === 0 ? (
               <div className="p-6 text-center">
                 <span className="text-4xl">O</span>
-                <p className="text-sm text-slate-500 mt-2">Kanit dosyasi bulunamadi</p>
+                <p className="text-sm text-slate-500 mt-2">Kanıt dosyası bulunamadı</p>
               </div>
             ) : (
               <div className="divide-y divide-slate-100">

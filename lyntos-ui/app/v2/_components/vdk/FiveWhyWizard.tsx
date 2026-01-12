@@ -22,11 +22,11 @@ export interface FiveWhyAnalysis {
 }
 
 const WHY_PROMPTS = [
-  'Bu sorun neden olustu?',
+  'Bu sorun neden oluştu?',
   'Bu durum neden var?',
   'Bunun sebebi ne?',
-  'Neden boyle oldu?',
-  'Asil neden ne?',
+  'Neden böyle oldu?',
+  'Asıl neden ne?',
 ];
 
 export function FiveWhyWizard({

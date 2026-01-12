@@ -161,7 +161,7 @@ export default function CompanyList({ onSelectCompany, showFilters = true }: Com
         {filteredCompanies.length === 0 ? (
           <div className="p-8 text-center text-slate-500">
             <div className="text-4xl mb-2">[?]</div>
-            <p>Sirket bulunamadi</p>
+            <p>Şirket bulunamadı</p>
           </div>
         ) : (
           filteredCompanies.map((company) => {

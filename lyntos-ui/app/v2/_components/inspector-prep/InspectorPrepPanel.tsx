@@ -149,7 +149,7 @@ export function InspectorPrepPanel({
       );
 
       if (!response.ok) {
-        throw new Error('PDF olusturulamadi');
+        throw new Error('PDF oluşturulamadı');
       }
 
       const blob = await response.blob();
@@ -163,7 +163,7 @@ export function InspectorPrepPanel({
       window.URL.revokeObjectURL(url);
     } catch (err) {
       console.error('PDF export failed:', err);
-      alert('PDF olusturulurken hata olustu');
+      alert('PDF oluşturulurken hata oluştu');
     } finally {
       setIsExporting(false);
     }

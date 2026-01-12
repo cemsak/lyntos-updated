@@ -60,11 +60,11 @@ function Dropdown<T>({
   getOptionLabel,
   getOptionSublabel,
   onChange,
-  placeholder = 'Seciniz...',
+  placeholder = 'Seçiniz...',
   disabled = false,
   loading = false,
   error = null,
-  emptyMessage = 'Kayit bulunamadi',
+  emptyMessage = 'Kayıt bulunamadı',
 }: DropdownProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -137,7 +137,7 @@ function Dropdown<T>({
           {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : error ? <AlertCircle className="w-4 h-4 text-red-500" /> : icon}
         </span>
         <span className={`flex-1 text-left text-sm truncate ${selectedOption ? 'text-slate-900' : error ? 'text-red-500' : 'text-slate-400'}`}>
-          {loading ? 'Yukleniyor...' : error ? 'Yuklenemedi' : (selectedOption ? getOptionLabel(selectedOption) : placeholder)}
+          {loading ? 'Yükleniyor...' : error ? 'Yüklenemedi' : (selectedOption ? getOptionLabel(selectedOption) : placeholder)}
         </span>
         <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>

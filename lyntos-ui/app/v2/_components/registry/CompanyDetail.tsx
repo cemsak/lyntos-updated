@@ -77,7 +77,7 @@ export default function CompanyDetail({ taxNumber, onClose, onRefresh }: Company
   if (error || !company) {
     return (
       <div className="bg-slate-800/50 rounded-lg border border-slate-700 p-6">
-        <div className="text-red-400">Sirket bulunamadi: {error}</div>
+        <div className="text-red-400">Şirket bulunamadı: {error}</div>
       </div>
     );
   }

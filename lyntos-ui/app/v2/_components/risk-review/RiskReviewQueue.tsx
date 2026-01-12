@@ -104,8 +104,8 @@ export function RiskReviewQueue({ onItemSelect }: RiskReviewQueueProps) {
 
   return (
     <Card
-      title={<span className="flex items-center gap-2"><AlertCircle className="w-5 h-5 text-amber-500" />VDK Risk Inceleme Kuyrugu</span>}
-      subtitle={isLoading ? 'Yukleniyor...' : `${stats.bekleyen} mukellef inceleme bekliyor`}
+      title={<span className="flex items-center gap-2"><AlertCircle className="w-5 h-5 text-amber-500" />VDK Risk İnceleme Kuyruğu</span>}
+      subtitle={isLoading ? 'Yükleniyor...' : `${stats.bekleyen} mükellef inceleme bekliyor`}
       headerAction={
         <div className="flex items-center gap-2">
           <button

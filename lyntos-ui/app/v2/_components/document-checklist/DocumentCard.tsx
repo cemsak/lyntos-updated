@@ -160,15 +160,15 @@ export function DocumentCard({
               {isUploading ? (
                 <div className="flex items-center justify-center gap-2 text-[12px] text-[#697386]">
                   <div className="w-4 h-4 border-2 border-[#635bff] border-t-transparent rounded-full animate-spin" />
-                  Yukleniyor...
+                  Yükleniyor...
                 </div>
               ) : (
                 <label className="cursor-pointer">
                   <div className="flex items-center justify-center gap-2 text-[12px] text-[#697386]">
                     <Upload className="w-4 h-4" />
                     <span>
-                      Surukle veya{' '}
-                      <span className="text-[#635bff]">Dosya Sec</span>
+                      Sürükle veya{' '}
+                      <span className="text-[#635bff]">Dosya Seç</span>
                     </span>
                   </div>
                   <input

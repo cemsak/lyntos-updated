@@ -36,7 +36,7 @@ function normalizeMissingData(raw: unknown): PanelEnvelope<MissingDataResult> {
           type: String(item.type || item.doc_type || 'Belge'),
           description: String(item.description || item.title || item.name || 'Eksik veri'),
           impact: (item.impact || item.priority || 'medium') as MissingItem['impact'],
-          action: String(item.action || item.cta || 'Yukle'),
+          action: String(item.action || item.cta || 'Yükle'),
           deadline: item.deadline ? String(item.deadline) : undefined,
         }))
       : [];
