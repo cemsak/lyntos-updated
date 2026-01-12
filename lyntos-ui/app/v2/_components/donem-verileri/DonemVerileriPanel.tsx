@@ -158,12 +158,39 @@ export function DonemVerileriPanel({ onUploadClick }: DonemVerileriPanelProps) {
                       <p className="text-xs text-slate-400 truncate">{tanim.aciklama}</p>
                     </div>
 
-                    {/* Status */}
+                    {/* Status + Action Buttons */}
                     <div className="flex items-center gap-2">
                       {isComplete ? (
-                        <Badge variant="success">Yüklendi</Badge>
+                        <>
+                          <Badge variant="success">Yüklendi</Badge>
+                          {tanim.spikyTip && onUploadClick && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onUploadClick(tanim.spikyTip!);
+                              }}
+                              className="px-2 py-1 text-xs font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
+                            >
+                              Güncelle
+                            </button>
+                          )}
+                        </>
                       ) : (
-                        <Badge variant="error">Eksik</Badge>
+                        <>
+                          <Badge variant="error">Eksik</Badge>
+                          {tanim.spikyTip && onUploadClick && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onUploadClick(tanim.spikyTip!);
+                              }}
+                              className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded transition-colors"
+                            >
+                              <Upload className="w-3 h-3" />
+                              Yükle
+                            </button>
+                          )}
+                        </>
                       )}
                       {hasUploadedDocs && (
                         isExpanded
@@ -206,20 +233,42 @@ export function DonemVerileriPanel({ onUploadClick }: DonemVerileriPanelProps) {
                 const tanim = BELGE_KATEGORILERI_UI[kategori];
                 const durum = kategoriDurumu[kategori];
                 const IconComponent = ICON_MAP[tanim.icon] || FileText;
+                const hasUploaded = durum.yuklenen > 0;
 
                 return (
-                  <button
+                  <div
                     key={kategori}
-                    onClick={() => handleKategoriClick(kategori)}
                     className="w-full flex items-center gap-3 p-2 rounded-lg border border-slate-200
-                               bg-slate-50-elevated/50 hover:bg-slate-50-elevated transition-colors text-left"
+                               bg-slate-50-elevated/50 hover:bg-slate-50-elevated transition-colors"
                   >
                     <IconComponent className="w-4 h-4 text-slate-400" />
                     <span className="flex-1 text-sm text-slate-600">{tanim.ad}</span>
-                    {durum.yuklenen > 0 && (
-                      <Badge variant="success" size="sm">{durum.yuklenen}</Badge>
-                    )}
-                  </button>
+                    <div className="flex items-center gap-2">
+                      {hasUploaded ? (
+                        <>
+                          <Badge variant="success" size="sm">{durum.yuklenen}</Badge>
+                          {tanim.spikyTip && onUploadClick && (
+                            <button
+                              onClick={() => onUploadClick(tanim.spikyTip!)}
+                              className="px-2 py-1 text-xs font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
+                            >
+                              Güncelle
+                            </button>
+                          )}
+                        </>
+                      ) : (
+                        tanim.spikyTip && onUploadClick && (
+                          <button
+                            onClick={() => onUploadClick(tanim.spikyTip!)}
+                            className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                          >
+                            <Upload className="w-3 h-3" />
+                            Yükle
+                          </button>
+                        )
+                      )}
+                    </div>
+                  </div>
                 );
               })}
             </div>

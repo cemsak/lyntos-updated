@@ -224,7 +224,7 @@ function KurganInfoModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => 
 
           {/* Context */}
           <div>
-            <h3 className="text-sm font-semibold text-slate-700 mb-2">KURGAN Hakkinda</h3>
+            <h3 className="text-sm font-semibold text-slate-700 mb-2">KURGAN Hakkında</h3>
             <ul className="space-y-2">
               {KURGAN_SMMM_INFO.context.map((item, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm text-slate-600">

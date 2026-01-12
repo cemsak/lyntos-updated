@@ -9,28 +9,28 @@ import { FiveWhyWizard } from '../../_components/vdk/FiveWhyWizard';
 // VDK Kriter bilgileri
 const VDK_KRITERLER: Record<string, { baslik: string; aciklama: string; oneri: string; risk: string }> = {
   'K-09': {
-    baslik: 'Yuksek Kasa Bakiyesi',
-    aciklama: 'Kasa hesabi bakiyesi aktif toplaminin %5\'ini veya 500.000 TL\'yi asiyor.',
-    oneri: 'Kasa sayimi yapilmali, fazla bakiye banka hesabina aktarilmali veya ortaklara borc olarak kaydedilmelidir.',
-    risk: 'Yuksek',
+    baslik: 'Yüksek Kasa Bakiyesi',
+    aciklama: 'Kasa hesabı bakiyesi aktif toplamının %5\'ini veya 500.000 TL\'yi aşıyor.',
+    oneri: 'Kasa sayımı yapılmalı, fazla bakiye banka hesabına aktarılmalı veya ortaklara borç olarak kaydedilmelidir.',
+    risk: 'Yüksek',
   },
   'K-05': {
-    baslik: 'Supheli Alacak Orani',
-    aciklama: 'Supheli alacaklar ticari alacaklarin %20\'sini asiyor.',
-    oneri: 'Supheli alacak karsiliklari gozden gecirilmeli, tahsilat takibi yapilmalidir.',
+    baslik: 'Şüpheli Alacak Oranı',
+    aciklama: 'Şüpheli alacaklar ticari alacakların %20\'sini aşıyor.',
+    oneri: 'Şüpheli alacak karşılıkları gözden geçirilmeli, tahsilat takibi yapılmalıdır.',
     risk: 'Orta',
   },
   'K-07': {
-    baslik: 'E-Fatura Uyumsuzlugu',
-    aciklama: 'E-fatura kayitlari ile muhasebe kayitlari arasinda tutarsizlik tespit edildi.',
-    oneri: 'Karsi firma ile mutabakat yapilmali, eksik faturalar kaydedilmelidir.',
+    baslik: 'E-Fatura Uyumsuzluğu',
+    aciklama: 'E-fatura kayıtları ile muhasebe kayıtları arasında tutarsızlık tespit edildi.',
+    oneri: 'Karşı firma ile mutabakat yapılmalı, eksik faturalar kaydedilmelidir.',
     risk: 'Orta',
   },
   'K-01': {
     baslik: 'Ortak Cari Hesap Bakiyesi',
-    aciklama: 'Ortak cari hesap bakiyesi yuksek, transfer fiyatlandirmasi riski.',
-    oneri: 'Ortak ile mutabakat yapilmali, faiz hesaplanmali.',
-    risk: 'Yuksek',
+    aciklama: 'Ortak cari hesap bakiyesi yüksek, transfer fiyatlandırması riski.',
+    oneri: 'Ortak ile mutabakat yapılmalı, faiz hesaplanmalı.',
+    risk: 'Yüksek',
   },
 };
 
@@ -44,12 +44,12 @@ export default function VdkDetayPage() {
 
   const kriter = VDK_KRITERLER[kriterId] || {
     baslik: `VDK Kriter ${kriterId}`,
-    aciklama: 'Kriter detaylari yukleniyor...',
-    oneri: 'Uzman gorusu aliniz.',
+    aciklama: 'Kriter detayları yükleniyor...',
+    oneri: 'Uzman görüşü alınız.',
     risk: 'Bilinmiyor',
   };
 
-  const riskVariant = kriter.risk === 'Yuksek' ? 'error' : kriter.risk === 'Orta' ? 'warning' : 'default';
+  const riskVariant = kriter.risk === 'Yüksek' ? 'error' : kriter.risk === 'Orta' ? 'warning' : 'default';
 
   const handleFiveWhyComplete = (analysis: { kriterId: string; problem: string; whys: string[]; kokNeden: string; onerilenAksiyonlar: string[] }) => {
     console.log('5 Why Analysis completed:', analysis);

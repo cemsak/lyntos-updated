@@ -329,9 +329,9 @@ function MatrahHesaplama({ veriler, yil }: MatrahHesaplamaProps) {
       <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-3">
         <div className="flex items-center gap-2 text-white">
           <Calculator className="w-5 h-5" />
-          <span className="font-semibold">Matrah Hesaplama Ozeti</span>
+          <span className="font-semibold">Matrah Hesaplama Özeti</span>
         </div>
-        <div className="text-blue-100 text-xs mt-1">{yil} Hesap Donemi</div>
+        <div className="text-blue-100 text-xs mt-1">{yil} Hesap Dönemi</div>
       </div>
 
       {/* Content */}
@@ -531,7 +531,7 @@ export function KurumlarVergisiPanel({
             </div>
             <div>
               <h2 className="text-xl font-bold text-slate-800">Kurumlar Vergisi Analizi</h2>
-              <p className="text-slate-500 text-sm">{yil} Hesap Donemi</p>
+              <p className="text-slate-500 text-sm">{yil} Hesap Dönemi</p>
             </div>
           </div>
           <div className="text-right">

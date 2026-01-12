@@ -45,9 +45,16 @@ export function AksiyonKarti({
     }
   };
 
+  // Kart arka plan rengi - oncelik bazlı AÇIK renkler
+  const kartBg = aksiyon.oncelik === 'acil' 
+    ? 'bg-red-50 border-red-200' 
+    : aksiyon.oncelik === 'normal'
+    ? 'bg-white border-slate-200'
+    : 'bg-blue-50 border-blue-200';
+
   return (
     <div
-      className={`rounded-lg border transition-all hover:shadow-md ${oncelikConfig.bgColor} ${oncelikConfig.borderColor} ${compact ? 'p-3' : 'p-4'}`}
+      className={`rounded-lg border transition-all hover:shadow-md ${kartBg} ${compact ? 'p-3' : 'p-4'}`}
     >
       {/* Ust Satir: Baslik + 8D Badge */}
       <div className="flex items-start justify-between gap-2 mb-2">
@@ -138,7 +145,7 @@ export function AksiyonKarti({
           onClick={handleAksiyonClick}
           className={`px-4 py-1.5 text-sm font-medium text-white rounded-lg transition-colors flex items-center gap-1 ${
             aksiyon.oncelik === 'acil' ? 'bg-red-600 hover:bg-red-700' :
-            aksiyon.oncelik === 'normal' ? 'bg-amber-600 hover:bg-amber-700' :
+            aksiyon.oncelik === 'normal' ? 'bg-slate-600 hover:bg-slate-700' :
             'bg-blue-600 hover:bg-blue-700'
           }`}
         >

@@ -561,7 +561,7 @@ export function MizanOmurgaPanel() {
                   activeTab === 'ozet' ? 'bg-teal-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
-                Analiz Ozeti
+                Analiz Özeti
               </button>
               <button
                 onClick={() => setActiveTab('detay')}

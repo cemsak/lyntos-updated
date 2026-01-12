@@ -32,7 +32,7 @@ function useBreadcrumbs(): Breadcrumb[] {
   const labels: Record<string, string> = {
     'v2': 'Ana Sayfa',
     'upload': 'Veri Yükleme',
-    'risk': 'Bekleyen Islemler',
+    'risk': 'Bekleyen İşlemler',
     'clients': 'Mükellefler',
     'declarations': 'Beyannameler',
     'reports': 'Raporlar',

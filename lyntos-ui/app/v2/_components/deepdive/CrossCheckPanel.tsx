@@ -10,6 +10,46 @@ import { ENDPOINTS } from '../contracts/endpoints';
 import { normalizeToEnvelope } from '../contracts/map';
 import type { PanelEnvelope } from '../contracts/envelope';
 
+// Demo data with real source labels
+const DEMO_CHECKS: CrossCheckItem[] = [
+  {
+    id: 'kdv-mizan',
+    check_type: 'kdv',
+    source_label: 'KDV Beyannamesi',
+    target_label: 'Mizan 391 Hesap',
+    source_amount: 1250000,
+    target_amount: 1250000,
+    difference: 0,
+    difference_pct: 0,
+    status: 'match',
+    explanation_tr: 'KDV beyannamesi ile mizan 391 hesabı tam eşleşiyor.',
+  },
+  {
+    id: 'efatura-mizan',
+    check_type: 'e_fatura',
+    source_label: 'e-Fatura Toplamı',
+    target_label: 'Mizan 600 Hesap',
+    source_amount: 3855280,
+    target_amount: 3420000,
+    difference: 435280,
+    difference_pct: 11.3,
+    status: 'major',
+    explanation_tr: 'UYUMSUZLUK NEDENİ: 5 adet Aralık faturası Ocak ayına kaydedilmiş. ÖNERİ: 600 Yurtiçi Satışlar hesabını kontrol edin.',
+  },
+  {
+    id: 'banka-mizan',
+    check_type: 'banka',
+    source_label: 'Banka Hesap Özeti',
+    target_label: 'Mizan 102 Hesap',
+    source_amount: 890000,
+    target_amount: 890000,
+    difference: 0,
+    difference_pct: 0,
+    status: 'match',
+    explanation_tr: 'Banka hesap özeti ile mizan 102 hesabı eşleşiyor.',
+  },
+];
+
 // SMMM Context Info for Cross-Check Panel
 const CROSS_CHECK_SMMM_INFO = {
   title: 'Cross-Check Matrisi Nedir?',
@@ -210,10 +250,27 @@ function CrossCheckInfoModal({ isOpen, onClose }: { isOpen: boolean; onClose: ()
 export function CrossCheckPanel() {
   const [showExplain, setShowExplain] = useState(false);
   const [showSmmmInfo, setShowSmmmInfo] = useState(false);
+  const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
   const envelope = useFailSoftFetch<CrossCheckResult>(ENDPOINTS.CROSS_CHECK, normalizeCrossCheck);
   const { status, reason_tr, data, analysis, trust, legal_basis_refs, evidence_refs, meta } = envelope;
 
   const formatAmount = (n: number) => n.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
+  // Use demo data if no real data
+  const isDemo = status === 'empty' || status === 'error' || !data || data.checks.length === 0;
+  const displayChecks = isDemo ? DEMO_CHECKS : data?.checks || [];
+  const displaySummary = isDemo ? {
+    total: DEMO_CHECKS.length,
+    matched: DEMO_CHECKS.filter(c => c.status === 'match').length,
+    discrepancies: DEMO_CHECKS.filter(c => c.status !== 'match').length,
+    critical: DEMO_CHECKS.filter(c => c.status === 'critical').length,
+  } : data?.summary || { total: 0, matched: 0, discrepancies: 0, critical: 0 };
+
+  const handleRowClick = (check: CrossCheckItem) => {
+    if (check.difference !== 0 && check.explanation_tr) {
+      setExpandedRowId(expandedRowId === check.id ? null : check.id);
+    }
+  };
 
   return (
     <>
@@ -232,34 +289,38 @@ export function CrossCheckPanel() {
         }
         subtitle="Mizan vs KDV / e-Fatura / Banka"
         headerAction={
-          data && (
-            <div className="flex items-center gap-2">
-              <Badge variant="success">{data.summary.matched} eşleşti</Badge>
-              {data.summary.critical > 0 && (
-                <Badge variant="error">{data.summary.critical} kritik</Badge>
-              )}
-            </div>
-          )
+          <div className="flex items-center gap-2">
+            {isDemo && (
+              <Badge variant="default">Demo Veri</Badge>
+            )}
+            <Badge variant="success">{displaySummary.matched} eşleşti</Badge>
+            {displaySummary.discrepancies > 0 && (
+              <Badge variant="warning">{displaySummary.discrepancies} fark</Badge>
+            )}
+          </div>
         }
       >
-        <PanelState status={status} reason_tr={reason_tr}>
-          {data && (
-            <div className="space-y-2">
-              {/* Dense Comparison Table */}
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs border-collapse">
-                  <thead>
-                    <tr className="bg-slate-100 border-b border-slate-200">
-                      <th className="text-left py-2 px-2 font-semibold text-slate-600 whitespace-nowrap">Veri Kaynağı A</th>
-                      <th className="text-right py-2 px-2 font-semibold text-slate-600 whitespace-nowrap tabular-nums">Tutar A</th>
-                      <th className="text-right py-2 px-2 font-semibold text-slate-600 whitespace-nowrap tabular-nums">Tutar B</th>
-                      <th className="text-right py-2 px-2 font-semibold text-slate-600 whitespace-nowrap tabular-nums">Fark</th>
-                      <th className="text-center py-2 px-2 font-semibold text-slate-600 whitespace-nowrap">Durum</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {data.checks.map((check) => (
-                      <tr key={check.id} className="hover:bg-slate-50">
+        <PanelState status={isDemo ? 'ok' : status} reason_tr={reason_tr}>
+          <div className="space-y-2">
+            {/* Dense Comparison Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs border-collapse">
+                <thead>
+                  <tr className="bg-slate-100 border-b border-slate-200">
+                    <th className="text-left py-2 px-2 font-semibold text-slate-600 whitespace-nowrap">Karşılaştırma</th>
+                    <th className="text-right py-2 px-2 font-semibold text-slate-600 whitespace-nowrap tabular-nums">Kaynak</th>
+                    <th className="text-right py-2 px-2 font-semibold text-slate-600 whitespace-nowrap tabular-nums">Hedef</th>
+                    <th className="text-right py-2 px-2 font-semibold text-slate-600 whitespace-nowrap tabular-nums">Fark</th>
+                    <th className="text-center py-2 px-2 font-semibold text-slate-600 whitespace-nowrap">Durum</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {displayChecks.map((check) => (
+                    <React.Fragment key={check.id}>
+                      <tr
+                        className={`hover:bg-slate-50 ${check.difference !== 0 && check.explanation_tr ? 'cursor-pointer' : ''}`}
+                        onClick={() => handleRowClick(check)}
+                      >
                         <td className="py-1.5 px-2">
                           <div className="flex flex-col">
                             <span className="text-slate-800 font-medium">{check.source_label}</span>
@@ -278,8 +339,11 @@ export function CrossCheckPanel() {
                               <Check className="w-3 h-3 text-green-500" />
                             </span>
                           ) : (
-                            <span className="text-red-600 font-medium">
+                            <span className="text-red-600 font-medium flex items-center justify-end gap-1">
                               {formatAmount(check.difference)}
+                              {check.explanation_tr && (
+                                <span className="text-[10px] text-slate-400">{expandedRowId === check.id ? '▲' : '▼'}</span>
+                              )}
                             </span>
                           )}
                         </td>
@@ -295,34 +359,45 @@ export function CrossCheckPanel() {
                           )}
                         </td>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                      {/* Expanded Row - Explanation */}
+                      {expandedRowId === check.id && check.explanation_tr && (
+                        <tr className="bg-amber-50">
+                          <td colSpan={5} className="py-2 px-3">
+                            <div className="flex items-start gap-2 text-xs">
+                              <AlertTriangle className="w-3.5 h-3.5 text-amber-600 flex-shrink-0 mt-0.5" />
+                              <span className="text-slate-700">{check.explanation_tr}</span>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
-              {/* Compact Summary */}
-              <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
-                <div className="flex items-center gap-3 text-slate-500">
-                  <span><strong className="text-green-600">{data.summary.matched}</strong> eşleşen</span>
-                  <span><strong className="text-amber-600">{data.summary.discrepancies}</strong> uyumsuz</span>
-                  {data.summary.critical > 0 && (
-                    <span><strong className="text-red-600">{data.summary.critical}</strong> kritik</span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <TrustBadge trust={trust} />
-                  {(analysis.expert || analysis.ai || legal_basis_refs.length > 0) && (
-                    <button
-                      onClick={() => setShowExplain(true)}
-                      className="text-blue-600 hover:text-blue-800 font-medium"
-                    >
-                      Neden? →
-                    </button>
-                  )}
-                </div>
+            {/* Compact Summary */}
+            <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
+              <div className="flex items-center gap-3 text-slate-500">
+                <span><strong className="text-green-600">{displaySummary.matched}</strong> eşleşen</span>
+                <span><strong className="text-amber-600">{displaySummary.discrepancies}</strong> uyumsuz</span>
+                {displaySummary.critical > 0 && (
+                  <span><strong className="text-red-600">{displaySummary.critical}</strong> kritik</span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <TrustBadge trust={trust} />
+                {(analysis.expert || analysis.ai || legal_basis_refs.length > 0) && (
+                  <button
+                    onClick={() => setShowExplain(true)}
+                    className="text-blue-600 hover:text-blue-800 font-medium"
+                  >
+                    Neden? →
+                  </button>
+                )}
               </div>
             </div>
-          )}
+          </div>
         </PanelState>
       </Card>
 

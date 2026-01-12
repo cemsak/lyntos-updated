@@ -207,7 +207,7 @@ LYNTOS - Muhasebe ve Vergi Analiz Platformu
                       onClick={() => handleDownload(selectedEvidence)}
                       className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
                     >
-                      <span>Indir</span>
+                      <span>İndir</span>
                     </button>
                   </div>
                 </div>
@@ -246,7 +246,7 @@ LYNTOS - Muhasebe ve Vergi Analiz Platformu
                         onClick={() => handleDownload(selectedEvidence)}
                         className="px-4 py-2 text-sm bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors"
                       >
-                        {isDemoItem(selectedEvidence) ? 'Demo Indir' : 'Dosyayi Ac'}
+                        {isDemoItem(selectedEvidence) ? 'Demo İndir' : 'Dosyayi Ac'}
                       </button>
                       {selectedEvidence.url && selectedEvidence.url.startsWith('http') && (
                         <a

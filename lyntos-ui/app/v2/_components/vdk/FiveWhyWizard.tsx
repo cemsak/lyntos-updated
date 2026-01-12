@@ -210,7 +210,7 @@ export function FiveWhyWizard({
             <div className="space-y-6">
               <div>
                 <h3 className="text-lg font-semibold text-slate-800 mb-3">
-                  Analiz Ozeti
+                  Analiz Özeti
                 </h3>
                 <div className="space-y-2 p-4 bg-slate-50 rounded-lg">
                   {whys.map((why, idx) => (

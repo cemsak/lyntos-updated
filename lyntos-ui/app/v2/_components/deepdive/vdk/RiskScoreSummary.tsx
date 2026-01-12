@@ -34,7 +34,7 @@ export function RiskScoreSummary({
     <div className="bg-slate-50 rounded-lg p-4 mb-6">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-medium text-slate-600">
-          Risk Ozeti
+          Risk Özeti
         </h3>
         <span
           className={`px-3 py-1 rounded-full text-xs font-bold ${config.bg} text-white`}

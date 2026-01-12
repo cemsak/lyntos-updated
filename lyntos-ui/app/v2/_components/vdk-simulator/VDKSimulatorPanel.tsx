@@ -259,7 +259,7 @@ export function VDKSimulatorPanel({
             </button>
             <button className="px-3 py-2 text-[12px] font-medium text-white bg-[#635bff] hover:bg-[#5851ea] rounded-lg flex items-center gap-1.5 transition-colors">
               <FileArchive className="w-3.5 h-3.5" />
-              Kanit Dosyasi Olustur
+              Kanıt Dosyası Oluştur
             </button>
           </div>
         </div>

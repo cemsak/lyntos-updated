@@ -20,9 +20,9 @@ export function PdfPreviewModal({ isOpen, onClose, onExport }: PdfPreviewModalPr
 
   const reportSections = [
     { name: 'Genel Bilgiler', icon: 'i', included: true },
-    { name: 'KPI Ozeti (8 gosterge)', icon: 'K', included: true },
+    { name: 'KPI Özeti (8 gösterge)', icon: 'K', included: true },
     { name: 'VDK Risk Analizi (13 kriter)', icon: 'R', included: true },
-    { name: 'Capraz Kontrol Sonuclari', icon: 'C', included: true },
+    { name: 'Çapraz Kontrol Sonuçları', icon: 'C', included: true },
     { name: 'Mizan Analizi', icon: 'M', included: true },
     { name: 'Enflasyon Muhasebesi', icon: 'E', included: true },
     { name: 'Eksik Veri Listesi', icon: '!', included: true },
@@ -38,8 +38,8 @@ export function PdfPreviewModal({ isOpen, onClose, onExport }: PdfPreviewModalPr
       <div className="bg-white rounded-lg shadow-xl w-full max-w-lg overflow-hidden">
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
-          <h2 className="text-lg font-semibold text-slate-900">PDF Rapor Onizleme</h2>
-          <p className="text-xs text-slate-500 mt-0.5">Rapor icerigini gozden gecirin</p>
+          <h2 className="text-lg font-semibold text-slate-900">PDF Rapor Önizleme</h2>
+          <p className="text-xs text-slate-500 mt-0.5">Rapor içeriğini gözden geçirin</p>
         </div>
 
         {/* Content */}
@@ -48,11 +48,11 @@ export function PdfPreviewModal({ isOpen, onClose, onExport }: PdfPreviewModalPr
           <div className="p-4 bg-slate-50 rounded-lg">
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <p className="text-slate-500">Mukellef</p>
+                <p className="text-slate-500">Mükellef</p>
                 <p className="font-medium text-slate-900">{scope.client_id || '—'}</p>
               </div>
               <div>
-                <p className="text-slate-500">Donem</p>
+                <p className="text-slate-500">Dönem</p>
                 <p className="font-medium text-slate-900">{scope.period || '—'}</p>
               </div>
               <div>
@@ -60,7 +60,7 @@ export function PdfPreviewModal({ isOpen, onClose, onExport }: PdfPreviewModalPr
                 <p className="font-medium text-slate-900">{scope.smmm_id || '—'}</p>
               </div>
               <div>
-                <p className="text-slate-500">Olusturma Tarihi</p>
+                <p className="text-slate-500">Oluşturma Tarihi</p>
                 <p className="font-medium text-slate-900">{new Date().toLocaleDateString('tr-TR')}</p>
               </div>
             </div>
@@ -68,7 +68,7 @@ export function PdfPreviewModal({ isOpen, onClose, onExport }: PdfPreviewModalPr
 
           {/* Sections */}
           <div>
-            <p className="text-sm font-medium text-slate-700 mb-2">Rapor Icerigi</p>
+            <p className="text-sm font-medium text-slate-700 mb-2">Rapor İçeriği</p>
             <div className="space-y-2">
               {reportSections.map((section, idx) => (
                 <div key={idx} className="flex items-center justify-between p-2 bg-slate-50 rounded">
@@ -88,8 +88,8 @@ export function PdfPreviewModal({ isOpen, onClose, onExport }: PdfPreviewModalPr
           <div className="p-3 bg-blue-50 rounded-lg border border-blue-100">
             <p className="text-xs text-blue-800">
               i PDF raporu <strong>rulepack_version</strong>, <strong>inputs_hash</strong> ve
-              <strong> olusturma zamani</strong> bilgilerini icerecektir. Bu bilgiler
-              raporun butunlugunu ve izlenebilirligini saglar.
+              <strong> oluşturma zamanı</strong> bilgilerini içerecektir. Bu bilgiler
+              raporun bütünlüğünü ve izlenebilirliğini sağlar.
             </p>
           </div>
         </div>
@@ -100,7 +100,7 @@ export function PdfPreviewModal({ isOpen, onClose, onExport }: PdfPreviewModalPr
             onClick={onClose}
             className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800 transition-colors"
           >
-            Iptal
+            İptal
           </button>
           <button
             onClick={() => {
@@ -110,7 +110,7 @@ export function PdfPreviewModal({ isOpen, onClose, onExport }: PdfPreviewModalPr
             className="px-6 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
           >
             <span>PDF</span>
-            Olustur ve Indir
+            Oluştur ve İndir
           </button>
         </div>
       </div>

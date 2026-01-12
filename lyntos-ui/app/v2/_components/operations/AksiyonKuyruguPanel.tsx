@@ -131,7 +131,7 @@ export function AksiyonKuyruguPanel({
       {hesaplananStats.acil > 0 && (
         <div className="flex items-center gap-2 mb-4 p-2 bg-red-50 border-l-4 border-red-400 rounded-md">
           <span className="text-red-600 font-medium">
-            🔴 {hesaplananStats.acil} acil is bekliyor!
+            🔴 {hesaplananStats.acil} acil iş bekliyor!
           </span>
         </div>
       )}

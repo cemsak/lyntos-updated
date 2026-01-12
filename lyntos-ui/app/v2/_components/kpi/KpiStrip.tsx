@@ -1,6 +1,7 @@
 'use client';
-import React from 'react';
+import React, { useState } from 'react';
 import { KpiCard, type KpiData } from './KpiCard';
+import { RiskSkoruDetayModal, DEFAULT_PUAN_KIRANLAR } from './RiskSkoruDetay';
 import { useFailSoftFetch } from '../hooks/useFailSoftFetch';
 import { ENDPOINTS } from '../contracts/endpoints';
 import type { PanelEnvelope, ExpertAnalysis, AiAnalysis, PanelMeta, LegalBasisRef, EvidenceRef } from '../contracts/envelope';
@@ -239,6 +240,9 @@ interface KpiStripProps {
 }
 
 export function KpiStrip({ onRegWatchClick }: KpiStripProps) {
+  // Risk Skoru Detay Modal state
+  const [riskDetayAcik, setRiskDetayAcik] = useState(false);
+
   // Each KPI has its own fail-soft fetch
   const kurgan = useFailSoftFetch<KpiData>(ENDPOINTS.KURGAN_RISK, normalizeKurganRisk);
   const dataQuality = useFailSoftFetch<KpiData>(ENDPOINTS.DATA_QUALITY, normalizeDataQuality);
@@ -257,16 +261,35 @@ export function KpiStrip({ onRegWatchClick }: KpiStripProps) {
     }
   });
 
+  // Get risk score value for modal
+  const riskSkor = kurgan.status === 'ok' && kurgan.data ?
+    (typeof kurgan.data.value === 'number' ? kurgan.data.value : 88) : 88;
+
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
-      <KpiCard title="Vergi Risk Skoru" icon="🎯" envelope={kurgan} />
-      <KpiCard title="Veri Kalitesi" icon="📊" envelope={dataQuality} />
-      <KpiCard title="Mutabakat" icon="✓" envelope={crossCheck} />
-      <KpiCard title="Gecici Vergi" icon="💰" envelope={quarterlyTax} />
-      <KpiCard title="Kurumlar Vergisi" icon="🏢" envelope={corporateTax} />
-      <KpiCard title="KV Tahmini" icon="📈" envelope={corporateTaxForecast} />
-      <KpiCard title="Enflasyon" icon="📉" envelope={inflation} />
-      <KpiCard title="Beyan Takvimi" icon="📅" envelope={regwatch} onClick={handleRegWatchClick} />
-    </div>
+    <>
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+        <KpiCard
+          title="Vergi Risk Skoru"
+          icon="🎯"
+          envelope={kurgan}
+          onClick={() => setRiskDetayAcik(true)}
+        />
+        <KpiCard title="Veri Kalitesi" icon="📊" envelope={dataQuality} />
+        <KpiCard title="Mutabakat" icon="✓" envelope={crossCheck} />
+        <KpiCard title="Geçici Vergi" icon="💰" envelope={quarterlyTax} />
+        <KpiCard title="Kurumlar Vergisi" icon="🏢" envelope={corporateTax} />
+        <KpiCard title="KV Tahmini" icon="📈" envelope={corporateTaxForecast} />
+        <KpiCard title="Enflasyon" icon="📉" envelope={inflation} />
+        <KpiCard title="Beyan Takvimi" icon="📅" envelope={regwatch} onClick={handleRegWatchClick} />
+      </div>
+
+      {/* Risk Skoru Detay Modal */}
+      <RiskSkoruDetayModal
+        isOpen={riskDetayAcik}
+        onClose={() => setRiskDetayAcik(false)}
+        skor={riskSkor}
+        puanKiranlar={DEFAULT_PUAN_KIRANLAR}
+      />
+    </>
   );
 }

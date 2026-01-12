@@ -93,9 +93,9 @@ export default function DashboardV3Page() {
             <div className="text-4xl mb-4">📊</div>
             <h2 className="text-lg font-semibold text-slate-900 mb-2">Dashboard V3</h2>
             <p className="text-sm text-slate-600 mb-4">
-              Lutfen yukaridaki secicilerden SMMM, Mukellef ve Donem secin.
+              Lütfen yukarıdaki seçicilerden SMMM, Mükellef ve Dönem seçin.
             </p>
-            <Badge variant="info">Scope Bekleniyor</Badge>
+            <Badge variant="info">Kapsam Bekleniyor</Badge>
           </div>
         </Card>
       </div>
@@ -126,7 +126,7 @@ export default function DashboardV3Page() {
         badge={
           acilSayisi > 0 && (
             <span className="bg-red-500 text-white text-sm font-bold px-5 py-2 rounded-full shadow-lg animate-pulse">
-              {acilSayisi} Acil Is
+              {acilSayisi} Acil İş
             </span>
           )
         }
@@ -160,7 +160,7 @@ export default function DashboardV3Page() {
       {/* ROW 3: KPI STRIP (8 Kart) */}
       <DashboardSection
         id="risk-ozeti-section"
-        title="Donem Ozeti"
+        title="Dönem Özeti"
         icon={<BarChart3 className="w-5 h-5 text-amber-600" />}
       >
         <KpiStrip />
@@ -175,7 +175,7 @@ export default function DashboardV3Page() {
               <Calculator className="w-5 h-5 text-indigo-600" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-slate-800">Gecici Vergi Analizi</h2>
+              <h2 className="text-lg font-bold text-slate-800">Geçici Vergi Analizi</h2>
               <p className="text-slate-500 text-sm">{scope.period} - 12 Kritik Kontrol</p>
             </div>
           </div>

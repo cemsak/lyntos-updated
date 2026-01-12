@@ -60,7 +60,7 @@ export function RiskReviewDetail({
             className="flex items-center gap-2 text-[14px] text-[#635bff] hover:text-[#5851ea] font-medium"
           >
             <ArrowLeft className="w-4 h-4" />
-            Bekleyen Islemler
+            Bekleyen İşlemler
           </button>
 
           <div className="flex items-center gap-2">
@@ -148,7 +148,7 @@ export function RiskReviewDetail({
             <div className="mt-4 bg-white border border-[#e3e8ee] rounded-lg p-4">
               <div className="flex items-center gap-3">
                 <span className="text-[12px] text-[#697386] font-medium uppercase tracking-wider">
-                  Islemler
+                  İşlemler
                 </span>
 
                 <div className="flex-1" />

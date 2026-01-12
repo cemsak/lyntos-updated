@@ -12,7 +12,7 @@ export function PdfExportButton() {
 
   const handleExport = async () => {
     if (!scope.smmm_id || !scope.client_id || !scope.period) {
-      setError('Lutfen once SMMM, Mukellef ve Donem secin.');
+      setError('Lütfen önce SMMM, Mükellef ve Dönem seçin.');
       setStatus('error');
       return;
     }
@@ -44,9 +44,9 @@ export function PdfExportButton() {
 
       if (!response.ok) {
         if (response.status === 404) {
-          throw new Error('PDF olusturma servisi bulunamadi. Lutfen daha sonra tekrar deneyin.');
+          throw new Error('PDF oluşturma servisi bulunamadı. Lütfen daha sonra tekrar deneyin.');
         }
-        throw new Error(`PDF olusturulamadi: ${response.status}`);
+        throw new Error(`PDF oluşturulamadı: ${response.status}`);
       }
 
       const contentType = response.headers.get('content-type');
@@ -79,7 +79,7 @@ export function PdfExportButton() {
             setProgress(0);
           }, 3000);
         } else if (data.job_id) {
-          setError('PDF hazirlaniyor, lutfen bekleyin...');
+          setError('PDF hazırlanıyor, lütfen bekleyin...');
           setStatus('idle');
         } else {
           throw new Error(data.message || 'Bilinmeyen hata');
@@ -87,7 +87,7 @@ export function PdfExportButton() {
       }
     } catch (err) {
       setStatus('error');
-      setError(err instanceof Error ? err.message : 'PDF olusturulurken hata olustu');
+      setError(err instanceof Error ? err.message : 'PDF oluşturulurken hata oluştu');
       setProgress(0);
     }
   };
@@ -98,7 +98,7 @@ export function PdfExportButton() {
         return (
           <>
             <span className="animate-spin">...</span>
-            <span>Hazirlaniyor</span>
+            <span>Hazırlanıyor</span>
           </>
         );
       case 'generating':
@@ -112,7 +112,7 @@ export function PdfExportButton() {
         return (
           <>
             <span>OK</span>
-            <span>Indirildi!</span>
+            <span>İndirildi!</span>
           </>
         );
       case 'error':
@@ -126,7 +126,7 @@ export function PdfExportButton() {
         return (
           <>
             <span>PDF</span>
-            <span>Indir</span>
+            <span>İndir</span>
           </>
         );
     }

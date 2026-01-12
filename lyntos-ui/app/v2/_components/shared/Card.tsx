@@ -22,7 +22,7 @@ export function Card({
   return (
     <div
       className={`
-        relative bg-white border border-slate-200 rounded-xl overflow-hidden
+        relative bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm
         ${accent ? 'pl-1' : ''}
         ${className}
       `}
@@ -34,7 +34,7 @@ export function Card({
 
       {/* Header */}
       {(title || headerAction) && (
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-slate-50">
           <div>
             {title && (
               <h3 className="text-sm font-semibold text-slate-900">
@@ -42,7 +42,7 @@ export function Card({
               </h3>
             )}
             {subtitle && (
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-slate-500 mt-0.5">
                 {subtitle}
               </p>
             )}

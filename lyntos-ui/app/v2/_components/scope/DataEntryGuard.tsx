@@ -24,7 +24,7 @@ interface DataEntryGuardProps {
 export function DataEntryGuard({
   children,
   locked = false,
-  lockedMessage = 'Bu donem kilitlendi, duzenleme yapilamaz.',
+  lockedMessage = 'Bu dönem kilitlendi, düzenleme yapılamaz.',
   compact = false,
 }: DataEntryGuardProps) {
   const { scope, isReady } = useDashboardScope();
@@ -37,15 +37,15 @@ export function DataEntryGuard({
     return (
       <div className="relative">
         {/* Overlay */}
-        <div className="absolute inset-0 bg-slate-50-primary/80 backdrop-blur-sm z-10 rounded-lg flex items-center justify-center">
+        <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 rounded-lg flex items-center justify-center">
           <div className={`text-center ${compact ? 'p-4' : 'p-8'}`}>
             <AlertTriangle className="w-8 h-8 text-amber-600 mx-auto mb-2" />
             <p className="text-sm font-medium text-slate-900">
-              Scope Secimi Gerekli
+              Kapsam Seçimi Gerekli
             </p>
             {!compact && (
               <p className="text-xs text-slate-400 mt-1 max-w-xs">
-                Islem yapmak icin SMMM, Mukellef ve Donem seciniz.
+                İşlem yapmak için SMMM, Mükellef ve Dönem seçiniz.
               </p>
             )}
           </div>
@@ -64,11 +64,11 @@ export function DataEntryGuard({
     return (
       <div className="relative">
         {/* Overlay */}
-        <div className="absolute inset-0 bg-slate-50-primary/80 backdrop-blur-sm z-10 rounded-lg flex items-center justify-center">
+        <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 rounded-lg flex items-center justify-center">
           <div className={`text-center ${compact ? 'p-4' : 'p-8'}`}>
             <Lock className="w-8 h-8 text-slate-400 mx-auto mb-2" />
             <p className="text-sm font-medium text-slate-900">
-              Donem Kilitli
+              Dönem Kilitli
             </p>
             {!compact && (
               <p className="text-xs text-slate-400 mt-1 max-w-xs">
@@ -101,7 +101,7 @@ export function DataEntryStatus({ locked = false }: { locked?: boolean }) {
     return (
       <span className="inline-flex items-center gap-1 text-xs text-amber-600">
         <AlertTriangle className="w-3 h-3" />
-        Scope bekleniyor
+        Kapsam bekleniyor
       </span>
     );
   }
@@ -118,7 +118,7 @@ export function DataEntryStatus({ locked = false }: { locked?: boolean }) {
   return (
     <span className="inline-flex items-center gap-1 text-xs text-emerald-600">
       <Unlock className="w-3 h-3" />
-      Duzenlenebilir
+      Düzenlenebilir
     </span>
   );
 }

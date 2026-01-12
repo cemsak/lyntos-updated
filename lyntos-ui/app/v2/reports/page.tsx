@@ -99,7 +99,7 @@ export default function ReportsPage() {
       {/* Recent Reports */}
       <div className="bg-white rounded-xl border border-slate-200 p-6">
         <h2 className="text-lg font-semibold text-slate-900 mb-4">
-          Son Olusturulan Raporlar
+          Son Oluşturulan Raporlar
         </h2>
         <div className="space-y-3">
           <div className="flex items-center justify-between py-2 border-b border-slate-100">

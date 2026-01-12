@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Sirket Islem Tipleri Listesi
+ * Şirket İşlem Tipleri Listesi
  * Sprint S2 - LYNTOS V2
  *
  * Corporate event types list with filtering and selection
@@ -66,7 +66,7 @@ export function EventTypesList({ onSelectEvent, selectedEventCode }: EventTypesL
     <div className="bg-white rounded-xl border border-[#e3e8ee] p-6">
       <h2 className="text-[16px] font-semibold text-[#1a1f36] mb-4 flex items-center gap-2">
         <FileText className="w-5 h-5 text-[#635bff]" />
-        Sirket Islem Tipleri
+        Şirket İşlem Tipleri
       </h2>
 
       {/* Filters */}
@@ -75,7 +75,7 @@ export function EventTypesList({ onSelectEvent, selectedEventCode }: EventTypesL
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#697386]" />
           <input
             type="text"
-            placeholder="Islem ara..."
+            placeholder="İşlem ara..."
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             className="w-full pl-10 pr-3 py-2 text-[13px] border border-[#e3e8ee] rounded-lg bg-white text-[#1a1f36] focus:outline-none focus:ring-2 focus:ring-[#635bff] focus:border-transparent"

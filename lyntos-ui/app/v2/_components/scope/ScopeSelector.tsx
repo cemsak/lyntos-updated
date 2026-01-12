@@ -277,18 +277,18 @@ export function ScopeSelector() {
           getOptionLabel={s => s.ad}
           getOptionSublabel={s => s.unvan}
           onChange={handleSmmmChange}
-          placeholder="SMMM Secin"
+          placeholder="SMMM Seçin"
           loading={smmmLoading}
           error={error && !user ? error : null}
-          emptyMessage="SMMM bulunamadi"
+          emptyMessage="SMMM bulunamadı"
           disabled={smmmList.length <= 1}
         />
       </div>
 
-      {/* Mukellef Selector */}
+      {/* Mükellef Selector */}
       <div className="w-56">
         <Dropdown
-          label="Mukellef"
+          label="Mükellef"
           icon={<Building2 className="w-4 h-4" />}
           value={scope.client_id}
           options={mukellefList}
@@ -296,28 +296,28 @@ export function ScopeSelector() {
           getOptionLabel={m => m.unvan}
           getOptionSublabel={m => `VKN: ${m.vkn}`}
           onChange={handleMukellefChange}
-          placeholder="Mukellef Secin"
+          placeholder="Mükellef Seçin"
           loading={mukellefLoading}
           error={error && clients.length === 0 && scope.smmm_id ? error : null}
-          emptyMessage="Mukellef bulunamadi"
+          emptyMessage="Mükellef bulunamadı"
           disabled={!scope.smmm_id}
         />
       </div>
 
-      {/* Donem Selector */}
+      {/* Dönem Selector */}
       <div className="w-52">
         <Dropdown
-          label="Donem"
+          label="Dönem"
           icon={<Calendar className="w-4 h-4" />}
           value={scope.period}
           options={donemList}
           getOptionId={d => d.id}
           getOptionLabel={d => d.label}
           onChange={period => setScope({ period })}
-          placeholder="Donem Secin"
+          placeholder="Dönem Seçin"
           loading={donemLoading}
           error={error && periods.length === 0 && scope.client_id ? error : null}
-          emptyMessage="Donem bulunamadi"
+          emptyMessage="Dönem bulunamadı"
           disabled={!scope.client_id}
         />
       </div>

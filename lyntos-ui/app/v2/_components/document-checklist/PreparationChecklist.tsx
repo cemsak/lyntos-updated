@@ -285,7 +285,7 @@ export function PreparationChecklist({
               {isCreatingBundle ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Olusturuluyor...
+                  Oluşturuluyor...
                 </>
               ) : (
                 <>
