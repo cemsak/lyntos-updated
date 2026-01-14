@@ -1,6 +1,5 @@
 export { FeedCard } from './FeedCard';
 export { IntelligenceFeed } from './IntelligenceFeed';
-export { RailDetailPanel } from './RailDetailPanel';
 export { ContextRail } from './ContextRail';
 export { MOCK_FEED_ITEMS, getFilteredFeed, sortFeedByScore } from './mockData';
 export {
