@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, Suspense, useEffect, useRef } from 'react';
 import { ListTodo, FolderOpen, BarChart3, Radio, Layers, Calculator, AlertCircle } from 'lucide-react';
 import { useDashboardScope, useScopeComplete } from './_components/scope/useDashboardScope';
 import { Card } from './_components/shared/Card';
@@ -37,14 +37,41 @@ import { GeciciVergiPanel, KurumlarVergisiPanel } from './_components/vergi-anal
 import { FiveWhyWizard } from './_components/vdk/FiveWhyWizard';
 
 // Intelligence Feed
-import { IntelligenceFeed, MOCK_FEED_ITEMS } from './_components/feed';
+import { IntelligenceFeed, MOCK_FEED_ITEMS, useUrlSync, useResetFeedSelection } from './_components/feed';
 
-export default function V2DashboardPage() {
+// ═══════════════════════════════════════════════════════════════════
+// MAIN DASHBOARD CONTENT (wrapped in Suspense for useSearchParams)
+// ═══════════════════════════════════════════════════════════════════
+
+function V2DashboardContent() {
   // === ALL HOOKS AT TOP (React Hook Rules) ===
   const { scope } = useDashboardScope();
   const scopeComplete = useScopeComplete();
   const { data: donemData, markAsUploaded } = useDonemVerileri();
   const { aksiyonlar, loading: aksiyonlarLoading } = useAksiyonlar();
+
+  // URL sync for feed selection (Sprint 3.2)
+  useUrlSync();
+
+  // Reset feed selection when scope changes (Sprint 3.2.1)
+  const resetFeedSelection = useResetFeedSelection();
+  const prevScopeRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const currentScopeKey = `${scope.client_id}:${scope.period}`;
+
+    // Skip on initial mount
+    if (prevScopeRef.current === null) {
+      prevScopeRef.current = currentScopeKey;
+      return;
+    }
+
+    // Reset feed selection when scope changes
+    if (prevScopeRef.current !== currentScopeKey) {
+      resetFeedSelection();
+      prevScopeRef.current = currentScopeKey;
+    }
+  }, [scope.client_id, scope.period, resetFeedSelection]);
 
   // === ALL USESTATE HOOKS ===
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
@@ -366,5 +393,31 @@ export default function V2DashboardPage() {
         </div>
       )}
     </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// DASHBOARD SKELETON (Loading state)
+// ═══════════════════════════════════════════════════════════════════
+
+function DashboardSkeleton() {
+  return (
+    <div className="animate-pulse space-y-6">
+      <div className="h-12 bg-slate-200 rounded-lg" />
+      <div className="h-64 bg-slate-200 rounded-lg" />
+      <div className="h-32 bg-slate-200 rounded-lg" />
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// MAIN EXPORT (Suspense wrapper for useSearchParams)
+// ═══════════════════════════════════════════════════════════════════
+
+export default function V2DashboardPage() {
+  return (
+    <Suspense fallback={<DashboardSkeleton />}>
+      <V2DashboardContent />
+    </Suspense>
   );
 }

@@ -3,6 +3,7 @@
 /**
  * LYNTOS Intelligence Feed Component
  * Sprint 2.3 - Feed List with filtering and grouping
+ * Sprint 3.1 - Zustand store integration
  *
  * The heart of the Kokpit - shows prioritized action items.
  */
@@ -15,6 +16,7 @@ import {
   type FeedSeverity,
   SEVERITY_CONFIG,
 } from './types';
+import { useFeedStore, useSelectedCardId, useSeverityFilter, useFeedActions } from './useFeedStore';
 
 interface IntelligenceFeedProps {
   items: FeedItem[];
@@ -58,14 +60,22 @@ export function IntelligenceFeed({
   onAction,
   onSnooze,
   onDismiss,
-  selectedItemId,
+  selectedItemId: propSelectedItemId,
   maxVisible = 7,
   title = 'Akıllı Akış',
   showFilters = true,
 }: IntelligenceFeedProps) {
-  const [filterSeverity, setFilterSeverity] = useState<FilterSeverity>('ALL');
+  // Store state
+  const storeSelectedCardId = useSelectedCardId();
+  const filterSeverity = useSeverityFilter();
+  const { selectCard, setSeverityFilter, dismissCard } = useFeedActions();
+  const dismissedIds = useFeedStore((s) => s.dismissedIds);
+
+  // Use store selectedCardId, fallback to prop for backwards compatibility
+  const selectedCardId = storeSelectedCardId ?? propSelectedItemId;
+
+  // Local state (only for UI)
   const [showAll, setShowAll] = useState(false);
-  const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
 
   // Filter out dismissed items
   const activeItems = useMemo(() =>
@@ -89,10 +99,16 @@ export function IntelligenceFeed({
   // Severity counts for filter badges
   const severityCounts = useMemo(() => groupBySeverity(activeItems), [activeItems]);
 
-  // Handle dismiss
+  // Handle dismiss - now uses store
   const handleDismiss = (item: FeedItem) => {
-    setDismissedIds(prev => new Set(prev).add(item.id));
+    dismissCard(item.id);
     onDismiss?.(item);
+  };
+
+  // Handle select - now uses store
+  const handleSelect = (item: FeedItem) => {
+    selectCard(item.id);
+    onSelectItem?.(item);
   };
 
   // Critical + High count for header badge
@@ -121,7 +137,7 @@ export function IntelligenceFeed({
             <div className="flex gap-1">
               <FilterButton
                 active={filterSeverity === 'ALL'}
-                onClick={() => setFilterSeverity('ALL')}
+                onClick={() => setSeverityFilter('ALL')}
                 count={activeItems.length}
               >
                 Tümü
@@ -130,7 +146,7 @@ export function IntelligenceFeed({
                 <FilterButton
                   key={sev}
                   active={filterSeverity === sev}
-                  onClick={() => setFilterSeverity(sev)}
+                  onClick={() => setSeverityFilter(sev)}
                   count={severityCounts[sev] || 0}
                   severity={sev}
                 >
@@ -149,11 +165,11 @@ export function IntelligenceFeed({
             <FeedCard
               key={item.id}
               item={item}
-              onSelect={onSelectItem}
+              onSelect={handleSelect}
               onAction={onAction}
               onSnooze={onSnooze}
               onDismiss={handleDismiss}
-              selected={item.id === selectedItemId}
+              selected={item.id === selectedCardId}
             />
           ))}
         </div>
