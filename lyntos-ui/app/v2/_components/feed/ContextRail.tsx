@@ -23,6 +23,7 @@ import {
   Check,
 } from 'lucide-react';
 import { useFeedStore, useSelectedCardId, useRailOpen } from './useFeedStore';
+import { useResetFeedSelection } from './useUrlSync';
 import { type FeedItem, type FeedImpact, SEVERITY_CONFIG, CATEGORY_CONFIG } from './types';
 
 interface ContextRailProps {
@@ -78,11 +79,19 @@ function formatImpact(impact: FeedImpact): React.ReactNode {
  * Context Rail - Detail drawer for feed items
  */
 export function ContextRail({ items, onAction }: ContextRailProps) {
+  // ─────────────────────────────────────────────────────────────────
+  // ALL HOOKS AT TOP LEVEL (React Rules of Hooks)
+  // ─────────────────────────────────────────────────────────────────
   const selectedCardId = useSelectedCardId();
   const railOpen = useRailOpen();
-  const closeRail = useFeedStore((s) => s.closeRail);
+  const resetFeedSelection = useResetFeedSelection();
 
+  // Refs
   const railRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const lastSelectedCardIdRef = useRef<string | null>(null);
+
+  // Local state
   const [copied, setCopied] = React.useState(false);
 
   // Find selected item
@@ -96,28 +105,72 @@ export function ContextRail({ items, onAction }: ContextRailProps) {
   const categoryConfig = selectedItem ? CATEGORY_CONFIG[selectedItem.category] : null;
 
   // ─────────────────────────────────────────────────────────────────
-  // CLICK-OUTSIDE HANDLER
+  // TRACK LAST SELECTED CARD ID (for focus return)
+  // ─────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (selectedCardId) {
+      lastSelectedCardIdRef.current = selectedCardId;
+    }
+  }, [selectedCardId]);
+
+  // ─────────────────────────────────────────────────────────────────
+  // FOCUS MANAGEMENT: Focus close button when rail opens
+  // ─────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (railOpen && closeButtonRef.current) {
+      // Use requestAnimationFrame for smooth focus after render
+      requestAnimationFrame(() => {
+        closeButtonRef.current?.focus();
+      });
+    }
+  }, [railOpen]);
+
+  // ─────────────────────────────────────────────────────────────────
+  // UNIFIED CLOSE HANDLER: Store + URL + Focus Return
+  // ─────────────────────────────────────────────────────────────────
+  const handleClose = useCallback(() => {
+    // Capture card ID for focus return BEFORE closing
+    const cardIdToFocus = lastSelectedCardIdRef.current;
+
+    // Close rail + clear URL (deterministic)
+    resetFeedSelection();
+
+    // Return focus to the last selected card
+    if (cardIdToFocus) {
+      requestAnimationFrame(() => {
+        const cardEl = document.querySelector(
+          `[data-feed-card][data-card-id="${cardIdToFocus}"]`
+        ) as HTMLElement;
+        cardEl?.focus();
+      });
+    }
+  }, [resetFeedSelection]);
+
+  // ─────────────────────────────────────────────────────────────────
+  // CLICK-OUTSIDE HANDLER (with composedPath for robustness)
   // ─────────────────────────────────────────────────────────────────
   const handleClickOutside = useCallback(
     (e: MouseEvent) => {
       if (!railOpen) return;
 
-      const target = e.target as HTMLElement;
+      // Use composedPath for robustness (handles Shadow DOM)
+      const path = e.composedPath?.() ?? [e.target];
 
       // Guard: Don't close if clicking on a feed card
-      if (target.closest('[data-feed-card]')) {
-        return;
-      }
+      // This prevents flicker when switching between cards
+      const clickedOnFeedCard = path.some(
+        (el) => el instanceof HTMLElement && el.hasAttribute('data-feed-card')
+      );
+      if (clickedOnFeedCard) return;
 
       // Guard: Don't close if clicking inside the rail
-      if (railRef.current && railRef.current.contains(target)) {
-        return;
-      }
+      const clickedInsideRail = railRef.current && path.includes(railRef.current);
+      if (clickedInsideRail) return;
 
-      // Close rail
-      closeRail();
+      // Close rail with focus return
+      handleClose();
     },
-    [railOpen, closeRail]
+    [railOpen, handleClose]
   );
 
   // ─────────────────────────────────────────────────────────────────
@@ -126,10 +179,10 @@ export function ContextRail({ items, onAction }: ContextRailProps) {
   const handleEscapeKey = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === 'Escape' && railOpen) {
-        closeRail();
+        handleClose();
       }
     },
-    [railOpen, closeRail]
+    [railOpen, handleClose]
   );
 
   // ─────────────────────────────────────────────────────────────────
@@ -169,7 +222,7 @@ export function ContextRail({ items, onAction }: ContextRailProps) {
       {/* Backdrop */}
       <div
         className="fixed inset-0 z-40 bg-black/30 transition-opacity duration-300"
-        onClick={() => closeRail()}
+        onClick={handleClose}
         aria-hidden="true"
       />
 
@@ -193,7 +246,8 @@ export function ContextRail({ items, onAction }: ContextRailProps) {
             <div className="flex-shrink-0 border-b border-slate-100 p-4">
               {/* Close button */}
               <button
-                onClick={() => closeRail()}
+                ref={closeButtonRef}
+                onClick={handleClose}
                 className="absolute top-4 right-4 p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
                 aria-label="Kapat"
               >
@@ -369,7 +423,8 @@ export function ContextRail({ items, onAction }: ContextRailProps) {
           /* Not Found State */
           <div className="flex flex-col items-center justify-center h-full py-12 px-4 text-center">
             <button
-              onClick={() => closeRail()}
+              ref={closeButtonRef}
+              onClick={handleClose}
               className="absolute top-4 right-4 p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
               aria-label="Kapat"
             >
@@ -386,7 +441,7 @@ export function ContextRail({ items, onAction }: ContextRailProps) {
               Seçilen kart bulunamadı. Dönem veya mükellef değişmiş olabilir.
             </p>
             <button
-              onClick={() => closeRail()}
+              onClick={handleClose}
               className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors text-sm font-medium"
             >
               <X className="w-4 h-4" />
