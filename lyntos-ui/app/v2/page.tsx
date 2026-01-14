@@ -5,6 +5,7 @@ import { useDashboardScope, useScopeComplete } from './_components/scope/useDash
 import { Card } from './_components/shared/Card';
 import { Badge } from './_components/shared/Badge';
 import { DashboardSection, scrollToSection } from './_components/layout';
+import { RightRail } from './_components/layout/RightRail';
 
 // P0: Bugünkü İşlerim
 import { AksiyonKuyruguPanel, useAksiyonlar } from './_components/operations';
@@ -35,27 +36,27 @@ import { GeciciVergiPanel, KurumlarVergisiPanel } from './_components/vergi-anal
 // 5 Why Wizard
 import { FiveWhyWizard } from './_components/vdk/FiveWhyWizard';
 
+// Intelligence Feed
+import { IntelligenceFeed, MOCK_FEED_ITEMS } from './_components/feed';
+
 export default function V2DashboardPage() {
+  // === ALL HOOKS AT TOP (React Hook Rules) ===
   const { scope } = useDashboardScope();
   const scopeComplete = useScopeComplete();
+  const { data: donemData, markAsUploaded } = useDonemVerileri();
+  const { aksiyonlar, loading: aksiyonlarLoading } = useAksiyonlar();
 
-  // Upload Modal State
+  // === ALL USESTATE HOOKS ===
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [uploadBelgeTipi, setUploadBelgeTipi] = useState<BelgeTipi | null>(null);
-
-  // 5 Why Wizard State
   const [fiveWhyOpen, setFiveWhyOpen] = useState(false);
   const [selectedAksiyon, setSelectedAksiyon] = useState<AksiyonItem | null>(null);
-
-  // Vergi Kontrol Modal State
   const [kontrolModalOpen, setKontrolModalOpen] = useState(false);
   const [selectedKontrol, setSelectedKontrol] = useState<{ id: string; baslik: string } | null>(null);
+  const [selectedFeedItem, setSelectedFeedItem] = useState<string | null>(null);
 
-  // Donem Verileri Hook
-  const { markAsUploaded } = useDonemVerileri();
-
-  // Aksiyonlar Hook - Real API data with fail-soft fallback
-  const { aksiyonlar, loading: aksiyonlarLoading } = useAksiyonlar();
+  // Derived values
+  const kritikAksiyonlar = aksiyonlar.filter(a => a.oncelik === 'acil').length;
 
   // Handlers
   const handleUploadClick = (belgeTipi: BelgeTipi) => {
@@ -81,6 +82,17 @@ export default function V2DashboardPage() {
 
   const handleRegWatchClick = () => {
     scrollToSection('regwatch-section');
+  };
+
+  const handleFeedSelect = (item: { id: string }) => {
+    setSelectedFeedItem(item.id);
+    // TODO: Open context rail with item details
+    console.log('Feed item selected:', item.id);
+  };
+
+  const handleFeedAction = (item: { id: string }, action: string) => {
+    console.log('Feed action:', item.id, action);
+    // TODO: Handle specific actions
   };
 
   const handleKontrolBaslat = (kontrolId: string) => {
@@ -111,41 +123,64 @@ export default function V2DashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_400px]">
       {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* CONTEXT BAR */}
+      {/* MAIN CONTENT - COL-SPAN-8 */}
       {/* ═══════════════════════════════════════════════════════════════════ */}
-      <Card>
-        <div className="flex flex-wrap items-center gap-4">
-          <Badge variant="success">Dönem Kapsamı Hazır</Badge>
-          <span className="text-sm text-slate-600">
-            {scope.smmm_id} / {scope.client_id} / {scope.period}
-          </span>
-          {scope.advanced && <Badge variant="warning">Uzman Modu</Badge>}
-        </div>
-      </Card>
-
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* BÖLÜM 1: BUGÜN NE YAPMALIYIM? (P0) - BEYAZ TEMA */}
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      <DashboardSection
-        id="aksiyonlar-section"
-        title="Bugün Ne Yapmalıyım?"
-        icon={<AlertCircle className="w-6 h-6 text-red-500" />}
-        variant="urgent"
-        badge={
-          aksiyonlar.filter(a => a.oncelik === 'acil').length > 0 && (
-            <span className="bg-red-100 text-red-700 text-sm font-semibold px-4 py-1.5 rounded-full">
-              {aksiyonlar.filter(a => a.oncelik === 'acil').length} Acil İş
+      <div className="min-w-0 space-y-6">
+        {/* CONTEXT BAR */}
+        <Card>
+          <div className="flex flex-wrap items-center gap-4">
+            <Badge variant="success">Dönem Kapsamı Hazır</Badge>
+            <span className="text-sm text-slate-600">
+              {scope.smmm_id} / {scope.client_id} / {scope.period}
             </span>
-          )
-        }
-      >
-        <AksiyonKuyruguPanel
-          aksiyonlar={aksiyonlar}
-          onProblemCozmeClick={handleProblemCozmeClick}
-        />
-      </DashboardSection>
+            {scope.advanced && <Badge variant="warning">Uzman Modu</Badge>}
+          </div>
+        </Card>
+
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* BÖLÜM 1: AKILLI AKIŞ (Intelligence Feed) - Anayasa Compliance */}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        <DashboardSection
+          id="feed-section"
+          title="Akıllı Akış"
+          icon={<AlertCircle className="w-6 h-6 text-blue-600" />}
+          variant="default"
+          badge={
+            MOCK_FEED_ITEMS.filter(i => i.severity === 'CRITICAL' || i.severity === 'HIGH').length > 0 && (
+              <span className="bg-red-100 text-red-700 text-sm font-semibold px-4 py-1.5 rounded-full">
+                {MOCK_FEED_ITEMS.filter(i => i.severity === 'CRITICAL' || i.severity === 'HIGH').length} Acil
+              </span>
+            )
+          }
+        >
+          <IntelligenceFeed
+            items={MOCK_FEED_ITEMS}
+            onSelectItem={handleFeedSelect}
+            onAction={handleFeedAction}
+            selectedItemId={selectedFeedItem || undefined}
+            maxVisible={5}
+            showFilters={true}
+          />
+        </DashboardSection>
+
+        {/* Eski Aksiyon Kuyruğu (advanced mode'da göster) */}
+        {scope.advanced && (
+          <DashboardSection
+            id="aksiyonlar-section"
+            title="Detaylı İş Listesi"
+            icon={<AlertCircle className="w-6 h-6 text-slate-500" />}
+            variant="default"
+            collapsible={true}
+            defaultCollapsed={true}
+          >
+            <AksiyonKuyruguPanel
+              aksiyonlar={aksiyonlar}
+              onProblemCozmeClick={handleProblemCozmeClick}
+            />
+          </DashboardSection>
+        )}
 
       {/* ═══════════════════════════════════════════════════════════════════ */}
       {/* BÖLÜM 2: DÖNEM VERİLERİ (P0) - KOMPAKT GRID */}
@@ -235,20 +270,36 @@ export default function V2DashboardPage() {
         </div>
       </div>
 
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* BÖLÜM 6: DETAYLI İNCELEME - Uzman Modu (Full panels when advanced mode) */}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {scope.advanced && (
+          <DashboardSection
+            id="deep-dive-section"
+            title="Tüm Detaylı İncelemeler"
+            icon={<Layers className="w-5 h-5 text-slate-600" />}
+            collapsible={true}
+            defaultCollapsed={false}
+          >
+            <DeepDiveSection />
+          </DashboardSection>
+        )}
+      </div>
+
       {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* BÖLÜM 6: DETAYLI İNCELEME - Uzman Modu (Full panels when advanced mode) */}
+      {/* RIGHT RAIL - COL-SPAN-4 (Sticky Sidebar) */}
       {/* ═══════════════════════════════════════════════════════════════════ */}
-      {scope.advanced && (
-        <DashboardSection
-          id="deep-dive-section"
-          title="Tüm Detaylı İncelemeler"
-          icon={<Layers className="w-5 h-5 text-slate-600" />}
-          collapsible={true}
-          defaultCollapsed={false}
-        >
-          <DeepDiveSection />
-        </DashboardSection>
-      )}
+      <div className="hidden lg:block">
+        <RightRail
+          kritikSayisi={MOCK_FEED_ITEMS.filter(i => i.severity === 'CRITICAL').length}
+          yuksekSayisi={MOCK_FEED_ITEMS.filter(i => i.severity === 'HIGH').length}
+          eksikBelgeSayisi={MOCK_FEED_ITEMS.filter(i => i.category === 'Belge').length}
+          oneriler={MOCK_FEED_ITEMS.slice(0, 3).map(i => i.title)}
+          kanitPaketiDurumu={donemData.tamamlanmaYuzdesi >= 80 ? 'hazir' : donemData.tamamlanmaYuzdesi >= 50 ? 'eksik' : 'bekliyor'}
+          kanitPaketiYuzde={donemData.tamamlanmaYuzdesi}
+          tamamlananBelgeler={['Mizan', 'KDV Beyanı']}
+        />
+      </div>
 
       {/* Upload Modal */}
       <UploadModal

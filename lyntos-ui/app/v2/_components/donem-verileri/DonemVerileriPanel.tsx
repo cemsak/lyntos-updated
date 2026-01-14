@@ -7,6 +7,7 @@ import {
 import { Card } from '../shared/Card';
 import { Badge } from '../shared/Badge';
 import { BelgeKarti } from './BelgeKarti';
+import { UploadPreviewCards } from './UploadPreviewCards';
 import type { BelgeTipi, BelgeKategorisiUI, BelgeDurumData } from './types';
 import {
   BELGE_KATEGORILERI_UI,
@@ -109,6 +110,9 @@ export function DonemVerileriPanel({ onUploadClick }: DonemVerileriPanelProps) {
       accent
     >
       <div className="space-y-4">
+        {/* Upload Preview Cards - Analysis hints */}
+        <UploadPreviewCards onUploadClick={onUploadClick} />
+
         {/* Progress Bar */}
         <div className="w-full bg-slate-50-elevated rounded-full h-2 overflow-hidden">
           <div

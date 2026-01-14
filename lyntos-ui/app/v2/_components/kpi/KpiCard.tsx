@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import type { PanelEnvelope } from '../contracts/envelope';
 import { ExplainModal } from './ExplainModal';
+import { formatKpiValue, type FormattedNumber } from './formatters';
 
 export interface KpiData {
   value: number | string;
@@ -98,63 +99,97 @@ function getBadgeText(status: string, riskLevel?: string): string {
 
 export function KpiCard({ title, envelope, icon, onClick }: KpiCardProps) {
   const [showExplain, setShowExplain] = useState(false);
+  const [showFullValue, setShowFullValue] = useState(false);
   const { status, reason_tr, data, analysis, trust, legal_basis_refs, evidence_refs } = envelope;
 
   const variant = getCardVariant(status, data?.risk_level);
   const styles = getVariantStyles(variant);
   const badgeText = getBadgeText(status, data?.risk_level);
 
+  // Format the value
+  const formattedValue: FormattedNumber | null = data
+    ? formatKpiValue(data.value, data.unit)
+    : null;
+
   const handleExplainClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     setShowExplain(true);
   };
 
+  const handleValueHover = () => {
+    if (formattedValue && formattedValue.display !== formattedValue.full) {
+      setShowFullValue(true);
+    }
+  };
+
   return (
     <>
       <div
-        className={`${styles.bg} rounded-xl p-4 border-2 ${styles.border} transition-all duration-200 hover:-translate-y-1 hover:shadow-lg h-[120px] overflow-hidden ${onClick ? 'cursor-pointer' : ''}`}
+        className={`
+          ${styles.bg} rounded-xl p-3 sm:p-4 border-2 ${styles.border}
+          transition-all duration-200 hover:-translate-y-1 hover:shadow-lg
+          min-h-[100px] flex flex-col justify-between
+          ${onClick ? 'cursor-pointer' : ''}
+        `}
         onClick={onClick}
         role={onClick ? 'button' : undefined}
         tabIndex={onClick ? 0 : undefined}
       >
         {/* Header */}
-        <div className="flex items-center justify-between mb-2">
-          <span className={`text-xs font-black uppercase tracking-wide ${styles.title}`}>
+        <div className="flex items-start justify-between gap-1 mb-2">
+          <span className={`text-[10px] sm:text-xs font-bold uppercase tracking-wide ${styles.title} line-clamp-2 leading-tight`}>
             {title}
           </span>
-          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${styles.badge}`}>
+          <span className={`text-[9px] sm:text-xs font-bold px-1.5 sm:px-2 py-0.5 rounded-full whitespace-nowrap ${styles.badge}`}>
             {badgeText}
           </span>
         </div>
 
-        {/* Value */}
-        <div className="text-3xl font-black text-slate-800 font-mono">
-          {status === 'ok' && data ? (
-            <>
-              {data.value}
-              {data.unit && <span className="text-lg ml-1">{data.unit}</span>}
-            </>
-          ) : (
-            <span className="text-slate-400">—</span>
+        {/* Value - with clamp typography and tooltip */}
+        <div
+          className="relative group"
+          onMouseEnter={handleValueHover}
+          onMouseLeave={() => setShowFullValue(false)}
+        >
+          <div className="text-[clamp(1.25rem,4vw,1.875rem)] font-black text-slate-800 font-mono tabular-nums leading-tight truncate">
+            {status === 'ok' && formattedValue ? (
+              <>
+                {formattedValue.display}
+                {formattedValue.unit && (
+                  <span className="text-[clamp(0.75rem,2vw,1rem)] ml-1 font-semibold text-slate-600">
+                    {formattedValue.unit}
+                  </span>
+                )}
+              </>
+            ) : (
+              <span className="text-slate-400">—</span>
+            )}
+          </div>
+
+          {/* Full value tooltip */}
+          {showFullValue && formattedValue && formattedValue.display !== formattedValue.full && (
+            <div className="absolute left-0 -bottom-8 z-50 bg-slate-800 text-white text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap">
+              {formattedValue.full} {formattedValue.unit}
+            </div>
           )}
         </div>
 
         {/* Label */}
-        <div className="text-xs text-slate-500 mt-1">
+        <div className="text-[10px] sm:text-xs text-slate-500 mt-1 line-clamp-1">
           {status === 'ok' && data?.label ? data.label : reason_tr || 'Veri bekleniyor'}
         </div>
 
-        {/* Neden? Link */}
-        <div className="mt-2">
+        {/* Footer: Neden? Link */}
+        <div className="mt-auto pt-2">
           {(analysis.expert || analysis.ai || legal_basis_refs.length > 0) ? (
             <button
               onClick={handleExplainClick}
-              className={`text-xs font-semibold ${styles.link} hover:underline`}
+              className={`text-[10px] sm:text-xs font-semibold ${styles.link} hover:underline`}
             >
               Neden? →
             </button>
           ) : (
-            <span className="text-xs text-slate-400">—</span>
+            <span className="text-[10px] text-slate-400">—</span>
           )}
         </div>
       </div>

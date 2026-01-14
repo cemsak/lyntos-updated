@@ -5,7 +5,7 @@
  * Sprint 7.3 - Stripe Dashboard Shell
  * Single navigation item with Stripe styling
  */
-import React from 'react';
+import React, { useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { NavItem } from './navigation';
@@ -24,13 +24,33 @@ const BADGE_COLORS = {
 
 export function SidebarItem({ item, collapsed = false, onClick }: SidebarItemProps) {
   const pathname = usePathname();
-  const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+  // Support hash anchors: /v2#section should be active when pathname is /v2
+  const baseHref = item.href.split('#')[0];
+  const hashPart = item.href.includes('#') ? item.href.split('#')[1] : null;
+  const isActive = pathname === baseHref || (baseHref !== '' && pathname.startsWith(baseHref + '/'));
   const Icon = item.icon;
+
+  // Handle smooth scroll for same-page hash navigation
+  const handleClick = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
+    // If href has a hash and we're already on that base path
+    if (hashPart && pathname === baseHref) {
+      const targetElement = document.getElementById(hashPart);
+      if (targetElement) {
+        e.preventDefault();
+        targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // Update URL hash without triggering navigation
+        window.history.pushState(null, '', item.href);
+      }
+      // If element doesn't exist, let default navigation happen
+    }
+    // Call parent onClick if provided
+    onClick?.();
+  }, [hashPart, pathname, baseHref, item.href, onClick]);
 
   return (
     <Link
       href={item.href}
-      onClick={onClick}
+      onClick={handleClick}
       className={`
         flex items-center gap-3 px-3 py-2 rounded-md text-[14px] font-medium transition-colors
         ${isActive

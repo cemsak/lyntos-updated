@@ -1,5 +1,6 @@
 // Donem Verileri Module Exports
 export { DonemVerileriPanel } from './DonemVerileriPanel';
+export { UploadPreviewCards } from './UploadPreviewCards';
 export { BelgeKarti } from './BelgeKarti';
 export { useDonemVerileri } from './useDonemVerileri';
 export type {
