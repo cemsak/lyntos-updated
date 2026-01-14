@@ -26,6 +26,9 @@ interface FeedState {
   dismissedIds: Set<string>;
   snoozedIds: Map<string, Date>; // id -> snooze until
 
+  // Resolved items (completed/handled cards)
+  resolvedIds: Set<string>;
+
   // Actions
   selectCard: (id: string | null) => void;
   openRail: () => void;
@@ -39,9 +42,15 @@ interface FeedState {
   undismiss: (id: string) => void;
   clearDismissed: () => void;
 
+  // Resolve action (mark as handled)
+  resolveCard: (id: string) => void;
+  unresolveCard: (id: string) => void;
+  clearResolved: () => void;
+
   // Computed helpers
   isCardDismissed: (id: string) => boolean;
   isCardSnoozed: (id: string) => boolean;
+  isCardResolved: (id: string) => boolean;
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -57,6 +66,7 @@ export const useFeedStore = create<FeedState>()(
     showDismissed: false,
     dismissedIds: new Set(),
     snoozedIds: new Map(),
+    resolvedIds: new Set(),
 
     // ─────────────────────────────────────────────────────────────────
     // SELECTION ACTIONS
@@ -130,6 +140,33 @@ export const useFeedStore = create<FeedState>()(
       }),
 
     // ─────────────────────────────────────────────────────────────────
+    // RESOLVE ACTIONS (mark as handled/completed)
+    // ─────────────────────────────────────────────────────────────────
+
+    resolveCard: (id) => {
+      set((state) => {
+        const newResolved = new Set(state.resolvedIds);
+        newResolved.add(id);
+        return {
+          resolvedIds: newResolved,
+          // Clear selection and close rail if resolved card was selected
+          selectedCardId: state.selectedCardId === id ? null : state.selectedCardId,
+          railOpen: state.selectedCardId === id ? false : state.railOpen,
+        };
+      });
+    },
+
+    unresolveCard: (id) => {
+      set((state) => {
+        const newResolved = new Set(state.resolvedIds);
+        newResolved.delete(id);
+        return { resolvedIds: newResolved };
+      });
+    },
+
+    clearResolved: () => set({ resolvedIds: new Set() }),
+
+    // ─────────────────────────────────────────────────────────────────
     // COMPUTED HELPERS
     // ─────────────────────────────────────────────────────────────────
 
@@ -140,6 +177,8 @@ export const useFeedStore = create<FeedState>()(
       if (!until) return false;
       return new Date() < until;
     },
+
+    isCardResolved: (id) => get().resolvedIds.has(id),
   }))
 );
 
@@ -152,6 +191,9 @@ export const useSelectedCardId = () => useFeedStore((s) => s.selectedCardId);
 export const useRailOpen = () => useFeedStore((s) => s.railOpen);
 export const useSeverityFilter = () => useFeedStore((s) => s.severityFilter);
 
+// Resolved IDs selector
+export const useResolvedIds = () => useFeedStore((s) => s.resolvedIds);
+
 // Actions (stable references)
 export const useFeedActions = () =>
   useFeedStore((s) => ({
@@ -162,6 +204,8 @@ export const useFeedActions = () =>
     setSeverityFilter: s.setSeverityFilter,
     dismissCard: s.dismissCard,
     snoozeCard: s.snoozeCard,
+    resolveCard: s.resolveCard,
+    unresolveCard: s.unresolveCard,
   }));
 
 // ═══════════════════════════════════════════════════════════════════

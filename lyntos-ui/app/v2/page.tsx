@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, Suspense, useEffect, useRef } from 'react';
+import React, { useState, Suspense, useEffect, useRef, useMemo } from 'react';
 import { ListTodo, FolderOpen, BarChart3, Radio, Layers, Calculator, AlertCircle } from 'lucide-react';
 import { useDashboardScope, useScopeComplete } from './_components/scope/useDashboardScope';
 import { Card } from './_components/shared/Card';
@@ -37,7 +37,18 @@ import { GeciciVergiPanel, KurumlarVergisiPanel } from './_components/vergi-anal
 import { FiveWhyWizard } from './_components/vdk/FiveWhyWizard';
 
 // Intelligence Feed
-import { IntelligenceFeed, MOCK_FEED_ITEMS, useUrlSync, useResetFeedSelection, ContextRail } from './_components/feed';
+import {
+  IntelligenceFeed,
+  RAW_MOCK_FEED_ITEMS,
+  useUrlSync,
+  useResetFeedSelection,
+  ContextRail,
+  buildFeed,
+  filterByStatus,
+  getFeedStats,
+  MATERIALITY_STANDARD,
+  useFeedStore,
+} from './_components/feed';
 
 // ═══════════════════════════════════════════════════════════════════
 // MAIN DASHBOARD CONTENT (wrapped in Suspense for useSearchParams)
@@ -72,6 +83,29 @@ function V2DashboardContent() {
       prevScopeRef.current = currentScopeKey;
     }
   }, [scope.client_id, scope.period, resetFeedSelection]);
+
+  // ═══════════════════════════════════════════════════════════════════
+  // FEED PIPELINE (Sprint 4.0 - Deterministic Feed)
+  // ═══════════════════════════════════════════════════════════════════
+
+  // Get resolved/snoozed IDs from store
+  const resolvedIds = useFeedStore((s) => s.resolvedIds);
+  const snoozedIds = useFeedStore((s) => s.snoozedIds);
+
+  // Build feed through pipeline (materiality, explainability, dedupe, limit)
+  const feedBuildResult = useMemo(() => {
+    return buildFeed(RAW_MOCK_FEED_ITEMS, MATERIALITY_STANDARD, 12);
+  }, []);
+
+  // Filter out resolved/snoozed items
+  const feedItems = useMemo(() => {
+    return filterByStatus(feedBuildResult.items, resolvedIds, snoozedIds);
+  }, [feedBuildResult.items, resolvedIds, snoozedIds]);
+
+  // Get feed statistics for RightRail
+  const feedStats = useMemo(() => {
+    return getFeedStats(feedItems);
+  }, [feedItems]);
 
   // === ALL USESTATE HOOKS ===
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
@@ -175,15 +209,15 @@ function V2DashboardContent() {
           icon={<AlertCircle className="w-6 h-6 text-blue-600" />}
           variant="default"
           badge={
-            MOCK_FEED_ITEMS.filter(i => i.severity === 'CRITICAL' || i.severity === 'HIGH').length > 0 && (
+            (feedStats.criticalCount + feedStats.highCount) > 0 && (
               <span className="bg-red-100 text-red-700 text-sm font-semibold px-4 py-1.5 rounded-full">
-                {MOCK_FEED_ITEMS.filter(i => i.severity === 'CRITICAL' || i.severity === 'HIGH').length} Acil
+                {feedStats.criticalCount + feedStats.highCount} Acil
               </span>
             )
           }
         >
           <IntelligenceFeed
-            items={MOCK_FEED_ITEMS}
+            items={feedItems}
             onSelectItem={handleFeedSelect}
             onAction={handleFeedAction}
             selectedItemId={selectedFeedItem || undefined}
@@ -318,10 +352,10 @@ function V2DashboardContent() {
       {/* ═══════════════════════════════════════════════════════════════════ */}
       <div className="hidden lg:block">
         <RightRail
-          kritikSayisi={MOCK_FEED_ITEMS.filter(i => i.severity === 'CRITICAL').length}
-          yuksekSayisi={MOCK_FEED_ITEMS.filter(i => i.severity === 'HIGH').length}
-          eksikBelgeSayisi={MOCK_FEED_ITEMS.filter(i => i.category === 'Belge').length}
-          oneriler={MOCK_FEED_ITEMS.slice(0, 3).map(i => i.title)}
+          kritikSayisi={feedStats.criticalCount}
+          yuksekSayisi={feedStats.highCount}
+          eksikBelgeSayisi={feedStats.missingDocCount}
+          oneriler={feedStats.topRecommendations}
           kanitPaketiDurumu={donemData.tamamlanmaYuzdesi >= 80 ? 'hazir' : donemData.tamamlanmaYuzdesi >= 50 ? 'eksik' : 'bekliyor'}
           kanitPaketiYuzde={donemData.tamamlanmaYuzdesi}
           tamamlananBelgeler={['Mizan', 'KDV Beyanı']}
@@ -393,12 +427,18 @@ function V2DashboardContent() {
         </div>
       )}
 
-      {/* Context Rail - Detail Panel (Sprint 3.3) */}
+      {/* Context Rail - Detail Panel (Sprint 3.3 + 4.0) */}
       <ContextRail
-        items={MOCK_FEED_ITEMS}
+        items={feedItems}
         onAction={(item, actionId) => {
           console.log('Context Rail action:', actionId, item.id);
-          // TODO: Handle action execution
+          // Handle navigate actions
+          if (item.actions) {
+            const action = item.actions.find(a => a.id === actionId);
+            if (action?.kind === 'navigate' && action.href) {
+              window.location.href = action.href;
+            }
+          }
         }}
       />
     </div>

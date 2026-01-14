@@ -185,7 +185,7 @@ export function FeedCard({
           {item.actions.slice(0, 2).map((action, idx) => (
             <button
               key={idx}
-              onClick={(e) => handleActionClick(e, action.action)}
+              onClick={(e) => handleActionClick(e, action.id)}
               className={`
                 text-xs font-medium px-2.5 py-1 rounded transition-colors
                 ${idx === 0
