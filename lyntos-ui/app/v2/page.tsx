@@ -37,7 +37,7 @@ import { GeciciVergiPanel, KurumlarVergisiPanel } from './_components/vergi-anal
 import { FiveWhyWizard } from './_components/vdk/FiveWhyWizard';
 
 // Intelligence Feed
-import { IntelligenceFeed, MOCK_FEED_ITEMS, useUrlSync, useResetFeedSelection } from './_components/feed';
+import { IntelligenceFeed, MOCK_FEED_ITEMS, useUrlSync, useResetFeedSelection, ContextRail } from './_components/feed';
 
 // ═══════════════════════════════════════════════════════════════════
 // MAIN DASHBOARD CONTENT (wrapped in Suspense for useSearchParams)
@@ -392,6 +392,15 @@ function V2DashboardContent() {
           </div>
         </div>
       )}
+
+      {/* Context Rail - Detail Panel (Sprint 3.3) */}
+      <ContextRail
+        items={MOCK_FEED_ITEMS}
+        onAction={(item, actionId) => {
+          console.log('Context Rail action:', actionId, item.id);
+          // TODO: Handle action execution
+        }}
+      />
     </div>
   );
 }

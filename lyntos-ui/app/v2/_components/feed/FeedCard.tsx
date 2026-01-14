@@ -96,6 +96,7 @@ export function FeedCard({
 
   return (
     <div
+      data-feed-card
       onClick={handleClick}
       className={`
         group relative
