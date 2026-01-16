@@ -387,6 +387,201 @@ export function useFeedSignals() {
         }
       }
 
+      // ─────────────────────────────────────────────────────────────────
+      // PHASE 1: HESAPLAMA KURALLARI
+      // ─────────────────────────────────────────────────────────────────
+
+      // P1-001: Amortisman Kontrolü
+      const mdvHesaplari = mizanAccounts.filter(a =>
+        a.hesapKodu.startsWith('25') && !a.hesapKodu.startsWith('257')
+      );
+      const mdvToplam = mdvHesaplari.reduce((sum, a) => sum + Math.max(0, a.borcBakiye - a.alacakBakiye), 0);
+      const donemAmortismanToplam = mizanAccounts
+        .filter(a => a.hesapKodu.startsWith('770'))
+        .reduce((sum, a) => sum + Math.max(0, a.borcBakiye - a.alacakBakiye), 0);
+
+      if (mdvToplam > 5000 && donemAmortismanToplam === 0) {
+        feedItems.push({
+          id: `P1-001-${Date.now()}`,
+          scope: feedScope,
+          dedupe_key: `amortisman-${scope.client_id}-${period}`,
+          category: 'Mizan',
+          severity: 'HIGH',
+          score: 70,
+          impact: {
+            amount_try: mdvToplam * 0.20,
+            points: -15,
+          },
+          title: 'Amortisman Ayrılmamış',
+          summary: `${formatTL(mdvToplam)} MDV için dönem amortismanı yok`,
+          why: `VUK 313-321 uyarınca maddi duran varlıklar için amortisman ayrılması zorunludur. ${formatTL(mdvToplam)} tutarındaki MDV için tahmini %20 amortisman: ${formatTL(mdvToplam * 0.20)}`,
+          evidence_refs: [
+            createMizanEvidence('25x', period, `MDV Hesapları: ${formatTL(mdvToplam)}`, mdvToplam),
+            createMizanEvidence('770', period, `Dönem Amortismanı: ${formatTL(donemAmortismanToplam)}`, donemAmortismanToplam),
+          ],
+          actions: [
+            createNavigateAction('hesapla', 'Amortisman Hesapla', `/v2/hesaplamalar/amortisman?period=${period}`),
+          ],
+          snoozeable: true,
+          created_at: now,
+        });
+      }
+
+      // P1-006: Binek Oto Limiti
+      const tasitlar = mizanAccounts.filter(a => a.hesapKodu.startsWith('254'));
+      const tasitToplam = tasitlar.reduce((sum, a) => sum + Math.max(0, a.borcBakiye - a.alacakBakiye), 0);
+      const amortismanLimiti = 2100000; // 2025 limiti
+
+      if (tasitToplam > amortismanLimiti) {
+        const asanKisim = tasitToplam - amortismanLimiti;
+        const kkegAmortisman = asanKisim * 0.20 * 0.25; // KKEG vergi etkisi
+
+        feedItems.push({
+          id: `P1-006-${Date.now()}`,
+          scope: feedScope,
+          dedupe_key: `binek-oto-${scope.client_id}-${period}`,
+          category: 'KV',
+          severity: 'HIGH',
+          score: 75,
+          impact: {
+            amount_try: kkegAmortisman,
+            points: -20,
+          },
+          title: 'Binek Oto Amortisman Limiti Aşımı',
+          summary: `Taşıt bedeli 2025 limitini ${formatTL(asanKisim)} aşıyor`,
+          why: `GVK 40/5 uyarınca binek oto amortismanında ${formatTL(amortismanLimiti)} limit vardır. Taşıt bedeli: ${formatTL(tasitToplam)}, Aşan kısım: ${formatTL(asanKisim)}`,
+          evidence_refs: [
+            createMizanEvidence('254', period, `Taşıtlar: ${formatTL(tasitToplam)}`, tasitToplam),
+            createCalculationEvidence('limit', `2025 Limiti: ${formatTL(amortismanLimiti)}`, amortismanLimiti),
+          ],
+          actions: [
+            createNavigateAction('kkeg', 'KKEG Hesapla', `/v2/hesaplamalar/kkeg?period=${period}`),
+          ],
+          snoozeable: true,
+          created_at: now,
+        });
+      }
+
+      // ─────────────────────────────────────────────────────────────────
+      // PHASE 3: ÇAPRAZ KONTROL KURALLARI
+      // ─────────────────────────────────────────────────────────────────
+
+      // P3-001: KDV Mutabakatı
+      const hesaplananKdv = mizanAccounts
+        .filter(a => a.hesapKodu.startsWith('391'))
+        .reduce((sum, a) => sum + Math.abs(a.alacakBakiye - a.borcBakiye), 0);
+      const indirilecekKdv = mizanAccounts
+        .filter(a => a.hesapKodu.startsWith('191'))
+        .reduce((sum, a) => sum + Math.max(0, a.borcBakiye - a.alacakBakiye), 0);
+      const odenecekKdvHesap = mizanAccounts
+        .filter(a => a.hesapKodu.startsWith('360'))
+        .reduce((sum, a) => sum + Math.abs(a.alacakBakiye - a.borcBakiye), 0);
+      const devredenKdvHesap = mizanAccounts
+        .filter(a => a.hesapKodu.startsWith('190'))
+        .reduce((sum, a) => sum + Math.max(0, a.borcBakiye - a.alacakBakiye), 0);
+
+      const kdvFark = hesaplananKdv - indirilecekKdv;
+      const beklenenOdenecek = kdvFark > 0 ? kdvFark : 0;
+      const kdvUyumsuzluk = Math.abs(beklenenOdenecek - odenecekKdvHesap);
+
+      if (kdvUyumsuzluk > 100 && hesaplananKdv > 0) {
+        feedItems.push({
+          id: `P3-001-${Date.now()}`,
+          scope: feedScope,
+          dedupe_key: `kdv-mutabakat-${scope.client_id}-${period}`,
+          category: 'Mutabakat',
+          severity: 'HIGH',
+          score: 80,
+          impact: {
+            amount_try: kdvUyumsuzluk,
+            points: -25,
+          },
+          title: 'KDV Mutabakat Uyumsuzluğu',
+          summary: `KDV hesapları arasında ${formatTL(kdvUyumsuzluk)} fark`,
+          why: `Hesaplanan KDV (391): ${formatTL(hesaplananKdv)} - İndirilecek KDV (191): ${formatTL(indirilecekKdv)} = ${formatTL(kdvFark)}. Beklenen ödenecek: ${formatTL(beklenenOdenecek)}, Kayıtlı (360): ${formatTL(odenecekKdvHesap)}`,
+          evidence_refs: [
+            createMizanEvidence('391', period, `Hesaplanan KDV: ${formatTL(hesaplananKdv)}`, hesaplananKdv),
+            createMizanEvidence('191', period, `İndirilecek KDV: ${formatTL(indirilecekKdv)}`, indirilecekKdv),
+            createMizanEvidence('360', period, `Ödenecek KDV: ${formatTL(odenecekKdvHesap)}`, odenecekKdvHesap),
+          ],
+          actions: [
+            createNavigateAction('mutabakat', 'KDV Mutabakat Tablosu', `/v2/mutabakat/kdv?period=${period}`),
+          ],
+          snoozeable: true,
+          created_at: now,
+        });
+      }
+
+      // P3-002: Dönem Sonu Kapatma
+      const gelirlerToplam = mizanAccounts
+        .filter(a => a.hesapKodu.startsWith('6'))
+        .reduce((sum, a) => sum + Math.abs(a.alacakBakiye - a.borcBakiye), 0);
+      const giderlerToplam = mizanAccounts
+        .filter(a => a.hesapKodu.startsWith('7'))
+        .reduce((sum, a) => sum + Math.max(0, a.borcBakiye - a.alacakBakiye), 0);
+      const donemKariHesap = mizanAccounts.find(a => a.hesapKodu.startsWith('690'));
+      const hesaplananKar = gelirlerToplam - giderlerToplam;
+
+      if (Math.abs(hesaplananKar) > 10000 && !donemKariHesap) {
+        feedItems.push({
+          id: `P3-002-${Date.now()}`,
+          scope: feedScope,
+          dedupe_key: `donem-kapatma-${scope.client_id}-${period}`,
+          category: 'Mizan',
+          severity: 'MEDIUM',
+          score: 60,
+          impact: {
+            amount_try: Math.abs(hesaplananKar),
+            points: -15,
+          },
+          title: 'Dönem Sonu Kapatma Yapılmamış',
+          summary: `Hesaplanan kar/zarar: ${formatTL(hesaplananKar)}, 690 hesabı boş`,
+          why: `Gelirler (6xx): ${formatTL(gelirlerToplam)}, Giderler (7xx): ${formatTL(giderlerToplam)}. Gelir ve gider hesapları dönem sonunda 690'a kapatılmalıdır.`,
+          evidence_refs: [
+            createCalculationEvidence('gelirler', `Gelirler (6xx): ${formatTL(gelirlerToplam)}`, gelirlerToplam),
+            createCalculationEvidence('giderler', `Giderler (7xx): ${formatTL(giderlerToplam)}`, giderlerToplam),
+          ],
+          actions: [
+            createNavigateAction('kapatma', 'Kapatma Kayıtları', `/v2/donem-sonu/kapatma?period=${period}`),
+          ],
+          snoozeable: true,
+          created_at: now,
+        });
+      }
+
+      // P3-004: Stopaj Kontrolü
+      const personelGiderleriToplam = mizanAccounts
+        .filter(a => a.hesapKodu.startsWith('770') || a.hesapKodu.startsWith('760'))
+        .reduce((sum, a) => sum + Math.max(0, a.borcBakiye - a.alacakBakiye), 0);
+      const stopajVar = mizanAccounts.some(a => a.hesapKodu.startsWith('360') && Math.abs(a.alacakBakiye - a.borcBakiye) > 0);
+      const sgkVar = mizanAccounts.some(a => a.hesapKodu.startsWith('361') && Math.abs(a.alacakBakiye - a.borcBakiye) > 0);
+
+      if (personelGiderleriToplam > 50000 && (!stopajVar || !sgkVar)) {
+        feedItems.push({
+          id: `P3-004-${Date.now()}`,
+          scope: feedScope,
+          dedupe_key: `stopaj-sgk-${scope.client_id}-${period}`,
+          category: 'KV',
+          severity: 'HIGH',
+          score: 85,
+          impact: {
+            amount_try: personelGiderleriToplam * 0.35,
+            points: -30,
+          },
+          title: 'Stopaj/SGK Eksikliği',
+          summary: `${formatTL(personelGiderleriToplam)} personel gideri var, stopaj/SGK boş`,
+          why: `Personel çalıştıran işletmelerde gelir vergisi stopajı (360) ve SGK kesintisi (361) olmalıdır. Tahmini kesinti tutarı: ${formatTL(personelGiderleriToplam * 0.35)}`,
+          evidence_refs: [
+            createMizanEvidence('77x', period, `Personel Giderleri: ${formatTL(personelGiderleriToplam)}`, personelGiderleriToplam),
+          ],
+          actions: [
+            createNavigateAction('kontrol', 'Stopaj Kontrolü', `/v2/mutabakat/muhtasar?period=${period}`),
+          ],
+          snoozeable: true,
+          created_at: now,
+        });
+      }
+
       console.log('[useFeedSignals] Gerçek veriden üretilen sinyaller:', feedItems.length);
 
       // Sort by score descending
