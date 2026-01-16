@@ -488,8 +488,8 @@ export function MizanOmurgaPanel() {
   const [showSmmmInfo, setShowSmmmInfo] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<MizanHesap | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [showOranlar, setShowOranlar] = useState(true);
-  const [showKritik, setShowKritik] = useState(true);
+  const [showOranlar, setShowOranlar] = useState(false);
+  const [showKritik, setShowKritik] = useState(false);
   const [activeTab, setActiveTab] = useState<'ozet' | 'detay'>('ozet');
 
   const envelope = useFailSoftFetch<MizanResult>(ENDPOINTS.MIZAN_ANALYSIS, normalizeMizan);

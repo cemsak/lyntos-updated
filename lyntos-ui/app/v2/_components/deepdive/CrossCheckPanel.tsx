@@ -75,18 +75,22 @@ function normalizeCrossCheck(raw: unknown): PanelEnvelope<CrossCheckResult> {
 
     const checksRaw = data?.checks || data?.items || data?.comparisons || [];
     const checks: CrossCheckItem[] = Array.isArray(checksRaw)
-      ? checksRaw.map((c: Record<string, unknown>, idx: number) => ({
-          id: String(c.id || `cc-${idx}`),
-          check_type: mapCheckType(c.type || c.check_type),
-          source_label: String(c.source_label || c.source || 'Kaynak'),
-          target_label: String(c.target_label || c.target || 'Hedef'),
-          source_amount: typeof c.source_amount === 'number' ? c.source_amount : 0,
-          target_amount: typeof c.target_amount === 'number' ? c.target_amount : 0,
-          difference: typeof c.difference === 'number' ? c.difference : 0,
-          difference_pct: typeof c.difference_pct === 'number' ? c.difference_pct : 0,
-          status: mapStatus(c.status || c.result),
-          explanation_tr: c.explanation_tr ? String(c.explanation_tr) : undefined,
-        }))
+      ? checksRaw.map((c: Record<string, unknown>, idx: number) => {
+          const checkType = mapCheckType(c.type || c.check_type);
+          const fallbackLabels = getFallbackLabels(checkType, idx);
+          return {
+            id: String(c.id || `cc-${idx}`),
+            check_type: checkType,
+            source_label: String(c.source_label || c.source || fallbackLabels.source),
+            target_label: String(c.target_label || c.target || fallbackLabels.target),
+            source_amount: typeof c.source_amount === 'number' ? c.source_amount : 0,
+            target_amount: typeof c.target_amount === 'number' ? c.target_amount : 0,
+            difference: typeof c.difference === 'number' ? c.difference : 0,
+            difference_pct: typeof c.difference_pct === 'number' ? c.difference_pct : 0,
+            status: mapStatus(c.status || c.result),
+            explanation_tr: c.explanation_tr ? String(c.explanation_tr) : undefined,
+          };
+        })
       : [];
 
     const summaryRaw = data?.summary as Record<string, unknown> | undefined;
@@ -121,6 +125,18 @@ function mapStatus(s: unknown): CrossCheckItem['status'] {
   if (str === 'major') return 'major';
   if (str === 'critical' || str === 'error') return 'critical';
   return 'minor';
+}
+
+// Fallback labels for cross-check types when API doesn't provide source/target labels
+function getFallbackLabels(type: CrossCheckItem['check_type'], index: number): { source: string; target: string } {
+  const typeLabels: Record<CrossCheckItem['check_type'], { source: string; target: string }> = {
+    kdv: { source: 'Mizan (191/391 KDV)', target: 'KDV-1 Beyannamesi' },
+    e_fatura: { source: 'Mizan (600-602 Satislar)', target: 'e-Fatura Satis Listesi' },
+    banka: { source: 'Mizan (102 Bankalar)', target: 'Banka Ekstresi' },
+    beyan: { source: 'Ba-Bs Formu', target: 'e-Fatura Listesi' },
+    other: { source: `Kaynak #${index + 1}`, target: `Hedef #${index + 1}` },
+  };
+  return typeLabels[type] || typeLabels.other;
 }
 
 const STATUS_CONFIG: Record<CrossCheckItem['status'], { badge: 'success' | 'warning' | 'error' | 'default'; label: string }> = {
@@ -232,9 +248,7 @@ export function CrossCheckPanel() {
   const displaySummary = hasData ? data.summary : { total: 0, matched: 0, discrepancies: 0, critical: 0 };
 
   const handleRowClick = (check: CrossCheckItem) => {
-    if (check.difference !== 0 && check.explanation_tr) {
-      setExpandedRowId(expandedRowId === check.id ? null : check.id);
-    }
+    setExpandedRowId(expandedRowId === check.id ? null : check.id);
   };
 
   return (
@@ -387,12 +401,37 @@ export function CrossCheckPanel() {
                         </td>
                       </tr>
                       {/* Expanded Row - Explanation */}
-                      {expandedRowId === check.id && check.explanation_tr && (
+                      {expandedRowId === check.id && (
                         <tr className="bg-amber-50">
-                          <td colSpan={7} className="py-2 px-3">
-                            <div className="flex items-start gap-2 text-xs">
-                              <AlertTriangle className="w-3.5 h-3.5 text-amber-600 flex-shrink-0 mt-0.5" />
-                              <span className="text-slate-700">{check.explanation_tr}</span>
+                          <td colSpan={7} className="py-3 px-4">
+                            <div className="space-y-2">
+                              {check.explanation_tr ? (
+                                <div className="flex items-start gap-2 text-xs">
+                                  <AlertTriangle className="w-3.5 h-3.5 text-amber-600 flex-shrink-0 mt-0.5" />
+                                  <span className="text-slate-700">{check.explanation_tr}</span>
+                                </div>
+                              ) : (
+                                <div className="text-xs text-slate-600">
+                                  <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                      <span className="font-medium text-slate-500">Kaynak:</span>
+                                      <span className="ml-2">{check.source_label}</span>
+                                      <span className="ml-2 font-mono">₺{check.source_amount.toLocaleString('tr-TR')}</span>
+                                    </div>
+                                    <div>
+                                      <span className="font-medium text-slate-500">Hedef:</span>
+                                      <span className="ml-2">{check.target_label}</span>
+                                      <span className="ml-2 font-mono">₺{check.target_amount.toLocaleString('tr-TR')}</span>
+                                    </div>
+                                  </div>
+                                  {check.difference !== 0 && (
+                                    <p className="mt-2 text-amber-700">
+                                      <AlertTriangle className="w-3 h-3 inline mr-1" />
+                                      Fark tespit edildi. Kayitlari kontrol edin.
+                                    </p>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </td>
                         </tr>

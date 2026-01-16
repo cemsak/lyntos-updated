@@ -297,10 +297,10 @@ function V2DashboardContent() {
       {/* ═══════════════════════════════════════════════════════════════════ */}
       {/* BÖLÜM 5: V3 3-COLUMN BOTTOM LAYOUT - KOMPAKT */}
       {/* ═══════════════════════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start" id="bottom-section">
+      <div className="flex flex-col gap-6" id="bottom-section">
         {/* Column 1: Detaylı İnceleme */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between p-3 border-b border-slate-100 bg-slate-50">
+          <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-slate-50">
             <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
               <span>🔍</span> Detaylı İnceleme
             </h2>
@@ -313,7 +313,7 @@ function V2DashboardContent() {
 
         {/* Column 2: Enflasyon Muhasebesi */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between p-3 border-b border-slate-100 bg-slate-50">
+          <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-slate-50">
             <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
               <span>📈</span> Enflasyon Muhasebesi
             </h2>
@@ -325,7 +325,7 @@ function V2DashboardContent() {
 
         {/* Column 3: Mevzuat Takibi */}
         <div id="regwatch-section" className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between p-3 border-b border-slate-100 bg-slate-50">
+          <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-slate-50">
             <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
               <span>📡</span> Mevzuat Takibi
             </h2>

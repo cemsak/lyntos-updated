@@ -606,7 +606,7 @@ export function KurumlarVergisiPanel({
       </div>
 
       {/* Main Content - Two Column Layout */}
-      <div className="flex flex-col lg:flex-row gap-6">
+      <div className="flex flex-col gap-6">
         {/* Sol: Kontrol Listesi - flexible */}
         <div className="flex-1 min-w-0">
           <Card title="20 Kritik Kontrol" subtitle="Risk, Avantaj ve Zorunlu Kontroller">
@@ -844,43 +844,54 @@ export function KurumlarVergisiPanel({
           </Card>
         </div>
 
-        {/* Sag: Matrah Hesaplama - fixed width */}
-        <div className="w-full lg:w-[300px] flex-shrink-0 self-start">
+        {/* Sag: Matrah Hesaplama - full width */}
+        <div className="w-full">
           {hasMatrahData && matrahVerileri ? (
             <MatrahHesaplama veriler={matrahVerileri} yil={yil} />
           ) : (
-            <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <Calculator className="w-5 h-5 text-slate-400" />
-                <p className="text-sm font-medium text-slate-600">Kurumlar Vergisi Matrah</p>
-              </div>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between py-1 border-b border-slate-100">
-                  <span className="text-slate-500">Ticari Bilanço Kârı</span>
-                  <span className="text-slate-300">₺---</span>
+            <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+              <div className="flex items-center gap-3 p-4 bg-slate-50 border-b border-slate-100">
+                <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
+                  <Calculator className="w-5 h-5 text-emerald-600" />
                 </div>
-                <div className="flex justify-between py-1 border-b border-slate-100">
-                  <span className="text-slate-500">+ KKEG Toplamı</span>
-                  <span className="text-slate-300">₺---</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-slate-100">
-                  <span className="text-slate-500">- İstisna Kazançlar</span>
-                  <span className="text-slate-300">₺---</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-slate-100">
-                  <span className="text-slate-500">- Geçmiş Yıl Zararları</span>
-                  <span className="text-slate-300">₺---</span>
-                </div>
-                <div className="flex justify-between py-2 border-t-2 border-slate-200 font-medium">
-                  <span className="text-slate-600">= Vergi Matrahı</span>
-                  <span className="text-slate-300">₺---</span>
-                </div>
-                <div className="flex justify-between py-1">
-                  <span className="text-slate-500">Hesaplanan Vergi (%25)</span>
-                  <span className="text-slate-300">₺---</span>
+                <div>
+                  <h3 className="text-base font-semibold text-slate-800">Kurumlar Vergisi Matrah Hesabi</h3>
+                  <p className="text-xs text-slate-500">VUK ve KVK'ya gore vergi matrahi hesaplamasi</p>
                 </div>
               </div>
-              <p className="text-xs text-slate-400 mt-3 text-center">Mizan yüklendiğinde otomatik hesaplanır</p>
+              <div className="p-4">
+                <table className="w-full text-sm">
+                  <tbody>
+                    <tr className="border-b border-slate-100">
+                      <td className="py-3 text-slate-600">Ticari Bilanco Kari</td>
+                      <td className="py-3 text-right font-mono text-slate-300 tabular-nums">₺---</td>
+                    </tr>
+                    <tr className="border-b border-slate-100">
+                      <td className="py-3 text-slate-600">+ KKEG Toplami</td>
+                      <td className="py-3 text-right font-mono text-slate-300 tabular-nums">₺---</td>
+                    </tr>
+                    <tr className="border-b border-slate-100">
+                      <td className="py-3 text-slate-600">- Istisna Kazanclar</td>
+                      <td className="py-3 text-right font-mono text-slate-300 tabular-nums">₺---</td>
+                    </tr>
+                    <tr className="border-b border-slate-100">
+                      <td className="py-3 text-slate-600">- Gecmis Yil Zararlari</td>
+                      <td className="py-3 text-right font-mono text-slate-300 tabular-nums">₺---</td>
+                    </tr>
+                    <tr className="border-t-2 border-slate-200 bg-slate-50">
+                      <td className="py-3 font-semibold text-slate-800">= Vergi Matrahi</td>
+                      <td className="py-3 text-right font-mono font-semibold text-slate-300 tabular-nums">₺---</td>
+                    </tr>
+                    <tr className="bg-emerald-50">
+                      <td className="py-3 font-medium text-emerald-700">Hesaplanan Vergi (%25)</td>
+                      <td className="py-3 text-right font-mono font-semibold text-emerald-700 tabular-nums">₺---</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <p className="text-xs text-slate-400 mt-4 text-center flex items-center justify-center gap-1">
+                  <span>📊</span> Mizan yuklendiginde otomatik hesaplanir
+                </p>
+              </div>
             </div>
           )}
         </div>
