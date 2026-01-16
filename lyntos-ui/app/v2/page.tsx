@@ -36,6 +36,9 @@ import { GeciciVergiPanel, KurumlarVergisiPanel } from './_components/vergi-anal
 // 5 Why Wizard
 import { FiveWhyWizard } from './_components/vdk/FiveWhyWizard';
 
+// Evidence Bundle
+import { EvidenceBundlePanel } from './_components/evidence';
+
 // Intelligence Feed
 import {
   IntelligenceFeed,
@@ -120,6 +123,7 @@ function V2DashboardContent() {
   const [kontrolModalOpen, setKontrolModalOpen] = useState(false);
   const [selectedKontrol, setSelectedKontrol] = useState<{ id: string; baslik: string } | null>(null);
   const [selectedFeedItem, setSelectedFeedItem] = useState<string | null>(null);
+  const [evidenceModalOpen, setEvidenceModalOpen] = useState(false);
 
   // Derived values
   const kritikAksiyonlar = aksiyonlar.filter(a => a.oncelik === 'acil').length;
@@ -350,6 +354,19 @@ function V2DashboardContent() {
             <DeepDiveSection />
           </DashboardSection>
         )}
+
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* KANIT PAKETİ BUTONU */}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        <div className="mt-6 flex justify-end">
+          <button
+            onClick={() => setEvidenceModalOpen(true)}
+            className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-medium hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
+          >
+            <span>📋</span>
+            Kanıt Paketi Oluştur
+          </button>
+        </div>
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════ */}
@@ -428,6 +445,15 @@ function V2DashboardContent() {
                 Kontrolü Başlat
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Evidence Bundle Modal */}
+      {evidenceModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-auto">
+            <EvidenceBundlePanel onClose={() => setEvidenceModalOpen(false)} />
           </div>
         </div>
       )}
