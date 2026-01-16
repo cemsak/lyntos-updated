@@ -10,6 +10,7 @@ import { RulePhase, IRule } from './types';
 import { PHASE_0_RULES } from './rules/phase0';
 import { PHASE_1_RULES } from './rules/phase1';
 import { PHASE_2_RULES } from './rules/phase2';
+import { PHASE_3_RULES } from './rules/phase3';
 
 // ═══════════════════════════════════════════════════════════════════
 // INITIALIZATION
@@ -33,6 +34,10 @@ export function initializeRuleEngine(): void {
   // Phase 2 kurallarını kaydet
   ruleRegistry.registerAll(PHASE_2_RULES);
   console.log(`📋 [Phase 2] ${PHASE_2_RULES.length} rules registered`);
+
+  // Phase 3 kurallarını kaydet
+  ruleRegistry.registerAll(PHASE_3_RULES);
+  console.log(`📋 [Phase 3] ${PHASE_3_RULES.length} rules registered`);
 
   initialized = true;
   console.log(`✅ [RuleEngine] Initialized with ${ruleRegistry.count} rules`);
@@ -85,4 +90,4 @@ export function getRulesByPhase(phase: RulePhase): IRule[] {
 // EXPORTS
 // ═══════════════════════════════════════════════════════════════════
 
-export { ruleRegistry, ruleEngine, PHASE_0_RULES, PHASE_1_RULES, PHASE_2_RULES };
+export { ruleRegistry, ruleEngine, PHASE_0_RULES, PHASE_1_RULES, PHASE_2_RULES, PHASE_3_RULES };
