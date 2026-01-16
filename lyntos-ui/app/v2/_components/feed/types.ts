@@ -154,7 +154,18 @@ export interface MaterialityPreset {
   critical_exception_categories: FeedCategory[];
   // Kritik istisna severity'leri (eşik bypass)
   critical_exception_severities: FeedSeverity[];
+  // Kritik istisna evidence kind'leri (tutardan bağımsız geçer)
+  critical_exception_evidence_kinds: EvidenceKind[];
 }
+
+/**
+ * Kritik Evidence Kind'ler (tüm preset'lerde bypass)
+ * Bu kind'ler tutardan bağımsız olarak materiality geçer
+ */
+export const CRITICAL_EVIDENCE_KINDS: EvidenceKind[] = [
+  'missing_doc',  // Eksik belge her zaman kritik
+  'vdk_kural',    // VDK kuralları her zaman önemli
+];
 
 // ═══════════════════════════════════════════════════════════════════
 // FEED BUILD RESULT

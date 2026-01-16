@@ -464,37 +464,64 @@ export function ContextRail({ items, onAction }: ContextRailProps) {
 
             {/* Footer - Resolve/Snooze/Copy */}
             <div className="flex-shrink-0 border-t border-slate-100 p-4 space-y-3">
-              {/* Resolve & Snooze Buttons */}
-              <div className="flex gap-2">
-                <button
-                  onClick={() => {
-                    if (selectedItem) {
-                      resolveCard(selectedItem.id);
-                      resetFeedSelection();
-                    }
-                  }}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium"
-                >
-                  <CheckCircle className="w-4 h-4" />
-                  Çözüldü
-                </button>
-                {selectedItem.snoozeable && (
+              {/* Resolve Button */}
+              <button
+                onClick={() => {
+                  if (selectedItem) {
+                    resolveCard(selectedItem.id);
+                    resetFeedSelection();
+                  }
+                }}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium"
+              >
+                <CheckCircle className="w-4 h-4" />
+                Çözüldü
+              </button>
+
+              {/* Snooze Options - 1g/7g/30g */}
+              {selectedItem.snoozeable && (
+                <div className="flex gap-2">
                   <button
                     onClick={() => {
                       if (selectedItem) {
-                        // Snooze for 24 hours
-                        const until = new Date(Date.now() + 24 * 60 * 60 * 1000);
+                        const until = new Date(Date.now() + 1 * 24 * 60 * 60 * 1000);
                         snoozeCard(selectedItem.id, until);
                         resetFeedSelection();
                       }
                     }}
-                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 transition-colors text-sm font-medium"
+                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 transition-colors text-xs font-medium"
                   >
-                    <Clock className="w-4 h-4" />
-                    Ertele (24s)
+                    <Clock className="w-3.5 h-3.5" />
+                    1 Gün
                   </button>
-                )}
-              </div>
+                  <button
+                    onClick={() => {
+                      if (selectedItem) {
+                        const until = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+                        snoozeCard(selectedItem.id, until);
+                        resetFeedSelection();
+                      }
+                    }}
+                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 transition-colors text-xs font-medium"
+                  >
+                    <Clock className="w-3.5 h-3.5" />
+                    7 Gün
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (selectedItem) {
+                        const until = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+                        snoozeCard(selectedItem.id, until);
+                        resetFeedSelection();
+                      }
+                    }}
+                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 transition-colors text-xs font-medium"
+                  >
+                    <Clock className="w-3.5 h-3.5" />
+                    30 Gün
+                  </button>
+                </div>
+              )}
 
               {/* Copy Button */}
               <button

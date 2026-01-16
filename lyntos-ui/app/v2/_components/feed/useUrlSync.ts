@@ -2,13 +2,9 @@
 
 /**
  * LYNTOS Feed URL Sync Hook
- * Sprint 3.2.1 Hotfix - Deterministic URL ↔ Store Sync
+ * Sprint 3.2 + Hotfix 4.3.2 - URL State Synchronization
  *
- * Fixes:
- * - Infinite loop prevention with useRef guard
- * - Proper rail close when URL card param removed
- * - Preserves other query params when updating URL
- * - Scope change reset support
+ * HOTFIX: Prevent URL ↔ Store infinite loop
  */
 
 import { useEffect, useCallback, useRef } from 'react';
@@ -19,81 +15,81 @@ const CARD_PARAM = 'card';
 
 /**
  * Hook to sync feed store with URL
- * Uses guard mechanism to prevent infinite loops
+ * Uses refs to prevent infinite loops
  */
 export function useUrlSync() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
 
-  const selectedCardId = useFeedStore((s) => s.selectedCardId);
-  const selectCard = useFeedStore((s) => s.selectCard);
+  // Get store directly (not via selector to avoid re-render)
+  const store = useFeedStore;
 
-  // Guard: track if we're currently syncing to prevent ping-pong
+  // Track if we're currently syncing to prevent loops
   const isSyncingRef = useRef(false);
-  // Track last synced value to detect real changes
-  const lastSyncedCardIdRef = useRef<string | null>(null);
+  const lastUrlCardIdRef = useRef<string | null>(null);
+  const lastStoreCardIdRef = useRef<string | null>(null);
 
   // ─────────────────────────────────────────────────────────────────
   // URL → STORE: Read URL param on mount/change
   // ─────────────────────────────────────────────────────────────────
   useEffect(() => {
-    // Skip if we're currently syncing from store → URL
     if (isSyncingRef.current) return;
 
     const urlCardId = searchParams.get(CARD_PARAM);
+    const storeCardId = store.getState().selectedCardId;
 
-    // Normalize: empty string or whitespace-only = null
-    const normalizedUrlCardId = urlCardId?.trim() || null;
-
-    // Only update if actually different from store
-    if (normalizedUrlCardId !== selectedCardId) {
-      lastSyncedCardIdRef.current = normalizedUrlCardId;
-      selectCard(normalizedUrlCardId);
+    // Only update if URL changed AND differs from store
+    if (urlCardId !== lastUrlCardIdRef.current && urlCardId !== storeCardId) {
+      lastUrlCardIdRef.current = urlCardId;
+      isSyncingRef.current = true;
+      store.getState().selectCard(urlCardId);
+      isSyncingRef.current = false;
     }
-  }, [searchParams, selectedCardId, selectCard]);
+  }, [searchParams, store]);
 
   // ─────────────────────────────────────────────────────────────────
   // STORE → URL: Update URL when store changes
   // ─────────────────────────────────────────────────────────────────
   useEffect(() => {
-    const currentUrlCardId = searchParams.get(CARD_PARAM);
+    // Subscribe to store changes
+    const unsubscribe = store.subscribe(
+      (state) => state.selectedCardId,
+      (selectedCardId) => {
+        if (isSyncingRef.current) return;
+        if (selectedCardId === lastStoreCardIdRef.current) return;
 
-    // Normalize URL value
-    const normalizedUrlCardId = currentUrlCardId?.trim() || null;
+        lastStoreCardIdRef.current = selectedCardId;
+        const currentUrlCardId = new URLSearchParams(window.location.search).get(CARD_PARAM);
 
-    // Skip if already in sync
-    if (selectedCardId === normalizedUrlCardId) return;
+        // Only update URL if store value differs from current URL
+        if (selectedCardId !== currentUrlCardId) {
+          isSyncingRef.current = true;
 
-    // Skip if this was just synced from URL
-    if (selectedCardId === lastSyncedCardIdRef.current) {
-      lastSyncedCardIdRef.current = null;
-      return;
-    }
+          const params = new URLSearchParams(window.location.search);
+          if (selectedCardId) {
+            params.set(CARD_PARAM, selectedCardId);
+          } else {
+            params.delete(CARD_PARAM);
+          }
 
-    // Set guard before URL update
-    isSyncingRef.current = true;
+          const newUrl = params.toString()
+            ? `${pathname}?${params.toString()}`
+            : pathname;
 
-    // Build new URL preserving existing params
-    const params = new URLSearchParams(searchParams.toString());
+          // Use replace to avoid polluting history
+          router.replace(newUrl, { scroll: false });
 
-    if (selectedCardId) {
-      params.set(CARD_PARAM, selectedCardId);
-    } else {
-      params.delete(CARD_PARAM);
-    }
+          // Reset sync flag after a tick
+          setTimeout(() => {
+            isSyncingRef.current = false;
+          }, 0);
+        }
+      }
+    );
 
-    const queryString = params.toString();
-    const newUrl = queryString ? `${pathname}?${queryString}` : pathname;
-
-    // Use replace to avoid polluting history
-    router.replace(newUrl, { scroll: false });
-
-    // Release guard after a tick (allows router to settle)
-    setTimeout(() => {
-      isSyncingRef.current = false;
-    }, 0);
-  }, [selectedCardId, searchParams, pathname, router]);
+    return () => unsubscribe();
+  }, [pathname, router, store]);
 
   // ─────────────────────────────────────────────────────────────────
   // HELPER: Get shareable URL for current selection
@@ -101,6 +97,7 @@ export function useUrlSync() {
   const getShareableUrl = useCallback(() => {
     if (typeof window === 'undefined') return '';
 
+    const selectedCardId = store.getState().selectedCardId;
     const url = new URL(window.location.href);
     if (selectedCardId) {
       url.searchParams.set(CARD_PARAM, selectedCardId);
@@ -108,51 +105,45 @@ export function useUrlSync() {
       url.searchParams.delete(CARD_PARAM);
     }
     return url.toString();
-  }, [selectedCardId]);
+  }, [store]);
 
   return { getShareableUrl };
 }
 
 /**
  * Hook to get current card ID from URL (read-only)
- * Useful for components that just need to read URL state
  */
 export function useCardIdFromUrl(): string | null {
   const searchParams = useSearchParams();
-  const cardId = searchParams.get(CARD_PARAM);
-  return cardId?.trim() || null;
+  return searchParams.get(CARD_PARAM);
 }
 
 /**
  * Navigate to a specific card (sets URL and store)
- * Use this for programmatic navigation
  */
 export function useNavigateToCard() {
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const selectCard = useFeedStore((s) => s.selectCard);
+  const store = useFeedStore;
 
-  return useCallback(
-    (cardId: string | null) => {
-      // Update store first
-      selectCard(cardId);
+  return useCallback((cardId: string | null) => {
+    // Update store
+    store.getState().selectCard(cardId);
 
-      // Build URL preserving other params
-      const params = new URLSearchParams(searchParams.toString());
-      if (cardId) {
-        params.set(CARD_PARAM, cardId);
-      } else {
-        params.delete(CARD_PARAM);
-      }
+    // Update URL
+    const params = new URLSearchParams(window.location.search);
+    if (cardId) {
+      params.set(CARD_PARAM, cardId);
+    } else {
+      params.delete(CARD_PARAM);
+    }
 
-      const queryString = params.toString();
-      const newUrl = queryString ? `${pathname}?${queryString}` : pathname;
+    const newUrl = params.toString()
+      ? `${pathname}?${params.toString()}`
+      : pathname;
 
-      router.push(newUrl, { scroll: false });
-    },
-    [router, pathname, searchParams, selectCard]
-  );
+    router.push(newUrl, { scroll: false });
+  }, [router, pathname, store]);
 }
 
 /**
@@ -162,20 +153,20 @@ export function useNavigateToCard() {
 export function useResetFeedSelection() {
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const closeRail = useFeedStore((s) => s.closeRail);
+  const store = useFeedStore;
 
   return useCallback(() => {
     // Close rail and clear selection in store
-    closeRail();
+    store.getState().closeRail();
 
     // Remove card param from URL
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(window.location.search);
     params.delete(CARD_PARAM);
 
-    const queryString = params.toString();
-    const newUrl = queryString ? `${pathname}?${queryString}` : pathname;
+    const newUrl = params.toString()
+      ? `${pathname}?${params.toString()}`
+      : pathname;
 
     router.replace(newUrl, { scroll: false });
-  }, [router, pathname, searchParams, closeRail]);
+  }, [router, pathname, store]);
 }

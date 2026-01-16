@@ -23,6 +23,7 @@ export {
   SEVERITY_CONFIG,
   CATEGORY_CONFIG,
   EVIDENCE_KIND_CONFIG,
+  CRITICAL_EVIDENCE_KINDS,
 } from './types';
 
 // Store
@@ -53,3 +54,6 @@ export {
   MATERIALITY_CONSERVATIVE,
   MATERIALITY_AGGRESSIVE,
 } from './pipeline';
+
+// Feed Signals (Sprint 4.3)
+export { useFeedSignals, useFilteredFeedSignals } from './useFeedSignals';

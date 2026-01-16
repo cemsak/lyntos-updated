@@ -14,55 +14,62 @@ import type {
   FeedCategory,
   MaterialityPreset,
   FeedBuildResult,
+  EvidenceKind,
 } from './types';
+import { CRITICAL_EVIDENCE_KINDS } from './types';
 
 // ═══════════════════════════════════════════════════════════════════
 // MATERIALITY PRESETS
 // ═══════════════════════════════════════════════════════════════════
 
 /**
- * Standart Preset: Orta ölçekli mükellefler için
- * - Mutlak eşik: 5.000 TL
+ * Muhafazakâr Preset: Daha fazla uyarı göster (düşük eşik)
+ * Küçük işletmeler veya dikkatli yaklaşım için
+ * - Mutlak eşik: 2.500 TL
  * - Oransal eşik: %0.5
- * - Min skor: 20
+ * - Min skor: 15
+ */
+export const MATERIALITY_CONSERVATIVE: MaterialityPreset = {
+  name: 'Muhafazakâr',
+  absolute_threshold_try: 2500,
+  relative_threshold_pct: 0.5,
+  min_score: 15,
+  critical_exception_categories: ['VDK', 'Belge', 'Mevzuat', 'GV'],
+  critical_exception_severities: ['CRITICAL', 'HIGH', 'MEDIUM'],
+  critical_exception_evidence_kinds: [...CRITICAL_EVIDENCE_KINDS],
+};
+
+/**
+ * Standart Preset: Orta ölçekli mükellefler için (varsayılan)
+ * - Mutlak eşik: 5.000 TL
+ * - Oransal eşik: %1.0
+ * - Min skor: 25
  */
 export const MATERIALITY_STANDARD: MaterialityPreset = {
   name: 'Standart',
   absolute_threshold_try: 5000,
-  relative_threshold_pct: 0.5,
-  min_score: 20,
+  relative_threshold_pct: 1.0,
+  min_score: 25,
   critical_exception_categories: ['VDK', 'Belge'],
   critical_exception_severities: ['CRITICAL', 'HIGH'],
+  critical_exception_evidence_kinds: [...CRITICAL_EVIDENCE_KINDS],
 };
 
 /**
- * Muhafazakâr Preset: Küçük işletmeler için
- * - Mutlak eşik: 1.000 TL
- * - Oransal eşik: %0.25
- * - Min skor: 10
- */
-export const MATERIALITY_CONSERVATIVE: MaterialityPreset = {
-  name: 'Muhafazakâr',
-  absolute_threshold_try: 1000,
-  relative_threshold_pct: 0.25,
-  min_score: 10,
-  critical_exception_categories: ['VDK', 'Belge', 'Mevzuat'],
-  critical_exception_severities: ['CRITICAL', 'HIGH', 'MEDIUM'],
-};
-
-/**
- * Agresif Preset: Büyük şirketler için
- * - Mutlak eşik: 25.000 TL
- * - Oransal eşik: %1.0
+ * Agresif Preset: Daha az uyarı göster (yüksek eşik)
+ * Büyük şirketler veya sadece kritik konulara odaklanmak için
+ * - Mutlak eşik: 10.000 TL
+ * - Oransal eşik: %2.0
  * - Min skor: 40
  */
 export const MATERIALITY_AGGRESSIVE: MaterialityPreset = {
   name: 'Agresif',
-  absolute_threshold_try: 25000,
-  relative_threshold_pct: 1.0,
+  absolute_threshold_try: 10000,
+  relative_threshold_pct: 2.0,
   min_score: 40,
   critical_exception_categories: ['VDK'],
   critical_exception_severities: ['CRITICAL'],
+  critical_exception_evidence_kinds: [...CRITICAL_EVIDENCE_KINDS],
 };
 
 // ═══════════════════════════════════════════════════════════════════
@@ -116,14 +123,15 @@ export function passesExplainability(item: RawFeedItem): boolean {
 // ═══════════════════════════════════════════════════════════════════
 
 /**
- * Materiality Gate: Önemsizlik eşiği kontrolü
+ * Materiality Gate: Önemsizlik eşiği kontrolü (3 bacaklı)
  *
  * Kart geçer eğer:
- * 1. Kritik istisna kategorisinde veya severity'de ise (bypass)
- * 2. VEYA aşağıdakilerden birini sağlıyorsa:
- *    - impact.amount_try >= absolute_threshold
- *    - impact.pct >= relative_threshold
- *    - score >= min_score
+ * A) Kritik istisna whitelist'inde ise (bypass):
+ *    - Kategori whitelist'te
+ *    - Severity whitelist'te
+ *    - Evidence kind whitelist'te (missing_doc, vdk_kural vb.)
+ * B) VEYA Mutlak eşik: impact.amount_try >= threshold
+ * C) VEYA Oransal eşik: impact.pct >= pctThreshold
  *
  * @param item - Kontrol edilecek feed item
  * @param preset - Materiality preset
@@ -133,15 +141,32 @@ export function passesMateriality(
   item: RawFeedItem,
   preset: MaterialityPreset = MATERIALITY_STANDARD
 ): boolean {
-  // Kritik istisna kontrolü - bypass
+  // ─────────────────────────────────────────────────────────────────
+  // A) Kritik İstisna Whitelist (tutardan bağımsız bypass)
+  // ─────────────────────────────────────────────────────────────────
+
+  // A1: Kategori whitelist
   if (preset.critical_exception_categories.includes(item.category)) {
     return true;
   }
+
+  // A2: Severity whitelist
   if (preset.critical_exception_severities.includes(item.severity)) {
     return true;
   }
 
-  // Mutlak eşik kontrolü
+  // A3: Evidence kind whitelist (yeni - anayasa gereği)
+  // Herhangi bir evidence ref kritik kind'da ise bypass
+  const hasWhitelistedEvidence = item.evidence_refs?.some((ref) =>
+    preset.critical_exception_evidence_kinds.includes(ref.kind)
+  );
+  if (hasWhitelistedEvidence) {
+    return true;
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // B) Mutlak Eşik: impact.amount_try >= threshold
+  // ─────────────────────────────────────────────────────────────────
   if (
     item.impact.amount_try !== undefined &&
     Math.abs(item.impact.amount_try) >= preset.absolute_threshold_try
@@ -149,7 +174,9 @@ export function passesMateriality(
     return true;
   }
 
-  // Oransal eşik kontrolü
+  // ─────────────────────────────────────────────────────────────────
+  // C) Oransal Eşik: impact.pct >= pctThreshold
+  // ─────────────────────────────────────────────────────────────────
   if (
     item.impact.pct !== undefined &&
     Math.abs(item.impact.pct) >= preset.relative_threshold_pct
@@ -157,7 +184,7 @@ export function passesMateriality(
     return true;
   }
 
-  // Skor kontrolü
+  // Skor kontrolü (ek güvenlik katmanı)
   if (item.score >= preset.min_score) {
     return true;
   }
@@ -171,13 +198,68 @@ export function passesMateriality(
 // ═══════════════════════════════════════════════════════════════════
 
 /**
+ * Deterministik Merge: İki feed item'ı birleştir
+ *
+ * Kurallar (Anayasa):
+ * - severity: MAX
+ * - score: MAX (sum değil!)
+ * - impact: field bazlı MAX (amount_try, pct, points)
+ * - evidence_refs: unique by ref, birleştir
+ * - actions: unique by id, birleştir
+ * - title/summary/why: en yüksek severity+score item'dan al
+ */
+function mergeFeedItems(existing: RawFeedItem, incoming: RawFeedItem): void {
+  const existingSeverityOrder = SEVERITY_ORDER[existing.severity];
+  const incomingSeverityOrder = SEVERITY_ORDER[incoming.severity];
+  const existingPriority = existingSeverityOrder * 1000 + existing.score;
+  const incomingPriority = incomingSeverityOrder * 1000 + incoming.score;
+
+  // En yüksek severity+score item'dan title/summary/why al
+  if (incomingPriority > existingPriority) {
+    existing.severity = incoming.severity;
+    existing.title = incoming.title;
+    existing.summary = incoming.summary;
+    existing.why = incoming.why;
+  }
+
+  // Score: MAX (not sum)
+  existing.score = Math.max(existing.score, incoming.score);
+
+  // Impact: field bazlı MAX
+  existing.impact = {
+    amount_try: Math.max(existing.impact.amount_try || 0, incoming.impact.amount_try || 0) || undefined,
+    pct: Math.max(existing.impact.pct || 0, incoming.impact.pct || 0) || undefined,
+    points: Math.max(existing.impact.points || 0, incoming.impact.points || 0) || undefined,
+  };
+
+  // Evidence refs: unique by ref, birleştir
+  const existingRefs = new Set(existing.evidence_refs.map((e) => e.ref));
+  for (const ref of incoming.evidence_refs) {
+    if (!existingRefs.has(ref.ref)) {
+      existing.evidence_refs.push(ref);
+      existingRefs.add(ref.ref);
+    }
+  }
+
+  // Actions: unique by id, birleştir
+  const existingActionIds = new Set(existing.actions.map((a) => a.id));
+  for (const action of incoming.actions) {
+    if (!existingActionIds.has(action.id)) {
+      existing.actions.push(action);
+      existingActionIds.add(action.id);
+    }
+  }
+}
+
+/**
  * Dedupe: Aynı dedupe_key'e sahip kartları birleştirir
  *
- * Birleştirme stratejisi:
- * - En yüksek severity alınır
- * - Skorlar toplanır (max 100)
- * - Impact'ler birleştirilir
- * - Evidence ve actions birleştirilir
+ * Deterministik birleştirme stratejisi (Anayasa):
+ * - severity: MAX
+ * - score: MAX
+ * - impact: field bazlı MAX
+ * - evidence_refs/actions: unique birleştir
+ * - title/summary/why: en yüksek severity+score'dan
  *
  * @param items - Dedupe edilecek feed items
  * @returns Dedupe edilmiş items
@@ -190,47 +272,18 @@ export function bundleAndDedupe(items: RawFeedItem[]): RawFeedItem[] {
     const existing = dedupeMap.get(key);
 
     if (!existing) {
-      dedupeMap.set(key, { ...item });
+      // Deep copy to avoid mutating original
+      dedupeMap.set(key, {
+        ...item,
+        impact: { ...item.impact },
+        evidence_refs: [...item.evidence_refs],
+        actions: [...item.actions],
+      });
       continue;
     }
 
-    // Merge: daha yüksek severity'yi al
-    const existingSeverityOrder = SEVERITY_ORDER[existing.severity];
-    const newSeverityOrder = SEVERITY_ORDER[item.severity];
-    if (newSeverityOrder > existingSeverityOrder) {
-      existing.severity = item.severity;
-    }
-
-    // Merge: skorları topla (max 100)
-    existing.score = Math.min(100, existing.score + item.score * 0.5);
-
-    // Merge: impact birleştir
-    existing.impact = {
-      amount_try:
-        (existing.impact.amount_try || 0) + (item.impact.amount_try || 0) || undefined,
-      pct: Math.max(existing.impact.pct || 0, item.impact.pct || 0) || undefined,
-      points:
-        (existing.impact.points || 0) + (item.impact.points || 0) || undefined,
-    };
-
-    // Merge: evidence refs birleştir (unique by ref)
-    const existingRefs = new Set(existing.evidence_refs.map((e) => e.ref));
-    for (const ref of item.evidence_refs) {
-      if (!existingRefs.has(ref.ref)) {
-        existing.evidence_refs.push(ref);
-      }
-    }
-
-    // Merge: actions birleştir (unique by id)
-    const existingActionIds = new Set(existing.actions.map((a) => a.id));
-    for (const action of item.actions) {
-      if (!existingActionIds.has(action.id)) {
-        existing.actions.push(action);
-      }
-    }
-
-    // Summary'yi güncelle (ilk item'dan al)
-    // Title ve summary ilk item'dan kalır
+    // Deterministik merge
+    mergeFeedItems(existing, item);
   }
 
   return Array.from(dedupeMap.values());

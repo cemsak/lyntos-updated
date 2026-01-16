@@ -39,15 +39,12 @@ import { FiveWhyWizard } from './_components/vdk/FiveWhyWizard';
 // Intelligence Feed
 import {
   IntelligenceFeed,
-  RAW_MOCK_FEED_ITEMS,
   useUrlSync,
   useResetFeedSelection,
   ContextRail,
-  buildFeed,
   filterByStatus,
-  getFeedStats,
-  MATERIALITY_STANDARD,
   useFeedStore,
+  useFeedSignals,
 } from './_components/feed';
 
 // ═══════════════════════════════════════════════════════════════════
@@ -85,27 +82,35 @@ function V2DashboardContent() {
   }, [scope.client_id, scope.period, resetFeedSelection]);
 
   // ═══════════════════════════════════════════════════════════════════
-  // FEED PIPELINE (Sprint 4.0 - Deterministic Feed)
+  // FEED SIGNALS (Sprint 4.3 - Real signals from generators)
   // ═══════════════════════════════════════════════════════════════════
 
   // Get resolved/snoozed IDs from store
   const resolvedIds = useFeedStore((s) => s.resolvedIds);
   const snoozedIds = useFeedStore((s) => s.snoozedIds);
 
-  // Build feed through pipeline (materiality, explainability, dedupe, limit)
-  const feedBuildResult = useMemo(() => {
-    return buildFeed(RAW_MOCK_FEED_ITEMS, MATERIALITY_STANDARD, 12);
-  }, []);
+  // Get signals from generators (Mizan + CrossCheck)
+  const { signals: feedSignals, stats: feedSignalStats } = useFeedSignals();
 
   // Filter out resolved/snoozed items
   const feedItems = useMemo(() => {
-    return filterByStatus(feedBuildResult.items, resolvedIds, snoozedIds);
-  }, [feedBuildResult.items, resolvedIds, snoozedIds]);
+    return filterByStatus(feedSignals, resolvedIds, snoozedIds);
+  }, [feedSignals, resolvedIds, snoozedIds]);
 
-  // Get feed statistics for RightRail
+  // Get feed statistics for RightRail (derived from signal stats)
   const feedStats = useMemo(() => {
-    return getFeedStats(feedItems);
-  }, [feedItems]);
+    const criticalCount = feedSignalStats.combined.critical;
+    const highCount = feedSignalStats.combined.high;
+    const missingDocCount = feedItems.filter(i => i.category === 'Belge').length;
+    const topRecommendations = feedItems.slice(0, 3).map(i => i.title);
+
+    return {
+      criticalCount,
+      highCount,
+      missingDocCount,
+      topRecommendations,
+    };
+  }, [feedSignalStats, feedItems]);
 
   // === ALL USESTATE HOOKS ===
   const [uploadModalOpen, setUploadModalOpen] = useState(false);

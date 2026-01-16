@@ -7,6 +7,7 @@
 
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
+import { useShallow } from 'zustand/react/shallow';
 import type { FeedSeverity } from './types';
 
 // ═══════════════════════════════════════════════════════════════════
@@ -39,6 +40,7 @@ interface FeedState {
 
   dismissCard: (id: string) => void;
   snoozeCard: (id: string, until: Date) => void;
+  unsnoozeCard: (id: string) => void;
   undismiss: (id: string) => void;
   clearDismissed: () => void;
 
@@ -119,6 +121,19 @@ export const useFeedStore = create<FeedState>()(
       set((state) => {
         const newSnoozed = new Map(state.snoozedIds);
         newSnoozed.set(id, until);
+        return {
+          snoozedIds: newSnoozed,
+          // Close rail + clear selection when snoozed
+          selectedCardId: state.selectedCardId === id ? null : state.selectedCardId,
+          railOpen: state.selectedCardId === id ? false : state.railOpen,
+        };
+      });
+    },
+
+    unsnoozeCard: (id) => {
+      set((state) => {
+        const newSnoozed = new Map(state.snoozedIds);
+        newSnoozed.delete(id);
         return { snoozedIds: newSnoozed };
       });
     },
@@ -194,19 +209,22 @@ export const useSeverityFilter = () => useFeedStore((s) => s.severityFilter);
 // Resolved IDs selector
 export const useResolvedIds = () => useFeedStore((s) => s.resolvedIds);
 
-// Actions (stable references)
+// Actions (stable references - useShallow prevents infinite loop)
 export const useFeedActions = () =>
-  useFeedStore((s) => ({
-    selectCard: s.selectCard,
-    openRail: s.openRail,
-    closeRail: s.closeRail,
-    toggleRail: s.toggleRail,
-    setSeverityFilter: s.setSeverityFilter,
-    dismissCard: s.dismissCard,
-    snoozeCard: s.snoozeCard,
-    resolveCard: s.resolveCard,
-    unresolveCard: s.unresolveCard,
-  }));
+  useFeedStore(
+    useShallow((s) => ({
+      selectCard: s.selectCard,
+      openRail: s.openRail,
+      closeRail: s.closeRail,
+      toggleRail: s.toggleRail,
+      setSeverityFilter: s.setSeverityFilter,
+      dismissCard: s.dismissCard,
+      snoozeCard: s.snoozeCard,
+      unsnoozeCard: s.unsnoozeCard,
+      resolveCard: s.resolveCard,
+      unresolveCard: s.unresolveCard,
+    }))
+  );
 
 // ═══════════════════════════════════════════════════════════════════
 // URL SYNC HELPER (to be used in Sprint 3.2)
