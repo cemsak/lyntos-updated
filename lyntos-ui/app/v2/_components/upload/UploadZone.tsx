@@ -4,6 +4,8 @@ import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { classifyFile } from './fileClassifier';
 import { getBankCount } from './bankRegistry';
+import { parseMizanFile } from './mizanParser';
+import { useMizanStore } from '../../_lib/stores/mizanStore';
 import type { UploadedFile, DocumentType, RequiredDocument } from './types';
 
 const generateId = () => `file_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -40,6 +42,7 @@ interface UploadZoneProps {
 export function UploadZone({ smmm_id, client_id, period, onUploadComplete }: UploadZoneProps) {
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const setMizan = useMizanStore(s => s.setMizan);
 
   const requiredDocs: RequiredDocument[] = [
     { type: 'beyanname_pdf', label_tr: 'KDV Beyannamesi', required: true, uploaded: false },
@@ -76,6 +79,37 @@ export function UploadZone({ smmm_id, client_id, period, onUploadComplete }: Upl
       try {
         const classification = await classifyFile(uploadFile.file);
 
+        // Mizan dosyası ise parse et ve store'a kaydet
+        if (classification.type === 'mizan_excel' || classification.type === 'mizan_csv') {
+          try {
+            const buffer = await uploadFile.file.arrayBuffer();
+            const parsedMizan = parseMizanFile(buffer, uploadFile.file.name);
+
+            // Store'a kaydet
+            setMizan(parsedMizan, {
+              taxpayerId: client_id,
+              taxpayerName: client_id, // TODO: Gerçek isim
+              period: period,
+              uploadedAt: new Date().toISOString(),
+            });
+
+            console.log('[UploadZone] Mizan parsed and stored:', {
+              accounts: parsedMizan.accounts.length,
+              totals: parsedMizan.totals,
+            });
+          } catch (parseError) {
+            console.error('[UploadZone] Mizan parse error:', parseError);
+            // Hata durumunda warning ekle ama yüklemeyi engelleme
+            setFiles(prev => prev.map(f => {
+              if (f.id !== uploadFile.id) return f;
+              return {
+                ...f,
+                warnings: [...f.warnings, `Mizan parse hatası: ${parseError}`],
+              };
+            }));
+          }
+        }
+
         setFiles(prev => prev.map(f => {
           if (f.id !== uploadFile.id) return f;
 
@@ -102,7 +136,7 @@ export function UploadZone({ smmm_id, client_id, period, onUploadComplete }: Upl
     }
 
     setIsProcessing(false);
-  }, []);
+  }, [setMizan, client_id, period]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
