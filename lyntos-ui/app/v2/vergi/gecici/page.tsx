@@ -97,7 +97,7 @@ export default function GeciciVergiPage() {
             Geçici Vergi
           </h1>
           <p className="text-slate-600 mt-1">
-            2024 yılı geçici vergi dönemlerini takip edin ve hesaplayın
+            2026 yili gecici vergi donemlerini takip edin ve hesaplayin
           </p>
         </div>
         <button
@@ -114,7 +114,7 @@ export default function GeciciVergiPage() {
         <KpiCard label="Toplam Geçici Vergi" value="₺---" status="neutral" />
         <KpiCard label="Ödenen" value="₺---" status="neutral" />
         <KpiCard label="Kalan" value="₺---" status="neutral" />
-        <KpiCard label="Aktif Dönem" value="4. Çeyrek" subtext="Ekim-Aralık 2024" status="warning" />
+        <KpiCard label="Aktif Donem" value="1. Ceyrek" subtext="Ocak-Mart 2026" status="warning" />
       </div>
 
       {/* Quarter Cards */}
@@ -122,28 +122,28 @@ export default function GeciciVergiPage() {
         <h2 className="text-lg font-semibold text-slate-800 mb-4">Dönemler</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <QuarterCard
-            quarter="1. Çeyrek"
+            quarter="1. Ceyrek"
             period="Ocak - Mart"
-            dueDate="17 Mayıs 2024"
-            status="completed"
-          />
-          <QuarterCard
-            quarter="2. Çeyrek"
-            period="Nisan - Haziran"
-            dueDate="17 Ağustos 2024"
-            status="completed"
-          />
-          <QuarterCard
-            quarter="3. Çeyrek"
-            period="Temmuz - Eylül"
-            dueDate="17 Kasım 2024"
-            status="completed"
-          />
-          <QuarterCard
-            quarter="4. Çeyrek"
-            period="Ekim - Aralık"
-            dueDate="17 Şubat 2025"
+            dueDate="17 Mayis 2026"
             status="current"
+          />
+          <QuarterCard
+            quarter="2. Ceyrek"
+            period="Nisan - Haziran"
+            dueDate="17 Agustos 2026"
+            status="upcoming"
+          />
+          <QuarterCard
+            quarter="3. Ceyrek"
+            period="Temmuz - Eylul"
+            dueDate="17 Kasim 2026"
+            status="upcoming"
+          />
+          <QuarterCard
+            quarter="4. Ceyrek"
+            period="Ekim - Aralik"
+            dueDate="Yillik KV ile"
+            status="upcoming"
           />
         </div>
       </div>
@@ -221,15 +221,15 @@ export default function GeciciVergiPage() {
         </div>
       </div>
 
-      {/* Backend Contract Placeholder */}
-      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+      {/* Info Banner */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <div className="flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+          <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
           <div>
-            <h4 className="font-medium text-amber-800">Backend Entegrasyonu Bekleniyor</h4>
-            <p className="text-sm text-amber-700 mt-1">
-              Geçici vergi hesaplaması backend contract&apos;ı tamamlandığında aktif olacaktır.
-              Mizan verileri yüklendiğinde otomatik hesaplama yapılabilecektir.
+            <h4 className="font-medium text-blue-800">Veri Yukleme Gerekli</h4>
+            <p className="text-sm text-blue-700 mt-1">
+              Gecici vergi hesaplamasi icin donem mizan verilerinizi yukleyin.
+              Yukleme sonrasi hesaplama otomatik olarak yapilacaktir.
             </p>
           </div>
         </div>

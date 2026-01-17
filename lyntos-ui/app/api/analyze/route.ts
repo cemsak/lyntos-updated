@@ -5,9 +5,17 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   const u = new URL(req.url);
   const entity =
-    u.searchParams.get("firma") || u.searchParams.get("entity") || "OZKANLAR";
+    u.searchParams.get("firma") || u.searchParams.get("entity");
   const period =
-    u.searchParams.get("donem") || u.searchParams.get("period") || "2025-Q3";
+    u.searchParams.get("donem") || u.searchParams.get("period");
+
+  // Parametreler zorunlu - default yok
+  if (!entity || !period) {
+    return NextResponse.json(
+      { error: "missing_params", detail: "firma ve donem parametreleri zorunlu" },
+      { status: 400 }
+    );
+  }
 
 
   const base = (process.env.BACKEND_URL ?? "http://127.0.0.1:8010").replace(/\/+$/, "");

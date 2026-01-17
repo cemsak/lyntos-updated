@@ -33,7 +33,7 @@ export function useVergusAnalysis({
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: 'DEV_HKOZKAN',
+            Authorization: localStorage.getItem('lyntos_token') || '',
           },
           body: JSON.stringify({
             client_id: clientId,
@@ -70,7 +70,7 @@ export function useVergusAnalysis({
         `/api/v1/vergus/quick-check/${clientId}?period=${period}`,
         {
           headers: {
-            Authorization: 'DEV_HKOZKAN',
+            Authorization: localStorage.getItem('lyntos_token') || '',
           },
         }
       );

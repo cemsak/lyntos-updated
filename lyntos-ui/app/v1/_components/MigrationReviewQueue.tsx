@@ -58,7 +58,7 @@ export default function MigrationReviewQueue({ tenantId, onResolve }: MigrationR
         body: JSON.stringify({
           queue_id: item.id,
           decision: decision,
-          client_id: 'OZKAN_KIRTASIYE',
+          client_id: '', // Zorunlu alan - UI'dan seçilmeli
           period_id: item.suggested_period_id || '2025-Q2',
           doc_type: item.suggested_doc_type,
           reason: decision === 'REJECT' ? 'User rejected' : '',

@@ -37,7 +37,7 @@ export function useVDKSimulator({
           {
             method: 'POST',
             headers: {
-              Authorization: 'DEV_HKOZKAN', // Dev auth header
+              Authorization: localStorage.getItem('lyntos_token') || '', // Dev auth header
             },
           }
         );
@@ -71,41 +71,7 @@ export function useVDKSimulator({
     [onSuccess, onError]
   );
 
-  const runDemo = useCallback(async (): Promise<SimulationResult | null> => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch('/api/v1/vdk-simulator/demo', {
-        method: 'GET',
-        headers: {
-          Authorization: 'DEV_HKOZKAN',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Demo simulasyon basarisiz');
-      }
-
-      const json: SimulationResponse = await response.json();
-
-      if (!json.success || !json.data) {
-        throw new Error('Demo sonucu alinamadi');
-      }
-
-      setResult(json.data);
-      onSuccess?.(json.data);
-      return json.data;
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : 'Demo simulasyon basarisiz';
-      setError(message);
-      onError?.(message);
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [onSuccess, onError]);
+  // runDemo fonksiyonu KALDIRILDI - Demo veri uretimi yasak
 
   const reset = useCallback(() => {
     setResult(null);
@@ -114,7 +80,6 @@ export function useVDKSimulator({
 
   return {
     analyze,
-    runDemo,
     reset,
     isLoading,
     result,

@@ -25,7 +25,12 @@ export function SourcesProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     async function fetchSources() {
       try {
-        const token = localStorage.getItem('lyntos_token') || 'DEV_HKOZKAN';
+        const token = localStorage.getItem('lyntos_token');
+        if (!token) {
+          console.warn('[SourcesProvider] No auth token found');
+          setIsLoaded(true);
+          return;
+        }
 
         const response = await fetch('/api/v1/contracts/sources', {
           headers: { 'Authorization': token },

@@ -22,9 +22,24 @@ export default async function RiskPage({
 
   const code = p.code;
 
-  const smmm = pick(sp, "smmm", "HKOZKAN");
-  const client = pick(sp, "client", "OZKAN_KIRTASIYE");
-  const period = pick(sp, "period", "2025-Q2");
+  const smmm = pick(sp, "smmm", "");
+  const client = pick(sp, "client", "");
+  const period = pick(sp, "period", "");
+
+  // Parametreler zorunlu
+  if (!smmm || !client || !period) {
+    return (
+      <div className="mx-auto max-w-6xl p-4">
+        <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
+          <h2 className="text-xl font-semibold text-slate-900 mb-2">Parametre Eksik</h2>
+          <p className="text-slate-600 mb-4">
+            Lutfen URL parametrelerini belirtin: ?smmm=XXX&amp;client=YYY&amp;period=2025-Q1
+          </p>
+          <a href="/v2" className="text-blue-600 hover:underline">V2 Dashboard&apos;a Git</a>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-6xl p-4">

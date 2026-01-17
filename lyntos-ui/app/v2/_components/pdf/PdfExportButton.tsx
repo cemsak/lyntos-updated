@@ -22,7 +22,12 @@ export function PdfExportButton() {
     setProgress(10);
 
     try {
-      const token = localStorage.getItem('lyntos_token') || 'DEV_HKOZKAN';
+      const token = localStorage.getItem('lyntos_token');
+      if (!token) {
+        setError('Oturum bulunamadi. Lutfen giris yapin.');
+        setStatus('error');
+        return;
+      }
 
       setStatus('generating');
       setProgress(30);

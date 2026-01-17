@@ -53,8 +53,13 @@ export function useVdkValidation(): UseVdkValidationReturn {
 
     try {
       const token = typeof window !== 'undefined'
-        ? localStorage.getItem('lyntos_token') || 'DEV_HKOZKAN'
-        : 'DEV_HKOZKAN';
+        ? localStorage.getItem('lyntos_token')
+        : null;
+      if (!token) {
+        setError('Oturum bulunamadi. Lutfen giris yapin.');
+        setLoading(false);
+        return null;
+      }
 
       const response = await fetch(VDK_VALIDATE_ENDPOINT, {
         method: 'POST',

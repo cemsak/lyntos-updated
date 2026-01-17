@@ -32,7 +32,7 @@ export function useInspectorPrep({ clientId, period }: UseInspectorPrepOptions) 
         `/api/v1/inspector-prep/notes/${clientId}?period=${period}`,
         {
           headers: {
-            Authorization: 'DEV_HKOZKAN',
+            Authorization: localStorage.getItem('lyntos_token') || '',
           },
         }
       );
@@ -57,7 +57,7 @@ export function useInspectorPrep({ clientId, period }: UseInspectorPrepOptions) 
         `/api/v1/inspector-prep/progress/${clientId}?period=${period}`,
         {
           headers: {
-            Authorization: 'DEV_HKOZKAN',
+            Authorization: localStorage.getItem('lyntos_token') || '',
           },
         }
       );
@@ -82,7 +82,7 @@ export function useInspectorPrep({ clientId, period }: UseInspectorPrepOptions) 
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: 'DEV_HKOZKAN',
+            Authorization: localStorage.getItem('lyntos_token') || '',
           },
           body: JSON.stringify({
             client_id: clientId,
@@ -128,7 +128,7 @@ export function useInspectorPrep({ clientId, period }: UseInspectorPrepOptions) 
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: 'DEV_HKOZKAN',
+            Authorization: localStorage.getItem('lyntos_token') || '',
           },
           body: JSON.stringify({
             client_id: clientId,

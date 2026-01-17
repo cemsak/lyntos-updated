@@ -1,10 +1,11 @@
 'use client';
 import React, { useState } from 'react';
 import { KpiCard, type KpiData } from './KpiCard';
-import { RiskSkoruDetayModal, DEFAULT_PUAN_KIRANLAR } from './RiskSkoruDetay';
+import { RiskSkoruDetayModal, type PuanKiranKriter } from './RiskSkoruDetay';
 import { useFailSoftFetch } from '../hooks/useFailSoftFetch';
 import { ENDPOINTS } from '../contracts/endpoints';
 import type { PanelEnvelope, ExpertAnalysis, AiAnalysis, PanelMeta, LegalBasisRef, EvidenceRef } from '../contracts/envelope';
+import { getSonrakiBeyan, formatTarihKisa } from '../../_lib/vergiTakvimi';
 import { normalizeExpertAnalysis, normalizeAiAnalysis, normalizeMeta, determineTrust, resolveLegalBasisRefs } from '../contracts/map';
 
 // Helper to extract nested analysis from backend response
@@ -225,14 +226,20 @@ function normalizeRegwatch(raw: unknown, requestId?: string): PanelEnvelope<KpiD
     const obj = r as Record<string, unknown>;
     const data = obj.data as Record<string, unknown> | undefined;
     if (!data) return undefined;
-    const isActive = data.is_active === true || data.status === 'ACTIVE';
-    const pending = typeof data.pending_count === 'number' ? data.pending_count : 0;
-    // Show next declaration deadline - currently static, will be dynamic with backend
+    // Dinamik beyan takviminden sonraki beyani al
+    const sonrakiBeyan = getSonrakiBeyan();
+    if (sonrakiBeyan) {
+      return {
+        value: formatTarihKisa(sonrakiBeyan.sonTarih),
+        label: `${sonrakiBeyan.beyanname} son gun`,
+      };
+    }
+    // Fallback - beyan bulunamazsa
     return {
-      value: '26 Şub',
-      label: 'KDV beyanı son gün',
+      value: '-',
+      label: 'Beyan takvimi bos',
     };
-  }, undefined, requestId, 'Beyan takvimini görüntüle');
+  }, undefined, requestId, 'Beyan takvimini goruntule');
 }
 
 interface KpiStripProps {
@@ -284,11 +291,12 @@ export function KpiStrip({ onRegWatchClick }: KpiStripProps) {
       </div>
 
       {/* Risk Skoru Detay Modal */}
+      {/* puanKiranlar: Backend API'den gelecek, şimdilik boş array */}
       <RiskSkoruDetayModal
         isOpen={riskDetayAcik}
         onClose={() => setRiskDetayAcik(false)}
         skor={riskSkor}
-        puanKiranlar={DEFAULT_PUAN_KIRANLAR}
+        puanKiranlar={[]}
       />
     </>
   );

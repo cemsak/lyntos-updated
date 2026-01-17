@@ -14,11 +14,11 @@ interface Source {
 interface SourceLinkProps {
   refs: string[];
   compact?: boolean;
-  smmm?: string;
+  smmm: string;
 }
 
 export default function SourceLink(props: SourceLinkProps) {
-  const { refs, compact = false, smmm = 'HKOZKAN' } = props;
+  const { refs, compact = false, smmm } = props;
   const [sources, setSources] = useState<Source[]>([]);
   const [loading, setLoading] = useState(true);
 

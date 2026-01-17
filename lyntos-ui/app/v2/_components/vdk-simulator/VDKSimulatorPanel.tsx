@@ -36,7 +36,7 @@ interface VDKSimulatorPanelProps {
 export function VDKSimulatorPanel({
   clientId,
   clientName,
-  period = '2024/Q4',
+  period = '2026/Q1',
   autoRun = true,
   onDocumentUpload,
 }: VDKSimulatorPanelProps) {

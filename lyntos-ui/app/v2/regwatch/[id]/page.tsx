@@ -97,7 +97,13 @@ export default function RegWatchDetailPage() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const token = localStorage.getItem('lyntos_token') || 'DEV_HKOZKAN';
+        const token = localStorage.getItem('lyntos_token');
+        if (!token) {
+          console.error('[RegWatch] No auth token found');
+          setItem(null);
+          setLoading(false);
+          return;
+        }
 
         // Try to fetch from API
         const response = await fetch(`/api/v1/regwatch/changes?id=${regId}`, {

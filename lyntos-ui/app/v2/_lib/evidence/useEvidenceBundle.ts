@@ -67,10 +67,10 @@ export function useEvidenceBundle(): UseEvidenceBundleReturn {
           unvan: mizanStore.meta?.taxpayerName || scope.client_id,
         },
         period: {
-          yil: parseInt(mizanStore.meta?.period?.split('-')[0] || '2024'),
+          yil: parseInt(mizanStore.meta?.period?.split('-')[0] || '2026'),
           donem: 'ANNUAL',
-          baslangic: `${mizanStore.meta?.period?.split('-')[0] || '2024'}-01-01`,
-          bitis: `${mizanStore.meta?.period?.split('-')[0] || '2024'}-12-31`,
+          baslangic: `${mizanStore.meta?.period?.split('-')[0] || '2026'}-01-01`,
+          bitis: `${mizanStore.meta?.period?.split('-')[0] || '2026'}-12-31`,
         },
         smmmId: scope.smmm_id,
         mizan: mizanAccounts,

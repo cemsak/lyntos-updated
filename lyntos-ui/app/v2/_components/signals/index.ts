@@ -9,18 +9,14 @@
 // ═══════════════════════════════════════════════════════════════════
 
 export { generateMizanSignals, MIZAN_RULES } from './mizanSignalGenerator';
-export {
-  MOCK_MIZAN_HESAPLAR,
-  MOCK_MIZAN_CONTEXT,
-  calculateCiroFromMizan,
-} from './mockMizanData';
+// MOCK_MIZAN_* exports KALDIRILDI - Mock data yasak
 
 // ═══════════════════════════════════════════════════════════════════
 // CROSSCHECK SIGNAL GENERATOR (Sprint 4.2)
 // ═══════════════════════════════════════════════════════════════════
 
 export { generateCrossCheckSignals, CROSSCHECK_THRESHOLDS } from './crossCheckSignalGenerator';
-export { MOCK_CROSSCHECK_ITEMS, MOCK_CROSSCHECK_CONTEXT } from './mockCrossCheckData';
+// MOCK_CROSSCHECK_* exports KALDIRILDI - Mock data yasak
 
 // ═══════════════════════════════════════════════════════════════════
 // TYPES

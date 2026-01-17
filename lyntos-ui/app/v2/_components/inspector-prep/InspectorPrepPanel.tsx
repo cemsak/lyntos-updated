@@ -143,7 +143,7 @@ export function InspectorPrepPanel({
         `/api/v1/inspector-prep/export-pdf/${clientId}?period=${period}`,
         {
           headers: {
-            Authorization: 'DEV_HKOZKAN',
+            Authorization: localStorage.getItem('lyntos_token') || '',
           },
         }
       );

@@ -190,10 +190,10 @@ export default function DashboardV3Page() {
             </div>
             <div>
               <h2 className="text-lg font-bold text-slate-800">Kurumlar Vergisi Analizi</h2>
-              <p className="text-slate-500 text-sm">2024 - 20 Kontrol (6+6+8)</p>
+              <p className="text-slate-500 text-sm">2025 - 20 Kontrol (6+6+8)</p>
             </div>
           </div>
-          <KurumlarVergisiPanel yil={2024} onKontrolClick={handleKontrolBaslat} />
+          <KurumlarVergisiPanel yil={2025} onKontrolClick={handleKontrolBaslat} />
         </div>
       </div>
 

@@ -215,8 +215,13 @@ export function useAksiyonlar(): UseAksiyonlarResult {
       });
 
       const token = typeof window !== 'undefined'
-        ? localStorage.getItem('lyntos_token') || 'DEV_HKOZKAN'
-        : 'DEV_HKOZKAN';
+        ? localStorage.getItem('lyntos_token')
+        : null;
+      if (!token) {
+        setError('Oturum bulunamadi. Lutfen giris yapin.');
+        setLoading(false);
+        return;
+      }
 
       const response = await fetch(url, {
         signal: controller.signal,

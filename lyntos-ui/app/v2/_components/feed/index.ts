@@ -3,8 +3,8 @@ export { FeedCard } from './FeedCard';
 export { IntelligenceFeed } from './IntelligenceFeed';
 export { ContextRail } from './ContextRail';
 
-// Mock Data
-export { MOCK_FEED_ITEMS, RAW_MOCK_FEED_ITEMS, getFilteredFeed, sortFeedByScore } from './mockData';
+// Mock Data KALDIRILDI - Mock data yasak
+// MOCK_FEED_ITEMS, RAW_MOCK_FEED_ITEMS, getFilteredFeed, sortFeedByScore silindi
 
 // Types
 export {

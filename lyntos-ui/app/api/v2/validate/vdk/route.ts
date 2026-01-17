@@ -10,7 +10,13 @@ const BACKEND_URL = process.env.BACKEND_URL || 'http://127.0.0.1:8000';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const authHeader = request.headers.get('Authorization') || 'DEV_HKOZKAN';
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader) {
+      return NextResponse.json(
+        { error: 'Unauthorized', detail: 'Authorization header required' },
+        { status: 401 }
+      );
+    }
 
     const response = await fetch(`${BACKEND_URL}/api/v2/validate/vdk`, {
       method: 'POST',

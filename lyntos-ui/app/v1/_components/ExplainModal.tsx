@@ -45,9 +45,9 @@ interface ExplainModalProps {
   // Common
   onClose: () => void;
   ruleId?: string;
-  smmm?: string;
-  client?: string;
-  period?: string;
+  smmm: string;
+  client: string;
+  period: string;
 }
 
 export default function ExplainModal({
@@ -61,9 +61,9 @@ export default function ExplainModal({
   trust_score,
   onClose,
   ruleId,
-  smmm = 'HKOZKAN',
-  client = 'OZKAN_KIRTASIYE',
-  period = '2025-Q2'
+  smmm,
+  client,
+  period
 }: ExplainModalProps) {
   const [downloading, setDownloading] = useState(false);
 

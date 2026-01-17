@@ -25,11 +25,14 @@ import {
 // API base URL - Backend port
 const API_BASE = 'http://127.0.0.1:8000';
 
-// Auth header - DEV mode (no Bearer prefix for DEV_* tokens)
-const AUTH_HEADER = {
-  'Authorization': 'DEV_HKOZKAN',
-  'Content-Type': 'application/json',
-};
+// Auth header - dynamically get token from localStorage
+function getAuthHeader(): Record<string, string> {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('lyntos_token') : null;
+  return {
+    'Authorization': token || '',
+    'Content-Type': 'application/json',
+  };
+}
 
 // Generic fetch with error handling
 async function fetchWithEnvelope<T>(
@@ -38,7 +41,7 @@ async function fetchWithEnvelope<T>(
 ): Promise<PanelEnvelope<T>> {
   try {
     const response = await fetch(url, {
-      headers: AUTH_HEADER,
+      headers: getAuthHeader(),
     });
 
     if (!response.ok) {
@@ -148,7 +151,7 @@ function transformKpiData(kurganData: unknown): KpiStripData {
 
   return {
     kpis,
-    period: '2024-Q4',
+    period: '2026-Q1',
     lastUpdated: new Date().toISOString(),
   };
 }
@@ -159,7 +162,7 @@ function transformGeciciVergi(response: unknown): TaxAnalysisData {
   const data = (raw?.data as Record<string, unknown>) || raw;
 
   return {
-    period: '2024-Q4',
+    period: '2026-Q1',
     totalControls: 12,
     passedControls: 8,
     warningControls: 3,
@@ -186,7 +189,7 @@ function transformKurumlarVergi(response: unknown): TaxAnalysisData {
   const data = (raw?.data as Record<string, unknown>) || raw;
 
   return {
-    period: '2024',
+    period: '2025',
     totalControls: 20,
     passedControls: 14,
     warningControls: 4,
@@ -215,7 +218,7 @@ function transformMizan(response: unknown): MizanData {
   const accounts = (data?.accounts as Record<string, Record<string, unknown>>) || {};
 
   return {
-    period: '2024-Q4',
+    period: '2026-Q1',
     toplamBorc: 15000000,
     toplamAlacak: 15000000,
     bakiyeDengesi: true,
@@ -240,7 +243,7 @@ function transformCrossCheck(response: unknown): CrossCheckData {
   const checks = (data?.checks as Array<Record<string, unknown>>) || [];
 
   return {
-    period: '2024-Q4',
+    period: '2026-Q1',
     checks: checks.map((c, i) => ({
       id: `cc-${i}`,
       source: (c?.type as string)?.split('_vs_')[0] || 'mizan',
@@ -291,9 +294,14 @@ export function useDashboardData(clientId?: string | null, period?: string | nul
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchAllData = useCallback(async () => {
-    // Default values if no client/period
-    const cId = clientId || 'OZKAN_KIRTASIYE';
-    const prd = period || '2024-Q4';
+    // Client/period zorunlu - default yok
+    if (!clientId || !period) {
+      console.warn('[useDashboardData] Client veya period seçilmedi');
+      setIsLoading(false);
+      return;
+    }
+    const cId = clientId;
+    const prd = period;
 
     setIsLoading(true);
 

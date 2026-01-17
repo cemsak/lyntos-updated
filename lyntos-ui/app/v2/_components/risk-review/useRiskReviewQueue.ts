@@ -133,7 +133,12 @@ export function useRiskReviewQueue(): UseRiskReviewQueueResult {
     setError(null);
 
     try {
-      const token = localStorage.getItem('lyntos_token') || 'DEV_HKOZKAN';
+      const token = localStorage.getItem('lyntos_token');
+      if (!token) {
+        setError('Oturum bulunamadi. Lutfen giris yapin.');
+        setIsLoading(false);
+        return;
+      }
 
       // Try primary endpoint
       const response = await fetch('/api/v1/contracts/risk-queue', {

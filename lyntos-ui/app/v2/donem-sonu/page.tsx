@@ -85,7 +85,7 @@ export default function DonemSonuPage() {
             Dönem Sonu İşlemleri
           </h1>
           <p className="text-slate-600 mt-1">
-            2024 mali yılı dönem sonu işlemlerini adım adım tamamlayın
+            2025 mali yili donem sonu islemlerini adim adim tamamlayin
           </p>
         </div>
         <button
@@ -175,15 +175,15 @@ export default function DonemSonuPage() {
         </div>
       </div>
 
-      {/* Backend Contract Placeholder */}
-      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+      {/* Info Banner */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <div className="flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+          <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
           <div>
-            <h4 className="font-medium text-amber-800">Backend Entegrasyonu Bekleniyor</h4>
-            <p className="text-sm text-amber-700 mt-1">
-              Bu modül backend contract&apos;ı tamamlandığında aktif olacaktır.
-              Şu an görüntülediğiniz sayfa, planlanan iş akışının önizlemesidir.
+            <h4 className="font-medium text-blue-800">Veri Yukleme Gerekli</h4>
+            <p className="text-sm text-blue-700 mt-1">
+              Donem sonu islemlerini baslatmak icin mizan verilerinizi yukleyin.
+              Is akisi adimlari veri yukleme sonrasi aktif hale gelecektir.
             </p>
           </div>
         </div>

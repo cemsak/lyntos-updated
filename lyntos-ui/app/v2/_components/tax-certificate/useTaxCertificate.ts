@@ -33,7 +33,7 @@ export function useTaxCertificate({ clientId, onSuccess, onError }: UseTaxCertif
         method: 'POST',
         body: formData,
         headers: {
-          'Authorization': 'DEV_HKOZKAN', // Dev auth header
+          'Authorization': localStorage.getItem('lyntos_token') || '', // Dev auth header
         },
       });
 
@@ -123,7 +123,7 @@ export function useTaxCertificate({ clientId, onSuccess, onError }: UseTaxCertif
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'DEV_HKOZKAN',
+          'Authorization': localStorage.getItem('lyntos_token') || '',
         },
         body: JSON.stringify(apiData),
       });

@@ -1,28 +1,20 @@
-/**
- * LYNTOS Evidence Bundle Module
- * Sprint 5.9 - Kanıt Paketi Export'ları
- */
-
-// Bundle Generator
+// Old rule-engine based evidence system
 export {
   generateEvidenceBundle,
   type EvidenceBundle,
   type EvidenceItem,
   type EvidenceSection,
-  type BundleGeneratorOptions,
+  type BundleGeneratorOptions
 } from './bundleGenerator';
-
-// PDF Generator
-export {
-  generatePDFContent,
-  exportPDFContentAsJSON,
-  getSeverityColor,
-  getRiskLevelColor,
-  DEFAULT_PDF_CONFIG,
-  type PDFConfig,
-  type PDFContent,
-  type PDFRenderedSection,
-} from './pdfGenerator';
-
-// React Hook
 export { useEvidenceBundle } from './useEvidenceBundle';
+export { generatePDFContent, type PDFContent } from './pdfGenerator';
+
+// New quarterly cross-check based evidence system
+export {
+  generateQuarterlyEvidenceBundle,
+  downloadQuarterlyPDFOnly,
+  generateManifest,
+  generatePDFReport,
+  type EvidenceManifest,
+  type QuarterlyBundleOptions
+} from './quarterly';

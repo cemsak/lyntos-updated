@@ -10,23 +10,33 @@ import { ENDPOINTS } from '../contracts/endpoints';
 import { normalizeToEnvelope } from '../contracts/map';
 import type { PanelEnvelope } from '../contracts/envelope';
 
-// Demo data for Yİ-ÜFE indicators
-const YIUFE_DEMO_DATA = {
-  son3Yil: 284.7,
-  son3YilEsik: 100,
-  son12Ay: 44.2,
-  son12AyEsik: 10,
-  düzeltmeKatsayisi: 2.847,
-  referansTarih: 'Aralık 2024',
+// YIUFE_DEMO_DATA kaldırıldı - Mock data yasak
+// Gerçek Yİ-ÜFE verisi TCMB EVDS API'den gelecek
+// https://evds2.tcmb.gov.tr/
+interface YiufeData {
+  son3Yil: number | null;
+  son3YilEsik: number;
+  son12Ay: number | null;
+  son12AyEsik: number;
+  duzeltmeKatsayisi: number | null;
+  referansTarih: string | null;
+  isLoading: boolean;
+  error: string | null;
+}
+
+// Sabit eşik değerleri (VUK Geçici 33 uyarınca)
+const YIUFE_ESIK_DEGERLERI = {
+  son3YilEsik: 100,  // %100
+  son12AyEsik: 10,   // %10
 };
 
-// VUK Geçici Madde 33 Açıklaması
+// VUK Geçici Madde 33 Açıklaması - Hardcoded değerler kaldırıldı
 const VUK_GEC33_INFO = {
   baslik: 'VUK Geçici Madde 33 Nedir?',
   açıklama: `Vergi Usul Kanunu Geçici Madde 33, yüksek enflasyon dönemlerinde mali tabloların düzeltilmesini düzenler.`,
   kosullar: [
-    'Yİ-ÜFE son 3 yılda %100\'ü aşmalı (Mevcut: %284.7 ✓)',
-    'Yİ-ÜFE son 12 ayda %10\'u aşmalı (Mevcut: %44.2 ✓)',
+    'Yİ-ÜFE son 3 yılda %100\'ü aşmalı',
+    'Yİ-ÜFE son 12 ayda %10\'u aşmalı',
     'Her iki koşul da sağlanmalıdır',
   ],
   yontem: [
@@ -198,11 +208,69 @@ export function InflationPanel() {
   const envelope = useFailSoftFetch<InflationResult>(ENDPOINTS.INFLATION_ADJUSTMENT, normalizeInflation);
   const { status, reason_tr, data, analysis, trust, legal_basis_refs, evidence_refs, meta } = envelope;
 
+  // Yİ-ÜFE state - TCMB EVDS API'den gelecek
+  const [yiufeData, setYiufeData] = useState<YiufeData>({
+    son3Yil: null,
+    son3YilEsik: YIUFE_ESIK_DEGERLERI.son3YilEsik,
+    son12Ay: null,
+    son12AyEsik: YIUFE_ESIK_DEGERLERI.son12AyEsik,
+    duzeltmeKatsayisi: null,
+    referansTarih: null,
+    isLoading: true,
+    error: null,
+  });
+
+  // TCMB EVDS API'den Yi-UFE verisi cek (Backend API route uzerinden - guvenli)
+  React.useEffect(() => {
+    const fetchYiufeData = async () => {
+      setYiufeData(prev => ({ ...prev, isLoading: true, error: null }));
+
+      try {
+        // Backend API route'u cagir (API key server-side'da guvenli)
+        const response = await fetch('/api/v2/tcmb/yiufe');
+        const result = await response.json();
+
+        if (!response.ok) {
+          // API key eksikse ozel mesaj goster
+          if (result.code === 'API_KEY_MISSING') {
+            throw new Error('TCMB API anahtari tanimli degil. .env.local dosyasini kontrol edin.');
+          }
+          throw new Error(result.error || 'Yi-UFE verisi alinamadi');
+        }
+
+        if (result.success && result.data) {
+          setYiufeData({
+            son3Yil: result.data.son3Yil,
+            son3YilEsik: YIUFE_ESIK_DEGERLERI.son3YilEsik,
+            son12Ay: result.data.son12Ay,
+            son12AyEsik: YIUFE_ESIK_DEGERLERI.son12AyEsik,
+            duzeltmeKatsayisi: result.data.duzeltmeKatsayisi,
+            referansTarih: result.data.referansTarih,
+            isLoading: false,
+            error: null,
+          });
+        } else {
+          throw new Error('Gecersiz API yaniti');
+        }
+      } catch (error) {
+        console.error('Yi-UFE verisi yuklenemedi:', error);
+        setYiufeData(prev => ({
+          ...prev,
+          isLoading: false,
+          error: error instanceof Error ? error.message : 'Baglanti hatasi',
+        }));
+      }
+    };
+
+    fetchYiufeData();
+  }, []);
+
   const formatCurrency = (n: number) => n.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' });
   const formatPct = (n: number) => `%${(n * 100).toFixed(2)}`;
 
   // Check if we have real data
   const hasData = data && data.items && data.items.length > 0;
+  const hasYiufeData = yiufeData.son3Yil !== null && yiufeData.son12Ay !== null;
 
   return (
     <>
@@ -234,29 +302,63 @@ export function InflationPanel() {
           )
         }
       >
-        {/* Yİ-ÜFE Indicators - Always Show */}
+        {/* Yİ-ÜFE Indicators - TCMB EVDS API'den gelecek */}
         <div className="mb-3 p-3 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg border border-indigo-100">
           <div className="flex items-center gap-2 mb-2">
             <TrendingUp className="w-4 h-4 text-indigo-600" />
-            <span className="text-xs font-semibold text-indigo-800">Yİ-ÜFE Göstergeleri ({YIUFE_DEMO_DATA.referansTarih})</span>
+            <span className="text-xs font-semibold text-indigo-800">
+              Yİ-ÜFE Göstergeleri {yiufeData.referansTarih ? `(${yiufeData.referansTarih})` : ''}
+            </span>
           </div>
-          <div className="grid grid-cols-3 gap-3 text-center">
-            <div className="p-2 bg-white rounded border border-indigo-100">
-              <p className="text-[10px] text-slate-500 mb-0.5">Son 3 Yıl</p>
-              <p className="text-lg font-bold text-indigo-700">%{YIUFE_DEMO_DATA.son3Yil}</p>
-              <p className="text-[10px] text-green-600">Eşik %{YIUFE_DEMO_DATA.son3YilEsik} ✓</p>
+          {yiufeData.isLoading ? (
+            <div className="text-center py-4">
+              <p className="text-xs text-slate-500">Yİ-ÜFE verileri yükleniyor...</p>
             </div>
-            <div className="p-2 bg-white rounded border border-indigo-100">
-              <p className="text-[10px] text-slate-500 mb-0.5">Son 12 Ay</p>
-              <p className="text-lg font-bold text-indigo-700">%{YIUFE_DEMO_DATA.son12Ay}</p>
-              <p className="text-[10px] text-green-600">Eşik %{YIUFE_DEMO_DATA.son12AyEsik} ✓</p>
+          ) : yiufeData.error ? (
+            <div className="text-center py-4">
+              <p className="text-xs text-red-500">{yiufeData.error}</p>
             </div>
-            <div className="p-2 bg-white rounded border border-indigo-100">
-              <p className="text-[10px] text-slate-500 mb-0.5">Düzeltme Katsayısı</p>
-              <p className="text-lg font-bold text-purple-700">{YIUFE_DEMO_DATA.düzeltmeKatsayisi}</p>
-              <p className="text-[10px] text-slate-400">TÜİK Kaynak</p>
+          ) : hasYiufeData ? (
+            <div className="grid grid-cols-3 gap-3 text-center">
+              <div className="p-2 bg-white rounded border border-indigo-100">
+                <p className="text-[10px] text-slate-500 mb-0.5">Son 3 Yıl</p>
+                <p className="text-lg font-bold text-indigo-700">%{yiufeData.son3Yil}</p>
+                <p className={`text-[10px] ${yiufeData.son3Yil! > yiufeData.son3YilEsik ? 'text-green-600' : 'text-slate-400'}`}>
+                  Eşik %{yiufeData.son3YilEsik} {yiufeData.son3Yil! > yiufeData.son3YilEsik ? '✓' : ''}
+                </p>
+              </div>
+              <div className="p-2 bg-white rounded border border-indigo-100">
+                <p className="text-[10px] text-slate-500 mb-0.5">Son 12 Ay</p>
+                <p className="text-lg font-bold text-indigo-700">%{yiufeData.son12Ay}</p>
+                <p className={`text-[10px] ${yiufeData.son12Ay! > yiufeData.son12AyEsik ? 'text-green-600' : 'text-slate-400'}`}>
+                  Eşik %{yiufeData.son12AyEsik} {yiufeData.son12Ay! > yiufeData.son12AyEsik ? '✓' : ''}
+                </p>
+              </div>
+              <div className="p-2 bg-white rounded border border-indigo-100">
+                <p className="text-[10px] text-slate-500 mb-0.5">Düzeltme Katsayısı</p>
+                <p className="text-lg font-bold text-purple-700">{yiufeData.duzeltmeKatsayisi}</p>
+                <p className="text-[10px] text-slate-400">TÜİK Kaynak</p>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-3 text-center">
+              <div className="p-2 bg-white rounded border border-indigo-100">
+                <p className="text-[10px] text-slate-500 mb-0.5">Son 3 Yıl</p>
+                <p className="text-lg font-bold text-slate-400">---</p>
+                <p className="text-[10px] text-slate-400">Eşik %{yiufeData.son3YilEsik}</p>
+              </div>
+              <div className="p-2 bg-white rounded border border-indigo-100">
+                <p className="text-[10px] text-slate-500 mb-0.5">Son 12 Ay</p>
+                <p className="text-lg font-bold text-slate-400">---</p>
+                <p className="text-[10px] text-slate-400">Eşik %{yiufeData.son12AyEsik}</p>
+              </div>
+              <div className="p-2 bg-white rounded border border-indigo-100">
+                <p className="text-[10px] text-slate-500 mb-0.5">Düzeltme Katsayısı</p>
+                <p className="text-lg font-bold text-slate-400">---</p>
+                <p className="text-[10px] text-blue-500">TCMB EVDS bekleniyor</p>
+              </div>
+            </div>
+          )}
         </div>
 
         <PanelState status={status} reason_tr={reason_tr}>

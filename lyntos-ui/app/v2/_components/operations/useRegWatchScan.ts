@@ -143,8 +143,13 @@ export function useRegWatchScan(): UseRegWatchScanResult {
 
     try {
       const token = typeof window !== 'undefined'
-        ? localStorage.getItem('lyntos_token') || 'DEV_HKOZKAN'
-        : 'DEV_HKOZKAN';
+        ? localStorage.getItem('lyntos_token')
+        : null;
+      if (!token) {
+        setError('Oturum bulunamadi. Lutfen giris yapin.');
+        setIsScanning(false);
+        return;
+      }
 
       // Animate scanning through sources (visual feedback)
       for (let i = 0; i < TRUSTED_SOURCES.length; i++) {

@@ -359,6 +359,9 @@ export default function V1DashboardClient({ contract, ctx }: Props) {
               legal_basis_refs={showModal.legal_basis ? [showModal.legal_basis] : []}
               evidence_refs={showModal.evidence_refs}
               trust_score={showModal.trust_score}
+              smmm={ctx.smmm}
+              client={ctx.client}
+              period={ctx.period}
             />
           </div>
         </div>

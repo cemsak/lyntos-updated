@@ -44,7 +44,11 @@ export function useFailSoftFetch<T>(
         period: scope.period,
       };
       const url = buildScopedUrl(endpoint, scopeParams);
-      const token = localStorage.getItem('lyntos_token') || 'DEV_HKOZKAN';
+      const token = localStorage.getItem('lyntos_token');
+      if (!token) {
+        setEnvelope({ ...createErrorEnvelope<T>('Oturum bulunamadi. Lutfen giris yapin.', requestId), status: 'auth' });
+        return;
+      }
       const timeoutId = setTimeout(() => controller.abort(), timeout);
 
       const response = await fetch(url, {

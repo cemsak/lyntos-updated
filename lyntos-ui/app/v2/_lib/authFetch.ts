@@ -1,3 +1,10 @@
+/**
+ * Authenticated Fetch Utilities
+ * DEV_HKOZKAN fallback kaldırıldı - Token yoksa hata fırlatılır
+ */
+
+import { getAuthToken, AuthError } from './auth';
+
 export interface AuthFetchOptions extends RequestInit {
   timeout?: number;
 }
@@ -8,9 +15,11 @@ export async function authFetch(url: string, options: AuthFetchOptions = {}): Pr
   const timeoutId = setTimeout(() => controller.abort(), timeout);
 
   try {
-    const token = typeof window !== 'undefined'
-      ? localStorage.getItem('lyntos_token') || 'DEV_HKOZKAN'
-      : 'DEV_HKOZKAN';
+    const token = getAuthToken();
+    if (!token) {
+      clearTimeout(timeoutId);
+      throw new AuthError('Oturum bulunamadı. Lütfen giriş yapın.');
+    }
 
     const response = await fetch(url, {
       ...fetchOptions,
@@ -35,3 +44,6 @@ export async function authFetchJson<T>(url: string, options: AuthFetchOptions = 
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   return response.json();
 }
+
+// Re-export AuthError for convenience
+export { AuthError } from './auth';

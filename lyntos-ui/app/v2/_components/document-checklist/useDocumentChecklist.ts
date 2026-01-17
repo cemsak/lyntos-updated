@@ -35,7 +35,7 @@ export function useDocumentChecklist({
         `/api/v1/documents/checklist/${clientId}?period=${period}`,
         {
           headers: {
-            Authorization: 'DEV_HKOZKAN',
+            Authorization: localStorage.getItem('lyntos_token') || '',
           },
         }
       );
@@ -74,7 +74,7 @@ export function useDocumentChecklist({
         const response = await fetch('/api/v1/documents/upload', {
           method: 'POST',
           headers: {
-            Authorization: 'DEV_HKOZKAN',
+            Authorization: localStorage.getItem('lyntos_token') || '',
           },
           body: formData,
         });
@@ -105,7 +105,7 @@ export function useDocumentChecklist({
           {
             method: 'DELETE',
             headers: {
-              Authorization: 'DEV_HKOZKAN',
+              Authorization: localStorage.getItem('lyntos_token') || '',
             },
           }
         );
@@ -131,7 +131,7 @@ export function useDocumentChecklist({
         {
           method: 'POST',
           headers: {
-            Authorization: 'DEV_HKOZKAN',
+            Authorization: localStorage.getItem('lyntos_token') || '',
           },
         }
       );

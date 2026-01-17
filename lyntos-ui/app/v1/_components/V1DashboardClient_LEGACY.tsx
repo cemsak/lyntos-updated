@@ -661,6 +661,9 @@ export default function V1DashboardClient({ contract, ctx }: Props) {
         <ExplainModal
           {...showModal}
           onClose={() => setShowModal(null)}
+          smmm={ctx.smmm}
+          client={ctx.client}
+          period={ctx.period}
         />
       )}
     </div>

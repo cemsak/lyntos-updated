@@ -295,7 +295,7 @@ function V2DashboardContent() {
         </div>
 
         {/* Kurumlar Vergisi */}
-        <KurumlarVergisiPanel yil={2024} onKontrolClick={handleKontrolBaslat} />
+        <KurumlarVergisiPanel yil={2025} onKontrolClick={handleKontrolBaslat} />
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════ */}

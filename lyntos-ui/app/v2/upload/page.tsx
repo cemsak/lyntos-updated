@@ -57,7 +57,7 @@ export default function UploadPage() {
         setStatus('success');
         // Simulated detected files
         setDetectedFiles([
-          { name: 'mizan_2024_q4.xlsx', type: 'Mizan', status: 'valid', message: '12.847 satır tespit edildi' },
+          { name: 'mizan_2026_q1.xlsx', type: 'Mizan', status: 'valid', message: '12.847 satir tespit edildi' },
           { name: 'kdv_beyan_aralik.pdf', type: 'KDV Beyannamesi', status: 'valid' },
           { name: 'banka_akbank_12.csv', type: 'Banka Ekstresi', status: 'warning', message: 'Tarih formatı kontrol edilmeli' },
           { name: 'efatura_liste.xml', type: 'e-Fatura', status: 'valid', message: '234 fatura tespit edildi' },

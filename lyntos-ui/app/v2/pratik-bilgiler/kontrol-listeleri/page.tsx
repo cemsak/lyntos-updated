@@ -1,10 +1,9 @@
 'use client';
 
 /**
- * Kontrol Listeleri Sayfası
- * Sprint 1.2 - Stub Page
+ * Kontrol Listeleri Sayfasi
  *
- * SMMM/YMM için hazır kontrol listeleri
+ * SMMM/YMM icin hazir kontrol listeleri
  */
 
 import React from 'react';

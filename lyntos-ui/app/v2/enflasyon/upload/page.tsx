@@ -164,7 +164,7 @@ export default function EnflasyonUploadPage() {
             <div>
               <h3 className="font-medium text-blue-800">Enflasyon Düzeltmesi Gereklilikleri</h3>
               <p className="text-sm text-blue-700 mt-1">
-                2024 yılı sonu itibarıyla enflasyon muhasebesi uygulaması zorunludur.
+                2025 yili sonu itibariyla enflasyon muhasebesi uygulamasi zorunludur.
                 Sistem, yüklenen belgeleri analiz ederek TMS 29 ve VUK Mükerrer 298
                 kapsamında düzeltme önerileri sunacaktır.
               </p>

@@ -6,15 +6,8 @@ import { useOranlarStore } from '../../_lib/stores/oranlarStore';
 import { useDashboardScope } from '../scope/useDashboardScope';
 import type { FeedItem, FeedSeverity, EvidenceRef, FeedAction, FeedImpact, FeedScope } from './types';
 
-// Mock data import (fallback için)
-import {
-  generateMizanSignals,
-  generateCrossCheckSignals,
-  MOCK_MIZAN_HESAPLAR,
-  MOCK_MIZAN_CONTEXT,
-  MOCK_CROSSCHECK_ITEMS,
-  MOCK_CROSSCHECK_CONTEXT,
-} from '../signals';
+// Types only - mock data ve generator import'ları kaldırıldı
+// Sinyaller artık doğrudan gerçek mizan verisinden üretiliyor
 
 interface FeedSignalStats {
   mizan: { total: number; critical: number; high: number; medium: number; low: number };
@@ -127,7 +120,7 @@ export function useFeedSignals() {
 
       const feedItems: FeedItem[] = [];
       const now = new Date().toISOString();
-      const period = scope.period || '2024-Q4';
+      const period = scope.period || '2026-Q1';
 
       // Common scope for all items
       const feedScope: FeedScope = {
@@ -598,43 +591,20 @@ export function useFeedSignals() {
     }
 
     // ═══════════════════════════════════════════════════════════════════
-    // MOCK MODU (Mizan yüklenmemişse)
+    // VERİ YÜKLENMEMİŞ - BOŞ DURUM
+    // Mock data KALDIRILDI - Gerçek mizan verisi yüklenmeden sinyal üretilmez
     // ═══════════════════════════════════════════════════════════════════
-    console.log('[useFeedSignals] Mock data kullanılıyor (mizan yüklenmemiş)');
+    console.log('[useFeedSignals] Mizan verisi yüklenmemiş - sinyal üretilmiyor');
 
-    const mizanResult = generateMizanSignals(MOCK_MIZAN_HESAPLAR, {
-      ...MOCK_MIZAN_CONTEXT,
-      client_id: scope.client_id,
-      period: scope.period,
-    });
-
-    const crossCheckResult = generateCrossCheckSignals(MOCK_CROSSCHECK_ITEMS, {
-      ...MOCK_CROSSCHECK_CONTEXT,
-      client_id: scope.client_id,
-      period: scope.period,
-    });
-
-    const allSignals = [...mizanResult.signals, ...crossCheckResult.signals];
+    // Boş sonuç döndür - UI "Veri yükleyin" mesajı gösterecek
+    const emptyStats = { total: 0, critical: 0, high: 0, medium: 0, low: 0 };
 
     return {
-      signals: allSignals,
+      signals: [],
       stats: {
-        mizan: {
-          total: mizanResult.signals.length,
-          ...mizanResult.stats.by_severity,
-          critical: mizanResult.stats.by_severity?.CRITICAL || 0,
-          high: mizanResult.stats.by_severity?.HIGH || 0,
-          medium: mizanResult.stats.by_severity?.MEDIUM || 0,
-          low: mizanResult.stats.by_severity?.LOW || 0,
-        },
-        crossCheck: {
-          total: crossCheckResult.signals.length,
-          critical: 0,
-          high: 0,
-          medium: 0,
-          low: 0,
-        },
-        combined: countBySeverity(allSignals),
+        mizan: emptyStats,
+        crossCheck: emptyStats,
+        combined: emptyStats,
       },
     };
 

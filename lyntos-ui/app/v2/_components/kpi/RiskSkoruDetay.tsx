@@ -175,27 +175,9 @@ export function RiskSkoruDetayModal({ isOpen, onClose, skor, puanKiranlar }: Ris
   );
 }
 
-// Default data for demo
-export const DEFAULT_PUAN_KIRANLAR: PuanKiranKriter[] = [
-  {
-    kod: 'K-09',
-    baslik: 'Kasa/Aktif Oranı',
-    puan: -5,
-    aciklama: 'Kasa bakiyesi toplam aktiflerin %10\'undan fazla. Bu oran vergi idaresi tarafından şüpheli bulunabilir.',
-    oneri: 'Kasa bakiyesini azaltın, banka hesabına aktarım yapın veya dönem sonu kasa sayımı tutanağı hazırlayın.',
-  },
-  {
-    kod: 'K-12',
-    baslik: 'Stok Devir Hızı',
-    puan: -4,
-    aciklama: 'Stok devir hızı sektör ortalamasının altında. Bu durum hayali stok şüphesi oluşturabilir.',
-    oneri: 'Stok sayım tutanaklarını güncelleyin, fire ve zayiat kayıtlarını kontrol edin.',
-  },
-  {
-    kod: 'K-15',
-    baslik: 'Alacak Tahsilat Süresi',
-    puan: -3,
-    aciklama: 'Alacak tahsilat süresi 120 günü aşıyor. Şüpheli alacak karşılığı ayrılması gerekebilir.',
-    oneri: 'Vadesi geçmiş alacaklar için yasal takip başlatın veya karşılık ayırın.',
-  },
-];
+// DEFAULT_PUAN_KIRANLAR kaldırıldı - Mock data yasak
+// Puan kıranlar backend API'den gelecek
+// export edilmiyor - component puanKiranlar prop'u zorunlu
+
+// Type export for external use
+export type { PuanKiranKriter };

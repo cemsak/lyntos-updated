@@ -1,10 +1,9 @@
 'use client';
 
 /**
- * Enflasyon Muhasebesi Ana Sayfası
- * Sprint 1.2 - Stub Page
+ * Enflasyon Muhasebesi Ana Sayfasi
  *
- * TMS 29 ve VUK geçici madde enflasyon düzeltmesi
+ * TMS 29 ve VUK gecici madde enflasyon duzeltmesi
  */
 
 import React from 'react';
@@ -53,10 +52,10 @@ export default function EnflasyonPage() {
       <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
         <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5" />
         <div>
-          <p className="text-sm font-medium text-amber-900">2024 Yılı Enflasyon Düzeltmesi</p>
+          <p className="text-sm font-medium text-amber-900">2025 Yili Enflasyon Duzeltmesi</p>
           <p className="text-sm text-amber-700 mt-1">
-            31.12.2024 tarihli bilançolar için enflasyon düzeltmesi zorunludur.
-            Son beyan tarihi: 30.04.2025
+            31.12.2025 tarihli bilancolar icin enflasyon duzeltmesi zorunludur.
+            Son beyan tarihi: 30.04.2026
           </p>
         </div>
       </div>

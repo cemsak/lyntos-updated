@@ -21,13 +21,17 @@ interface UseLayoutDataResult {
   refreshPeriods: (clientId: string) => Promise<void>;
 }
 
-function getAuthToken(): string {
-  if (typeof window === 'undefined') return 'DEV_HKOZKAN';
-  return localStorage.getItem('lyntos_token') || 'DEV_HKOZKAN';
+function getAuthToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('lyntos_token');
 }
 
 async function fetchWithAuth<T>(endpoint: string): Promise<T> {
   const token = getAuthToken();
+  if (!token) {
+    throw new Error('Oturum bulunamadi. Lutfen giris yapin.');
+  }
+
   const response = await fetch(`${API_BASE}${endpoint}`, {
     headers: {
       'Authorization': token,

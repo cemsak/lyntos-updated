@@ -40,7 +40,10 @@ export default function CariMutabakatPage() {
       setLoading(true);
       setError(null);
       try {
-        const token = localStorage.getItem('lyntos_token') || 'DEV_HKOZKAN';
+        const token = localStorage.getItem('lyntos_token');
+        if (!token) {
+          throw new Error('Oturum bulunamadi');
+        }
         const response = await fetch('/api/v1/contracts/data-quality?type=cari', {
           headers: {
             'Authorization': token,
@@ -75,7 +78,10 @@ export default function CariMutabakatPage() {
     setIsRefreshing(true);
     setError(null);
     try {
-      const token = localStorage.getItem('lyntos_token') || 'DEV_HKOZKAN';
+      const token = localStorage.getItem('lyntos_token');
+        if (!token) {
+          throw new Error('Oturum bulunamadi');
+        }
       const response = await fetch('/api/v1/contracts/data-quality?type=cari', {
         headers: {
           'Authorization': token,
