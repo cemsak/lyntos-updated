@@ -827,20 +827,13 @@ def seed_pilot_data():
                     '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5jtK9xvq0Ej.u', 'smmm')
         """)
 
-        # Pilot client
-        cursor.execute("""
-            INSERT OR IGNORE INTO clients (id, smmm_id, name, tax_id, sector)
-            VALUES ('OZKAN_KIRTASIYE', 'HKOZKAN', 'Özkan Kırtasiye Ltd. Şti.', '1234567890', 'Perakende')
-        """)
+        # Pilot client - TEMIZLENDI (SIFIR TOLERANS)
+        # Gercek mukellef verileri sadece API/UI uzerinden eklenmeli
+        # cursor.execute removed - no demo clients
 
-        # Pilot periods
-        cursor.execute("""
-            INSERT OR IGNORE INTO periods (id, client_id, start_date, end_date, status)
-            VALUES
-                ('2025-Q1', 'OZKAN_KIRTASIYE', '2025-01-01', '2025-03-31', 'closed'),
-                ('2025-Q2', 'OZKAN_KIRTASIYE', '2025-04-01', '2025-06-30', 'active'),
-                ('2025-Q3', 'OZKAN_KIRTASIYE', '2025-07-01', '2025-09-30', 'active')
-        """)
+        # Pilot periods - TEMIZLENDI (SIFIR TOLERANS)
+        # Gercek donem verileri sadece API/UI uzerinden eklenmeli
+        # cursor.execute removed - no demo periods
 
         conn.commit()
         logger.info("Pilot data seeded")

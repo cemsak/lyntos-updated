@@ -130,30 +130,9 @@ class TTSGScraper:
         return results
 
     def _demo_search_company(self, company_name: str) -> List[Dict]:
-        """Demo mode company search"""
-        demo_companies = [
-            {
-                "company_name": "ALANYA TURIZM YATIRIMLARI A.S.",
-                "registry_number": "12345",
-                "registry_office": "Alanya",
-            },
-            {
-                "company_name": "AKDENIZ INSAAT LTD. STI.",
-                "registry_number": "12346",
-                "registry_office": "Alanya",
-            },
-        ]
-
-        results = []
-        for c in demo_companies:
-            if company_name.lower() in c["company_name"].lower():
-                results.append({
-                    **c,
-                    "source": "ttsg_demo",
-                    "scraped_at": datetime.utcnow().isoformat(),
-                })
-
-        return results
+        """Demo mode company search - TEMIZLENDI (SIFIR TOLERANS)"""
+        # Demo mode devre disi - gercek veri sadece API'den alinmali
+        return []
 
     def search_by_tax_number(self, tax_number: str) -> Optional[Dict]:
         """Search by tax number (via GIB verification)"""
@@ -263,54 +242,9 @@ class TTSGScraper:
         return results
 
     def _demo_search_city(self, city: str, change_type: Optional[str] = None) -> List[Dict]:
-        """Demo mode city search"""
-        demo_results = []
-
-        # Demo companies for Alanya pilot
-        demo_companies = [
-            {
-                "tax_number": "1234567890",
-                "company_name": "ALANYA TURIZM YATIRIMLARI ANONIM SIRKETI",
-                "company_type": "as",
-                "trade_registry_office": "Alanya",
-                "city": "Antalya",
-                "district": "Alanya",
-                "current_capital": 5000000,
-                "status": "active",
-            },
-            {
-                "tax_number": "0987654321",
-                "company_name": "AKDENIZ INSAAT LIMITED SIRKETI",
-                "company_type": "ltd",
-                "trade_registry_office": "Alanya",
-                "city": "Antalya",
-                "district": "Alanya",
-                "current_capital": 500000,
-                "status": "active",
-            },
-            {
-                "tax_number": "5555555555",
-                "company_name": "GUNES OTEL ISLETMECILIGI ANONIM SIRKETI",
-                "company_type": "as",
-                "trade_registry_office": "Alanya",
-                "city": "Antalya",
-                "district": "Alanya",
-                "current_capital": 2500000,
-                "status": "liquidation",
-            },
-        ]
-
-        for company in demo_companies:
-            if city.lower() in company.get("city", "").lower() or \
-               city.lower() in company.get("district", "").lower():
-                demo_results.append({
-                    **company,
-                    "change_type": change_type,
-                    "source": "ttsg_demo",
-                    "scraped_at": datetime.utcnow().isoformat(),
-                })
-
-        return demo_results
+        """Demo mode city search - TEMIZLENDI (SIFIR TOLERANS)"""
+        # Demo mode devre disi - gercek veri sadece API'den alinmali
+        return []
 
     def _detect_change_type(self, text: str) -> Optional[str]:
         """Detect change type from text content"""

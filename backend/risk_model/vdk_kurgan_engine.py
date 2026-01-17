@@ -666,5 +666,5 @@ if __name__ == "__main__":
         'cari_oran': 1.5,
     }
 
-    assessment = engine.evaluate_all(test_data, vkn="1234567890", period="2025-Q1")
+    assessment = engine.evaluate_all(test_data, vkn="TEST_VKN_000", period="2025-Q1")
     print("\n" + json.dumps(engine.to_dict(assessment), indent=2, ensure_ascii=False))

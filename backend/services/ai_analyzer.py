@@ -595,10 +595,10 @@ if __name__ == "__main__":
     result = analyzer.analyze_regwatch_event(test_event)
     print(json.dumps(result, indent=2, ensure_ascii=False))
 
-    # Test company change
+    # Test company change - TEMIZLENDI (SIFIR TOLERANS)
     test_change = {
         "company_name": "TEST A.S.",
-        "tax_number": "1234567890",
+        "tax_number": "TEST_VKN_000",
         "change_type": "liquidation_start",
         "old_value": "Aktif",
         "new_value": "Tasfiye Halinde"

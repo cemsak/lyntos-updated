@@ -59,118 +59,12 @@ PILOT_OFFICES = [
     },
 ]
 
-# Demo companies for Alanya pilot
-DEMO_COMPANIES = [
-    {
-        "id": str(uuid.uuid4()),
-        "tax_number": "1234567890",
-        "trade_registry_number": "12345",
-        "company_name": "ALANYA TURIZM YATIRIMLARI ANONIM SIRKETI",
-        "company_type": "as",
-        "trade_registry_office": "Alanya",
-        "city": "Antalya",
-        "district": "Alanya",
-        "address": "Keykubat Mah. Ataturk Cad. No:123 Alanya/Antalya",
-        "establishment_date": "2020-03-15",
-        "current_capital": 5000000,
-        "paid_capital": 5000000,
-        "currency": "TRY",
-        "status": "active",
-        "nace_code": "55.10",
-        "activity_description": "Otel isletmeciligi",
-        "is_tracked": 1,
-        "tracked_by": "HKOZKAN",
-        "source": "demo",
-    },
-    {
-        "id": str(uuid.uuid4()),
-        "tax_number": "0987654321",
-        "trade_registry_number": "12346",
-        "company_name": "AKDENIZ INSAAT LIMITED SIRKETI",
-        "company_type": "ltd",
-        "trade_registry_office": "Alanya",
-        "city": "Antalya",
-        "district": "Alanya",
-        "address": "Saray Mah. Gazipasa Cad. No:45 Alanya/Antalya",
-        "establishment_date": "2018-06-20",
-        "current_capital": 500000,
-        "paid_capital": 500000,
-        "currency": "TRY",
-        "status": "active",
-        "nace_code": "41.20",
-        "activity_description": "Bina insaati",
-        "is_tracked": 1,
-        "tracked_by": "HKOZKAN",
-        "source": "demo",
-    },
-    {
-        "id": str(uuid.uuid4()),
-        "tax_number": "5555555555",
-        "trade_registry_number": "12347",
-        "company_name": "GUNES OTEL ISLETMECILIGI ANONIM SIRKETI",
-        "company_type": "as",
-        "trade_registry_office": "Alanya",
-        "city": "Antalya",
-        "district": "Alanya",
-        "address": "Obagol Mah. Sahil Yolu No:78 Alanya/Antalya",
-        "establishment_date": "2015-01-10",
-        "current_capital": 2500000,
-        "paid_capital": 2500000,
-        "currency": "TRY",
-        "status": "liquidation",
-        "nace_code": "55.10",
-        "activity_description": "Otel isletmeciligi",
-        "is_tracked": 1,
-        "tracked_by": "HKOZKAN",
-        "source": "demo",
-    },
-    {
-        "id": str(uuid.uuid4()),
-        "tax_number": "6666666666",
-        "trade_registry_number": "12348",
-        "company_name": "ALANYA TARIM URUNLERI LIMITED SIRKETI",
-        "company_type": "ltd",
-        "trade_registry_office": "Alanya",
-        "city": "Antalya",
-        "district": "Alanya",
-        "address": "Kestel Mah. Tarim Cad. No:12 Alanya/Antalya",
-        "establishment_date": "2019-09-05",
-        "current_capital": 100000,
-        "paid_capital": 50000,
-        "currency": "TRY",
-        "status": "active",
-        "nace_code": "01.24",
-        "activity_description": "Narenciye yetistiriciligi",
-        "is_tracked": 0,
-        "source": "demo",
-    },
-]
+# Demo companies - TEMIZLENDI (SIFIR TOLERANS)
+# Gercek sirket verileri sadece API uzerinden alinmali
+DEMO_COMPANIES = []
 
-# Demo changes
-DEMO_CHANGES = [
-    {
-        "id": str(uuid.uuid4()),
-        "company_id": None,  # Will be set dynamically
-        "tax_number": "1234567890",
-        "change_type": "capital_increase",
-        "change_description": "Sermaye 3.000.000 TL'den 5.000.000 TL'ye artirildi",
-        "old_value": "3000000",
-        "new_value": "5000000",
-        "ttsg_issue": "11234",
-        "ttsg_date": "2024-12-15",
-    },
-    {
-        "id": str(uuid.uuid4()),
-        "company_id": None,
-        "tax_number": "5555555555",
-        "change_type": "liquidation_start",
-        "change_description": "Sirket tasfiyeye girdi",
-        "old_value": "active",
-        "new_value": "liquidation",
-        "ttsg_issue": "11250",
-        "ttsg_date": "2025-01-05",
-    },
-]
+# Demo changes - TEMIZLENDI (SIFIR TOLERANS)
+DEMO_CHANGES = []
 
 
 def seed_registry_offices():
