@@ -33,6 +33,21 @@ export default function UploadPage() {
   const [detectedFiles, setDetectedFiles] = useState<DetectedFile[]>([]);
   const [dragActive, setDragActive] = useState(false);
 
+  // Sablon indirme fonksiyonu
+  const handleDownloadTemplate = (type: 'mizan' | 'banka') => {
+    const link = document.createElement('a');
+    if (type === 'mizan') {
+      link.href = '/templates/mizan_sablonu.csv';
+      link.download = 'mizan_sablonu.csv';
+    } else {
+      link.href = '/templates/banka_ekstresi.csv';
+      link.download = 'banka_ekstresi.csv';
+    }
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleModeSelect = (selectedMode: UploadMode) => {
     setMode(selectedMode);
     setStatus('idle');
@@ -163,11 +178,17 @@ export default function UploadPage() {
             Standart format şablonlarını indirin
           </p>
           <div className="space-y-1.5">
-            <button className="w-full text-left text-xs text-blue-600 hover:text-blue-800 flex items-center gap-2 p-1.5 rounded hover:bg-white transition-colors">
+            <button
+              onClick={() => handleDownloadTemplate('mizan')}
+              className="w-full text-left text-xs text-blue-600 hover:text-blue-800 flex items-center gap-2 p-1.5 rounded hover:bg-white transition-colors"
+            >
               <FileSpreadsheet className="w-3.5 h-3.5" />
-              Mizan Şablonu (.xlsx)
+              Mizan Sablonu (.csv)
             </button>
-            <button className="w-full text-left text-xs text-blue-600 hover:text-blue-800 flex items-center gap-2 p-1.5 rounded hover:bg-white transition-colors">
+            <button
+              onClick={() => handleDownloadTemplate('banka')}
+              className="w-full text-left text-xs text-blue-600 hover:text-blue-800 flex items-center gap-2 p-1.5 rounded hover:bg-white transition-colors"
+            >
               <Database className="w-3.5 h-3.5" />
               Banka Ekstresi (.csv)
             </button>
