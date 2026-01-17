@@ -26,10 +26,11 @@ function getAuthToken(): string | null {
   return localStorage.getItem('lyntos_token');
 }
 
-async function fetchWithAuth<T>(endpoint: string): Promise<T> {
+async function fetchWithAuth<T>(endpoint: string): Promise<T | null> {
   const token = getAuthToken();
   if (!token) {
-    throw new Error('Oturum bulunamadi. Lutfen giris yapin.');
+    console.warn('[Auth] Token bulunamadi - gecici mod');
+    return null; // Hata firlatma, null dondur
   }
 
   const response = await fetch(`${API_BASE}${endpoint}`, {
@@ -61,8 +62,14 @@ export function useLayoutData(): UseLayoutDataResult {
       try {
         const userData = await fetchWithAuth<User>('/api/v1/user/me');
         if (mounted) {
-          setUser(userData);
-          setError(null);
+          if (userData) {
+            setUser(userData);
+            setError(null);
+          } else {
+            // Token yok - gecici mod, hata gosterme
+            setUser(null);
+            setLoading(false);
+          }
         }
       } catch (err) {
         console.error('[useLayoutData] User fetch failed:', err);
@@ -86,8 +93,10 @@ export function useLayoutData(): UseLayoutDataResult {
 
     try {
       const clientsData = await fetchWithAuth<Client[]>('/api/v1/user/me/clients');
-      setClients(clientsData);
-      setError(null);
+      if (clientsData) {
+        setClients(clientsData);
+        setError(null);
+      }
     } catch (err) {
       console.error('[useLayoutData] Clients fetch failed:', err);
       setClients([]);
@@ -110,8 +119,10 @@ export function useLayoutData(): UseLayoutDataResult {
 
     try {
       const periodsData = await fetchWithAuth<Period[]>(`/api/v1/user/clients/${clientId}/periods`);
-      setPeriods(periodsData);
-      setError(null);
+      if (periodsData) {
+        setPeriods(periodsData);
+        setError(null);
+      }
     } catch (err) {
       console.error('[useLayoutData] Periods fetch failed:', err);
       setPeriods([]);
