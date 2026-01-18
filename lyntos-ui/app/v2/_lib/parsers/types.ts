@@ -8,21 +8,50 @@
 // ═══════════════════════════════════════════════════════════════════
 
 export type DetectedFileType =
+  // Excel Dosyalari
   | 'MIZAN_EXCEL'
   | 'YEVMIYE_EXCEL'
   | 'KEBIR_EXCEL'
+  | 'HESAP_PLANI_EXCEL'
+  | 'BILANCO_EXCEL'
+  | 'GELIR_TABLOSU_EXCEL'
+  | 'BABS_FORM_EXCEL'           // Ba-Bs Formlari
+  | 'SGK_APHB_EXCEL'            // SGK Aylik Prim Hizmet Belgesi
+  | 'SGK_EKSIK_GUN_EXCEL'       // SGK Eksik Gun Bildirimi
+
+  // e-Defter (XML)
   | 'E_DEFTER_YEVMIYE_XML'
   | 'E_DEFTER_KEBIR_XML'
   | 'E_DEFTER_BERAT_XML'
   | 'E_DEFTER_RAPOR_XML'
+
+  // e-Belgeler (XML)
+  | 'E_FATURA_XML'
+  | 'E_ARSIV_XML'
+  | 'E_IRSALIYE_XML'
+  | 'E_SMM_XML'
+
+  // Banka Ekstreleri
   | 'BANKA_EKSTRE_CSV'
+  | 'BANKA_EKSTRE_EXCEL'
+
+  // Beyanname PDF'leri
   | 'KDV_BEYANNAME_PDF'
   | 'KDV_TAHAKKUK_PDF'
   | 'MUHTASAR_BEYANNAME_PDF'
   | 'MUHTASAR_TAHAKKUK_PDF'
   | 'GECICI_VERGI_BEYANNAME_PDF'
   | 'GECICI_VERGI_TAHAKKUK_PDF'
+  | 'KURUMLAR_VERGISI_PDF'
+  | 'DAMGA_VERGISI_PDF'
+
+  // Diger PDF'ler
   | 'VERGI_LEVHASI_PDF'
+  | 'SGK_APHB_PDF'
+  | 'SGK_EKSIK_GUN_PDF'
+  | 'BABS_FORM_PDF'
+
+  // Bilinmeyen
   | 'UNKNOWN';
 
 export interface DetectedFile {
@@ -39,8 +68,12 @@ export interface DetectedFile {
     donem?: string;              // "2025-01" veya "2025-Q1"
     ay?: string;                 // "Ocak", "Subat", "Mart"
     banka?: string;              // "YKB", "Akbank" vb.
+    bankaAdi?: string;           // "Yapi Kredi Bankasi" vb.
+    muhasebeKodu?: string;       // "102.01", "102.19" vb.
     beratTipi?: 'Y' | 'K' | 'YB' | 'KB' | 'DR';
     gibOnayli?: boolean;
+    faturaTipi?: 'SATIS' | 'ALIS';
+    belgeNo?: string;
   };
   rawContent?: ArrayBuffer;
   parseResult?: unknown;

@@ -1,6 +1,16 @@
+/**
+ * LYNTOS Upload Page v2.0
+ * =======================
+ * GERCEK PARSING - SIFIR MOCK DATA
+ *
+ * useQuarterlyAnalysis hook'u ile entegre
+ * donemStore'a otomatik kayit
+ * 40+ belge tipi destegi
+ */
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import Link from 'next/link';
 import {
   Upload,
   FileArchive,
@@ -15,26 +25,159 @@ import {
   Loader2,
   Info,
   ArrowRight,
+  RefreshCw,
+  FileCode,
+  Building2,
+  Receipt,
+  Clock,
 } from 'lucide-react';
+import { useQuarterlyAnalysis } from '../_hooks/useQuarterlyAnalysis';
+import { useDonemStore } from '../_lib/stores/donemStore';
 
 type UploadMode = 'zip' | 'multi' | null;
-type UploadStatus = 'idle' | 'uploading' | 'processing' | 'success' | 'error';
 
-interface DetectedFile {
-  name: string;
-  type: string;
-  status: 'valid' | 'invalid' | 'warning';
-  message?: string;
+// ============================================================================
+// DOSYA TIPI -> TURKCE LABEL & IKON
+// ============================================================================
+const FILE_TYPE_CONFIG: Record<string, { label: string; icon: typeof FileSpreadsheet; color: string }> = {
+  // Muhasebe
+  'MIZAN_EXCEL': { label: 'Mizan', icon: FileSpreadsheet, color: 'text-emerald-600 bg-emerald-100' },
+  'MIZAN_CSV': { label: 'Mizan (CSV)', icon: FileSpreadsheet, color: 'text-emerald-600 bg-emerald-100' },
+  'YEVMIYE_EXCEL': { label: 'Yevmiye Defteri', icon: FileSpreadsheet, color: 'text-blue-600 bg-blue-100' },
+  'KEBIR_EXCEL': { label: 'Defteri Kebir', icon: FileSpreadsheet, color: 'text-blue-600 bg-blue-100' },
+  'HESAP_PLANI_EXCEL': { label: 'Hesap Plani', icon: FileSpreadsheet, color: 'text-purple-600 bg-purple-100' },
+  'HESAP_PLANI_CSV': { label: 'Hesap Plani (CSV)', icon: FileSpreadsheet, color: 'text-purple-600 bg-purple-100' },
+  'HESAP_PLANI_XML': { label: 'Hesap Plani (XML)', icon: FileCode, color: 'text-purple-600 bg-purple-100' },
+  'BILANCO_EXCEL': { label: 'Bilanco', icon: FileSpreadsheet, color: 'text-indigo-600 bg-indigo-100' },
+  'GELIR_TABLOSU_EXCEL': { label: 'Gelir Tablosu', icon: FileSpreadsheet, color: 'text-indigo-600 bg-indigo-100' },
+  'MUHASEBE_FISI_EXCEL': { label: 'Muhasebe Fisi', icon: FileSpreadsheet, color: 'text-gray-600 bg-gray-100' },
+  'MUHASEBE_FISI_CSV': { label: 'Muhasebe Fisi (CSV)', icon: FileText, color: 'text-gray-600 bg-gray-100' },
+  'MUHASEBE_FISI_XML': { label: 'Muhasebe Fisi (XML)', icon: FileCode, color: 'text-gray-600 bg-gray-100' },
+
+  // E-Defter
+  'E_DEFTER_YEVMIYE_XML': { label: 'E-Defter Yevmiye', icon: FileCode, color: 'text-cyan-600 bg-cyan-100' },
+  'E_DEFTER_KEBIR_XML': { label: 'E-Defter Kebir', icon: FileCode, color: 'text-cyan-600 bg-cyan-100' },
+  'E_DEFTER_BERAT_XML': { label: 'E-Defter Berati', icon: FileCode, color: 'text-cyan-600 bg-cyan-100' },
+  'E_DEFTER_RAPOR_XML': { label: 'E-Defter Raporu', icon: FileCode, color: 'text-cyan-600 bg-cyan-100' },
+
+  // E-Belgeler
+  'E_FATURA_XML': { label: 'E-Fatura', icon: Receipt, color: 'text-orange-600 bg-orange-100' },
+  'E_ARSIV_XML': { label: 'E-Arsiv Fatura', icon: Receipt, color: 'text-orange-600 bg-orange-100' },
+  'E_IRSALIYE_XML': { label: 'E-Irsaliye', icon: Receipt, color: 'text-orange-600 bg-orange-100' },
+  'E_FATURA_PDF': { label: 'E-Fatura (PDF)', icon: FileText, color: 'text-orange-600 bg-orange-100' },
+  'E_ARSIV_PDF': { label: 'E-Arsiv (PDF)', icon: FileText, color: 'text-orange-600 bg-orange-100' },
+
+  // Banka
+  'BANKA_EKSTRE_CSV': { label: 'Banka Ekstresi', icon: Building2, color: 'text-teal-600 bg-teal-100' },
+  'BANKA_EKSTRE_EXCEL': { label: 'Banka Ekstresi (Excel)', icon: Building2, color: 'text-teal-600 bg-teal-100' },
+  'BANKA_EKSTRE_PDF': { label: 'Banka Ekstresi (PDF)', icon: Building2, color: 'text-teal-600 bg-teal-100' },
+  'BANKA_EKSTRE_HTML': { label: 'Banka Ekstresi (HTML)', icon: Building2, color: 'text-teal-600 bg-teal-100' },
+  'MT940_TXT': { label: 'MT940 Ekstre', icon: Building2, color: 'text-teal-600 bg-teal-100' },
+
+  // Beyannameler
+  'KDV_BEYANNAME_PDF': { label: 'KDV Beyannamesi', icon: FileText, color: 'text-red-600 bg-red-100' },
+  'KDV_TAHAKKUK_PDF': { label: 'KDV Tahakkuku', icon: FileText, color: 'text-red-600 bg-red-100' },
+  'MUHTASAR_BEYANNAME_PDF': { label: 'Muhtasar Beyanname', icon: FileText, color: 'text-red-600 bg-red-100' },
+  'MUHTASAR_TAHAKKUK_PDF': { label: 'Muhtasar Tahakkuk', icon: FileText, color: 'text-red-600 bg-red-100' },
+  'GECICI_VERGI_BEYANNAME_PDF': { label: 'Gecici Vergi Beyanname', icon: FileText, color: 'text-red-600 bg-red-100' },
+  'GECICI_VERGI_TAHAKKUK_PDF': { label: 'Gecici Vergi Tahakkuk', icon: FileText, color: 'text-red-600 bg-red-100' },
+  'KURUMLAR_VERGISI_PDF': { label: 'Kurumlar Vergisi', icon: FileText, color: 'text-red-600 bg-red-100' },
+  'GELIR_VERGISI_PDF': { label: 'Gelir Vergisi', icon: FileText, color: 'text-red-600 bg-red-100' },
+  'DAMGA_VERGISI_PDF': { label: 'Damga Vergisi', icon: FileText, color: 'text-red-600 bg-red-100' },
+  'VERGI_LEVHASI_PDF': { label: 'Vergi Levhasi', icon: FileText, color: 'text-amber-600 bg-amber-100' },
+  'VERGI_LEVHASI_IMAGE': { label: 'Vergi Levhasi (Goruntu)', icon: FileText, color: 'text-amber-600 bg-amber-100' },
+
+  // Ba-Bs
+  'BA_FORMU_XML': { label: 'Ba Formu', icon: FileCode, color: 'text-violet-600 bg-violet-100' },
+  'BS_FORMU_XML': { label: 'Bs Formu', icon: FileCode, color: 'text-violet-600 bg-violet-100' },
+  'BA_FORMU_PDF': { label: 'Ba Formu (PDF)', icon: FileText, color: 'text-violet-600 bg-violet-100' },
+  'BS_FORMU_PDF': { label: 'Bs Formu (PDF)', icon: FileText, color: 'text-violet-600 bg-violet-100' },
+  'BABS_FORM_EXCEL': { label: 'Ba-Bs Formu (Excel)', icon: FileSpreadsheet, color: 'text-violet-600 bg-violet-100' },
+  'BABS_FORM_PDF': { label: 'Ba-Bs Formu (PDF)', icon: FileText, color: 'text-violet-600 bg-violet-100' },
+
+  // SGK
+  'SGK_APHB_PDF': { label: 'APHB', icon: FileText, color: 'text-sky-600 bg-sky-100' },
+  'SGK_APHB_EXCEL': { label: 'APHB (Excel)', icon: FileSpreadsheet, color: 'text-sky-600 bg-sky-100' },
+  'SGK_EKSIK_GUN_PDF': { label: 'Eksik Gun', icon: FileText, color: 'text-sky-600 bg-sky-100' },
+  'SGK_EKSIK_GUN_EXCEL': { label: 'Eksik Gun (Excel)', icon: FileSpreadsheet, color: 'text-sky-600 bg-sky-100' },
+
+  // Diger
+  'CARI_EKSTRE_EXCEL': { label: 'Cari Hesap Ekstresi', icon: FileSpreadsheet, color: 'text-slate-600 bg-slate-100' },
+  'STOK_RAPOR_EXCEL': { label: 'Stok Raporu', icon: FileSpreadsheet, color: 'text-slate-600 bg-slate-100' },
+  'DEMIRBAS_LISTE_EXCEL': { label: 'Demirbas Listesi', icon: FileSpreadsheet, color: 'text-slate-600 bg-slate-100' },
+  'PERSONEL_LISTE_EXCEL': { label: 'Personel Listesi', icon: FileSpreadsheet, color: 'text-slate-600 bg-slate-100' },
+  'YAS_ANALIZI_EXCEL': { label: 'Yas Analizi', icon: FileSpreadsheet, color: 'text-slate-600 bg-slate-100' },
+  'SOZLESME_PDF': { label: 'Sozlesme', icon: FileText, color: 'text-slate-600 bg-slate-100' },
+  'FATURA_PDF': { label: 'Fatura (PDF)', icon: Receipt, color: 'text-slate-600 bg-slate-100' },
+  'FATURA_IMAGE': { label: 'Fatura (Goruntu)', icon: Receipt, color: 'text-slate-600 bg-slate-100' },
+  'FIS_IMAGE': { label: 'Fis (Goruntu)', icon: Receipt, color: 'text-slate-600 bg-slate-100' },
+
+  // Arsiv
+  'ARCHIVE_ZIP': { label: 'ZIP Arsivi', icon: FileArchive, color: 'text-slate-600 bg-slate-100' },
+  'ARCHIVE_OTHER': { label: 'Arsiv Dosyasi', icon: FileArchive, color: 'text-slate-600 bg-slate-100' },
+
+  // Bilinmeyen
+  'UNKNOWN': { label: 'Tanimlanamadi', icon: AlertCircle, color: 'text-amber-600 bg-amber-100' },
+  'UNKNOWN_EXCEL': { label: 'Excel (Tip Belirsiz)', icon: FileSpreadsheet, color: 'text-amber-600 bg-amber-100' },
+  'UNKNOWN_CSV': { label: 'CSV (Tip Belirsiz)', icon: FileText, color: 'text-amber-600 bg-amber-100' },
+  'UNKNOWN_XML': { label: 'XML (Tip Belirsiz)', icon: FileCode, color: 'text-amber-600 bg-amber-100' },
+  'UNKNOWN_PDF': { label: 'PDF (Tip Belirsiz)', icon: FileText, color: 'text-amber-600 bg-amber-100' },
+  'UNKNOWN_TXT': { label: 'Metin Dosyasi', icon: FileText, color: 'text-amber-600 bg-amber-100' },
+  'UNKNOWN_JSON': { label: 'JSON Dosyasi', icon: FileCode, color: 'text-amber-600 bg-amber-100' },
+  'UNKNOWN_HTML': { label: 'HTML Dosyasi', icon: FileCode, color: 'text-amber-600 bg-amber-100' },
+  'UNKNOWN_IMAGE': { label: 'Goruntu Dosyasi', icon: FileText, color: 'text-amber-600 bg-amber-100' },
+};
+
+function getFileTypeConfig(fileType: string) {
+  return FILE_TYPE_CONFIG[fileType] || FILE_TYPE_CONFIG['UNKNOWN'];
 }
 
+// ============================================================================
+// ANA COMPONENT
+// ============================================================================
 export default function UploadPage() {
   const [mode, setMode] = useState<UploadMode>(null);
-  const [status, setStatus] = useState<UploadStatus>('idle');
-  const [detectedFiles, setDetectedFiles] = useState<DetectedFile[]>([]);
   const [dragActive, setDragActive] = useState(false);
 
-  // Sablon indirme fonksiyonu
-  const handleDownloadTemplate = (type: 'mizan' | 'banka') => {
+  // GERCEK PARSING HOOK
+  const analysis = useQuarterlyAnalysis();
+
+  // MERKEZI STORE
+  const setDonemData = useDonemStore(s => s.setDonemData);
+  const clearDonemData = useDonemStore(s => s.clearDonemData);
+
+  // Parse tamamlandiginda store'a kaydet
+  useEffect(() => {
+    if (analysis.isComplete && analysis.parsedData && analysis.detectedFiles.length > 0) {
+      // Dosya adindan ceyrek tespit et
+      const currentFile = analysis.currentFile || 'upload.zip';
+      let quarter: 'Q1' | 'Q2' | 'Q3' | 'Q4' = 'Q1';
+      const quarterMatch = currentFile.match(/Q([1-4])/i);
+      if (quarterMatch) {
+        quarter = `Q${quarterMatch[1]}` as 'Q1' | 'Q2' | 'Q3' | 'Q4';
+      }
+
+      const year = new Date().getFullYear();
+
+      setDonemData(
+        {
+          clientId: 'current',
+          clientName: 'Mukellef',
+          period: `${year}-${quarter}`,
+          quarter,
+          year,
+          uploadedAt: new Date().toISOString(),
+          sourceFile: currentFile,
+        },
+        analysis.detectedFiles,
+        analysis.parsedData,
+        analysis.fileStats
+      );
+    }
+  }, [analysis.isComplete, analysis.parsedData, analysis.detectedFiles, analysis.fileStats, analysis.currentFile, setDonemData]);
+
+  // Sablon indirme
+  const handleDownloadTemplate = useCallback((type: 'mizan' | 'banka') => {
     const link = document.createElement('a');
     if (type === 'mizan') {
       link.href = '/templates/mizan_sablonu.csv';
@@ -46,15 +189,16 @@ export default function UploadPage() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  };
+  }, []);
 
-  const handleModeSelect = (selectedMode: UploadMode) => {
+  const handleModeSelect = useCallback((selectedMode: UploadMode) => {
     setMode(selectedMode);
-    setStatus('idle');
-    setDetectedFiles([]);
-  };
+    if (analysis.isComplete || analysis.isError) {
+      analysis.reset();
+    }
+  }, [analysis]);
 
-  const handleDrag = (e: React.DragEvent) => {
+  const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (e.type === 'dragenter' || e.type === 'dragover') {
@@ -62,37 +206,78 @@ export default function UploadPage() {
     } else if (e.type === 'dragleave') {
       setDragActive(false);
     }
-  };
+  }, []);
 
-  const simulateUpload = () => {
-    setStatus('uploading');
-    setTimeout(() => {
-      setStatus('processing');
-      setTimeout(() => {
-        setStatus('success');
-        // Simulated detected files
-        setDetectedFiles([
-          { name: 'mizan_2026_q1.xlsx', type: 'Mizan', status: 'valid', message: '12.847 satir tespit edildi' },
-          { name: 'kdv_beyan_aralik.pdf', type: 'KDV Beyannamesi', status: 'valid' },
-          { name: 'banka_akbank_12.csv', type: 'Banka Ekstresi', status: 'warning', message: 'Tarih formatı kontrol edilmeli' },
-          { name: 'efatura_liste.xml', type: 'e-Fatura', status: 'valid', message: '234 fatura tespit edildi' },
-        ]);
-      }, 1500);
-    }, 2000);
-  };
+  // GERCEK UPLOAD - MOCK YOK
+  const handleRealUpload = useCallback(async (file: File) => {
+    await analysis.analyzeZip(file);
+  }, [analysis]);
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      simulateUpload();
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      handleRealUpload(files[0]);
     }
-  };
+  }, [handleRealUpload]);
 
-  const handleFileInput = () => {
-    simulateUpload();
-  };
+  const handleFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      handleRealUpload(files[0]);
+    }
+  }, [handleRealUpload]);
+
+  const handleReset = useCallback(() => {
+    analysis.reset();
+    clearDonemData();
+    setMode(null);
+  }, [analysis, clearDonemData]);
+
+  // GERCEK dosyalardan liste olustur
+  const recognizedFiles = analysis.detectedFiles.filter(f => !f.fileType.startsWith('UNKNOWN'));
+  const unknownFiles = analysis.detectedFiles.filter(f => f.fileType.startsWith('UNKNOWN'));
+
+  // Kategori bazli gruplama
+  const groupedFiles = useMemo(() => {
+    const groups: Record<string, typeof recognizedFiles> = {
+      'Muhasebe': [],
+      'E-Defter': [],
+      'E-Belgeler': [],
+      'Banka': [],
+      'Beyanname': [],
+      'SGK': [],
+      'Diger': [],
+    };
+
+    for (const file of recognizedFiles) {
+      const type = file.fileType;
+      if (type.includes('MIZAN') || type.includes('YEVMIYE') || type.includes('KEBIR') ||
+          type.includes('HESAP_PLANI') || type.includes('BILANCO') || type.includes('GELIR_TABLOSU') ||
+          type.includes('MUHASEBE_FISI')) {
+        groups['Muhasebe'].push(file);
+      } else if (type.includes('E_DEFTER')) {
+        groups['E-Defter'].push(file);
+      } else if (type.includes('E_FATURA') || type.includes('E_ARSIV') || type.includes('E_IRSALIYE')) {
+        groups['E-Belgeler'].push(file);
+      } else if (type.includes('BANKA') || type.includes('MT940')) {
+        groups['Banka'].push(file);
+      } else if (type.includes('KDV') || type.includes('MUHTASAR') || type.includes('GECICI') ||
+                 type.includes('KURUMLAR') || type.includes('GELIR_VERGISI') || type.includes('DAMGA') ||
+                 type.includes('VERGI_LEVHASI') || type.includes('BA_FORMU') || type.includes('BS_FORMU') ||
+                 type.includes('BABS')) {
+        groups['Beyanname'].push(file);
+      } else if (type.includes('APHB') || type.includes('SGK') || type.includes('EKSIK_GUN')) {
+        groups['SGK'].push(file);
+      } else {
+        groups['Diger'].push(file);
+      }
+    }
+
+    return groups;
+  }, [recognizedFiles]);
 
   return (
     <div className="space-y-6">
@@ -101,103 +286,114 @@ export default function UploadPage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
             <Upload className="w-7 h-7 text-blue-600" />
-            Toplu Veri Yükleme
+            Donem Verisi Yukleme
           </h1>
           <p className="text-slate-600 mt-1">
-            Dönem belgelerinizi tek seferde yükleyin, sistem otomatik tanımlasın
+            Donem belgelerinizi yukleyin - 40+ belge tipi otomatik taninir
           </p>
         </div>
+        {(analysis.isComplete || analysis.isError) && (
+          <button
+            onClick={handleReset}
+            className="flex items-center gap-2 px-4 py-2 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Yeni Yukleme
+          </button>
+        )}
       </div>
 
       {/* Upload Mode Selection */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* ZIP Package */}
-        <button
-          onClick={() => handleModeSelect('zip')}
-          className={`
-            relative p-6 rounded-xl border-2 transition-all text-left
-            ${mode === 'zip'
-              ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
-              : 'border-slate-200 bg-white hover:border-blue-300 hover:shadow-md'
-            }
-          `}
-        >
-          {mode === 'zip' && (
-            <div className="absolute top-3 right-3">
-              <CheckCircle2 className="w-5 h-5 text-blue-600" />
+      {!analysis.isProcessing && !analysis.isComplete && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* ZIP Package */}
+          <button
+            onClick={() => handleModeSelect('zip')}
+            className={`
+              relative p-6 rounded-xl border-2 transition-all text-left
+              ${mode === 'zip'
+                ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
+                : 'border-slate-200 bg-white hover:border-blue-300 hover:shadow-md'
+              }
+            `}
+          >
+            {mode === 'zip' && (
+              <div className="absolute top-3 right-3">
+                <CheckCircle2 className="w-5 h-5 text-blue-600" />
+              </div>
+            )}
+            <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center mb-4">
+              <FileArchive className="w-6 h-6 text-blue-600" />
             </div>
-          )}
-          <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center mb-4">
-            <FileArchive className="w-6 h-6 text-blue-600" />
-          </div>
-          <h3 className="font-semibold text-slate-900 mb-1">Toplu Paket (ZIP)</h3>
-          <p className="text-sm text-slate-500">
-            Tüm dönem belgelerini tek ZIP dosyasında yükleyin
-          </p>
-          <div className="mt-3 flex items-center gap-1 text-xs text-blue-600">
-            <span className="font-medium">Önerilen</span>
-            <span className="px-1.5 py-0.5 bg-blue-100 rounded">En Hızlı</span>
-          </div>
-        </button>
-
-        {/* Multi File */}
-        <button
-          onClick={() => handleModeSelect('multi')}
-          className={`
-            relative p-6 rounded-xl border-2 transition-all text-left
-            ${mode === 'multi'
-              ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
-              : 'border-slate-200 bg-white hover:border-blue-300 hover:shadow-md'
-            }
-          `}
-        >
-          {mode === 'multi' && (
-            <div className="absolute top-3 right-3">
-              <CheckCircle2 className="w-5 h-5 text-blue-600" />
+            <h3 className="font-semibold text-slate-900 mb-1">Toplu Paket (ZIP)</h3>
+            <p className="text-sm text-slate-500">
+              Tum donem belgelerini tek ZIP dosyasinda yukleyin
+            </p>
+            <div className="mt-3 flex items-center gap-1 text-xs text-blue-600">
+              <span className="font-medium">Onerilen</span>
+              <span className="px-1.5 py-0.5 bg-blue-100 rounded">En Hizli</span>
             </div>
-          )}
-          <div className="w-12 h-12 rounded-xl bg-indigo-100 flex items-center justify-center mb-4">
-            <Files className="w-6 h-6 text-indigo-600" />
-          </div>
-          <h3 className="font-semibold text-slate-900 mb-1">Çoklu Dosya</h3>
-          <p className="text-sm text-slate-500">
-            Birden fazla dosyayı sürükle-bırak ile yükleyin
-          </p>
-          <div className="mt-3 flex items-center gap-1 text-xs text-slate-500">
-            <span>Drag & Drop destekli</span>
-          </div>
-        </button>
+          </button>
 
-        {/* Template Download */}
-        <div className="p-6 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50">
-          <div className="w-12 h-12 rounded-xl bg-slate-200 flex items-center justify-center mb-4">
-            <Download className="w-6 h-6 text-slate-500" />
-          </div>
-          <h3 className="font-semibold text-slate-700 mb-1">Şablon İndir</h3>
-          <p className="text-sm text-slate-500 mb-3">
-            Standart format şablonlarını indirin
-          </p>
-          <div className="space-y-1.5">
-            <button
-              onClick={() => handleDownloadTemplate('mizan')}
-              className="w-full text-left text-xs text-blue-600 hover:text-blue-800 flex items-center gap-2 p-1.5 rounded hover:bg-white transition-colors"
-            >
-              <FileSpreadsheet className="w-3.5 h-3.5" />
-              Mizan Sablonu (.csv)
-            </button>
-            <button
-              onClick={() => handleDownloadTemplate('banka')}
-              className="w-full text-left text-xs text-blue-600 hover:text-blue-800 flex items-center gap-2 p-1.5 rounded hover:bg-white transition-colors"
-            >
-              <Database className="w-3.5 h-3.5" />
-              Banka Ekstresi (.csv)
-            </button>
+          {/* Multi File */}
+          <button
+            onClick={() => handleModeSelect('multi')}
+            className={`
+              relative p-6 rounded-xl border-2 transition-all text-left
+              ${mode === 'multi'
+                ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
+                : 'border-slate-200 bg-white hover:border-blue-300 hover:shadow-md'
+              }
+            `}
+          >
+            {mode === 'multi' && (
+              <div className="absolute top-3 right-3">
+                <CheckCircle2 className="w-5 h-5 text-blue-600" />
+              </div>
+            )}
+            <div className="w-12 h-12 rounded-xl bg-indigo-100 flex items-center justify-center mb-4">
+              <Files className="w-6 h-6 text-indigo-600" />
+            </div>
+            <h3 className="font-semibold text-slate-900 mb-1">Coklu Dosya</h3>
+            <p className="text-sm text-slate-500">
+              Birden fazla dosyayi surukle-birak ile yukleyin
+            </p>
+            <div className="mt-3 flex items-center gap-1 text-xs text-slate-500">
+              <span>Drag & Drop destekli</span>
+            </div>
+          </button>
+
+          {/* Template Download */}
+          <div className="p-6 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50">
+            <div className="w-12 h-12 rounded-xl bg-slate-200 flex items-center justify-center mb-4">
+              <Download className="w-6 h-6 text-slate-500" />
+            </div>
+            <h3 className="font-semibold text-slate-700 mb-1">Sablon Indir</h3>
+            <p className="text-sm text-slate-500 mb-3">
+              Standart format sablonlarini indirin
+            </p>
+            <div className="space-y-1.5">
+              <button
+                onClick={() => handleDownloadTemplate('mizan')}
+                className="w-full text-left text-xs text-blue-600 hover:text-blue-800 flex items-center gap-2 p-1.5 rounded hover:bg-white transition-colors"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+                Mizan Sablonu (.csv)
+              </button>
+              <button
+                onClick={() => handleDownloadTemplate('banka')}
+                className="w-full text-left text-xs text-blue-600 hover:text-blue-800 flex items-center gap-2 p-1.5 rounded hover:bg-white transition-colors"
+              >
+                <Database className="w-3.5 h-3.5" />
+                Banka Ekstresi (.csv)
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Upload Area - Show when mode selected */}
-      {mode && (
+      {/* Upload Area */}
+      {mode && !analysis.isProcessing && !analysis.isComplete && !analysis.isError && (
         <div
           onDragEnter={handleDrag}
           onDragLeave={handleDrag}
@@ -207,172 +403,281 @@ export default function UploadPage() {
             relative border-2 border-dashed rounded-xl p-12 text-center transition-all
             ${dragActive
               ? 'border-blue-500 bg-blue-50'
-              : status === 'success'
-                ? 'border-emerald-300 bg-emerald-50'
-                : 'border-slate-300 hover:border-blue-400 bg-white'
+              : 'border-slate-300 hover:border-blue-400 bg-white'
             }
           `}
         >
-          {status === 'idle' && (
-            <>
-              <Upload className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-slate-700 mb-2">
-                {mode === 'zip' ? 'ZIP dosyanızı sürükleyin' : 'Dosyalarınızı sürükleyin'}
+          <Upload className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-slate-700 mb-2">
+            {mode === 'zip' ? 'ZIP dosyanizi surukleyin' : 'Dosyalarinizi surukleyin'}
+          </h3>
+          <p className="text-sm text-slate-500 mb-4">
+            veya dosya secmek icin tiklayin
+          </p>
+          <input
+            type="file"
+            accept={mode === 'zip' ? '.zip' : '.xlsx,.xls,.csv,.pdf,.xml,.zip,.txt,.json'}
+            onChange={handleFileInput}
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          />
+          <p className="text-xs text-slate-400">
+            {mode === 'zip'
+              ? 'Desteklenen: ZIP (maks. 200MB)'
+              : 'Desteklenen: XLSX, XLS, CSV, PDF, XML, TXT, JSON (maks. 50MB/dosya)'
+            }
+          </p>
+        </div>
+      )}
+
+      {/* Processing Status */}
+      {analysis.isProcessing && (
+        <div className="bg-white border border-slate-200 rounded-xl p-8">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center">
+              <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-slate-800">
+                {analysis.phase === 'extracting' && 'ZIP Aciliyor...'}
+                {analysis.phase === 'detecting' && 'Dosyalar Tanimlaniyor...'}
+                {analysis.phase === 'parsing' && 'Veriler Okunuyor...'}
+                {analysis.phase === 'checking' && 'Capraz Kontroller Yapiliyor...'}
               </h3>
-              <p className="text-sm text-slate-500 mb-4">
-                veya dosya seçmek için tıklayın
-              </p>
-              <input
-                type="file"
-                multiple={mode === 'multi'}
-                accept={mode === 'zip' ? '.zip' : '.xlsx,.xls,.csv,.pdf,.xml'}
-                onChange={handleFileInput}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              <p className="text-sm text-slate-500">{analysis.currentFile}</p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-600">Ilerleme</span>
+              <span className="font-medium text-slate-800">%{Math.round(analysis.progress)}</span>
+            </div>
+            <div className="w-full bg-slate-200 rounded-full h-3 overflow-hidden">
+              <div
+                className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-300"
+                style={{ width: `${analysis.progress}%` }}
               />
-              <p className="text-xs text-slate-400">
-                {mode === 'zip'
-                  ? 'Desteklenen: ZIP (maks. 100MB)'
-                  : 'Desteklenen: XLSX, XLS, CSV, PDF, XML (maks. 10MB/dosya)'
-                }
-              </p>
-            </>
-          )}
-
-          {status === 'uploading' && (
-            <div className="py-8">
-              <Loader2 className="w-12 h-12 text-blue-500 mx-auto mb-4 animate-spin" />
-              <h3 className="text-lg font-medium text-slate-700 mb-2">Dosyalar Yükleniyor...</h3>
-              <div className="w-64 mx-auto bg-slate-200 rounded-full h-2 overflow-hidden">
-                <div className="bg-blue-500 h-2 rounded-full animate-pulse" style={{ width: '60%' }} />
-              </div>
             </div>
-          )}
+          </div>
 
-          {status === 'processing' && (
-            <div className="py-8">
-              <Loader2 className="w-12 h-12 text-indigo-500 mx-auto mb-4 animate-spin" />
-              <h3 className="text-lg font-medium text-slate-700 mb-2">Dosyalar Analiz Ediliyor...</h3>
-              <p className="text-sm text-slate-500">Belge türleri otomatik tanımlanıyor</p>
-            </div>
-          )}
-
-          {status === 'success' && (
-            <div className="py-4">
-              <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-emerald-700 mb-2">Yükleme Başarılı!</h3>
-              <p className="text-sm text-slate-600">{detectedFiles.length} dosya tespit edildi</p>
+          {analysis.fileStats.total > 0 && (
+            <div className="mt-4 flex items-center gap-4 text-sm text-slate-600">
+              <span className="flex items-center gap-1">
+                <Clock className="w-4 h-4" />
+                {analysis.fileStats.detected} / {analysis.fileStats.total} dosya islendi
+              </span>
             </div>
           )}
         </div>
       )}
 
-      {/* Detected Files - Show after success */}
-      {status === 'success' && detectedFiles.length > 0 && (
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-          <div className="p-4 bg-slate-50 border-b border-slate-200">
-            <h2 className="font-semibold text-slate-800 flex items-center gap-2">
-              <Info className="w-5 h-5 text-blue-600" />
-              Sistem Şunları Tespit Etti
-            </h2>
+      {/* Error State */}
+      {analysis.isError && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-6">
+          <div className="flex items-start gap-4">
+            <XCircle className="w-6 h-6 text-red-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <h3 className="font-semibold text-red-700 mb-1">Yukleme Hatasi</h3>
+              <p className="text-sm text-red-600 mb-4">{analysis.error}</p>
+              <button
+                onClick={handleReset}
+                className="px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Tekrar Dene
+              </button>
+            </div>
           </div>
-          <div className="divide-y divide-slate-100">
-            {detectedFiles.map((file, idx) => (
-              <div key={idx} className="flex items-center gap-4 p-4 hover:bg-slate-50">
-                <div className={`
-                  w-10 h-10 rounded-lg flex items-center justify-center
-                  ${file.status === 'valid' ? 'bg-emerald-100' : file.status === 'warning' ? 'bg-amber-100' : 'bg-red-100'}
-                `}>
-                  {file.status === 'valid' ? (
-                    <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                  ) : file.status === 'warning' ? (
-                    <AlertCircle className="w-5 h-5 text-amber-600" />
-                  ) : (
-                    <XCircle className="w-5 h-5 text-red-600" />
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-slate-800 truncate">{file.name}</span>
-                    <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-xs rounded">
-                      {file.type}
-                    </span>
-                  </div>
-                  {file.message && (
-                    <p className={`text-xs mt-0.5 ${
-                      file.status === 'warning' ? 'text-amber-600' : 'text-slate-500'
-                    }`}>
-                      {file.message}
-                    </p>
-                  )}
-                </div>
-                <button className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1">
-                  Detay
-                  <ArrowRight className="w-3 h-3" />
-                </button>
+        </div>
+      )}
+
+      {/* Success - GERCEK DOSYALAR */}
+      {analysis.isComplete && (
+        <div className="space-y-4">
+          {/* Summary */}
+          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-6">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-full bg-emerald-100 flex items-center justify-center">
+                <CheckCircle2 className="w-8 h-8 text-emerald-500" />
               </div>
-            ))}
+              <div className="flex-1">
+                <h3 className="font-semibold text-emerald-700 text-lg">Yukleme Tamamlandi!</h3>
+                <p className="text-sm text-emerald-600">
+                  {analysis.fileStats.total} dosya islendi, {analysis.fileStats.parsed} dosya basariyla okundu
+                </p>
+              </div>
+              {analysis.duration && (
+                <div className="text-right">
+                  <p className="text-xs text-emerald-500">Islem suresi</p>
+                  <p className="font-medium text-emerald-700">{(analysis.duration / 1000).toFixed(1)}s</p>
+                </div>
+              )}
+            </div>
           </div>
-          <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
-            <p className="text-sm text-slate-600">
-              <strong className="text-emerald-600">{detectedFiles.filter(f => f.status === 'valid').length}</strong> geçerli,
-              <strong className="text-amber-600 ml-1">{detectedFiles.filter(f => f.status === 'warning').length}</strong> uyarı
-            </p>
-            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
-              Analizi Başlat
-              <ArrowRight className="w-4 h-4" />
-            </button>
+
+          {/* Stats Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-white border border-slate-200 rounded-xl p-4">
+              <p className="text-sm text-slate-500">Toplam Dosya</p>
+              <p className="text-2xl font-bold text-slate-800">{analysis.fileStats.total}</p>
+            </div>
+            <div className="bg-white border border-slate-200 rounded-xl p-4">
+              <p className="text-sm text-slate-500">Taninan</p>
+              <p className="text-2xl font-bold text-emerald-600">{analysis.fileStats.detected}</p>
+            </div>
+            <div className="bg-white border border-slate-200 rounded-xl p-4">
+              <p className="text-sm text-slate-500">Ayristirilan</p>
+              <p className="text-2xl font-bold text-blue-600">{analysis.fileStats.parsed}</p>
+            </div>
+            <div className="bg-white border border-slate-200 rounded-xl p-4">
+              <p className="text-sm text-slate-500">Taninamayan</p>
+              <p className="text-2xl font-bold text-amber-600">{analysis.fileStats.failed}</p>
+            </div>
+          </div>
+
+          {/* Grouped Files List */}
+          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+            <div className="p-4 bg-slate-50 border-b border-slate-200">
+              <h2 className="font-semibold text-slate-800 flex items-center gap-2">
+                <Info className="w-5 h-5 text-blue-600" />
+                Tanimlanan Dosyalar ({recognizedFiles.length})
+              </h2>
+            </div>
+
+            <div className="divide-y divide-slate-100 max-h-[500px] overflow-y-auto">
+              {Object.entries(groupedFiles).map(([category, files]) => {
+                if (files.length === 0) return null;
+
+                return (
+                  <div key={category} className="p-4">
+                    <h3 className="text-sm font-medium text-slate-700 mb-3 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                      {category} ({files.length})
+                    </h3>
+                    <div className="space-y-2">
+                      {files.map((file) => {
+                        const config = getFileTypeConfig(file.fileType);
+                        const IconComponent = config.icon;
+
+                        return (
+                          <div key={file.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50">
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${config.color.split(' ')[1]}`}>
+                              <IconComponent className={`w-4 h-4 ${config.color.split(' ')[0]}`} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-slate-800 truncate">{file.fileName}</p>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <span className={`px-1.5 py-0.5 text-xs rounded ${config.color}`}>
+                                  {config.label}
+                                </span>
+                                <span className="text-xs text-slate-400">
+                                  %{file.confidence} guven
+                                </span>
+                                {file.metadata?.banka && (
+                                  <span className="text-xs text-teal-600 bg-teal-50 px-1.5 py-0.5 rounded">
+                                    {file.metadata.banka}
+                                  </span>
+                                )}
+                                {file.metadata?.ay && (
+                                  <span className="text-xs text-slate-500">
+                                    {file.metadata.ay}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <span className="text-xs text-slate-400">
+                              {(file.fileSize / 1024).toFixed(1)} KB
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Unknown files */}
+            {unknownFiles.length > 0 && (
+              <>
+                <div className="p-3 bg-amber-50 border-t border-amber-200">
+                  <p className="text-sm text-amber-700 font-medium flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4" />
+                    Taninamayan Dosyalar ({unknownFiles.length})
+                  </p>
+                </div>
+                <div className="divide-y divide-slate-100">
+                  {unknownFiles.slice(0, 10).map((file) => (
+                    <div key={file.id} className="flex items-center gap-3 p-3 bg-amber-50/50">
+                      <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
+                        <AlertCircle className="w-4 h-4 text-amber-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-slate-700 truncate">{file.fileName}</p>
+                        <p className="text-xs text-slate-500">{file.fileExtension.toUpperCase()} dosyasi</p>
+                      </div>
+                      <span className="text-xs text-slate-400">{(file.fileSize / 1024).toFixed(1)} KB</span>
+                    </div>
+                  ))}
+                  {unknownFiles.length > 10 && (
+                    <div className="p-3 text-center text-sm text-slate-500 bg-amber-50/50">
+                      +{unknownFiles.length - 10} dosya daha
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            {/* Actions */}
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+              <p className="text-sm text-slate-600">
+                <strong className="text-emerald-600">{analysis.fileStats.parsed}</strong> basarili,
+                <strong className="text-amber-600 ml-1">{unknownFiles.length}</strong> taninamadi
+              </p>
+              <Link
+                href="/v2"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+              >
+                Analize Git
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
           </div>
         </div>
       )}
 
       {/* Supported File Types Info */}
-      <div className="bg-white border border-slate-200 rounded-xl p-6">
-        <h3 className="font-semibold text-slate-800 mb-4">Desteklenen Belge Türleri</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-            <FileSpreadsheet className="w-5 h-5 text-emerald-600" />
-            <div>
-              <p className="text-sm font-medium text-slate-700">Mizan</p>
-              <p className="text-xs text-slate-500">.xlsx, .xls, .csv</p>
-            </div>
+      {!analysis.isProcessing && !analysis.isComplete && (
+        <div className="bg-white border border-slate-200 rounded-xl p-6">
+          <h3 className="font-semibold text-slate-800 mb-4">Desteklenen Belge Turleri (40+)</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
+            {[
+              { icon: FileSpreadsheet, label: 'Mizan', color: 'text-emerald-600 bg-emerald-50' },
+              { icon: FileSpreadsheet, label: 'Yevmiye', color: 'text-blue-600 bg-blue-50' },
+              { icon: FileSpreadsheet, label: 'Kebir', color: 'text-blue-600 bg-blue-50' },
+              { icon: FileCode, label: 'E-Defter', color: 'text-cyan-600 bg-cyan-50' },
+              { icon: Receipt, label: 'E-Fatura', color: 'text-orange-600 bg-orange-50' },
+              { icon: Receipt, label: 'E-Arsiv', color: 'text-orange-600 bg-orange-50' },
+              { icon: Building2, label: 'Banka (25+ banka)', color: 'text-teal-600 bg-teal-50' },
+              { icon: Building2, label: 'MT940 Ekstre', color: 'text-teal-600 bg-teal-50' },
+              { icon: FileText, label: 'KDV Beyan', color: 'text-red-600 bg-red-50' },
+              { icon: FileText, label: 'Muhtasar', color: 'text-red-600 bg-red-50' },
+              { icon: FileText, label: 'Gecici Vergi', color: 'text-red-600 bg-red-50' },
+              { icon: FileText, label: 'Ba-Bs Formu', color: 'text-violet-600 bg-violet-50' },
+              { icon: FileText, label: 'APHB/SGK', color: 'text-sky-600 bg-sky-50' },
+              { icon: FileText, label: 'Vergi Levhasi', color: 'text-amber-600 bg-amber-50' },
+              { icon: FileSpreadsheet, label: 'Hesap Plani', color: 'text-purple-600 bg-purple-50' },
+            ].map((item, i) => (
+              <div key={i} className={`flex items-center gap-2 p-2.5 rounded-lg ${item.color.split(' ')[1]}`}>
+                <item.icon className={`w-4 h-4 ${item.color.split(' ')[0]}`} />
+                <span className="text-xs font-medium text-slate-700">{item.label}</span>
+              </div>
+            ))}
           </div>
-          <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-            <FileText className="w-5 h-5 text-blue-600" />
-            <div>
-              <p className="text-sm font-medium text-slate-700">Beyanname</p>
-              <p className="text-xs text-slate-500">.pdf, .xml</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-            <Database className="w-5 h-5 text-indigo-600" />
-            <div>
-              <p className="text-sm font-medium text-slate-700">Banka Ekstresi</p>
-              <p className="text-xs text-slate-500">.csv, .xlsx</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-            <FileText className="w-5 h-5 text-amber-600" />
-            <div>
-              <p className="text-sm font-medium text-slate-700">e-Fatura/e-Arşiv</p>
-              <p className="text-xs text-slate-500">.xml, .zip</p>
-            </div>
-          </div>
+          <p className="text-xs text-slate-500 mt-4">
+            Formatlar: XLSX, XLS, CSV, XML (UBL-TR, XBRL-GL), PDF, MT940 (SWIFT), JSON, HTML, TXT, Goruntu
+          </p>
         </div>
-      </div>
-
-      {/* Quick Tips */}
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-        <h4 className="font-medium text-blue-800 mb-2 flex items-center gap-2">
-          <Info className="w-4 h-4" />
-          Hızlı İpuçları
-        </h4>
-        <ul className="space-y-1 text-sm text-blue-700">
-          <li>• ZIP paketinde dosyaları klasörlemeden düz yapıda tutun</li>
-          <li>• Dosya isimlerinde Türkçe karakter kullanabilirsiniz</li>
-          <li>• Sistem belge türlerini otomatik tanır, manuel eşleştirme gerekmez</li>
-          <li>• Aynı türden birden fazla dönem belgesi yükleyebilirsiniz</li>
-        </ul>
-      </div>
+      )}
     </div>
   );
 }
