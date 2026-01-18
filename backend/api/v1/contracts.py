@@ -11,6 +11,7 @@ import subprocess
 import sys
 import time
 import re
+import sqlite3
 
 from schemas.response_envelope import wrap_response
 
@@ -57,8 +58,90 @@ router = APIRouter(tags=["v1"])
 BACKEND_DIR = Path(__file__).resolve().parent.parent.parent
 CONTRACTS_DIR = BACKEND_DIR / "docs" / "contracts"
 OUT_DIR = BACKEND_DIR / "out"
+DB_PATH = BACKEND_DIR / "database" / "lyntos.db"
 
 PERIOD_RE = re.compile(r"^\d{4}-Q[1-4]$")
+
+
+def _get_db():
+    """Get SQLite database connection"""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def _get_mizan_data_from_db(tenant_id: str, client_id: str, period_id: str) -> dict | None:
+    """
+    Fetch mizan data from database for portfolio calculation.
+    Returns dict with totals and key account balances, or None if no data.
+    """
+    try:
+        conn = _get_db()
+        cursor = conn.cursor()
+
+        # Get entry count and totals
+        cursor.execute("""
+            SELECT
+                COUNT(*) as entry_count,
+                SUM(borc_toplam) as toplam_borc,
+                SUM(alacak_toplam) as toplam_alacak,
+                SUM(borc_bakiye) as borc_bakiye_toplam,
+                SUM(alacak_bakiye) as alacak_bakiye_toplam
+            FROM mizan_entries
+            WHERE tenant_id = ? AND client_id = ? AND period_id = ?
+        """, (tenant_id, client_id, period_id))
+
+        row = cursor.fetchone()
+
+        if not row or row["entry_count"] == 0:
+            conn.close()
+            return None
+
+        # Get key account balances for analysis
+        cursor.execute("""
+            SELECT hesap_kodu, hesap_adi, borc_bakiye, alacak_bakiye
+            FROM mizan_entries
+            WHERE tenant_id = ? AND client_id = ? AND period_id = ?
+            ORDER BY hesap_kodu
+        """, (tenant_id, client_id, period_id))
+
+        accounts = {r["hesap_kodu"]: dict(r) for r in cursor.fetchall()}
+
+        # Calculate ciro from 600 (Satis Gelirleri) accounts
+        ciro = 0
+        for kod, hesap in accounts.items():
+            if kod.startswith("600"):
+                ciro += hesap.get("alacak_bakiye", 0) or 0
+
+        # Calculate kar/zarar from 690 (Donem Kari/Zarari)
+        kar_zarar = 0
+        for kod, hesap in accounts.items():
+            if kod.startswith("690"):
+                kar_zarar = (hesap.get("alacak_bakiye", 0) or 0) - (hesap.get("borc_bakiye", 0) or 0)
+
+        # Get devreden KDV from 190/191
+        devreden_kdv = 0
+        for kod, hesap in accounts.items():
+            if kod in ["190", "191"]:
+                devreden_kdv += hesap.get("borc_bakiye", 0) or 0
+
+        conn.close()
+
+        return {
+            "entry_count": row["entry_count"],
+            "toplam_borc": row["toplam_borc"] or 0,
+            "toplam_alacak": row["toplam_alacak"] or 0,
+            "ciro": ciro,
+            "kar_zarar": kar_zarar,
+            "devreden_kdv": devreden_kdv,
+            "accounts": accounts,
+            "source": "database"
+        }
+
+    except Exception as e:
+        import logging
+        logging.getLogger("contracts").warning(f"Database read error: {e}")
+        return None
 
 
 # --- Sprint-3 KPI helpers (backend is source of truth) ---
@@ -2625,11 +2708,10 @@ _kurgan_logger = logging.getLogger("kurgan_api")
 def _get_portfolio_data_for_kurgan(smmm_id: str, client_id: str, period: str) -> dict:
     """
     Portfolio verisini KURGAN icin hazirla.
-    Gercek veri yoksa bos dict doner (mock data YOK!).
-    """
-    # Portfolio contract'tan veri cek
-    portfolio_path = CONTRACTS_DIR / "portfolio_customer_summary.json"
 
+    Sprint 9: Artik ONCE database'den (mizan_entries) okuyor.
+    Database'de veri yoksa JSON'a fallback yapar.
+    """
     portfolio_data = {
         "client_name": client_id,
         "smmm_name": smmm_id,
@@ -2645,12 +2727,37 @@ def _get_portfolio_data_for_kurgan(smmm_id: str, client_id: str, period: str) ->
         "ortak_gecmisi_temiz": True,
         "banka_data": {},
         "kdv_data": {},
-        "inflation_data": {}
+        "inflation_data": {},
+        "data_source": "none"
     }
+
+    # Sprint 9: First try database (mizan_entries table)
+    db_data = _get_mizan_data_from_db(smmm_id, client_id, period)
+
+    if db_data and db_data.get("entry_count", 0) > 0:
+        _kurgan_logger.info(f"Database'den {db_data['entry_count']} mizan kaydı okundu: {client_id}/{period}")
+        portfolio_data["data_source"] = "database"
+        portfolio_data["ciro"] = db_data.get("ciro", 0)
+        portfolio_data["kar_zarar"] = db_data.get("kar_zarar", 0)
+        portfolio_data["devreden_kdv"] = db_data.get("devreden_kdv", 0)
+        portfolio_data["mizan_entry_count"] = db_data.get("entry_count", 0)
+        portfolio_data["toplam_borc"] = db_data.get("toplam_borc", 0)
+        portfolio_data["toplam_alacak"] = db_data.get("toplam_alacak", 0)
+
+        # Calculate zarar_donem_sayisi from kar_zarar
+        if portfolio_data["kar_zarar"] < 0:
+            portfolio_data["zarar_donem_sayisi"] = 1
+
+        return portfolio_data
+
+    # Fallback to JSON file if no database data
+    _kurgan_logger.info(f"Database'de veri yok, JSON'a fallback: {client_id}/{period}")
+    portfolio_path = CONTRACTS_DIR / "portfolio_customer_summary.json"
 
     if portfolio_path.exists():
         try:
             raw = json.loads(portfolio_path.read_text(encoding="utf-8"))
+            portfolio_data["data_source"] = "json"
 
             # KPI'lardan veri cek
             kpis = raw.get("kpis", {})
