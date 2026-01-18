@@ -174,8 +174,8 @@ async def get_periods_for_client(
     return [
         PeriodResponse(
             id=p["id"],
-            code=p["id"],  # Use ID as code
-            label=get_period_label(p["id"]),
+            code=p.get("period_code") or p["id"],  # Use period_code if available
+            label=get_period_label(p.get("period_code") or p["id"]),
             description=get_period_description(p["start_date"], p["end_date"]),
             startDate=p["start_date"],
             endDate=p["end_date"],
