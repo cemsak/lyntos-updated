@@ -85,7 +85,6 @@ export async function parseFile(file: DetectedFile) {
     case 'HESAP_PLANI_EXCEL':
     case 'BILANCO_EXCEL':
     case 'GELIR_TABLOSU_EXCEL':
-    case 'BABS_FORM_EXCEL':
     case 'SGK_EKSIK_GUN_EXCEL':
       return { type: 'unsupported' as const, data: null, message: `${file.fileType} henuz desteklenmiyor` };
 
@@ -135,7 +134,6 @@ export async function parseFile(file: DetectedFile) {
     case 'VERGI_LEVHASI_PDF':
     case 'SGK_APHB_PDF':
     case 'SGK_EKSIK_GUN_PDF':
-    case 'BABS_FORM_PDF':
       return { type: 'unsupported' as const, data: null, message: `${file.fileType} henuz desteklenmiyor` };
 
     // Bilinmeyen

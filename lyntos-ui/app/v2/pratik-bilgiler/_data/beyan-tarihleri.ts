@@ -9,7 +9,6 @@ export const beyanTarihleri2026Ocak: BeyanTarihi[] = [
 
 export const beyanTarihleri2026Subat: BeyanTarihi[] = [
   { id: 'kdv-subat', beyanname: 'KDV Beyannamesi', son_tarih: '2026-02-28', odeme_tarihi: '2026-02-28', donem: 'Ocak 2026' },
-  { id: 'ba-bs', beyanname: 'Ba-Bs Formları', son_tarih: '2026-02-28', donem: 'Aralık 2025' },
   { id: 'e-defter', beyanname: 'e-Defter Berat Yükleme', son_tarih: '2026-02-28', donem: 'Aralık 2025' }
 ];
 

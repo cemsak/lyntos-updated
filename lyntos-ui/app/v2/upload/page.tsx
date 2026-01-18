@@ -87,14 +87,6 @@ const FILE_TYPE_CONFIG: Record<string, { label: string; icon: typeof FileSpreads
   'VERGI_LEVHASI_PDF': { label: 'Vergi Levhasi', icon: FileText, color: 'text-amber-600 bg-amber-100' },
   'VERGI_LEVHASI_IMAGE': { label: 'Vergi Levhasi (Goruntu)', icon: FileText, color: 'text-amber-600 bg-amber-100' },
 
-  // Ba-Bs
-  'BA_FORMU_XML': { label: 'Ba Formu', icon: FileCode, color: 'text-violet-600 bg-violet-100' },
-  'BS_FORMU_XML': { label: 'Bs Formu', icon: FileCode, color: 'text-violet-600 bg-violet-100' },
-  'BA_FORMU_PDF': { label: 'Ba Formu (PDF)', icon: FileText, color: 'text-violet-600 bg-violet-100' },
-  'BS_FORMU_PDF': { label: 'Bs Formu (PDF)', icon: FileText, color: 'text-violet-600 bg-violet-100' },
-  'BABS_FORM_EXCEL': { label: 'Ba-Bs Formu (Excel)', icon: FileSpreadsheet, color: 'text-violet-600 bg-violet-100' },
-  'BABS_FORM_PDF': { label: 'Ba-Bs Formu (PDF)', icon: FileText, color: 'text-violet-600 bg-violet-100' },
-
   // SGK
   'SGK_APHB_PDF': { label: 'APHB', icon: FileText, color: 'text-sky-600 bg-sky-100' },
   'SGK_APHB_EXCEL': { label: 'APHB (Excel)', icon: FileSpreadsheet, color: 'text-sky-600 bg-sky-100' },
@@ -266,8 +258,7 @@ export default function UploadPage() {
         groups['Banka'].push(file);
       } else if (type.includes('KDV') || type.includes('MUHTASAR') || type.includes('GECICI') ||
                  type.includes('KURUMLAR') || type.includes('GELIR_VERGISI') || type.includes('DAMGA') ||
-                 type.includes('VERGI_LEVHASI') || type.includes('BA_FORMU') || type.includes('BS_FORMU') ||
-                 type.includes('BABS')) {
+                 type.includes('VERGI_LEVHASI')) {
         groups['Beyanname'].push(file);
       } else if (type.includes('APHB') || type.includes('SGK') || type.includes('EKSIK_GUN')) {
         groups['SGK'].push(file);
@@ -662,7 +653,6 @@ export default function UploadPage() {
               { icon: FileText, label: 'KDV Beyan', color: 'text-red-600 bg-red-50' },
               { icon: FileText, label: 'Muhtasar', color: 'text-red-600 bg-red-50' },
               { icon: FileText, label: 'Gecici Vergi', color: 'text-red-600 bg-red-50' },
-              { icon: FileText, label: 'Ba-Bs Formu', color: 'text-violet-600 bg-violet-50' },
               { icon: FileText, label: 'APHB/SGK', color: 'text-sky-600 bg-sky-50' },
               { icon: FileText, label: 'Vergi Levhasi', color: 'text-amber-600 bg-amber-50' },
               { icon: FileSpreadsheet, label: 'Hesap Plani', color: 'text-purple-600 bg-purple-50' },

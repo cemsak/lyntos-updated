@@ -17,8 +17,7 @@ export const usulsuzlukCezalari: CezaVerisi[] = [
 export const ozelUsulsuzlukCezalari: CezaVerisi[] = [
   { id: 'ozel-fatura-almama', tur: 'ozel_usulsuzluk', title: 'Fatura/Belge Almama', tutar_veya_oran: '6.900 TL', aciklama: 'Her belge için', guncellik: guncellik2025 },
   { id: 'ozel-fatura-vermeme', tur: 'ozel_usulsuzluk', title: 'Fatura/Belge Vermeme', tutar_veya_oran: '6.900 TL', aciklama: 'Her belge için', guncellik: guncellik2025 },
-  { id: 'ozel-e-fatura', tur: 'ozel_usulsuzluk', title: 'e-Fatura/e-Defter İhlali', tutar_veya_oran: '55.000 TL', aciklama: 'Her ihlal için', guncellik: guncellik2025 },
-  { id: 'ozel-ba-bs', tur: 'ozel_usulsuzluk', title: 'Ba-Bs Vermeme/Geç Verme', tutar_veya_oran: '6.900 TL', aciklama: 'Her form için', guncellik: guncellik2025 }
+  { id: 'ozel-e-fatura', tur: 'ozel_usulsuzluk', title: 'e-Fatura/e-Defter İhlali', tutar_veya_oran: '55.000 TL', aciklama: 'Her ihlal için', guncellik: guncellik2025 }
 ];
 
 export const vergiZiyai: CezaVerisi = {

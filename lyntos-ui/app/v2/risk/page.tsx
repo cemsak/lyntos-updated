@@ -25,7 +25,8 @@ export default function RiskQueuePage() {
     async function fetchRiskItems() {
       const token = getAuthToken();
       if (!token) {
-        setError('Oturum bulunamadi. Lutfen giris yapin.');
+        // Token yoksa bile empty state goster (demo mode)
+        setRiskItems([]);
         setIsLoading(false);
         return;
       }
@@ -66,9 +67,9 @@ export default function RiskQueuePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Bekleyen Islemler</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Bekleyen İşlemler</h1>
         <p className="text-slate-600 mt-1">
-          Cozum bekleyen risk uyarilari
+          Çözüm bekleyen risk uyarıları
         </p>
       </div>
 
@@ -79,7 +80,7 @@ export default function RiskQueuePage() {
             <AlertTriangle className="w-8 h-8 text-red-600" />
             <div>
               <p className="text-2xl font-bold text-red-700">{stats.kritik}</p>
-              <p className="text-sm text-red-600">Kritik</p>
+              <p className="text-sm text-red-600">Kritik Seviye</p>
             </div>
           </div>
         </div>
@@ -88,7 +89,7 @@ export default function RiskQueuePage() {
             <Clock className="w-8 h-8 text-amber-600" />
             <div>
               <p className="text-2xl font-bold text-amber-700">{stats.orta}</p>
-              <p className="text-sm text-amber-600">Orta</p>
+              <p className="text-sm text-amber-600">Orta Seviye</p>
             </div>
           </div>
         </div>
@@ -97,7 +98,7 @@ export default function RiskQueuePage() {
             <CheckCircle2 className="w-8 h-8 text-blue-600" />
             <div>
               <p className="text-2xl font-bold text-blue-700">{stats.dusuk}</p>
-              <p className="text-sm text-blue-600">Dusuk</p>
+              <p className="text-sm text-blue-600">Düşük Seviye</p>
             </div>
           </div>
         </div>
@@ -106,7 +107,7 @@ export default function RiskQueuePage() {
             <CheckCircle2 className="w-8 h-8 text-green-600" />
             <div>
               <p className="text-2xl font-bold text-green-700">{stats.cozuldu}</p>
-              <p className="text-sm text-green-600">Cozuldu</p>
+              <p className="text-sm text-green-600">Çözüldü</p>
             </div>
           </div>
         </div>
@@ -117,7 +118,7 @@ export default function RiskQueuePage() {
         {isLoading ? (
           <div className="flex justify-center items-center p-12 bg-white rounded-xl border border-slate-200">
             <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
-            <span className="ml-2 text-slate-600">Yukleniyor...</span>
+            <span className="ml-2 text-slate-600">Yükleniyor...</span>
           </div>
         ) : error ? (
           <div className="flex flex-col items-center justify-center p-12 bg-white rounded-xl border border-slate-200">
@@ -129,14 +130,14 @@ export default function RiskQueuePage() {
             <CheckCircle2 className="w-16 h-16 text-green-400 mb-4" />
             <h3 className="text-lg font-semibold text-slate-800 mb-2">Bekleyen Risk Yok</h3>
             <p className="text-slate-500 text-center max-w-md">
-              Su anda cozum bekleyen risk ogesi bulunmuyor.
-              Mizan yukleyerek risk analizi baslatin.
+              Henüz bekleyen risk uyarısı bulunmuyor.
+              Mizan yükleyerek risk analizi başlatın.
             </p>
             <Link
               href="/v2/upload"
               className="mt-6 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
-              Veri Yukle
+              Veri Yükle
             </Link>
           </div>
         ) : (
@@ -185,7 +186,7 @@ export default function RiskQueuePage() {
                     href={`/v2/vdk/${risk.id}`}
                     className="inline-flex items-center gap-1 mt-2 text-sm text-blue-600 hover:text-blue-800"
                   >
-                    Incele <ArrowRight className="w-3 h-3" />
+                    İncele <ArrowRight className="w-3 h-3" />
                   </Link>
                 </div>
               </div>

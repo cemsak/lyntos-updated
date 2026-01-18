@@ -102,8 +102,7 @@ export const NAVIGATION: NavSection[] = [
         label: 'Bekleyen İşlemler',
         href: '/v2/risk',
         icon: AlertTriangle,
-        badge: 3,
-        badgeColor: 'danger',
+        // Badge is dynamically set based on actual pending risk items
       },
       {
         id: 'vdk-risk',

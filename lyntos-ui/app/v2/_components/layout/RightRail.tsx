@@ -4,7 +4,7 @@
  * LYNTOS RightRail Component
  * Sprint 2.4 - Anayasa Compliance
  *
- * "Komutan Paneli" - Dönem durumu ve hızlı aksiyonlar
+ * Dönem Özeti Paneli - Dönem durumu ve hızlı aksiyonlar
  * Feed ile senkronize çalışır
  */
 
@@ -145,7 +145,7 @@ export function RightRail({
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-sm font-bold">Dönem Durumu</h3>
-            <p className="text-[10px] text-slate-300 mt-0.5">Komutan Paneli</p>
+            <p className="text-[10px] text-slate-300 mt-0.5">Kontrol Paneli</p>
           </div>
           {acilToplam > 0 && (
             <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full animate-pulse">

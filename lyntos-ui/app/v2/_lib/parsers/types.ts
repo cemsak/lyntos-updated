@@ -15,7 +15,6 @@ export type DetectedFileType =
   | 'HESAP_PLANI_EXCEL'
   | 'BILANCO_EXCEL'
   | 'GELIR_TABLOSU_EXCEL'
-  | 'BABS_FORM_EXCEL'           // Ba-Bs Formlari
   | 'SGK_APHB_EXCEL'            // SGK Aylik Prim Hizmet Belgesi
   | 'SGK_EKSIK_GUN_EXCEL'       // SGK Eksik Gun Bildirimi
 
@@ -49,7 +48,6 @@ export type DetectedFileType =
   | 'VERGI_LEVHASI_PDF'
   | 'SGK_APHB_PDF'
   | 'SGK_EKSIK_GUN_PDF'
-  | 'BABS_FORM_PDF'
 
   // Bilinmeyen
   | 'UNKNOWN';

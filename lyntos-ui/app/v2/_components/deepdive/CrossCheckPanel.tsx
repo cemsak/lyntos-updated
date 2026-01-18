@@ -17,7 +17,7 @@ const EMPTY_STATE_STRUCTURE = [
   { source: 'Mizan (600-602)', target: 'KDV-1 Beyannamesi', icon: '📋', threshold: '≤%2' },
   { source: 'Mizan (153/253)', target: 'e-Fatura Alış Listesi', icon: '🧾', threshold: '≤%1' },
   { source: 'Mizan (102)', target: 'Banka Ekstresi', icon: '🏦', threshold: '₺0' },
-  { source: 'Ba-Bs Formu', target: 'e-Fatura Listesi', icon: '📄', threshold: '₺0' },
+  { source: 'Muhtasar (MPHB)', target: 'SGK APHB', icon: '👥', threshold: '₺0' },
 ];
 
 // SMMM Context Info for Cross-Check Panel
@@ -133,7 +133,7 @@ function getFallbackLabels(type: CrossCheckItem['check_type'], index: number): {
     kdv: { source: 'Mizan (191/391 KDV)', target: 'KDV-1 Beyannamesi' },
     e_fatura: { source: 'Mizan (600-602 Satislar)', target: 'e-Fatura Satis Listesi' },
     banka: { source: 'Mizan (102 Bankalar)', target: 'Banka Ekstresi' },
-    beyan: { source: 'Ba-Bs Formu', target: 'e-Fatura Listesi' },
+    beyan: { source: 'Muhtasar (MPHB)', target: 'SGK APHB' },
     other: { source: `Kaynak #${index + 1}`, target: `Hedef #${index + 1}` },
   };
   return typeLabels[type] || typeLabels.other;

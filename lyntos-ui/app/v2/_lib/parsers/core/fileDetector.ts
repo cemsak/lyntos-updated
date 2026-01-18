@@ -7,7 +7,6 @@
  * - e-Defter (XML)
  * - Banka Ekstreleri (CSV) - 25+ Turk bankasi
  * - KDV/Muhtasar/Gecici Vergi Beyannameleri (PDF)
- * - Ba-Bs Formlari (Excel/PDF)
  * - SGK/APHB Dokumanlari (Excel/PDF)
  * - Hesap Plani, Bilanco, Gelir Tablosu (Excel)
  */
@@ -136,7 +135,7 @@ export async function detectFileType(
 
 /**
  * Excel dosyasi tipini tespit et
- * Desteklenen tipler: Mizan, Yevmiye, Kebir, Hesap Plani, Bilanco, Gelir Tablosu, Ba-Bs, SGK, Banka Ekstre
+ * Desteklenen tipler: Mizan, Yevmiye, Kebir, Hesap Plani, Bilanco, Gelir Tablosu, SGK, Banka Ekstre
  */
 async function detectExcelType(
   base: Omit<DetectedFile, 'fileType' | 'confidence' | 'detectionMethod' | 'metadata'>,
@@ -216,21 +215,6 @@ async function detectExcelType(
     return {
       ...base,
       fileType: 'GELIR_TABLOSU_EXCEL',
-      confidence: 90,
-      detectionMethod: 'filename',
-      metadata: { donem },
-    };
-  }
-
-  // ═══ Ba-Bs FORMLARI ═══
-
-  if (lowerName.includes('ba-bs') || lowerName.includes('babs') ||
-      lowerName.includes('ba_bs') || lowerName.includes('form-ba') ||
-      lowerName.includes('form-bs') || lowerName.includes('ba formu') ||
-      lowerName.includes('bs formu')) {
-    return {
-      ...base,
-      fileType: 'BABS_FORM_EXCEL',
       confidence: 90,
       detectionMethod: 'filename',
       metadata: { donem },
@@ -420,18 +404,6 @@ async function detectCSVType(
       };
     }
 
-    // Ba-Bs CSV
-    if (lowerName.includes('ba-bs') || lowerName.includes('babs') ||
-        lowerName.includes('ba_bs') || lowerName.includes('form-ba') ||
-        lowerName.includes('form-bs')) {
-      return {
-        ...base,
-        fileType: 'BABS_FORM_EXCEL', // Form olarak isle
-        confidence: 85,
-        detectionMethod: 'filename',
-        metadata: { donem: extractPeriodFromPath(base.originalPath) },
-      };
-    }
   }
 
   if (bankaInfo) {
@@ -621,7 +593,7 @@ async function detectXMLType(
 /**
  * PDF dosyasi tipini tespit et
  * Desteklenen tipler: KDV, Muhtasar, Gecici Vergi, Kurumlar Vergisi, Damga Vergisi,
- *                     Vergi Levhasi, SGK APHB, Ba-Bs Formlari
+ *                     Vergi Levhasi, SGK APHB
  */
 async function detectPDFType(
   base: Omit<DetectedFile, 'fileType' | 'confidence' | 'detectionMethod' | 'metadata'>,
@@ -780,19 +752,6 @@ async function detectPDFType(
     };
   }
 
-  // ═══ Ba-Bs FORMLARI ═══
-  if (lowerName.includes('ba-bs') || lowerName.includes('babs') ||
-      lowerName.includes('ba_bs') || lowerName.includes('form-ba') ||
-      lowerName.includes('form-bs')) {
-    return {
-      ...base,
-      fileType: 'BABS_FORM_PDF',
-      confidence: 90,
-      detectionMethod: 'filename',
-      metadata: { ay: ayInfo?.ayAdi, donem },
-    };
-  }
-
   // ═══ BILINMEYEN ═══
   return {
     ...base,
@@ -831,7 +790,6 @@ function createEmptyTypeGroups(): Record<DetectedFileType, DetectedFile[]> {
     HESAP_PLANI_EXCEL: [],
     BILANCO_EXCEL: [],
     GELIR_TABLOSU_EXCEL: [],
-    BABS_FORM_EXCEL: [],
     SGK_APHB_EXCEL: [],
     SGK_EKSIK_GUN_EXCEL: [],
 
@@ -865,7 +823,6 @@ function createEmptyTypeGroups(): Record<DetectedFileType, DetectedFile[]> {
     VERGI_LEVHASI_PDF: [],
     SGK_APHB_PDF: [],
     SGK_EKSIK_GUN_PDF: [],
-    BABS_FORM_PDF: [],
 
     // Bilinmeyen
     UNKNOWN: [],
@@ -905,7 +862,7 @@ export function getDetectionStats(files: DetectedFile[]): {
     banka: number;         // Banka ekstreleri
     beyanname: number;     // PDF beyannameler
     sgk: number;           // SGK dokumanlari
-    diger: number;         // Diger (Levha, Ba-Bs, vb.)
+    diger: number;         // Diger (Vergi Levhasi vb.)
   };
 } {
   const byType: Record<DetectedFileType, number> = {
@@ -916,7 +873,6 @@ export function getDetectionStats(files: DetectedFile[]): {
     HESAP_PLANI_EXCEL: 0,
     BILANCO_EXCEL: 0,
     GELIR_TABLOSU_EXCEL: 0,
-    BABS_FORM_EXCEL: 0,
     SGK_APHB_EXCEL: 0,
     SGK_EKSIK_GUN_EXCEL: 0,
 
@@ -950,7 +906,6 @@ export function getDetectionStats(files: DetectedFile[]): {
     VERGI_LEVHASI_PDF: 0,
     SGK_APHB_PDF: 0,
     SGK_EKSIK_GUN_PDF: 0,
-    BABS_FORM_PDF: 0,
 
     // Bilinmeyen
     UNKNOWN: 0,
@@ -985,7 +940,7 @@ export function getDetectionStats(files: DetectedFile[]): {
                byType.KURUMLAR_VERGISI_PDF + byType.DAMGA_VERGISI_PDF,
     sgk: byType.SGK_APHB_EXCEL + byType.SGK_EKSIK_GUN_EXCEL +
          byType.SGK_APHB_PDF + byType.SGK_EKSIK_GUN_PDF,
-    diger: byType.VERGI_LEVHASI_PDF + byType.BABS_FORM_EXCEL + byType.BABS_FORM_PDF,
+    diger: byType.VERGI_LEVHASI_PDF,
   };
 
   return {
