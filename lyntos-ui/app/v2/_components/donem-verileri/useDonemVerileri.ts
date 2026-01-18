@@ -72,7 +72,10 @@ interface UseDonemVerileriReturn {
 
 export function useDonemVerileri(): UseDonemVerileriReturn {
   // Gerçek store'dan oku - MOCK YOK
+  // detectedFiles: in-memory (lost on refresh)
+  // fileSummaries: persisted to localStorage (survives refresh)
   const detectedFiles = useDonemStore(s => s.detectedFiles);
+  const fileSummaries = useDonemStore(s => s.fileSummaries);
 
   // Hydration state - Zustand persist hydration tamamlandı mı?
   // isLoaded "veri var mı" demek, hydration "store hazır mı" demek
@@ -91,9 +94,12 @@ export function useDonemVerileri(): UseDonemVerileriReturn {
     // Yüklenen belge tiplerini tespit et
     const yukluTipler = new Set<BelgeTipi>();
 
+    // Use detectedFiles if available (same session), otherwise fall back to fileSummaries (after refresh)
+    const files = detectedFiles.length > 0 ? detectedFiles : fileSummaries;
+
     // Store'daki dosyalardan tipleri çıkar
-    if (detectedFiles && detectedFiles.length > 0) {
-      for (const file of detectedFiles) {
+    if (files && files.length > 0) {
+      for (const file of files) {
         const fileType = file.fileType as DetectedFileType;
         const belgeTipi = FILE_TYPE_TO_BELGE_TIPI[fileType];
         if (belgeTipi) {
@@ -114,8 +120,12 @@ export function useDonemVerileri(): UseDonemVerileriReturn {
     const belgeler: BelgeDurumData[] = Object.values(BELGE_TANIMLARI).map(tanim => {
       const yuklendi = yukluTipler.has(tanim.tip);
 
-      // Yüklenen dosya bilgisini bul
+      // Yüklenen dosya bilgisini bul (try detectedFiles first, then summaries)
       const matchingFile = detectedFiles?.find(f => {
+        const belgeTipi = FILE_TYPE_TO_BELGE_TIPI[f.fileType as DetectedFileType];
+        return belgeTipi === tanim.tip ||
+               LEGACY_BELGE_TIPI_MAP[tanim.tip] === belgeTipi;
+      }) || fileSummaries?.find(f => {
         const belgeTipi = FILE_TYPE_TO_BELGE_TIPI[f.fileType as DetectedFileType];
         return belgeTipi === tanim.tip ||
                LEGACY_BELGE_TIPI_MAP[tanim.tip] === belgeTipi;
@@ -152,7 +162,7 @@ export function useDonemVerileri(): UseDonemVerileriReturn {
       varSayisi,
       bekleyenSayisi,
     };
-  }, [detectedFiles, manuallyMarked]);
+  }, [detectedFiles, fileSummaries, manuallyMarked]);
 
   // Upload modal'dan çağrılan fonksiyon
   const markAsUploaded = useCallback((tip: BelgeTipi) => {

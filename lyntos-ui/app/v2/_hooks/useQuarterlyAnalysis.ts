@@ -1,6 +1,9 @@
 /**
  * LYNTOS Quarterly Analysis Hook
  * ZIP upload -> Parse -> Cross-check -> Results
+ *
+ * Supports nested ZIP extraction (max depth 2)
+ * e-Defter archives inside Q1.zip are automatically extracted
  */
 
 'use client';
@@ -24,6 +27,92 @@ import {
 } from '../_lib/parsers';
 
 import type { EngineCheckReport } from '../_lib/parsers/crosscheck/types';
+
+// ============================================================================
+// NESTED ZIP EXTRACTION HELPER
+// ============================================================================
+
+interface ExtractedFile {
+  fileName: string;
+  path: string;
+  content: ArrayBuffer;
+  fromNestedZip: boolean;
+  nestedZipName?: string;
+}
+
+const MAX_ZIP_DEPTH = 2;
+
+/**
+ * Check if a file should be skipped (system files, etc.)
+ */
+function shouldSkipFile(name: string): boolean {
+  return (
+    name.startsWith('__MACOSX') ||
+    name.startsWith('.') ||
+    name.includes('/.') ||
+    name.endsWith('.DS_Store') ||
+    name.endsWith('.xslt') // XSLT stylesheets are helper files, skip
+  );
+}
+
+/**
+ * Recursively extract files from a ZIP, including nested ZIPs
+ */
+async function extractZipRecursive(
+  zipData: ArrayBuffer | Blob,
+  basePath: string = '',
+  depth: number = 0,
+  nestedZipName?: string
+): Promise<ExtractedFile[]> {
+  if (depth > MAX_ZIP_DEPTH) {
+    console.warn(`[ZIP] Max depth ${MAX_ZIP_DEPTH} reached at: ${basePath}`);
+    return [];
+  }
+
+  const zip = await JSZip.loadAsync(zipData);
+  const extractedFiles: ExtractedFile[] = [];
+
+  for (const [entryName, zipEntry] of Object.entries(zip.files)) {
+    // Skip directories
+    if (zipEntry.dir) continue;
+
+    // Skip system files
+    if (shouldSkipFile(entryName)) continue;
+
+    const fileName = entryName.split('/').pop() || entryName;
+    const fullPath = basePath ? `${basePath}/${entryName}` : entryName;
+    const ext = fileName.split('.').pop()?.toLowerCase();
+
+    try {
+      if (ext === 'zip') {
+        // Nested ZIP — extract recursively
+        console.log(`[ZIP] Extracting nested ZIP: ${fileName} (depth ${depth + 1})`);
+        const nestedContent = await zipEntry.async('arraybuffer');
+        const nestedFiles = await extractZipRecursive(
+          nestedContent,
+          fullPath,
+          depth + 1,
+          fileName
+        );
+        extractedFiles.push(...nestedFiles);
+      } else {
+        // Regular file — add to results
+        const content = await zipEntry.async('arraybuffer');
+        extractedFiles.push({
+          fileName,
+          path: fullPath,
+          content,
+          fromNestedZip: depth > 0,
+          nestedZipName: nestedZipName,
+        });
+      }
+    } catch (err) {
+      console.warn(`[ZIP] Failed to extract ${entryName}:`, err);
+    }
+  }
+
+  return extractedFiles;
+}
 
 export type AnalysisPhase =
   | 'idle'
@@ -102,7 +191,7 @@ export function useQuarterlyAnalysis() {
     const startTime = Date.now();
 
     try {
-      // Phase 1: Extracting
+      // Phase 1: Extracting (with nested ZIP support)
       updateState({
         phase: 'extracting',
         progress: 5,
@@ -112,20 +201,21 @@ export function useQuarterlyAnalysis() {
       });
 
       const arrayBuffer = await file.arrayBuffer();
-      const zip = await JSZip.loadAsync(arrayBuffer);
-      const fileEntries = Object.keys(zip.files).filter(name => !zip.files[name].dir);
 
-      // Filter out system files
-      const validEntries = fileEntries.filter(name =>
-        !name.startsWith('__MACOSX') &&
-        !name.startsWith('.') &&
-        !name.includes('/.') &&
-        !name.endsWith('.DS_Store')
-      );
+      // Extract all files recursively (including nested ZIPs)
+      console.log(`[ZIP] Starting recursive extraction of: ${file.name}`);
+      const extractedFiles = await extractZipRecursive(arrayBuffer, '', 0);
+      console.log(`[ZIP] Extracted ${extractedFiles.length} files (including from nested ZIPs)`);
+
+      // Count files from nested ZIPs for logging
+      const nestedCount = extractedFiles.filter(f => f.fromNestedZip).length;
+      if (nestedCount > 0) {
+        console.log(`[ZIP] ${nestedCount} files extracted from nested ZIPs`);
+      }
 
       updateState({
         progress: 15,
-        fileStats: { total: validEntries.length, detected: 0, parsed: 0, failed: 0 }
+        fileStats: { total: extractedFiles.length, detected: 0, parsed: 0, failed: 0 }
       });
 
       // Phase 2: Detecting file types
@@ -133,24 +223,24 @@ export function useQuarterlyAnalysis() {
 
       const detectedFiles: DetectedFile[] = [];
 
-      for (let i = 0; i < validEntries.length; i++) {
-        const entryName = validEntries[i];
-        const zipEntry = zip.files[entryName];
+      for (let i = 0; i < extractedFiles.length; i++) {
+        const extractedFile = extractedFiles[i];
 
         updateState({
-          currentFile: entryName.split('/').pop() || entryName,
-          progress: 20 + (i / validEntries.length) * 20
+          currentFile: extractedFile.fileName,
+          progress: 20 + (i / extractedFiles.length) * 20
         });
 
         try {
-          const content = await zipEntry.async('arraybuffer');
-          const fileName = entryName.split('/').pop() || entryName;
-
           // detectFileType returns DetectedFile with rawContent included
-          const detected = await detectFileType(fileName, content, entryName);
+          const detected = await detectFileType(
+            extractedFile.fileName,
+            extractedFile.content,
+            extractedFile.path
+          );
           detectedFiles.push(detected);
         } catch (err) {
-          console.warn(`Skip file ${entryName}:`, err);
+          console.warn(`Skip file ${extractedFile.path}:`, err);
         }
       }
 
@@ -159,7 +249,7 @@ export function useQuarterlyAnalysis() {
       updateState({
         detectedFiles,
         fileStats: {
-          total: validEntries.length,
+          total: extractedFiles.length,
           detected: recognizedFiles.length,
           parsed: 0,
           failed: 0
@@ -231,7 +321,7 @@ export function useQuarterlyAnalysis() {
 
         updateState({
           fileStats: {
-            total: validEntries.length,
+            total: extractedFiles.length,
             detected: recognizedFiles.length,
             parsed: parsedCount,
             failed: failedCount

@@ -131,6 +131,8 @@ export async function parseFile(file: DetectedFile) {
     // Diger PDF'ler - henuz parser yok
     case 'KURUMLAR_VERGISI_PDF':
     case 'DAMGA_VERGISI_PDF':
+    case 'POSET_BEYANNAME_PDF':
+    case 'POSET_TAHAKKUK_PDF':
     case 'VERGI_LEVHASI_PDF':
     case 'SGK_APHB_PDF':
     case 'SGK_EKSIK_GUN_PDF':

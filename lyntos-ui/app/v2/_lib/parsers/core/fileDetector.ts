@@ -148,7 +148,10 @@ async function detectExcelType(
   // ═══ MUHASEBE DEFTERI TIPI TESPIT ═══
 
   // Mizan (en yuksek oncelik)
-  if (lowerName.includes('mizan')) {
+  // Turkish İ -> i̇ when lowercased, so check both variations
+  // Also handles: MİZAN, mizan, Mizan, etc.
+  const mizanMatch = /m[iİı]zan/i.test(fileName);
+  if (lowerName.includes('mizan') || mizanMatch) {
     return {
       ...base,
       fileType: 'MIZAN_EXCEL',
@@ -718,6 +721,37 @@ async function detectPDFType(
     };
   }
 
+  // ═══ POSET (PLASTIK POSET VERGISI) ═══
+  // Pattern: *_Poset(UC_AYLIK).xml_BYN.pdf veya *_Poset(UC_AYLIK).xml_THK.pdf
+  if (lowerName.includes('poset') || lowerName.includes('poşet')) {
+    if (lowerName.includes('byn') || lowerName.includes('beyanname')) {
+      return {
+        ...base,
+        fileType: 'POSET_BEYANNAME_PDF',
+        confidence: 95,
+        detectionMethod: 'filename',
+        metadata: { ay: ayInfo?.ayAdi, donem },
+      };
+    }
+    if (lowerName.includes('thk') || lowerName.includes('tahakkuk')) {
+      return {
+        ...base,
+        fileType: 'POSET_TAHAKKUK_PDF',
+        confidence: 95,
+        detectionMethod: 'filename',
+        metadata: { ay: ayInfo?.ayAdi, donem },
+      };
+    }
+    // Sadece Poset yaziyorsa beyanname varsay
+    return {
+      ...base,
+      fileType: 'POSET_BEYANNAME_PDF',
+      confidence: 75,
+      detectionMethod: 'filename',
+      metadata: { ay: ayInfo?.ayAdi, donem },
+    };
+  }
+
   // ═══ VERGI LEVHASI ═══
   if (lowerName.includes('levha') || lowerName.includes('vergi levha')) {
     return {
@@ -818,6 +852,8 @@ function createEmptyTypeGroups(): Record<DetectedFileType, DetectedFile[]> {
     GECICI_VERGI_TAHAKKUK_PDF: [],
     KURUMLAR_VERGISI_PDF: [],
     DAMGA_VERGISI_PDF: [],
+    POSET_BEYANNAME_PDF: [],
+    POSET_TAHAKKUK_PDF: [],
 
     // Diger PDF'ler
     VERGI_LEVHASI_PDF: [],
@@ -901,6 +937,8 @@ export function getDetectionStats(files: DetectedFile[]): {
     GECICI_VERGI_TAHAKKUK_PDF: 0,
     KURUMLAR_VERGISI_PDF: 0,
     DAMGA_VERGISI_PDF: 0,
+    POSET_BEYANNAME_PDF: 0,
+    POSET_TAHAKKUK_PDF: 0,
 
     // Diger PDF
     VERGI_LEVHASI_PDF: 0,
@@ -937,7 +975,8 @@ export function getDetectionStats(files: DetectedFile[]): {
     beyanname: byType.KDV_BEYANNAME_PDF + byType.KDV_TAHAKKUK_PDF +
                byType.MUHTASAR_BEYANNAME_PDF + byType.MUHTASAR_TAHAKKUK_PDF +
                byType.GECICI_VERGI_BEYANNAME_PDF + byType.GECICI_VERGI_TAHAKKUK_PDF +
-               byType.KURUMLAR_VERGISI_PDF + byType.DAMGA_VERGISI_PDF,
+               byType.KURUMLAR_VERGISI_PDF + byType.DAMGA_VERGISI_PDF +
+               byType.POSET_BEYANNAME_PDF + byType.POSET_TAHAKKUK_PDF,
     sgk: byType.SGK_APHB_EXCEL + byType.SGK_EKSIK_GUN_EXCEL +
          byType.SGK_APHB_PDF + byType.SGK_EKSIK_GUN_PDF,
     diger: byType.VERGI_LEVHASI_PDF,

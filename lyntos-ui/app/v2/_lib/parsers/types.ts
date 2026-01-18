@@ -43,6 +43,8 @@ export type DetectedFileType =
   | 'GECICI_VERGI_TAHAKKUK_PDF'
   | 'KURUMLAR_VERGISI_PDF'
   | 'DAMGA_VERGISI_PDF'
+  | 'POSET_BEYANNAME_PDF'
+  | 'POSET_TAHAKKUK_PDF'
 
   // Diger PDF'ler
   | 'VERGI_LEVHASI_PDF'
