@@ -27,6 +27,7 @@ from api.v2.evidence_bundle import router as evidence_bundle_router
 from api.v2.brief import router as brief_router
 from api.v2.dossier import router as dossier_router
 from api.v2.periods import router as periods_router
+from api.v2.bulk_upload import router as bulk_upload_router
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -142,6 +143,7 @@ app.include_router(evidence_bundle_router, prefix="/api/v2")
 app.include_router(brief_router, prefix="/api/v2")
 app.include_router(dossier_router, prefix="/api/v2")
 app.include_router(periods_router, prefix="/api/v2")
+app.include_router(bulk_upload_router, prefix="/api/v2")
 # --- /LYNTOS v2 API ---
 
 app.add_middleware(
