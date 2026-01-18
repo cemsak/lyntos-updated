@@ -2,8 +2,13 @@
  * Central Authentication Helper
  * LYNTOS V2 - Merkezi auth token yönetimi
  *
- * DEV_HKOZKAN fallback'ler kaldırıldı - Token yoksa hata fırlat
+ * Development mode: DEV_HKOZKAN fallback aktif
+ * Production mode: Token yoksa hata fırlatılır
  */
+
+// Development mode check - Next.js environment
+const IS_DEV = process.env.NODE_ENV === 'development';
+const DEV_TOKEN = 'DEV_HKOZKAN';
 
 export class AuthError extends Error {
   constructor(message: string = 'Oturum bulunamadı. Lütfen giriş yapın.') {
@@ -14,11 +19,22 @@ export class AuthError extends Error {
 
 /**
  * Get auth token from localStorage
- * Returns null if not available (SSR or no token)
+ * In development mode, falls back to DEV_HKOZKAN if no token
  */
 export function getAuthToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem('lyntos_token');
+  if (typeof window === 'undefined') {
+    // SSR - use dev token in development
+    return IS_DEV ? DEV_TOKEN : null;
+  }
+
+  const token = localStorage.getItem('lyntos_token');
+
+  // Development fallback
+  if (!token && IS_DEV) {
+    return DEV_TOKEN;
+  }
+
+  return token;
 }
 
 /**

@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { PanelEnvelope, createLoadingEnvelope, createErrorEnvelope, createMissingEnvelope } from '../contracts/envelope';
 import { useDashboardScope, useScopeComplete } from '../scope/useDashboardScope';
 import { buildScopedUrl, type ScopeParams } from '../contracts/endpoints';
+import { getAuthToken } from '../../_lib/auth';
 
 interface FetchOptions {
   timeout?: number;
@@ -38,8 +39,8 @@ export function useFailSoftFetch<T>(
     if (typeof window === 'undefined') {
       return createEmptyEnvelope<T>('Veri yüklemek için dönem seçin.');
     }
-    // Check token synchronously
-    const token = localStorage.getItem('lyntos_token');
+    // Check token using centralized auth (includes DEV_HKOZKAN fallback in dev mode)
+    const token = getAuthToken();
     if (!token) {
       return createEmptyEnvelope<T>('Veri yüklemek için önce dönem seçin.');
     }
@@ -71,9 +72,10 @@ export function useFailSoftFetch<T>(
       return;
     }
 
-    const token = localStorage.getItem('lyntos_token');
+    // Use centralized auth (includes DEV_HKOZKAN fallback in dev mode)
+    const token = getAuthToken();
     if (!token) {
-      // Token yoksa empty state döndür (demo mode) - NO loading flash
+      // Token yoksa empty state döndür - NO loading flash
       setEnvelope(createEmptyEnvelope<T>('Veri yüklemek için önce dönem seçin.'));
       return;
     }

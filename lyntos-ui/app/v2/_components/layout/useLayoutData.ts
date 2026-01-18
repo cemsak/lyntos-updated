@@ -4,11 +4,13 @@
  * LYNTOS Layout Data Hook
  * Sprint MOCK-006 - Mock data removed, uses only API data
  *
- * Fetches user, clients, and periods from backend - no mock fallback
+ * Fetches user, clients, and periods from backend
+ * Uses centralized auth for DEV_HKOZKAN fallback in development
  */
 import { useState, useEffect, useCallback } from 'react';
 import type { User, Client, Period } from './types';
 import { API_BASE_URL } from '../../_lib/config/api';
+import { getAuthToken } from '../../_lib/auth';
 
 const API_BASE = API_BASE_URL;
 
@@ -22,16 +24,12 @@ interface UseLayoutDataResult {
   refreshPeriods: (clientId: string) => Promise<void>;
 }
 
-function getAuthToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem('lyntos_token');
-}
-
 async function fetchWithAuth<T>(endpoint: string): Promise<T | null> {
+  // Uses centralized getAuthToken which has DEV_HKOZKAN fallback
   const token = getAuthToken();
   if (!token) {
-    console.warn('[Auth] Token bulunamadi - gecici mod');
-    return null; // Hata firlatma, null dondur
+    console.warn('[Auth] Token bulunamadi');
+    return null;
   }
 
   const response = await fetch(`${API_BASE}${endpoint}`, {
