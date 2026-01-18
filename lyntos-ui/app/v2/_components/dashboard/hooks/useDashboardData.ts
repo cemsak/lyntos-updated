@@ -22,8 +22,9 @@ import {
   createEmptyEnvelope,
 } from '../types';
 
-// API base URL - Backend port
-const API_BASE = 'http://127.0.0.1:8000';
+// API base URL - from centralized config
+import { API_BASE_URL } from '../../../_lib/config/api';
+const API_BASE = API_BASE_URL;
 
 // Auth header - dynamically get token from localStorage
 function getAuthHeader(): Record<string, string> {

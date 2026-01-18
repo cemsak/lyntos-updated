@@ -27,6 +27,11 @@ import {
 } from '../_lib/parsers';
 
 import type { EngineCheckReport } from '../_lib/parsers/crosscheck/types';
+import {
+  syncDonemToBackend,
+  type SyncPayload,
+  type SyncResponse
+} from '../_lib/api/donemSync';
 
 // ============================================================================
 // NESTED ZIP EXTRACTION HELPER
@@ -120,8 +125,11 @@ export type AnalysisPhase =
   | 'detecting'
   | 'parsing'
   | 'checking'
+  | 'syncing'
   | 'complete'
   | 'error';
+
+export type SyncStatus = 'idle' | 'syncing' | 'success' | 'error';
 
 export interface FileStats {
   total: number;
@@ -152,6 +160,9 @@ export interface AnalysisState {
   error: string | null;
   startTime: number | null;
   endTime: number | null;
+  // Sync state
+  syncStatus: SyncStatus;
+  syncResult: SyncResponse | null;
 }
 
 const initialState: AnalysisState = {
@@ -173,7 +184,10 @@ const initialState: AnalysisState = {
   checkReport: null,
   error: null,
   startTime: null,
-  endTime: null
+  endTime: null,
+  // Sync state
+  syncStatus: 'idle',
+  syncResult: null
 };
 
 export function useQuarterlyAnalysis() {
@@ -367,14 +381,98 @@ export function useQuarterlyAnalysis() {
     }
   }, [updateState]);
 
+  /**
+   * Sync parsed data to backend
+   * Call this after analysis is complete to persist data
+   */
+  const syncToBackend = useCallback(async (
+    meta: {
+      clientId: string;
+      clientName: string;
+      period: string;
+      quarter: string;
+      year: number;
+      sourceFile: string;
+    },
+    tenantId: string = 'default'
+  ) => {
+    if (state.phase !== 'complete') {
+      console.warn('[Sync] Cannot sync - analysis not complete');
+      return null;
+    }
+
+    updateState({ syncStatus: 'syncing' });
+
+    try {
+      // Build file summaries from detected files
+      const fileSummaries: SyncPayload['fileSummaries'] = state.detectedFiles
+        .filter(f => f.fileType !== 'UNKNOWN')
+        .map(f => ({
+          id: f.id || crypto.randomUUID(),
+          fileName: f.fileName,
+          fileType: f.fileType,
+          fileSize: f.rawContent?.byteLength || 0,
+          confidence: f.confidence,
+          metadata: {
+            originalPath: f.originalPath,
+            fileExtension: f.fileExtension,
+          }
+        }));
+
+      const payload: SyncPayload = {
+        tenantId,
+        meta: {
+          ...meta,
+          uploadedAt: new Date().toISOString(),
+        },
+        fileSummaries,
+        stats: state.fileStats,
+      };
+
+      console.log('[Sync] Sending to backend:', {
+        clientId: meta.clientId,
+        period: meta.period,
+        fileCount: fileSummaries.length
+      });
+
+      const result = await syncDonemToBackend(payload);
+
+      updateState({
+        syncStatus: result.success ? 'success' : 'error',
+        syncResult: result
+      });
+
+      return result;
+
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Sync failed';
+      console.error('[Sync] Error:', errorMessage);
+      updateState({
+        syncStatus: 'error',
+        syncResult: {
+          success: false,
+          syncedCount: 0,
+          errorCount: 1,
+          skippedCount: 0,
+          results: [],
+          errors: [errorMessage]
+        }
+      });
+      return null;
+    }
+  }, [state.phase, state.detectedFiles, state.fileStats, updateState]);
+
   return {
     ...state,
     analyzeZip,
     reset,
+    syncToBackend,
     isIdle: state.phase === 'idle',
-    isProcessing: ['extracting', 'detecting', 'parsing', 'checking'].includes(state.phase),
+    isProcessing: ['extracting', 'detecting', 'parsing', 'checking', 'syncing'].includes(state.phase),
     isComplete: state.phase === 'complete',
     isError: state.phase === 'error',
+    isSyncing: state.syncStatus === 'syncing',
+    isSynced: state.syncStatus === 'success',
     duration: state.startTime && state.endTime ? state.endTime - state.startTime : null
   };
 }

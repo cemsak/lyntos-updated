@@ -19,6 +19,13 @@ from api.v1.notifications import router as notifications_router
 from api.v1.chat import router as chat_router
 from api.v1.user import router as user_router
 from api.v2.validate_vdk import router as vdk_validate_router
+from api.v2.donem_sync import router as donem_sync_router
+from api.v2.mizan_sync import router as mizan_sync_router
+from api.v2.cross_check import router as cross_check_router
+from api.v2.feed import router as feed_router
+from api.v2.evidence_bundle import router as evidence_bundle_router
+from api.v2.brief import router as brief_router
+from api.v2.dossier import router as dossier_router
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -126,6 +133,13 @@ app.include_router(user_router, prefix="/api/v1", tags=["User"])
 
 # --- LYNTOS v2 API ---
 app.include_router(vdk_validate_router)
+app.include_router(donem_sync_router)
+app.include_router(mizan_sync_router)
+app.include_router(cross_check_router)
+app.include_router(feed_router, prefix="/api/v2")
+app.include_router(evidence_bundle_router, prefix="/api/v2")
+app.include_router(brief_router, prefix="/api/v2")
+app.include_router(dossier_router, prefix="/api/v2")
 # --- /LYNTOS v2 API ---
 
 app.add_middleware(

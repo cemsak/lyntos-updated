@@ -8,8 +8,9 @@
  */
 import { useState, useEffect, useCallback } from 'react';
 import type { User, Client, Period } from './types';
+import { API_BASE_URL } from '../../_lib/config/api';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_BASE = API_BASE_URL;
 
 interface UseLayoutDataResult {
   user: User | null;

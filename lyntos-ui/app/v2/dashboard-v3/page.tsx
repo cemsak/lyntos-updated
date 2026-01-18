@@ -5,11 +5,14 @@
 
 'use client';
 
-import React, { useState } from 'react';
-import { AlertCircle, FolderOpen, BarChart3, Calculator, Layers, Radio } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { AlertCircle, FolderOpen, BarChart3, Calculator, Layers, Radio, Cloud, CloudOff, RefreshCw } from 'lucide-react';
 
 // Scope
 import { useDashboardScope, useScopeComplete } from '../_components/scope/useDashboardScope';
+
+// Dashboard Data Hook (Backend API)
+import { useDashboardData } from '../_hooks/useDashboardData';
 
 // Shared
 import { Card } from '../_components/shared/Card';
@@ -44,6 +47,9 @@ import { RegWatchPanel } from '../_components/operations/RegWatchPanel';
 import { UploadModal } from '../_components/modals';
 import { FiveWhyWizard } from '../_components/vdk/FiveWhyWizard';
 
+// Missing Documents Card (Backend Big-6 Status)
+import { MissingDocumentsCard } from '../_components/MissingDocumentsCard';
+
 export default function DashboardV3Page() {
   const { scope } = useDashboardScope();
   const scopeComplete = useScopeComplete();
@@ -59,6 +65,20 @@ export default function DashboardV3Page() {
   // Hooks
   const { markAsUploaded } = useDonemVerileri();
   const { aksiyonlar } = useAksiyonlar();
+
+  // Backend Sync Status - fetch from API
+  const {
+    data: backendData,
+    isLoading: isBackendLoading,
+    isError: isBackendError,
+    isEmpty: isBackendEmpty,
+    refetch: refetchBackendData,
+    docTypeCounts,
+  } = useDashboardData(
+    scopeComplete ? scope.period : null,
+    scope.smmm_id || 'default',
+    scope.client_id || 'default'
+  );
 
   // Handlers
   const handleUploadClick = (belgeTipi: BelgeTipi) => {
@@ -108,12 +128,50 @@ export default function DashboardV3Page() {
     <div className="space-y-6">
       {/* Context Bar */}
       <Card>
-        <div className="flex flex-wrap items-center gap-4">
-          <Badge variant="success">V3 Aktif</Badge>
-          <span className="text-sm text-slate-600">
-            {scope.smmm_id} / {scope.client_id} / {scope.period}
-          </span>
-          <Badge variant="info">Beyaz Tema</Badge>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-4">
+            <Badge variant="success">V3 Aktif</Badge>
+            <span className="text-sm text-slate-600">
+              {scope.smmm_id} / {scope.client_id} / {scope.period}
+            </span>
+            <Badge variant="info">Beyaz Tema</Badge>
+          </div>
+
+          {/* Backend Sync Status */}
+          <div className="flex items-center gap-2">
+            {isBackendLoading ? (
+              <div className="flex items-center gap-2 text-slate-500">
+                <RefreshCw className="w-4 h-4 animate-spin" />
+                <span className="text-xs">Yükleniyor...</span>
+              </div>
+            ) : isBackendError ? (
+              <button
+                onClick={() => refetchBackendData()}
+                className="flex items-center gap-2 text-red-500 hover:text-red-700"
+                title="Yeniden dene"
+              >
+                <CloudOff className="w-4 h-4" />
+                <span className="text-xs">Bağlantı hatası</span>
+              </button>
+            ) : isBackendEmpty ? (
+              <div className="flex items-center gap-2 text-amber-500" title="Backend'de veri yok">
+                <Cloud className="w-4 h-4" />
+                <span className="text-xs">Senkronize edilmedi</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-emerald-600" title={`${backendData?.totalCount || 0} dosya senkronize`}>
+                <Cloud className="w-4 h-4" />
+                <span className="text-xs font-medium">
+                  {backendData?.totalCount || 0} dosya senkronize
+                </span>
+                {backendData?.syncedAt && (
+                  <span className="text-xs text-slate-400">
+                    ({new Date(backendData.syncedAt).toLocaleDateString('tr-TR')})
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </Card>
 
@@ -137,7 +195,7 @@ export default function DashboardV3Page() {
         />
       </DashboardSection>
 
-      {/* ROW 2: DONEM VERILERI (11 Belge) */}
+      {/* ROW 2: DONEM VERILERI (11 Belge) + Backend Big-6 Status */}
       <DashboardSection
         id="donem-verileri-section"
         title="Donem Verileri"
@@ -145,15 +203,26 @@ export default function DashboardV3Page() {
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <DonemVerileriPanel onUploadClick={handleUploadClick} />
-          <button
-            onClick={() => handleUploadClick('MIZAN')}
-            className="bg-white border-2 border-dashed border-slate-300 rounded-lg p-6 flex items-center justify-center min-h-[200px] hover:border-indigo-400 hover:bg-indigo-50/50 transition-colors cursor-pointer"
-          >
-            <div className="text-center text-slate-400">
-              <span className="text-3xl block mb-2">+</span>
-              <p className="text-sm font-medium">Belge yuklemek icin tiklayin</p>
-            </div>
-          </button>
+          <MissingDocumentsCard
+            byDocType={backendData?.byDocType}
+            period={scope.period}
+            onCategoryClick={(docType) => {
+              console.log('Category clicked:', docType);
+              // Map Big-6 to BelgeTipi for upload modal
+              const docTypeToUpload: Record<string, BelgeTipi> = {
+                'MIZAN': 'MIZAN',
+                'BEYANNAME': 'beyan_kdv',
+                'TAHAKKUK': 'vergi_tahakkuk',
+                'BANKA': 'banka_ekstresi',
+                'EDEFTER_BERAT': 'E_DEFTER',
+                'EFATURA_ARSIV': 'e_fatura_listesi',
+              };
+              const belgeTipi = docTypeToUpload[docType];
+              if (belgeTipi) {
+                handleUploadClick(belgeTipi);
+              }
+            }}
+          />
         </div>
       </DashboardSection>
 

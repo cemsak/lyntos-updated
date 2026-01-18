@@ -7,8 +7,9 @@
  * Fetches regulatory events from backend - no mock fallback
  */
 import { useState, useCallback, useRef } from 'react';
+import { API_BASE_URL } from '../../_lib/config/api';
 
-const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000';
+const API_BASE = API_BASE_URL;
 
 // Trusted sources for scanning animation
 export const TRUSTED_SOURCES = [

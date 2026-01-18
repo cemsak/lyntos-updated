@@ -5,7 +5,7 @@
  * Sprint 2.4 - Anayasa Compliance
  *
  * Dönem Özeti Paneli - Dönem durumu ve hızlı aksiyonlar
- * Feed ile senkronize çalışır
+ * Backend API entegrasyonu ile gerçek veri gösterir
  */
 
 import React from 'react';
@@ -20,7 +20,10 @@ import {
   ShieldAlert,
   FolderArchive,
   Zap,
+  RefreshCw,
 } from 'lucide-react';
+import { useDashboardScope, useScopeComplete } from '../scope/useDashboardScope';
+import { useRightRailData } from '../../_hooks/useRightRailData';
 
 interface RightRailProps {
   // Feed'den gelen veriler
@@ -105,19 +108,51 @@ function QuickLink({ href, icon, children }: QuickLinkProps) {
 }
 
 export function RightRail({
-  kritikSayisi = 0,
-  yuksekSayisi = 0,
-  eksikBelgeSayisi = 0,
-  oneriler = [],
-  kanitPaketiDurumu = 'bekliyor',
-  kanitPaketiYuzde = 0,
-  tamamlananBelgeler = [],
+  kritikSayisi: propKritikSayisi,
+  yuksekSayisi: propYuksekSayisi,
+  eksikBelgeSayisi: propEksikBelgeSayisi,
+  oneriler: propOneriler,
+  kanitPaketiDurumu: propKanitPaketiDurumu,
+  kanitPaketiYuzde: propKanitPaketiYuzde,
+  tamamlananBelgeler: propTamamlananBelgeler,
 }: RightRailProps) {
+  // Get scope from context
+  const { scope } = useDashboardScope();
+  const scopeComplete = useScopeComplete();
+
+  // Fetch real data from backend APIs
+  const {
+    data: apiData,
+    isLoading,
+    refetch,
+  } = useRightRailData(
+    scopeComplete ? scope.period : null,
+    scope.smmm_id || 'default',
+    scope.client_id || 'default'
+  );
+
+  // Use API data with fallback to props (for backward compatibility)
+  const kritikSayisi = apiData.criticalCount > 0 ? apiData.criticalCount : (propKritikSayisi ?? 0);
+  const yuksekSayisi = apiData.highCount > 0 ? apiData.highCount : (propYuksekSayisi ?? 0);
+  const eksikBelgeSayisi = apiData.missingDocCount > 0 ? apiData.missingDocCount : (propEksikBelgeSayisi ?? 0);
+
   // Toplam acil iş sayısı
   const acilToplam = kritikSayisi + yuksekSayisi;
 
-  // Kanıt paketi status
+  // Kanıt paketi status - prefer API data
   const getKanitStatus = () => {
+    // Use API evidence bundle status if available
+    if (apiData.evidenceBundleStatus !== 'not_started') {
+      switch (apiData.evidenceBundleStatus) {
+        case 'ready': return { label: 'Hazır', status: 'success' as const };
+        case 'in_progress': return { label: `%${apiData.evidenceBundlePercent}`, status: 'warning' as const };
+        case 'error': return { label: 'Hata', status: 'danger' as const };
+        default: return { label: 'Bekliyor', status: 'neutral' as const };
+      }
+    }
+    // Fallback to props
+    const kanitPaketiDurumu = propKanitPaketiDurumu ?? 'bekliyor';
+    const kanitPaketiYuzde = propKanitPaketiYuzde ?? 0;
     switch (kanitPaketiDurumu) {
       case 'hazir': return { label: 'Hazır', status: 'success' as const };
       case 'eksik': return { label: `%${kanitPaketiYuzde}`, status: 'warning' as const };
@@ -126,14 +161,22 @@ export function RightRail({
   };
   const kanitStatus = getKanitStatus();
 
-  // Default öneriler (Feed'den gelen veya varsayılan)
+  // Öneriler - prefer API data
+  const oneriler = apiData.topRecommendations.length > 0
+    ? apiData.topRecommendations
+    : (propOneriler ?? []);
+
   const displayOneriler = oneriler.length > 0 ? oneriler : [
     'Kritik riskleri inceleyin',
-    'Eksik belgeleri tamamlayın',
-    'KDV mutabakatı yapın',
+    'Eksik belgeleri tamamlayin',
+    'KDV mutabakati yapin',
   ];
 
-  // Varsayılan tamamlanan belgeler
+  // Tamamlanan belgeler - prefer API data
+  const tamamlananBelgeler = apiData.completedDocuments.length > 0
+    ? apiData.completedDocuments
+    : (propTamamlananBelgeler ?? []);
+
   const belgeler = tamamlananBelgeler.length > 0
     ? tamamlananBelgeler
     : ['Mizan', 'KDV', 'GV'];
@@ -145,13 +188,27 @@ export function RightRail({
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-sm font-bold">Dönem Durumu</h3>
-            <p className="text-[10px] text-slate-300 mt-0.5">Kontrol Paneli</p>
+            <p className="text-[10px] text-slate-300 mt-0.5 flex items-center gap-1">
+              {isLoading ? (
+                <>
+                  <RefreshCw className="w-3 h-3 animate-spin" />
+                  Yukleniyor...
+                </>
+              ) : (
+                <>Kontrol Paneli</>
+              )}
+            </p>
           </div>
-          {acilToplam > 0 && (
-            <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full animate-pulse">
-              {acilToplam} Acil
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            {isLoading && (
+              <RefreshCw className="w-4 h-4 animate-spin text-slate-400" />
+            )}
+            {acilToplam > 0 && (
+              <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full animate-pulse">
+                {acilToplam} Acil
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
@@ -237,9 +294,9 @@ export function RightRail({
               {belge}
             </span>
           ))}
-          {kanitPaketiDurumu !== 'hazir' && (
+          {kanitStatus.status !== 'success' && (
             <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-400">
-              +{4 - belgeler.length} eksik
+              +{6 - belgeler.length} eksik
             </span>
           )}
         </div>
