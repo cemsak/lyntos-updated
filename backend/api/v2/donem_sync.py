@@ -27,6 +27,119 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v2/donem", tags=["Donem Sync"])
 
+
+# ============================================================================
+# AUTO-CREATE HELPERS (Sprint 4)
+# ============================================================================
+
+def get_period_dates(period_code: str) -> tuple:
+    """
+    Convert period code to start/end dates.
+
+    Args:
+        period_code: "2025-Q1" format
+
+    Returns:
+        (start_date, end_date) as "YYYY-MM-DD" strings, or (None, None) if invalid
+    """
+    if not period_code or '-Q' not in period_code.upper():
+        return None, None
+
+    try:
+        parts = period_code.upper().split('-Q')
+        year = int(parts[0])
+        quarter = int(parts[1])
+
+        quarter_map = {
+            1: ("01-01", "03-31"),
+            2: ("04-01", "06-30"),
+            3: ("07-01", "09-30"),
+            4: ("10-01", "12-31"),
+        }
+
+        if quarter not in quarter_map:
+            return None, None
+
+        start_suffix, end_suffix = quarter_map[quarter]
+        return f"{year}-{start_suffix}", f"{year}-{end_suffix}"
+    except (ValueError, IndexError):
+        return None, None
+
+
+def ensure_client_exists(cursor, client_id: str, client_name: str, tenant_id: str) -> bool:
+    """
+    Ensure client exists in database, create if not.
+
+    Returns True if client exists or was created, False on error.
+    """
+    cursor.execute("SELECT id FROM clients WHERE id = ?", (client_id,))
+    if cursor.fetchone():
+        return True
+
+    # Create client with placeholder data
+    now = datetime.utcnow().isoformat()
+    placeholder_tax_id = f"PENDING-{client_id[:20]}"
+
+    try:
+        cursor.execute("""
+            INSERT INTO clients (
+                id, smmm_id, name, tax_id, created_at
+            ) VALUES (?, ?, ?, ?, ?)
+        """, (
+            client_id,
+            tenant_id,
+            client_name or client_id.replace("_", " ").title(),
+            placeholder_tax_id,
+            now
+        ))
+        logger.info(f"Auto-created client: {client_id}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to create client {client_id}: {e}")
+        return False
+
+
+def ensure_period_exists(cursor, client_id: str, period_code: str) -> bool:
+    """
+    Ensure period exists for client, create if not.
+
+    Returns True if period exists or was created, False on error.
+    """
+    period_code_upper = period_code.upper()
+    period_id = f"{client_id}_{period_code_upper}"
+
+    cursor.execute("SELECT id FROM periods WHERE id = ?", (period_id,))
+    if cursor.fetchone():
+        return True
+
+    # Get dates for period
+    start_date, end_date = get_period_dates(period_code_upper)
+    if not start_date:
+        logger.warning(f"Invalid period format: {period_code}")
+        return False
+
+    now = datetime.utcnow().isoformat()
+
+    try:
+        cursor.execute("""
+            INSERT INTO periods (
+                id, client_id, period_code, start_date, end_date, status, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (
+            period_id,
+            client_id,
+            period_code_upper,
+            start_date,
+            end_date,
+            "active",
+            now
+        ))
+        logger.info(f"Auto-created period: {period_id}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to create period {period_id}: {e}")
+        return False
+
 # ============================================================================
 # DOC_TYPE MAPPING
 # Frontend DetectedFileType -> Backend Big-6 Categories
@@ -214,6 +327,27 @@ async def sync_donem_data(request: DonemSyncRequest):
         with get_connection() as conn:
             cursor = conn.cursor()
             now = datetime.utcnow().isoformat()
+
+            # AUTO-CREATE: Ensure client and period exist before sync
+            if not ensure_client_exists(cursor, request.meta.clientId, request.meta.clientName, request.tenantId):
+                return DonemSyncResponse(
+                    success=False,
+                    syncedCount=0,
+                    errorCount=1,
+                    skippedCount=0,
+                    results=[],
+                    errors=[f"Failed to ensure client exists: {request.meta.clientId}"]
+                )
+
+            if not ensure_period_exists(cursor, request.meta.clientId, request.meta.period):
+                return DonemSyncResponse(
+                    success=False,
+                    syncedCount=0,
+                    errorCount=1,
+                    skippedCount=0,
+                    results=[],
+                    errors=[f"Failed to ensure period exists: {request.meta.period}"]
+                )
 
             for file_summary in request.fileSummaries:
                 try:

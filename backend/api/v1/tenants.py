@@ -3,15 +3,27 @@ Tenant & Taxpayer Management API
 Lists taxpayers (mükellef) and periods (dönem) for SMMM offices
 
 LYNTOS Enterprise - Multi-tenant SMMM Platform
+
+Sprint 4: Now uses real database data instead of hardcoded demo data
 """
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 from middleware.auth import verify_token
-
+from pathlib import Path
+import sqlite3
 
 router = APIRouter(prefix="/tenants", tags=["tenants"])
+
+# Database path
+DB_PATH = Path(__file__).parent.parent.parent / "database" / "lyntos.db"
+
+
+def get_db():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
 
 
 class Taxpayer(BaseModel):
@@ -39,40 +51,71 @@ class PeriodListResponse(BaseModel):
     data: dict
 
 
+def mask_vkn(tax_id: str) -> str:
+    """Mask VKN for display (show first 3 and last 2 digits)"""
+    if not tax_id or len(tax_id) < 5:
+        return tax_id or "***"
+    return f"{tax_id[:3]}****{tax_id[-2:]}"
+
+
+def get_period_label(period_code: str) -> str:
+    """Generate Turkish period label from code"""
+    if not period_code or "-Q" not in period_code.upper():
+        return period_code
+
+    parts = period_code.upper().split("-Q")
+    year = parts[0]
+    quarter = int(parts[1])
+
+    quarter_labels = {
+        1: "Ocak-Mart",
+        2: "Nisan-Haziran",
+        3: "Temmuz-Eylül",
+        4: "Ekim-Aralık"
+    }
+
+    month_range = quarter_labels.get(quarter, "")
+    return f"{year} Q{quarter} ({month_range})"
+
+
 @router.get("/{tenant_id}/taxpayers")
 async def list_taxpayers(tenant_id: str, user: dict = Depends(verify_token)):
     """
     List all taxpayers (mükellef) for a tenant (SMMM office)
 
-    For demo purposes, returns hardcoded list. In production,
-    this would query the database.
+    Reads from clients table in database.
     """
-    # Demo data - in production, query from database
-    taxpayers = [
-        {
-            "id": "OZKAN_KIRTASIYE",
-            "name": "Özkan Kırtasiye ve Ofis Malz. Ltd. Şti.",
-            "vkn": "123****89",
-            "active": True
-        },
-        {
-            "id": "DEMO_TICARET",
-            "name": "Demo Ticaret A.Ş.",
-            "vkn": "987****21",
-            "active": True
-        },
-        {
-            "id": "ABC_INSAAT",
-            "name": "ABC İnşaat San. Tic. Ltd. Şti.",
-            "vkn": "456****78",
-            "active": True
-        }
-    ]
+    conn = get_db()
+    cursor = conn.cursor()
 
-    return {
-        "schema": {"name": "taxpayer_list", "version": "1.0"},
-        "data": {"taxpayers": taxpayers}
-    }
+    try:
+        # Get clients for this SMMM (tenant)
+        cursor.execute("""
+            SELECT id, name, tax_id
+            FROM clients
+            WHERE smmm_id = ? OR smmm_id IS NULL
+            ORDER BY name
+        """, (tenant_id,))
+
+        rows = cursor.fetchall()
+
+        taxpayers = [
+            {
+                "id": row["id"],
+                "name": row["name"],
+                "vkn": mask_vkn(row["tax_id"]),
+                "active": True
+            }
+            for row in rows
+        ]
+
+        return {
+            "schema": {"name": "taxpayer_list", "version": "1.0"},
+            "data": {"taxpayers": taxpayers}
+        }
+
+    finally:
+        conn.close()
 
 
 @router.get("/{tenant_id}/taxpayers/{taxpayer_id}/periods")
@@ -80,17 +123,40 @@ async def list_periods(tenant_id: str, taxpayer_id: str, user: dict = Depends(ve
     """
     List available periods for a taxpayer
 
-    Periods are fiscal quarters (Q1-Q4) for each year.
+    Reads from periods table in database.
     """
-    # Demo data - in production, derive from uploaded documents
-    periods = [
-        {"id": "2024-Q4", "label": "2024 Q4 (Ekim-Aralık)", "status": "closed"},
-        {"id": "2025-Q1", "label": "2025 Q1 (Ocak-Mart)", "status": "closed"},
-        {"id": "2025-Q2", "label": "2025 Q2 (Nisan-Haziran)", "status": "active"},
-        {"id": "2025-Q3", "label": "2025 Q3 (Temmuz-Eylül)", "status": "draft"},
-    ]
+    conn = get_db()
+    cursor = conn.cursor()
 
-    return {
-        "schema": {"name": "period_list", "version": "1.0"},
-        "data": {"periods": periods, "taxpayer_id": taxpayer_id}
-    }
+    try:
+        # Verify taxpayer exists
+        cursor.execute("SELECT id FROM clients WHERE id = ?", (taxpayer_id,))
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail=f"Mükellef bulunamadı: {taxpayer_id}")
+
+        # Get periods for this client
+        cursor.execute("""
+            SELECT id, period_code, start_date, end_date, status
+            FROM periods
+            WHERE client_id = ?
+            ORDER BY start_date DESC
+        """, (taxpayer_id,))
+
+        rows = cursor.fetchall()
+
+        periods = [
+            {
+                "id": row["period_code"] or row["id"],
+                "label": get_period_label(row["period_code"] or row["id"]),
+                "status": row["status"] or "active"
+            }
+            for row in rows
+        ]
+
+        return {
+            "schema": {"name": "period_list", "version": "1.0"},
+            "data": {"periods": periods, "taxpayer_id": taxpayer_id}
+        }
+
+    finally:
+        conn.close()
