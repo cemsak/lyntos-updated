@@ -18,6 +18,11 @@ from datetime import datetime
 import sqlite3
 import uuid
 import hashlib
+import logging
+
+from services.parse_service import trigger_parse_for_document
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/bulk-upload", tags=["bulk-upload"])
 
@@ -300,12 +305,33 @@ async def upload_zip(
                     ))
 
                     results["saved"] += 1
+
+                    # Trigger parsing for MIZAN files
+                    parse_result = None
+                    if doc_type == 'MIZAN':
+                        try:
+                            parse_result = trigger_parse_for_document(
+                                cursor,
+                                doc_id,
+                                tenant_id,
+                                client_id,
+                                period,
+                                doc_type,
+                                relative_path,
+                                filename
+                            )
+                            logger.info(f"Parsed {filename}: {parse_result.get('status')}, inserted={parse_result.get('inserted_count', 0)}")
+                        except Exception as pe:
+                            logger.warning(f"Parse failed for {filename}: {pe}")
+                            parse_result = {'status': 'ERROR', 'message': str(pe)}
+
                     results["files"].append({
                         "filename": filename,
                         "doc_type": doc_type,
                         "status": "saved",
                         "path": relative_path,
-                        "size": len(file_content)
+                        "size": len(file_content),
+                        "parse_result": parse_result
                     })
 
                 except Exception as e:
@@ -375,3 +401,54 @@ async def get_upload_status(client_id: str, period: str, tenant_id: str = "HKOZK
         "by_type": by_type,
         "files": files
     }
+
+
+@router.post("/parse/{client_id}/{period}")
+async def trigger_parsing(
+    client_id: str,
+    period: str,
+    tenant_id: str = "HKOZKAN",
+    doc_types: Optional[str] = "MIZAN",
+    force: bool = False
+):
+    """
+    Trigger parsing for existing uploaded documents.
+
+    Useful for processing documents that were uploaded before parser integration.
+
+    Args:
+        client_id: Client identifier
+        period: Period code (e.g., 2025-Q2)
+        tenant_id: SMMM identifier
+        doc_types: Comma-separated list of doc types to parse (default: MIZAN)
+        force: If True, reprocess all documents regardless of current status
+    """
+    from services.parse_service import process_uploaded_documents
+
+    doc_type_list = [dt.strip() for dt in doc_types.split(',')]
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    try:
+        result = process_uploaded_documents(
+            cursor,
+            tenant_id,
+            client_id,
+            period,
+            doc_type_list,
+            force=force
+        )
+        conn.commit()
+
+        return {
+            "status": "success",
+            "client_id": client_id,
+            "period": period,
+            **result
+        }
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=f"Parse error: {str(e)}")
+    finally:
+        conn.close()
