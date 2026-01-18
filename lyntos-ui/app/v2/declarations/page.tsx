@@ -23,7 +23,8 @@ export default function DeclarationsPage() {
     async function fetchDeclarations() {
       const token = getAuthToken();
       if (!token) {
-        setError('Oturum bulunamadi. Lutfen giris yapin.');
+        // Token yoksa empty state göster (demo mode)
+        setDeclarations([]);
         setIsLoading(false);
         return;
       }

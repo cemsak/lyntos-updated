@@ -24,7 +24,7 @@ export function PdfExportButton() {
     try {
       const token = localStorage.getItem('lyntos_token');
       if (!token) {
-        setError('Oturum bulunamadi. Lutfen giris yapin.');
+        setError('PDF oluşturmak için önce veri yükleyin.');
         setStatus('error');
         return;
       }

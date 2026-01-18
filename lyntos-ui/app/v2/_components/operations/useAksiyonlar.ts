@@ -218,7 +218,8 @@ export function useAksiyonlar(): UseAksiyonlarResult {
         ? localStorage.getItem('lyntos_token')
         : null;
       if (!token) {
-        setError('Oturum bulunamadi. Lutfen giris yapin.');
+        // Token yoksa empty state göster
+        setAksiyonlar([]);
         setLoading(false);
         return;
       }

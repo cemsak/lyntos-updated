@@ -135,7 +135,8 @@ export function useRiskReviewQueue(): UseRiskReviewQueueResult {
     try {
       const token = localStorage.getItem('lyntos_token');
       if (!token) {
-        setError('Oturum bulunamadi. Lutfen giris yapin.');
+        // Token yoksa empty state göster
+        setItems([]);
         setIsLoading(false);
         return;
       }

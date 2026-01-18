@@ -12,6 +12,14 @@ interface FetchOptions {
 
 const DEFAULT_OPTIONS: FetchOptions = { timeout: 12000, retries: 1, retryDelay: 1000 };
 
+// Create empty state envelope for demo mode
+function createEmptyEnvelope<T>(reason: string): PanelEnvelope<T> {
+  return {
+    ...createMissingEnvelope<T>(reason),
+    status: 'empty',
+  };
+}
+
 export function useFailSoftFetch<T>(
   endpoint: string,
   normalizer: (raw: unknown, requestId?: string) => PanelEnvelope<T>,
@@ -19,15 +27,54 @@ export function useFailSoftFetch<T>(
 ): PanelEnvelope<T> {
   const { scope } = useDashboardScope();
   const scopeComplete = useScopeComplete();
-  const [envelope, setEnvelope] = useState<PanelEnvelope<T>>(createLoadingEnvelope<T>());
+
+  // Hydration state - prevent loading spinner during SSR/hydration
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  // Determine initial state synchronously based on conditions
+  // This prevents showing loading spinner when we know we won't fetch
+  const getInitialState = useCallback((): PanelEnvelope<T> => {
+    // During SSR or before hydration, show empty state (not loading)
+    if (typeof window === 'undefined') {
+      return createEmptyEnvelope<T>('Veri yüklemek için dönem seçin.');
+    }
+    // Check token synchronously
+    const token = localStorage.getItem('lyntos_token');
+    if (!token) {
+      return createEmptyEnvelope<T>('Veri yüklemek için önce dönem seçin.');
+    }
+    // If scope not complete, show missing state
+    if (!scopeComplete) {
+      return createMissingEnvelope<T>('Scope seçilmedi. Lütfen SMMM, Mükellef ve Dönem seçin.');
+    }
+    // Only show loading if we'll actually fetch
+    return createLoadingEnvelope<T>();
+  }, [scopeComplete]);
+
+  const [envelope, setEnvelope] = useState<PanelEnvelope<T>>(getInitialState);
   const abortRef = useRef<AbortController | null>(null);
   const { timeout, retries, retryDelay } = { ...DEFAULT_OPTIONS, ...options };
+
+  // Set hydration state on mount
+  useEffect(() => {
+    setIsHydrated(true);
+    // Re-evaluate initial state after hydration
+    setEnvelope(getInitialState());
+  }, [getInitialState]);
 
   const fetchData = useCallback(async (attempt = 0) => {
     if (abortRef.current) abortRef.current.abort();
 
+    // Check preconditions BEFORE setting loading state
     if (!scopeComplete) {
-      setEnvelope(createMissingEnvelope<T>('Scope secilmedi. Lutfen SMMM, Mukellef ve Donem secin.'));
+      setEnvelope(createMissingEnvelope<T>('Scope seçilmedi. Lütfen SMMM, Mükellef ve Dönem seçin.'));
+      return;
+    }
+
+    const token = localStorage.getItem('lyntos_token');
+    if (!token) {
+      // Token yoksa empty state döndür (demo mode) - NO loading flash
+      setEnvelope(createEmptyEnvelope<T>('Veri yüklemek için önce dönem seçin.'));
       return;
     }
 
@@ -35,6 +82,7 @@ export function useFailSoftFetch<T>(
     abortRef.current = controller;
     const requestId = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
+    // Only show loading if we're actually going to fetch
     setEnvelope(createLoadingEnvelope<T>());
 
     try {
@@ -44,11 +92,6 @@ export function useFailSoftFetch<T>(
         period: scope.period,
       };
       const url = buildScopedUrl(endpoint, scopeParams);
-      const token = localStorage.getItem('lyntos_token');
-      if (!token) {
-        setEnvelope({ ...createErrorEnvelope<T>('Oturum bulunamadi. Lutfen giris yapin.', requestId), status: 'auth' });
-        return;
-      }
       const timeoutId = setTimeout(() => controller.abort(), timeout);
 
       const response = await fetch(url, {

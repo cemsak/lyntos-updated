@@ -146,7 +146,7 @@ export function useRegWatchScan(): UseRegWatchScanResult {
         ? localStorage.getItem('lyntos_token')
         : null;
       if (!token) {
-        setError('Oturum bulunamadi. Lutfen giris yapin.');
+        // Token yoksa tarama yapılamaz, empty state göster
         setIsScanning(false);
         return;
       }

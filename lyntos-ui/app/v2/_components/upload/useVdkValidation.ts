@@ -56,7 +56,7 @@ export function useVdkValidation(): UseVdkValidationReturn {
         ? localStorage.getItem('lyntos_token')
         : null;
       if (!token) {
-        setError('Oturum bulunamadi. Lutfen giris yapin.');
+        // Token yoksa validasyon yapılamaz
         setLoading(false);
         return null;
       }

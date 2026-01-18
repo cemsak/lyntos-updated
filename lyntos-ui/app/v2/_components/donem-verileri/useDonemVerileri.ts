@@ -4,7 +4,7 @@
  * donemStore'dan gerçek veri okur - SIFIR MOCK DATA
  */
 
-import { useMemo, useCallback, useState } from 'react';
+import { useMemo, useCallback, useState, useEffect } from 'react';
 import type { BelgeTipi, BelgeDurumData, DonemVerileriResult } from './types';
 import { BELGE_TANIMLARI } from './types';
 import { useDonemStore } from '../../_lib/stores/donemStore';
@@ -73,7 +73,15 @@ interface UseDonemVerileriReturn {
 export function useDonemVerileri(): UseDonemVerileriReturn {
   // Gerçek store'dan oku - MOCK YOK
   const detectedFiles = useDonemStore(s => s.detectedFiles);
-  const isLoaded = useDonemStore(s => s.isLoaded);
+
+  // Hydration state - Zustand persist hydration tamamlandı mı?
+  // isLoaded "veri var mı" demek, hydration "store hazır mı" demek
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  useEffect(() => {
+    // Client-side'da mount olunca hydration tamamlanmış demektir
+    setIsHydrated(true);
+  }, []);
 
   // Manuel olarak işaretlenen tipler (upload modal'dan)
   const [manuallyMarked, setManuallyMarked] = useState<Set<BelgeTipi>>(new Set());
@@ -160,7 +168,9 @@ export function useDonemVerileri(): UseDonemVerileriReturn {
 
   return {
     data,
-    isLoading: !isLoaded,
+    // isLoading: Hydration tamamlanana kadar true, sonra false
+    // Veri yoksa empty state gösterilir, sonsuz spinner değil
+    isLoading: !isHydrated,
     markAsUploaded
   };
 }

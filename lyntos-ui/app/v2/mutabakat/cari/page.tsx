@@ -42,7 +42,10 @@ export default function CariMutabakatPage() {
       try {
         const token = localStorage.getItem('lyntos_token');
         if (!token) {
-          throw new Error('Oturum bulunamadi');
+          // Token yoksa empty state göster
+          setHesaplar([]);
+          setLoading(false);
+          return;
         }
         const response = await fetch('/api/v1/contracts/data-quality?type=cari', {
           headers: {
@@ -80,7 +83,9 @@ export default function CariMutabakatPage() {
     try {
       const token = localStorage.getItem('lyntos_token');
         if (!token) {
-          throw new Error('Oturum bulunamadi');
+          // Token yoksa işlem yapma
+          setIsRefreshing(false);
+          return;
         }
       const response = await fetch('/api/v1/contracts/data-quality?type=cari', {
         headers: {

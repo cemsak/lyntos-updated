@@ -209,6 +209,7 @@ export function InflationPanel() {
   const { status, reason_tr, data, analysis, trust, legal_basis_refs, evidence_refs, meta } = envelope;
 
   // Yİ-ÜFE state - TCMB EVDS API'den gelecek
+  // Initial isLoading: false to prevent loading spinner before useEffect runs
   const [yiufeData, setYiufeData] = useState<YiufeData>({
     son3Yil: null,
     son3YilEsik: YIUFE_ESIK_DEGERLERI.son3YilEsik,
@@ -216,7 +217,7 @@ export function InflationPanel() {
     son12AyEsik: YIUFE_ESIK_DEGERLERI.son12AyEsik,
     duzeltmeKatsayisi: null,
     referansTarih: null,
-    isLoading: true,
+    isLoading: false,
     error: null,
   });
 

@@ -77,7 +77,7 @@ export function EvidenceViewer({ isOpen, onClose, evidenceRefs, title = 'Kanıt 
       try {
         const token = localStorage.getItem('lyntos_token');
         if (!token) {
-          setError('Oturum bulunamadi. Lutfen giris yapin.');
+          setError('Kanıt görüntülemek için önce veri yükleyin.');
           return;
         }
 
