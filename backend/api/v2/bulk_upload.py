@@ -19,6 +19,9 @@ import sqlite3
 import uuid
 import hashlib
 import logging
+import subprocess
+import os
+import sys
 
 from services.parse_service import trigger_parse_for_document
 
@@ -150,6 +153,98 @@ def ensure_period_exists(cursor, client_id: str, period_code: str) -> bool:
         now
     ))
     return True
+
+
+def _maybe_refresh_contracts(tenant_id: str, client_id: str, period: str) -> dict:
+    """
+    Phase 1 Bridge: Run refresh_contracts.py after upload if enabled.
+
+    Controlled by env var LYNTOS_AUTO_REFRESH_ON_UPLOAD=1
+    Fail-soft: refresh failure does NOT fail the upload.
+
+    Returns:
+        dict with keys:
+        - enabled: bool - whether auto-refresh was enabled
+        - triggered: bool - whether refresh was actually triggered
+        - success: bool - whether refresh completed successfully
+        - message: str - status message
+        - duration_ms: int - time taken (only if triggered)
+    """
+    result = {
+        "enabled": False,
+        "triggered": False,
+        "success": False,
+        "message": "",
+        "duration_ms": 0
+    }
+
+    # Check env var
+    auto_refresh = os.environ.get("LYNTOS_AUTO_REFRESH_ON_UPLOAD", "0")
+    if auto_refresh not in ("1", "true", "True", "TRUE"):
+        result["message"] = "Auto-refresh disabled (LYNTOS_AUTO_REFRESH_ON_UPLOAD not set)"
+        return result
+
+    result["enabled"] = True
+
+    # Build paths
+    backend_dir = Path(__file__).parent.parent.parent.resolve()
+    script_path = backend_dir / "scripts" / "refresh_contracts.py"
+    contracts_dir = backend_dir / "docs" / "contracts"
+
+    if not script_path.exists():
+        result["message"] = f"Script not found: {script_path}"
+        logger.warning(f"[refresh_contracts] {result['message']}")
+        return result
+
+    # Build command
+    cmd = [
+        sys.executable,
+        str(script_path),
+        "--smmm", tenant_id,
+        "--client", client_id,
+        "--period", period,
+        "--contracts_dir", str(contracts_dir)
+    ]
+
+    result["triggered"] = True
+    logger.info(f"[refresh_contracts] Running: {' '.join(cmd)}")
+
+    import time
+    start_time = time.time()
+
+    try:
+        proc = subprocess.run(
+            cmd,
+            cwd=str(backend_dir),
+            capture_output=True,
+            text=True,
+            timeout=120  # 2 minute timeout
+        )
+
+        duration_ms = int((time.time() - start_time) * 1000)
+        result["duration_ms"] = duration_ms
+
+        if proc.returncode == 0:
+            result["success"] = True
+            result["message"] = f"Contracts refreshed successfully ({duration_ms}ms)"
+            logger.info(f"[refresh_contracts] {result['message']}")
+        else:
+            result["message"] = f"Refresh failed (exit code {proc.returncode}): {proc.stderr[:500] if proc.stderr else 'no stderr'}"
+            logger.warning(f"[refresh_contracts] {result['message']}")
+
+    except subprocess.TimeoutExpired:
+        duration_ms = int((time.time() - start_time) * 1000)
+        result["duration_ms"] = duration_ms
+        result["message"] = f"Refresh timed out after 120s"
+        logger.warning(f"[refresh_contracts] {result['message']}")
+
+    except Exception as e:
+        duration_ms = int((time.time() - start_time) * 1000)
+        result["duration_ms"] = duration_ms
+        result["message"] = f"Refresh error: {str(e)}"
+        logger.warning(f"[refresh_contracts] {result['message']}")
+
+    return result
 
 
 @router.post("/zip")
@@ -342,6 +437,12 @@ async def upload_zip(
 
             conn.commit()
             conn.close()
+
+            # Phase 1 Bridge: trigger contract refresh if enabled
+            refresh_result = _maybe_refresh_contracts(tenant_id, client_id, period)
+            results["post_upload"] = {
+                "refresh_contracts": refresh_result
+            }
 
             # Set final status
             if results["errors"]:
