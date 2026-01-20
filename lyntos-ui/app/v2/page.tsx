@@ -47,8 +47,10 @@ import {
   ContextRail,
   filterByStatus,
   useFeedStore,
-  useFeedSignals,
 } from './_components/feed';
+
+// Backend Feed Hook (Sprint 4 - Real API data)
+import { useBackendFeed } from './_hooks/useBackendFeed';
 
 // ═══════════════════════════════════════════════════════════════════
 // MAIN DASHBOARD CONTENT (wrapped in Suspense for useSearchParams)
@@ -85,25 +87,35 @@ function V2DashboardContent() {
   }, [scope.client_id, scope.period, resetFeedSelection]);
 
   // ═══════════════════════════════════════════════════════════════════
-  // FEED SIGNALS (Sprint 4.3 - Real signals from generators)
+  // FEED FROM BACKEND API (Sprint 4 - Real data from /api/v2/feed)
   // ═══════════════════════════════════════════════════════════════════
 
   // Get resolved/snoozed IDs from store
   const resolvedIds = useFeedStore((s) => s.resolvedIds);
   const snoozedIds = useFeedStore((s) => s.snoozedIds);
 
-  // Get signals from generators (Mizan + CrossCheck)
-  const { signals: feedSignals, stats: feedSignalStats } = useFeedSignals();
+  // Fetch feed from backend API - REAL DATA
+  const {
+    items: backendFeedItems,
+    loading: feedLoading,
+    error: feedError,
+    stats: backendFeedStats,
+  } = useBackendFeed({
+    smmm_id: scope.smmm_id || '',
+    client_id: scope.client_id || '',
+    period: scope.period || '',
+    enabled: scopeComplete,
+  });
 
   // Filter out resolved/snoozed items
   const feedItems = useMemo(() => {
-    return filterByStatus(feedSignals, resolvedIds, snoozedIds);
-  }, [feedSignals, resolvedIds, snoozedIds]);
+    return filterByStatus(backendFeedItems, resolvedIds, snoozedIds);
+  }, [backendFeedItems, resolvedIds, snoozedIds]);
 
-  // Get feed statistics for RightRail (derived from signal stats)
+  // Get feed statistics for RightRail (from backend stats)
   const feedStats = useMemo(() => {
-    const criticalCount = feedSignalStats.combined.critical;
-    const highCount = feedSignalStats.combined.high;
+    const criticalCount = backendFeedStats.critical;
+    const highCount = backendFeedStats.high;
     const missingDocCount = feedItems.filter(i => i.category === 'Belge').length;
     const topRecommendations = feedItems.slice(0, 3).map(i => i.title);
 
@@ -113,7 +125,7 @@ function V2DashboardContent() {
       missingDocCount,
       topRecommendations,
     };
-  }, [feedSignalStats, feedItems]);
+  }, [backendFeedStats, feedItems]);
 
   // === ALL USESTATE HOOKS ===
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
@@ -186,6 +198,39 @@ function V2DashboardContent() {
               Lütfen yukarıdaki seçicilerden SMMM, Mükellef ve Dönem seçin.
             </p>
             <Badge variant="info">Kapsam Bekleniyor</Badge>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  // Feed loading state
+  if (feedLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Card className="max-w-md">
+          <div className="text-center py-8">
+            <div className="text-4xl mb-4 animate-spin">⏳</div>
+            <h2 className="text-lg font-semibold text-slate-900 mb-2">Veriler Yükleniyor</h2>
+            <p className="text-sm text-slate-600">
+              {scope.client_id} - {scope.period} verileri backend API'den alınıyor...
+            </p>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  // Feed error state (NO MOCK FALLBACK)
+  if (feedError) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Card className="max-w-md">
+          <div className="text-center py-8">
+            <div className="text-4xl mb-4">❌</div>
+            <h2 className="text-lg font-semibold text-red-600 mb-2">Veri Yüklenirken Hata</h2>
+            <p className="text-sm text-slate-600 mb-4">{feedError}</p>
+            <p className="text-xs text-slate-400">Backend çalışıyor mu? http://localhost:8000</p>
           </div>
         </Card>
       </div>
