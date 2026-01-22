@@ -2,12 +2,13 @@
 import React, { useState, useMemo } from 'react';
 import {
   Table, BookOpen, FileSpreadsheet, FileText, Building2, Receipt, PieChart,
-  ChevronDown, ChevronRight, Upload
+  ChevronDown, ChevronRight, Upload, Trash2
 } from 'lucide-react';
 import { Card } from '../shared/Card';
 import { Badge } from '../shared/Badge';
 import { BelgeKarti } from './BelgeKarti';
 import { UploadPreviewCards } from './UploadPreviewCards';
+import { DeleteDonemModal } from '../modals/DeleteDonemModal';
 import type { BelgeTipi, BelgeKategorisiUI, BelgeDurumData } from './types';
 import {
   BELGE_KATEGORILERI_UI,
@@ -15,10 +16,12 @@ import {
   getZorunluKategoriler,
   getOpsiyonelKategoriler,
 } from './types';
-import { useDonemVerileri } from './useDonemVerileri';
+import { useDonemVerileriV2 } from './useDonemVerileriV2';
+import { useDashboardScope } from '../scope/useDashboardScope';
 
 interface DonemVerileriPanelProps {
   onUploadClick?: (tip: BelgeTipi) => void;
+  onDeleteSuccess?: () => void;
 }
 
 // Icon mapping
@@ -32,9 +35,14 @@ const ICON_MAP: Record<string, React.ElementType> = {
   PieChart,
 };
 
-export function DonemVerileriPanel({ onUploadClick }: DonemVerileriPanelProps) {
-  const { data, isLoading } = useDonemVerileri();
+export function DonemVerileriPanel({ onUploadClick, onDeleteSuccess }: DonemVerileriPanelProps) {
+  // V2: Backend-only hook - localStorage kullanmaz
+  const { data, isLoading, error, refetch } = useDonemVerileriV2();
   const [expandedKategori, setExpandedKategori] = useState<BelgeKategorisiUI | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  // Dönem bilgisi için scope (backend-driven)
+  const { scope } = useDashboardScope();
 
   // Group belgeler by category
   const kategoriDurumu = useMemo(() => {
@@ -103,9 +111,21 @@ export function DonemVerileriPanel({ onUploadClick }: DonemVerileriPanelProps) {
       title="Dönem Verileri"
       subtitle={`%${data.tamamlanmaYuzdesi} tamamlandı`}
       headerAction={
-        data.eksikSayisi > 0 && (
-          <Badge variant="warning">{data.eksikSayisi} eksik</Badge>
-        )
+        <div className="flex items-center gap-2">
+          {data.eksikSayisi > 0 && (
+            <Badge variant="warning">{data.eksikSayisi} eksik</Badge>
+          )}
+          {/* Veri varsa silme butonu göster */}
+          {data.varSayisi > 0 && scope.period && (
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+              title="Dönem verisini sil"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
       }
       accent
     >
@@ -298,6 +318,22 @@ export function DonemVerileriPanel({ onUploadClick }: DonemVerileriPanelProps) {
           </div>
         </div>
       </div>
+
+      {/* Delete Dönem Modal */}
+      <DeleteDonemModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        period={scope.period || null}
+        clientName={scope.client_id}
+        onSuccess={() => {
+          setShowDeleteModal(false);
+          // Backend'den veriyi yeniden çek
+          refetch();
+          if (onDeleteSuccess) {
+            onDeleteSuccess();
+          }
+        }}
+      />
     </Card>
   );
 }

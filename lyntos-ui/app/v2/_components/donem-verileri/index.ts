@@ -3,6 +3,7 @@ export { DonemVerileriPanel } from './DonemVerileriPanel';
 export { UploadPreviewCards } from './UploadPreviewCards';
 export { BelgeKarti } from './BelgeKarti';
 export { useDonemVerileri } from './useDonemVerileri';
+export { useDonemVerileriV2 } from './useDonemVerileriV2';
 export type {
   BelgeTipi,
   BelgeDurumu,
