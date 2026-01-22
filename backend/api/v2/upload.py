@@ -45,33 +45,42 @@ router = APIRouter(prefix="/api/v2", tags=["upload"])
 DB_PATH = Path(__file__).parent.parent.parent / "database" / "lyntos.db"
 UPLOAD_DIR = Path(__file__).parent.parent.parent / "uploads"
 
-# Dosya tipi pattern'leri (bulk_upload.py'den)
-DOC_PATTERNS = {
-    "MIZAN": [r"mizan", r"mizn", r"MİZAN", r"trial.?balance"],
-    "BANKA": [
+# Dosya tipi pattern'leri (bulk_upload.py'den, genişletilmiş)
+# ÖNEMLİ: Sıralama önemli! Daha spesifik pattern'ler önce kontrol edilmeli
+# OrderedDict gibi davranması için classify_file fonksiyonu sırayla kontrol eder
+DOC_PATTERNS_ORDERED = [
+    # Önce spesifik pattern'ler (sıralama önemli!)
+    ("MIZAN", [r"mizan", r"mizn", r"MİZAN", r"trial.?balance"]),
+    ("YEVMIYE", [r"yevmiye_defteri", r"yevmiye defteri", r"yevmiye"]),
+    ("KEBIR", [r"defteri_kebir", r"kebir_defteri", r"kebir"]),
+    ("POSET", [r"poset", r"Poset", r"POSET", r"poşet", r"Poşet"]),  # Poset BEYANNAME'den önce!
+    ("GECICI_VERGI", [
+        r"KGecici", r"k.?gecici", r"geçici.?vergi", r"gecici.?vergi",
+        r"quarterly.?tax"
+    ]),
+    ("BEYANNAME", [
+        r"_BYN\.pdf", r"beyanname", r"BEYANNAME", r"KDV.*BYN",
+        r"MUHTASAR.*BYN", r"Muhtasar.*BYN"
+    ]),
+    ("TAHAKKUK", [
+        r"_THK\.pdf", r"tahakkuk", r"TAHAKKUK", r"KDV.*THK",
+        r"MUHTASAR.*THK", r"Muhtasar.*THK"
+    ]),
+    ("BANKA", [
         r"102\.", r"banka", r"ekstre", r"YKB", r"AKBANK", r"HALKBANK",
         r"ZİRAAT", r"ZIRAAT", r"GARANTİ", r"GARANTI", r"İŞ.?BANK",
-        r"ISBANK", r"VAKIF", r"KUVEYT", r"QNB", r"ING", r"TEB", r"HSBC"
-    ],
-    "BEYANNAME": [
-        r"_BYN\.pdf", r"beyanname", r"BEYANNAME", r"KDV.*BYN",
-        r"MUHTASAR.*BYN", r"GV.*BYN"
-    ],
-    "TAHAKKUK": [
-        r"_THK\.pdf", r"tahakkuk", r"TAHAKKUK", r"KDV.*THK",
-        r"MUHTASAR.*THK", r"GV.*THK"
-    ],
-    "EDEFTER_BERAT": [
-        r"e.?defter", r"berat", r"BERAT",
-        r"\d{10}-\d{6}-[YKDB]", r"yevmiye.*berat", r"kebir.*berat"
-    ],
-    "YEVMIYE": [r"yevmiye", r"YEVMİYE", r"journal"],
-    "KEBIR": [r"kebir", r"KEBİR", r"ledger"],
-    "EFATURA_ARSIV": [
+        r"ISBANK", r"VAKIF", r"KUVEYT", r"QNB", r"ING", r"TEB", r"HSBC",
+        r"ALBARAKA", r"DENİZ", r"DENIZ", r"YAPI.?KREDİ", r"YAPI.?KREDI"
+    ]),
+    ("EDEFTER_BERAT", [
+        r"E.?DEFTER\s+\d", r"e-defter", r"e_defter", r"berat", r"BERAT",
+        r"\d{10}-\d{6}-[YKDB]"
+    ]),
+    ("EFATURA_ARSIV", [
         r"e.?fatura", r"e.?arsiv", r"e.?arşiv", r"fatura.*liste",
         r"arsiv.*liste", r"arşiv.*liste"
-    ],
-}
+    ]),
+]
 
 
 def get_db():
@@ -82,8 +91,8 @@ def get_db():
 
 
 def classify_file(filename: str) -> str:
-    """Dosya adından dosya tipini algıla"""
-    for doc_type, patterns in DOC_PATTERNS.items():
+    """Dosya adından dosya tipini algıla (sıralı kontrol)"""
+    for doc_type, patterns in DOC_PATTERNS_ORDERED:
         for pattern in patterns:
             if re.search(pattern, filename, re.IGNORECASE):
                 return doc_type
@@ -397,13 +406,16 @@ async def upload_donem_zip(
                         else:
                             file_result["message"] = f"Desteklenmeyen mizan formatı: {fpath.suffix}"
 
-                    elif doc_type in ["BANKA", "BEYANNAME", "TAHAKKUK", "YEVMIYE", "KEBIR"]:
+                    elif doc_type in ["BANKA", "BEYANNAME", "TAHAKKUK", "YEVMIYE", "KEBIR", "GECICI_VERGI", "EDEFTER_BERAT", "EFATURA_ARSIV", "POSET"]:
                         # TODO: Diğer dosya tipleri için parse eklenecek
                         file_result["status"] = "pending"
                         file_result["message"] = f"{doc_type} parse henüz eklenmedi"
 
-                    else:
+                    elif doc_type == "OTHER":
                         file_result["message"] = "Bilinmeyen dosya tipi"
+
+                    else:
+                        file_result["message"] = f"Tanınan tip: {doc_type}"
 
                     results.append(file_result)
 

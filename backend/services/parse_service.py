@@ -65,7 +65,7 @@ def _try_get(row: Dict[str, str], keys: List[str]) -> Optional[str]:
 
 def parse_mizan_file(file_path: Path) -> List[Dict[str, Any]]:
     """
-    Parse a mizan (trial balance) CSV file.
+    Parse a mizan (trial balance) file (CSV or Excel).
 
     Supports various header formats:
     - HESAP KODU, HESAP ADI, BORC, ALACAK, BORC BAKIYE, ALACAK BAKIYE
@@ -78,6 +78,113 @@ def parse_mizan_file(file_path: Path) -> List[Dict[str, Any]]:
     if not file_path.exists():
         logger.warning(f"Mizan file not found: {file_path}")
         return results
+
+    suffix = file_path.suffix.lower()
+
+    # Excel files (.xlsx, .xls)
+    if suffix in ['.xlsx', '.xls']:
+        return _parse_mizan_excel(file_path)
+
+    # CSV files
+    return _parse_mizan_csv(file_path)
+
+
+def _parse_mizan_excel(file_path: Path) -> List[Dict[str, Any]]:
+    """Parse mizan from Excel file."""
+    results = []
+
+    try:
+        import pandas as pd
+    except ImportError:
+        logger.error("pandas not installed, cannot parse Excel files")
+        return results
+
+    try:
+        df = pd.read_excel(file_path, header=None)
+    except Exception as e:
+        logger.error(f"Could not read Excel file {file_path}: {e}")
+        return results
+
+    # Find header row (contains HESAP KODU)
+    header_idx = None
+    for i, row in df.iterrows():
+        row_str = ' '.join([str(c).upper() for c in row.values if pd.notna(c)])
+        if 'HESAP KODU' in row_str or 'HESAP_KODU' in row_str or 'HESAPKODU' in row_str:
+            header_idx = i
+            break
+
+    if header_idx is None:
+        logger.warning(f"No header row found in {file_path}")
+        return results
+
+    # Set header row
+    df.columns = df.iloc[header_idx].values
+    df = df.iloc[header_idx + 1:].reset_index(drop=True)
+
+    # Clean column names
+    df.columns = [str(c).strip() if pd.notna(c) else f'col_{i}' for i, c in enumerate(df.columns)]
+
+    # Find column indices
+    col_map = {}
+    for col in df.columns:
+        col_upper = col.upper()
+        if 'HESAP KODU' in col_upper or col_upper == 'HESAPKODU':
+            col_map['hesap_kodu'] = col
+        elif 'HESAP ADI' in col_upper or 'HESAP ADI' in col_upper:
+            col_map['hesap_adi'] = col
+        elif col_upper == 'BORÇ' or col_upper == 'BORC':
+            col_map['borc'] = col
+        elif col_upper == 'ALACAK':
+            col_map['alacak'] = col
+        elif 'BORÇ BAKİYE' in col_upper or 'BORC BAKIYE' in col_upper:
+            col_map['borc_bakiye'] = col
+        elif 'ALACAK BAKİYE' in col_upper:
+            col_map['alacak_bakiye'] = col
+
+    if 'hesap_kodu' not in col_map:
+        logger.warning(f"HESAP KODU column not found in {file_path}")
+        return results
+
+    for _, row in df.iterrows():
+        hesap_kodu = row.get(col_map.get('hesap_kodu'))
+        if pd.isna(hesap_kodu) or str(hesap_kodu).strip() == '':
+            continue
+
+        hesap_kodu = str(hesap_kodu).strip()
+
+        # Skip total rows
+        if hesap_kodu.upper() in ['TOPLAM', 'GENEL TOPLAM', 'ARA TOPLAM', 'NAN']:
+            continue
+
+        # Skip single digit group headers (1, 2, 3, etc.) - they're category summaries
+        # Keep 3+ digit actual accounts (100, 102, 320, etc.)
+        if hesap_kodu.isdigit() and len(hesap_kodu) < 3:
+            continue
+
+        hesap_adi = row.get(col_map.get('hesap_adi', ''))
+        hesap_adi = str(hesap_adi).strip() if pd.notna(hesap_adi) else None
+
+        borc = row.get(col_map.get('borc', ''))
+        alacak = row.get(col_map.get('alacak', ''))
+        borc_bakiye = row.get(col_map.get('borc_bakiye', ''))
+        alacak_bakiye = row.get(col_map.get('alacak_bakiye', ''))
+
+        results.append({
+            'hesap_kodu': hesap_kodu,
+            'hesap_adi': hesap_adi,
+            'borc_toplam': _parse_tr_number(str(borc) if pd.notna(borc) else None),
+            'alacak_toplam': _parse_tr_number(str(alacak) if pd.notna(alacak) else None),
+            'borc_bakiye': _parse_tr_number(str(borc_bakiye) if pd.notna(borc_bakiye) else None),
+            'alacak_bakiye': _parse_tr_number(str(alacak_bakiye) if pd.notna(alacak_bakiye) else None),
+        })
+
+    logger.info(f"Parsed {len(results)} mizan entries from Excel: {file_path.name}")
+    return results
+
+
+def _parse_mizan_csv(file_path: Path) -> List[Dict[str, Any]]:
+    """Parse mizan from CSV file."""
+    results = []
 
     try:
         # Try to read as CSV
