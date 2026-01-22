@@ -106,6 +106,102 @@ def init_database():
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_log(action)")
 
         # ════════════════════════════════════════════════════════════════
+        # MUHASEBE VERİ TABLOLARI (KRİTİK - MALİYE CEZASI RİSKİ!)
+        # Sprint 8: Bu tablolar olmadan veri yüklenemez!
+        # ════════════════════════════════════════════════════════════════
+
+        # Mizan Entries - Trial Balance (MİZAN)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS mizan_entries (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tenant_id TEXT NOT NULL,
+                client_id TEXT NOT NULL,
+                period_id TEXT NOT NULL,
+                hesap_kodu TEXT NOT NULL,
+                hesap_adi TEXT,
+                borc_toplam REAL DEFAULT 0,
+                alacak_toplam REAL DEFAULT 0,
+                borc_bakiye REAL DEFAULT 0,
+                alacak_bakiye REAL DEFAULT 0,
+                source_file TEXT,
+                row_index INTEGER,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(tenant_id, client_id, period_id, hesap_kodu)
+            )
+        """)
+
+        # KDV Beyanname Data - VAT Declaration
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS kdv_beyanname_data (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tenant_id TEXT NOT NULL,
+                client_id TEXT NOT NULL,
+                period_id TEXT NOT NULL,
+                beyan_tipi TEXT DEFAULT 'KDV1',
+                matrah REAL DEFAULT 0,
+                hesaplanan_kdv REAL DEFAULT 0,
+                indirilecek_kdv REAL DEFAULT 0,
+                odenecek_kdv REAL DEFAULT 0,
+                devreden_kdv REAL DEFAULT 0,
+                iade_talep REAL DEFAULT 0,
+                tecil_terkin REAL DEFAULT 0,
+                ihracat_istisna REAL DEFAULT 0,
+                source_file TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(tenant_id, client_id, period_id, beyan_tipi)
+            )
+        """)
+
+        # Banka Bakiye Data - Bank Balance
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS banka_bakiye_data (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tenant_id TEXT NOT NULL,
+                client_id TEXT NOT NULL,
+                period_id TEXT NOT NULL,
+                banka_adi TEXT NOT NULL,
+                hesap_no TEXT,
+                hesap_kodu TEXT,
+                donem_basi_bakiye REAL DEFAULT 0,
+                donem_sonu_bakiye REAL DEFAULT 0,
+                toplam_giris REAL DEFAULT 0,
+                toplam_cikis REAL DEFAULT 0,
+                source_file TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(tenant_id, client_id, period_id, banka_adi, hesap_no)
+            )
+        """)
+
+        # Tahakkuk Data - Tax Assessment
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS tahakkuk_data (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tenant_id TEXT NOT NULL,
+                client_id TEXT NOT NULL,
+                period_id TEXT NOT NULL,
+                vergi_turu TEXT NOT NULL,
+                tahakkuk_tarihi TEXT,
+                vade_tarihi TEXT,
+                tahakkuk_tutari REAL DEFAULT 0,
+                odenen_tutar REAL DEFAULT 0,
+                kalan_tutar REAL DEFAULT 0,
+                source_file TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(tenant_id, client_id, period_id, vergi_turu, tahakkuk_tarihi)
+            )
+        """)
+
+        # Muhasebe veri indexleri
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_mizan_tenant_client_period ON mizan_entries(tenant_id, client_id, period_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_mizan_hesap_kodu ON mizan_entries(hesap_kodu)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_kdv_tenant_client_period ON kdv_beyanname_data(tenant_id, client_id, period_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_banka_tenant_client_period ON banka_bakiye_data(tenant_id, client_id, period_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_tahakkuk_tenant_client_period ON tahakkuk_data(tenant_id, client_id, period_id)")
+
+        # ════════════════════════════════════════════════════════════════
         # REGWATCH TABLES
         # ════════════════════════════════════════════════════════════════
 
@@ -809,6 +905,125 @@ def init_database():
 
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_chat_messages_session ON chat_messages(session_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_chat_messages_role ON chat_messages(role)")
+
+        # ════════════════════════════════════════════════════════════════
+        # BANKA HAREKETLERİ (Bank Transactions)
+        # ════════════════════════════════════════════════════════════════
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS bank_transactions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tenant_id TEXT NOT NULL,
+                client_id TEXT NOT NULL,
+                period_id TEXT NOT NULL,
+                hesap_kodu TEXT,
+                banka_adi TEXT,
+                tarih TEXT,
+                aciklama TEXT,
+                islem_tipi TEXT,
+                tutar REAL,
+                bakiye REAL,
+                source_file TEXT,
+                line_number INTEGER,
+                created_at TEXT DEFAULT (datetime('now')),
+                updated_at TEXT DEFAULT (datetime('now'))
+            )
+        """)
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_bank_trans_client_period ON bank_transactions(client_id, period_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_bank_trans_hesap ON bank_transactions(hesap_kodu)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_bank_trans_tarih ON bank_transactions(tarih)")
+
+        # ════════════════════════════════════════════════════════════════
+        # YEVMİYE DEFTERİ (Journal Entries)
+        # ════════════════════════════════════════════════════════════════
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS journal_entries (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tenant_id TEXT NOT NULL,
+                client_id TEXT NOT NULL,
+                period_id TEXT NOT NULL,
+                fis_no TEXT,
+                tarih TEXT,
+                fis_aciklama TEXT,
+                hesap_kodu TEXT,
+                hesap_adi TEXT,
+                aciklama TEXT,
+                borc REAL DEFAULT 0,
+                alacak REAL DEFAULT 0,
+                source_file TEXT,
+                line_number INTEGER,
+                created_at TEXT DEFAULT (datetime('now')),
+                updated_at TEXT DEFAULT (datetime('now'))
+            )
+        """)
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_journal_client_period ON journal_entries(client_id, period_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_journal_fis ON journal_entries(fis_no)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_journal_hesap ON journal_entries(hesap_kodu)")
+
+        # ════════════════════════════════════════════════════════════════
+        # DEFTERİ KEBİR (General Ledger)
+        # ════════════════════════════════════════════════════════════════
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS ledger_entries (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tenant_id TEXT NOT NULL,
+                client_id TEXT NOT NULL,
+                period_id TEXT NOT NULL,
+                kebir_hesap TEXT,
+                tarih TEXT,
+                madde_no TEXT,
+                fis_no TEXT,
+                evrak_no TEXT,
+                evrak_tarihi TEXT,
+                hesap_kodu TEXT,
+                hesap_adi TEXT,
+                aciklama TEXT,
+                borc REAL DEFAULT 0,
+                alacak REAL DEFAULT 0,
+                bakiye REAL DEFAULT 0,
+                source_file TEXT,
+                line_number INTEGER,
+                created_at TEXT DEFAULT (datetime('now')),
+                updated_at TEXT DEFAULT (datetime('now'))
+            )
+        """)
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_ledger_client_period ON ledger_entries(client_id, period_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_ledger_hesap ON ledger_entries(hesap_kodu)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_ledger_kebir ON ledger_entries(kebir_hesap)")
+
+        # ════════════════════════════════════════════════════════════════
+        # E-DEFTER KAYITLARI (E-Ledger Entries from XML)
+        # ════════════════════════════════════════════════════════════════
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS edefter_entries (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tenant_id TEXT NOT NULL,
+                client_id TEXT NOT NULL,
+                period_id TEXT NOT NULL,
+                vkn TEXT,
+                donem TEXT,
+                defter_tipi TEXT,
+                fis_no TEXT,
+                satir_no INTEGER,
+                tarih TEXT,
+                fis_aciklama TEXT,
+                hesap_kodu TEXT,
+                hesap_adi TEXT,
+                alt_hesap_kodu TEXT,
+                alt_hesap_adi TEXT,
+                tutar REAL DEFAULT 0,
+                borc_alacak TEXT,
+                belge_no TEXT,
+                belge_tarihi TEXT,
+                aciklama TEXT,
+                source_file TEXT,
+                created_at TEXT DEFAULT (datetime('now')),
+                updated_at TEXT DEFAULT (datetime('now'))
+            )
+        """)
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_edefter_client_period ON edefter_entries(client_id, period_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_edefter_vkn ON edefter_entries(vkn)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_edefter_hesap ON edefter_entries(hesap_kodu)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_edefter_fis ON edefter_entries(fis_no)")
 
         conn.commit()
         logger.info(f"Database initialized: {DB_PATH}")

@@ -28,13 +28,29 @@ UPLOAD_DIR = BACKEND_DIR / "backend" / "uploads"  # Actual file location (nested
 def _parse_tr_number(s: Optional[str]) -> float:
     """
     Parse Turkish number format (3.983.434,26) to float.
+    Also handles already-parsed floats from Excel.
     Returns 0.0 for empty, None, or '-'.
     """
     if s is None:
         return 0.0
+
+    # If it's already a number (from Excel), return it directly
+    if isinstance(s, (int, float)):
+        return float(s)
+
     s = str(s).strip()
-    if not s or s == "-":
+    if not s or s == "-" or s.lower() == 'nan':
         return 0.0
+
+    # Check if it's already in standard float format (e.g., "12345.67")
+    # This happens when Excel returns floats as strings
+    if re.match(r'^-?\d+\.?\d*$', s):
+        try:
+            return float(s)
+        except ValueError:
+            pass
+
+    # Turkish format: 3.983.434,26 (dots as thousand sep, comma as decimal)
     # Remove thousand separators (dots), convert decimal comma to dot
     s = s.replace(".", "").replace(",", ".")
     try:
@@ -567,3 +583,492 @@ def trigger_parse_for_document(
         """, (new_status, datetime.utcnow().isoformat(), doc_id))
 
     return result
+
+
+# =============================================================================
+# BANKA EKSTRESİ PARSER
+# =============================================================================
+
+def parse_bank_statement(file_path: Path) -> List[Dict[str, Any]]:
+    """
+    Parse bank statement CSV file.
+
+    Supports Turkish bank statement format:
+    - Delimiter: semicolon (;)
+    - Encoding: windows-1254 or utf-8
+    - Columns: Tarih, Aciklama, Islem Tutari, Bakiye
+
+    Returns list of transactions with normalized fields.
+    """
+    results = []
+
+    if not file_path.exists():
+        logger.warning(f"Bank statement file not found: {file_path}")
+        return results
+
+    # Extract bank info from filename
+    # Format: Q1 102.01 YKB 1-2-3.csv
+    filename = file_path.name
+    hesap_kodu = None
+    banka_adi = None
+
+    # Try to extract account code (102.xx)
+    match = re.search(r'(102\.\d{2})', filename)
+    if match:
+        hesap_kodu = match.group(1)
+
+    # Try to extract bank name
+    bank_names = ['YKB', 'AKBANK', 'HALKBANK', 'ZİRAAT', 'ZIRAAT', 'ALBARAKA',
+                  'GARANTİ', 'İŞBANK', 'VAKIF', 'DENİZ', 'QNB', 'ING', 'TEB']
+    for bank in bank_names:
+        if bank.upper() in filename.upper():
+            banka_adi = bank
+            break
+
+    # Try different encodings
+    content = None
+    for encoding in ['utf-8-sig', 'utf-8', 'windows-1254', 'latin-1', 'iso-8859-9']:
+        try:
+            with open(file_path, 'r', encoding=encoding) as f:
+                content = f.read()
+            break
+        except (UnicodeDecodeError, UnicodeError):
+            continue
+
+    if not content:
+        logger.error(f"Could not read bank statement with any encoding: {file_path}")
+        return results
+
+    lines = content.strip().split('\n')
+
+    # Detect delimiter
+    first_data_line = lines[0] if lines else ""
+    delimiter = ';' if ';' in first_data_line else ','
+
+    # Find header row (Tarih, Açıklama, etc.)
+    header_idx = 0
+    for i, line in enumerate(lines[:10]):  # Check first 10 lines
+        line_upper = line.upper()
+        if 'TARİH' in line_upper or 'TARIH' in line_upper:
+            header_idx = i
+            break
+
+    # Parse header
+    header_line = lines[header_idx]
+    header = [col.strip() for col in header_line.split(delimiter)]
+
+    # Find column indices
+    tarih_idx = None
+    aciklama_idx = None
+    tutar_idx = None
+    bakiye_idx = None
+
+    for i, col in enumerate(header):
+        col_upper = col.upper()
+        if 'TARİH' in col_upper or 'TARIH' in col_upper:
+            tarih_idx = i
+        elif 'AÇIKLAMA' in col_upper or 'ACIKLAMA' in col_upper:
+            aciklama_idx = i
+        elif 'TUTAR' in col_upper or 'İŞLEM' in col_upper or 'ISLEM' in col_upper:
+            tutar_idx = i
+        elif 'BAKİYE' in col_upper or 'BAKIYE' in col_upper:
+            bakiye_idx = i
+
+    # Parse data rows
+    for line_num, line in enumerate(lines[header_idx + 1:], start=header_idx + 2):
+        if not line.strip():
+            continue
+
+        cols = line.split(delimiter)
+
+        try:
+            tarih = cols[tarih_idx].strip() if tarih_idx is not None and tarih_idx < len(cols) else None
+            aciklama = cols[aciklama_idx].strip() if aciklama_idx is not None and aciklama_idx < len(cols) else None
+            tutar_str = cols[tutar_idx].strip() if tutar_idx is not None and tutar_idx < len(cols) else None
+            bakiye_str = cols[bakiye_idx].strip() if bakiye_idx is not None and bakiye_idx < len(cols) else None
+
+            # Skip empty rows
+            if not tarih and not aciklama:
+                continue
+
+            # Parse amount (can be negative)
+            tutar = _parse_tr_number(tutar_str) if tutar_str else 0.0
+            bakiye = _parse_tr_number(bakiye_str) if bakiye_str else 0.0
+
+            # Determine transaction type from description
+            islem_tipi = _classify_bank_transaction(aciklama or '')
+
+            results.append({
+                'hesap_kodu': hesap_kodu,
+                'banka_adi': banka_adi,
+                'tarih': tarih,
+                'aciklama': aciklama,
+                'islem_tipi': islem_tipi,
+                'tutar': tutar,
+                'bakiye': bakiye,
+                'line_number': line_num
+            })
+
+        except Exception as e:
+            logger.warning(f"Error parsing line {line_num}: {e}")
+            continue
+
+    logger.info(f"Parsed {len(results)} bank transactions from: {file_path.name}")
+    return results
+
+
+def _classify_bank_transaction(aciklama: str) -> str:
+    """Classify bank transaction type from description."""
+    aciklama_upper = aciklama.upper()
+
+    if 'PEŞIN SATIŞ' in aciklama_upper or 'PESIN SATIS' in aciklama_upper:
+        return 'POS_PESIN'
+    elif 'TAKSİT' in aciklama_upper or 'TAKSIT' in aciklama_upper:
+        return 'POS_TAKSIT'
+    elif 'KATKI PAYI' in aciklama_upper:
+        return 'KOMISYON'
+    elif 'ÜYE İŞYERİ' in aciklama_upper or 'UYE ISYERI' in aciklama_upper:
+        return 'POS_UCRETI'
+    elif 'BSMV' in aciklama_upper:
+        return 'VERGI'
+    elif 'GİDEN EFT' in aciklama_upper or 'GIDEN EFT' in aciklama_upper:
+        return 'EFT_GIDEN'
+    elif 'GELEN EFT' in aciklama_upper:
+        return 'EFT_GELEN'
+    elif 'GİDEN FAST' in aciklama_upper or 'GIDEN FAST' in aciklama_upper:
+        return 'FAST_GIDEN'
+    elif 'GELEN FAST' in aciklama_upper:
+        return 'FAST_GELEN'
+    elif 'VİRMAN' in aciklama_upper or 'VIRMAN' in aciklama_upper:
+        return 'VIRMAN'
+    elif 'FAİZ' in aciklama_upper or 'FAIZ' in aciklama_upper:
+        return 'FAIZ'
+    elif 'HAVALE' in aciklama_upper:
+        return 'HAVALE'
+    elif 'MASRAF' in aciklama_upper or 'ÜCRET' in aciklama_upper or 'UCRET' in aciklama_upper:
+        return 'MASRAF'
+    else:
+        return 'DIGER'
+
+
+# =============================================================================
+# YEVMİYE DEFTERİ PARSER
+# =============================================================================
+
+def parse_yevmiye_defteri(file_path: Path) -> List[Dict[str, Any]]:
+    """
+    Parse yevmiye defteri (journal/day book) Excel file.
+
+    Structure:
+    - Header contains company info
+    - Each entry starts with a "fiş header" line: 00001-----00001-----AÇILIŞ-----01/01/2025
+    - Followed by account lines with hesap_kodu, hesap_adi, aciklama, borc, alacak
+
+    Returns list of journal entry lines.
+    """
+    results = []
+
+    if not file_path.exists():
+        logger.warning(f"Yevmiye file not found: {file_path}")
+        return results
+
+    try:
+        import pandas as pd
+        df = pd.read_excel(file_path, header=None)
+    except Exception as e:
+        logger.error(f"Could not read yevmiye Excel file {file_path}: {e}")
+        return results
+
+    current_fis_no = None
+    current_tarih = None
+    current_aciklama = None
+
+    for idx, row in df.iterrows():
+        # Get first cell to check for fiş header
+        first_cell = str(row.iloc[0]) if pd.notna(row.iloc[0]) else ''
+
+        # Check if this is a fiş header line (contains -----)
+        if '-----' in first_cell:
+            # Parse fiş header: 00001-----00001-----AÇILIŞ-----01/01/2025
+            parts = first_cell.split('-----')
+            if len(parts) >= 4:
+                current_fis_no = parts[0].strip()
+                current_aciklama = parts[2].strip() if len(parts) > 2 else ''
+                current_tarih = parts[3].strip() if len(parts) > 3 else ''
+            continue
+
+        # Check if this is a column header row
+        if 'HESAP KODU' in first_cell.upper():
+            continue
+
+        # Check if this is a data row (has hesap kodu)
+        hesap_kodu = first_cell.strip()
+
+        # Skip if not a valid account code
+        if not hesap_kodu or hesap_kodu.upper() in ['NAN', 'TOPLAM', '']:
+            continue
+
+        # Check if it looks like an account code (digits and dots)
+        if not re.match(r'^[\d.]+$', hesap_kodu):
+            continue
+
+        try:
+            hesap_adi = str(row.iloc[1]).strip() if pd.notna(row.iloc[1]) else ''
+            aciklama = str(row.iloc[2]).strip() if len(row) > 2 and pd.notna(row.iloc[2]) else ''
+            detay = str(row.iloc[3]).strip() if len(row) > 3 and pd.notna(row.iloc[3]) else ''
+
+            # Borç and Alacak can be in different positions
+            borc = 0.0
+            alacak = 0.0
+
+            # Try to find borç and alacak values
+            for i in range(3, min(len(row), 7)):
+                val = row.iloc[i]
+                if pd.notna(val):
+                    val_str = str(val).strip()
+                    if val_str and val_str not in ['NaN', 'nan', '']:
+                        parsed = _parse_tr_number(val_str)
+                        if parsed > 0:
+                            if borc == 0:
+                                borc = parsed
+                            elif alacak == 0:
+                                alacak = parsed
+
+            # Skip rows without any values
+            if borc == 0 and alacak == 0:
+                continue
+
+            results.append({
+                'fis_no': current_fis_no,
+                'tarih': current_tarih,
+                'fis_aciklama': current_aciklama,
+                'hesap_kodu': hesap_kodu,
+                'hesap_adi': hesap_adi,
+                'aciklama': aciklama or detay,
+                'borc': borc,
+                'alacak': alacak,
+                'line_number': idx
+            })
+
+        except Exception as e:
+            logger.warning(f"Error parsing yevmiye row {idx}: {e}")
+            continue
+
+    logger.info(f"Parsed {len(results)} yevmiye entries from: {file_path.name}")
+    return results
+
+
+# =============================================================================
+# DEFTERİ KEBİR PARSER
+# =============================================================================
+
+def parse_defteri_kebir(file_path: Path) -> List[Dict[str, Any]]:
+    """
+    Parse defteri kebir (general ledger) Excel file.
+
+    Structure:
+    - Header row with: KEBİR HESAP, TARİH, MADDE NO, FİŞ NO, EVRAK NO, EVRAK TARİHİ,
+                       HESAP KODU, HESAP ADI, AÇIKLAMA, BORÇ, ALACAK, BAKİYE
+
+    Returns list of ledger entries.
+    """
+    results = []
+
+    if not file_path.exists():
+        logger.warning(f"Kebir file not found: {file_path}")
+        return results
+
+    try:
+        import pandas as pd
+        df = pd.read_excel(file_path, header=0)
+    except Exception as e:
+        logger.error(f"Could not read kebir Excel file {file_path}: {e}")
+        return results
+
+    # Map column names (handle variations)
+    col_map = {}
+    for col in df.columns:
+        col_str = str(col).upper().strip()
+        if 'KEBİR' in col_str or 'KEBIR' in col_str:
+            col_map['kebir_hesap'] = col
+        elif col_str == 'TARİH' or col_str == 'TARIH':
+            col_map['tarih'] = col
+        elif 'MADDE' in col_str:
+            col_map['madde_no'] = col
+        elif 'FİŞ' in col_str or 'FIS' in col_str:
+            col_map['fis_no'] = col
+        elif 'EVRAK NO' in col_str:
+            col_map['evrak_no'] = col
+        elif 'EVRAK' in col_str and 'TARİH' in col_str:
+            col_map['evrak_tarihi'] = col
+        elif 'HESAP KODU' in col_str or 'HESAPKODU' in col_str:
+            col_map['hesap_kodu'] = col
+        elif 'HESAP ADI' in col_str or 'HESAPADI' in col_str:
+            col_map['hesap_adi'] = col
+        elif 'AÇIKLAMA' in col_str or 'ACIKLAMA' in col_str:
+            col_map['aciklama'] = col
+        elif col_str == 'BORÇ' or col_str == 'BORC':
+            col_map['borc'] = col
+        elif col_str == 'ALACAK':
+            col_map['alacak'] = col
+        elif 'BAKİYE' in col_str or 'BAKIYE' in col_str:
+            col_map['bakiye'] = col
+
+    for idx, row in df.iterrows():
+        try:
+            kebir_hesap = str(row.get(col_map.get('kebir_hesap', ''), '')).strip()
+            hesap_kodu = str(row.get(col_map.get('hesap_kodu', ''), '')).strip()
+
+            # Skip invalid rows
+            if not hesap_kodu or hesap_kodu.upper() in ['NAN', '', 'NONE']:
+                continue
+
+            tarih = row.get(col_map.get('tarih', ''))
+            if pd.notna(tarih):
+                tarih = str(tarih)
+            else:
+                tarih = None
+
+            borc = row.get(col_map.get('borc', ''))
+            borc = _parse_tr_number(str(borc)) if pd.notna(borc) else 0.0
+
+            alacak = row.get(col_map.get('alacak', ''))
+            alacak = _parse_tr_number(str(alacak)) if pd.notna(alacak) else 0.0
+
+            bakiye = row.get(col_map.get('bakiye', ''))
+            bakiye = _parse_tr_number(str(bakiye)) if pd.notna(bakiye) else 0.0
+
+            results.append({
+                'kebir_hesap': kebir_hesap,
+                'tarih': tarih,
+                'madde_no': str(row.get(col_map.get('madde_no', ''), '')),
+                'fis_no': str(row.get(col_map.get('fis_no', ''), '')),
+                'evrak_no': str(row.get(col_map.get('evrak_no', ''), '')),
+                'evrak_tarihi': str(row.get(col_map.get('evrak_tarihi', ''), '')),
+                'hesap_kodu': hesap_kodu,
+                'hesap_adi': str(row.get(col_map.get('hesap_adi', ''), '')),
+                'aciklama': str(row.get(col_map.get('aciklama', ''), '')),
+                'borc': borc,
+                'alacak': alacak,
+                'bakiye': bakiye,
+                'line_number': idx
+            })
+
+        except Exception as e:
+            logger.warning(f"Error parsing kebir row {idx}: {e}")
+            continue
+
+    logger.info(f"Parsed {len(results)} kebir entries from: {file_path.name}")
+    return results
+
+
+# =============================================================================
+# E-DEFTER XML PARSER
+# =============================================================================
+
+def parse_edefter_xml(file_path: Path) -> List[Dict[str, Any]]:
+    """
+    Parse E-Defter XML file (XBRL GL format).
+
+    Supports:
+    - Yevmiye (Y) files - Journal entries
+    - Kebir (K) files - Ledger entries
+    - Berat files (YB, KB) - Certificate/seal info
+
+    Returns list of accounting entries.
+    """
+    results = []
+
+    if not file_path.exists():
+        logger.warning(f"E-Defter XML file not found: {file_path}")
+        return results
+
+    # Determine file type from name
+    # Format: VKN-YYYYMM-TYPE-SEQ.xml
+    filename = file_path.name
+    file_type = None
+    match = re.search(r'-(\d{6})-([YKD][RB]?)-', filename)
+    if match:
+        file_type = match.group(2)  # Y, K, YB, KB, DR
+
+    try:
+        import xml.etree.ElementTree as ET
+        tree = ET.parse(file_path)
+        root = tree.getroot()
+    except Exception as e:
+        logger.error(f"Could not parse E-Defter XML {file_path}: {e}")
+        return results
+
+    # Define namespaces
+    ns = {
+        'edefter': 'http://www.edefter.gov.tr',
+        'xbrli': 'http://www.xbrl.org/2003/instance',
+        'gl-cor': 'http://www.xbrl.org/int/gl/cor/2006-10-25',
+        'gl-bus': 'http://www.xbrl.org/int/gl/bus/2006-10-25',
+    }
+
+    # Find all entry headers
+    for entry_header in root.findall('.//gl-cor:entryHeader', ns):
+        try:
+            # Get entry-level info
+            entry_number = entry_header.findtext('gl-cor:entryNumber', '', ns)
+            entered_date = entry_header.findtext('gl-cor:enteredDate', '', ns)
+            entry_comment = entry_header.findtext('gl-cor:entryComment', '', ns)
+
+            # Get entry details (line items)
+            for detail in entry_header.findall('gl-cor:entryDetail', ns):
+                line_number = detail.findtext('gl-cor:lineNumber', '', ns)
+
+                # Get account info
+                account = detail.find('gl-cor:account', ns)
+                if account is not None:
+                    account_main_id = account.findtext('gl-cor:accountMainID', '', ns)
+                    account_main_desc = account.findtext('gl-cor:accountMainDescription', '', ns)
+
+                    account_sub = account.find('gl-cor:accountSub', ns)
+                    account_sub_id = ''
+                    account_sub_desc = ''
+                    if account_sub is not None:
+                        account_sub_id = account_sub.findtext('gl-cor:accountSubID', '', ns)
+                        account_sub_desc = account_sub.findtext('gl-cor:accountSubDescription', '', ns)
+                else:
+                    account_main_id = ''
+                    account_main_desc = ''
+                    account_sub_id = ''
+                    account_sub_desc = ''
+
+                # Get amount and D/C code
+                amount = detail.findtext('gl-cor:amount', '0', ns)
+                debit_credit = detail.findtext('gl-cor:debitCreditCode', '', ns)
+
+                # Get document info
+                doc_number = detail.findtext('gl-cor:documentNumber', '', ns)
+                doc_date = detail.findtext('gl-cor:documentDate', '', ns)
+                posting_date = detail.findtext('gl-cor:postingDate', '', ns)
+
+                # Get detail comment
+                detail_comment = detail.findtext('gl-cor:detailComment', '', ns)
+
+                results.append({
+                    'defter_tipi': file_type,
+                    'fis_no': entry_number,
+                    'tarih': entered_date or posting_date,
+                    'fis_aciklama': entry_comment,
+                    'satir_no': line_number,
+                    'hesap_kodu': account_main_id,
+                    'hesap_adi': account_main_desc,
+                    'alt_hesap_kodu': account_sub_id,
+                    'alt_hesap_adi': account_sub_desc,
+                    'tutar': _parse_tr_number(amount),
+                    'borc_alacak': debit_credit,  # D or C
+                    'belge_no': doc_number,
+                    'belge_tarihi': doc_date,
+                    'aciklama': detail_comment,
+                })
+
+        except Exception as e:
+            logger.warning(f"Error parsing E-Defter entry: {e}")
+            continue
+
+    logger.info(f"Parsed {len(results)} E-Defter entries from: {file_path.name}")
+    return results

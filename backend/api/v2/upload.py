@@ -34,6 +34,10 @@ from datetime import datetime
 
 from services.parse_service import (
     parse_mizan_file,
+    parse_bank_statement,
+    parse_yevmiye_defteri,
+    parse_defteri_kebir,
+    parse_edefter_xml,
     trigger_parse_for_document
 )
 
@@ -177,13 +181,25 @@ def clear_existing_data(cursor, tenant_id: str, client_id: str, period: str):
     """Aynı dönem için eski veriyi temizle"""
     period_upper = period.upper()
 
-    # Mizan verilerini temizle
-    cursor.execute("""
-        DELETE FROM mizan_entries
-        WHERE tenant_id = ? AND client_id = ? AND period_id = ?
-    """, (tenant_id, client_id, period_upper))
+    # Tüm tablo verilerini temizle
+    tables = [
+        "mizan_entries",
+        "bank_transactions",
+        "journal_entries",
+        "ledger_entries",
+        "edefter_entries"
+    ]
 
-    logger.info(f"Eski mizan verileri temizlendi: {client_id}/{period_upper}")
+    for table in tables:
+        try:
+            cursor.execute(f"""
+                DELETE FROM {table}
+                WHERE tenant_id = ? AND client_id = ? AND period_id = ?
+            """, (tenant_id, client_id, period_upper))
+        except Exception as e:
+            logger.warning(f"{table} temizleme hatası: {e}")
+
+    logger.info(f"Eski dönem verileri temizlendi: {client_id}/{period_upper}")
 
 
 def save_and_parse_mizan(
@@ -254,6 +270,295 @@ def save_and_parse_mizan(
 
     except Exception as e:
         logger.error(f"Mizan parse hatası: {e}")
+        return {
+            "status": "error",
+            "rows": 0,
+            "message": f"Parse hatası: {str(e)}"
+        }
+
+
+def save_and_parse_banka(
+    cursor,
+    tenant_id: str,
+    client_id: str,
+    period: str,
+    file_path: Path,
+    original_filename: str
+) -> Dict[str, Any]:
+    """Banka ekstresi parse edip database'e yaz"""
+    period_upper = period.upper()
+    now = datetime.utcnow().isoformat()
+
+    try:
+        rows = parse_bank_statement(file_path)
+
+        if not rows:
+            return {
+                "status": "empty",
+                "rows": 0,
+                "message": "Banka ekstresinde veri bulunamadı"
+            }
+
+        inserted_count = 0
+
+        for idx, row in enumerate(rows):
+            try:
+                cursor.execute("""
+                    INSERT INTO bank_transactions (
+                        tenant_id, client_id, period_id,
+                        hesap_kodu, banka_adi, tarih,
+                        aciklama, islem_tipi, tutar, bakiye,
+                        source_file, line_number,
+                        created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    tenant_id,
+                    client_id,
+                    period_upper,
+                    row.get('hesap_kodu'),
+                    row.get('banka_adi'),
+                    row.get('tarih'),
+                    row.get('aciklama'),
+                    row.get('islem_tipi'),
+                    row.get('tutar', 0),
+                    row.get('bakiye', 0),
+                    original_filename,
+                    idx,
+                    now,
+                    now
+                ))
+                inserted_count += 1
+            except Exception as e:
+                logger.warning(f"Banka satır {idx} eklenemedi: {e}")
+
+        return {
+            "status": "success",
+            "rows": inserted_count,
+            "message": f"{inserted_count} banka işlemi kaydedildi"
+        }
+
+    except Exception as e:
+        logger.error(f"Banka parse hatası: {e}")
+        return {
+            "status": "error",
+            "rows": 0,
+            "message": f"Parse hatası: {str(e)}"
+        }
+
+
+def save_and_parse_yevmiye(
+    cursor,
+    tenant_id: str,
+    client_id: str,
+    period: str,
+    file_path: Path,
+    original_filename: str
+) -> Dict[str, Any]:
+    """Yevmiye defteri parse edip database'e yaz"""
+    period_upper = period.upper()
+    now = datetime.utcnow().isoformat()
+
+    try:
+        rows = parse_yevmiye_defteri(file_path)
+
+        if not rows:
+            return {
+                "status": "empty",
+                "rows": 0,
+                "message": "Yevmiye defterinde veri bulunamadı"
+            }
+
+        inserted_count = 0
+
+        for idx, row in enumerate(rows):
+            try:
+                cursor.execute("""
+                    INSERT INTO journal_entries (
+                        tenant_id, client_id, period_id,
+                        fis_no, tarih, fis_aciklama,
+                        hesap_kodu, hesap_adi, aciklama,
+                        borc, alacak,
+                        source_file, line_number,
+                        created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    tenant_id,
+                    client_id,
+                    period_upper,
+                    row.get('fis_no'),
+                    row.get('fis_tarihi'),
+                    row.get('fis_turu'),  # fis_aciklama olarak kullan
+                    row.get('hesap_kodu'),
+                    row.get('hesap_adi'),
+                    row.get('aciklama'),
+                    row.get('borc', 0),
+                    row.get('alacak', 0),
+                    original_filename,
+                    idx,
+                    now,
+                    now
+                ))
+                inserted_count += 1
+            except Exception as e:
+                logger.warning(f"Yevmiye satır {idx} eklenemedi: {e}")
+
+        return {
+            "status": "success",
+            "rows": inserted_count,
+            "message": f"{inserted_count} yevmiye kaydı eklendi"
+        }
+
+    except Exception as e:
+        logger.error(f"Yevmiye parse hatası: {e}")
+        return {
+            "status": "error",
+            "rows": 0,
+            "message": f"Parse hatası: {str(e)}"
+        }
+
+
+def save_and_parse_kebir(
+    cursor,
+    tenant_id: str,
+    client_id: str,
+    period: str,
+    file_path: Path,
+    original_filename: str
+) -> Dict[str, Any]:
+    """Defteri Kebir parse edip database'e yaz"""
+    period_upper = period.upper()
+    now = datetime.utcnow().isoformat()
+
+    try:
+        rows = parse_defteri_kebir(file_path)
+
+        if not rows:
+            return {
+                "status": "empty",
+                "rows": 0,
+                "message": "Defteri Kebir'de veri bulunamadı"
+            }
+
+        inserted_count = 0
+
+        for idx, row in enumerate(rows):
+            try:
+                cursor.execute("""
+                    INSERT INTO ledger_entries (
+                        tenant_id, client_id, period_id,
+                        hesap_kodu, hesap_adi,
+                        tarih, fis_no, aciklama,
+                        borc, alacak, bakiye,
+                        source_file, line_number,
+                        created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    tenant_id,
+                    client_id,
+                    period_upper,
+                    row.get('hesap_kodu'),
+                    row.get('hesap_adi'),
+                    row.get('tarih'),
+                    row.get('fis_no'),
+                    row.get('aciklama'),
+                    row.get('borc', 0),
+                    row.get('alacak', 0),
+                    row.get('bakiye', 0),
+                    original_filename,
+                    idx,
+                    now,
+                    now
+                ))
+                inserted_count += 1
+            except Exception as e:
+                logger.warning(f"Kebir satır {idx} eklenemedi: {e}")
+
+        return {
+            "status": "success",
+            "rows": inserted_count,
+            "message": f"{inserted_count} kebir kaydı eklendi"
+        }
+
+    except Exception as e:
+        logger.error(f"Kebir parse hatası: {e}")
+        return {
+            "status": "error",
+            "rows": 0,
+            "message": f"Parse hatası: {str(e)}"
+        }
+
+
+def save_and_parse_edefter(
+    cursor,
+    tenant_id: str,
+    client_id: str,
+    period: str,
+    file_path: Path,
+    original_filename: str
+) -> Dict[str, Any]:
+    """E-Defter XML parse edip database'e yaz"""
+    period_upper = period.upper()
+    now = datetime.utcnow().isoformat()
+
+    try:
+        rows = parse_edefter_xml(file_path)
+
+        if not rows:
+            return {
+                "status": "empty",
+                "rows": 0,
+                "message": "E-Defter'de veri bulunamadı"
+            }
+
+        inserted_count = 0
+
+        for idx, row in enumerate(rows):
+            try:
+                cursor.execute("""
+                    INSERT INTO edefter_entries (
+                        tenant_id, client_id, period_id,
+                        defter_tipi, fis_no, satir_no, tarih,
+                        fis_aciklama, hesap_kodu, hesap_adi,
+                        alt_hesap_kodu, alt_hesap_adi,
+                        tutar, borc_alacak,
+                        belge_no, belge_tarihi, aciklama,
+                        source_file,
+                        created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    tenant_id,
+                    client_id,
+                    period_upper,
+                    row.get('defter_tipi'),
+                    row.get('fis_no'),
+                    row.get('satir_no'),
+                    row.get('tarih'),
+                    row.get('fis_aciklama'),
+                    row.get('hesap_kodu'),
+                    row.get('hesap_adi'),
+                    row.get('alt_hesap_kodu'),
+                    row.get('alt_hesap_adi'),
+                    row.get('tutar', 0),
+                    row.get('borc_alacak'),
+                    row.get('belge_no'),
+                    row.get('belge_tarihi'),
+                    row.get('aciklama'),
+                    original_filename,
+                    now,
+                    now
+                ))
+                inserted_count += 1
+            except Exception as e:
+                logger.warning(f"E-Defter satır {idx} eklenemedi: {e}")
+
+        return {
+            "status": "success",
+            "rows": inserted_count,
+            "message": f"{inserted_count} e-defter kaydı eklendi"
+        }
+
+    except Exception as e:
+        logger.error(f"E-Defter parse hatası: {e}")
         return {
             "status": "error",
             "rows": 0,
@@ -389,9 +694,11 @@ async def upload_donem_zip(
                     }
 
                     # 5. PARSE ET
+                    suffix = fpath.suffix.lower()
+
                     if doc_type == "MIZAN":
                         # CSV veya XLSX mizan dosyası
-                        if fpath.suffix.lower() in ['.csv', '.xlsx', '.xls']:
+                        if suffix in ['.csv', '.xlsx', '.xls']:
                             parse_result = save_and_parse_mizan(
                                 cursor,
                                 smmm_id,
@@ -404,12 +711,90 @@ async def upload_donem_zip(
                             file_result["rows"] = parse_result["rows"]
                             file_result["message"] = parse_result["message"]
                         else:
-                            file_result["message"] = f"Desteklenmeyen mizan formatı: {fpath.suffix}"
+                            file_result["message"] = f"Desteklenmeyen mizan formatı: {suffix}"
 
-                    elif doc_type in ["BANKA", "BEYANNAME", "TAHAKKUK", "YEVMIYE", "KEBIR", "GECICI_VERGI", "EDEFTER_BERAT", "EFATURA_ARSIV", "POSET"]:
-                        # TODO: Diğer dosya tipleri için parse eklenecek
-                        file_result["status"] = "pending"
-                        file_result["message"] = f"{doc_type} parse henüz eklenmedi"
+                    elif doc_type == "BANKA":
+                        # CSV veya XLSX banka ekstresi
+                        if suffix in ['.csv', '.xlsx', '.xls']:
+                            parse_result = save_and_parse_banka(
+                                cursor,
+                                smmm_id,
+                                client_id,
+                                period_upper,
+                                fpath,
+                                fpath.name
+                            )
+                            file_result["status"] = parse_result["status"]
+                            file_result["rows"] = parse_result["rows"]
+                            file_result["message"] = parse_result["message"]
+                        else:
+                            file_result["message"] = f"Desteklenmeyen banka formatı: {suffix}"
+
+                    elif doc_type == "YEVMIYE":
+                        # XLSX yevmiye defteri
+                        if suffix in ['.xlsx', '.xls']:
+                            parse_result = save_and_parse_yevmiye(
+                                cursor,
+                                smmm_id,
+                                client_id,
+                                period_upper,
+                                fpath,
+                                fpath.name
+                            )
+                            file_result["status"] = parse_result["status"]
+                            file_result["rows"] = parse_result["rows"]
+                            file_result["message"] = parse_result["message"]
+                        else:
+                            file_result["message"] = f"Desteklenmeyen yevmiye formatı: {suffix}"
+
+                    elif doc_type == "KEBIR":
+                        # XLSX defteri kebir
+                        if suffix in ['.xlsx', '.xls']:
+                            parse_result = save_and_parse_kebir(
+                                cursor,
+                                smmm_id,
+                                client_id,
+                                period_upper,
+                                fpath,
+                                fpath.name
+                            )
+                            file_result["status"] = parse_result["status"]
+                            file_result["rows"] = parse_result["rows"]
+                            file_result["message"] = parse_result["message"]
+                        else:
+                            file_result["message"] = f"Desteklenmeyen kebir formatı: {suffix}"
+
+                    elif doc_type == "EDEFTER_BERAT":
+                        # XML e-defter dosyaları
+                        if suffix == '.xml':
+                            parse_result = save_and_parse_edefter(
+                                cursor,
+                                smmm_id,
+                                client_id,
+                                period_upper,
+                                fpath,
+                                fpath.name
+                            )
+                            file_result["status"] = parse_result["status"]
+                            file_result["rows"] = parse_result["rows"]
+                            file_result["message"] = parse_result["message"]
+                        else:
+                            # E-defter klasöründeki diğer dosyalar (id, berat.xslt vb.)
+                            file_result["status"] = "skipped"
+                            file_result["message"] = "E-defter yardımcı dosyası"
+
+                    elif doc_type in ["BEYANNAME", "TAHAKKUK", "GECICI_VERGI", "POSET"]:
+                        # PDF dosyaları - şimdilik sadece kaydet, parse yok
+                        if suffix == '.pdf':
+                            file_result["status"] = "stored"
+                            file_result["message"] = f"{doc_type} PDF kaydedildi (parse edilmedi)"
+                        else:
+                            file_result["message"] = f"Desteklenmeyen {doc_type} formatı: {suffix}"
+
+                    elif doc_type == "EFATURA_ARSIV":
+                        # E-fatura arşiv dosyaları
+                        file_result["status"] = "stored"
+                        file_result["message"] = "E-fatura arşivi kaydedildi"
 
                     elif doc_type == "OTHER":
                         file_result["message"] = "Bilinmeyen dosya tipi"
