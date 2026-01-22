@@ -38,6 +38,8 @@ from services.parse_service import (
     parse_yevmiye_defteri,
     parse_defteri_kebir,
     parse_edefter_xml,
+    parse_beyanname_pdf,
+    parse_tahakkuk_pdf,
     trigger_parse_for_document
 )
 
@@ -187,7 +189,9 @@ def clear_existing_data(cursor, tenant_id: str, client_id: str, period: str):
         "bank_transactions",
         "journal_entries",
         "ledger_entries",
-        "edefter_entries"
+        "edefter_entries",
+        "beyanname_entries",
+        "tahakkuk_entries"
     ]
 
     for table in tables:
@@ -566,6 +570,149 @@ def save_and_parse_edefter(
         }
 
 
+def save_and_parse_beyanname(
+    cursor,
+    tenant_id: str,
+    client_id: str,
+    period: str,
+    file_path: Path,
+    original_filename: str
+) -> Dict[str, Any]:
+    """Beyanname PDF parse edip database'e yaz"""
+    period_upper = period.upper()
+    now = datetime.utcnow().isoformat()
+
+    try:
+        result = parse_beyanname_pdf(file_path)
+
+        if not result.get('parsed_ok'):
+            return {
+                "status": "error",
+                "rows": 0,
+                "message": f"Parse hatası: {', '.join(result.get('parse_errors', []))}"
+            }
+
+        cursor.execute("""
+            INSERT INTO beyanname_entries (
+                tenant_id, client_id, period_id,
+                beyanname_tipi, donem_yil, donem_ay, donem_tipi,
+                vergi_dairesi, vkn, unvan, onay_zamani,
+                matrah_toplam, hesaplanan_vergi, indirimler_toplam,
+                odenecek_vergi, devreden_kdv,
+                source_file, raw_text, parsed_ok,
+                created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            tenant_id,
+            client_id,
+            period_upper,
+            result.get('beyanname_tipi'),
+            result.get('donem_yil'),
+            result.get('donem_ay'),
+            result.get('donem_tipi'),
+            result.get('vergi_dairesi'),
+            result.get('vkn'),
+            result.get('unvan'),
+            result.get('onay_zamani'),
+            result.get('matrah_toplam', 0),
+            result.get('hesaplanan_vergi', 0),
+            result.get('indirimler_toplam', 0),
+            result.get('odenecek_vergi', 0),
+            result.get('devreden_kdv', 0),
+            original_filename,
+            result.get('raw_text', '')[:10000],  # İlk 10K karakter
+            1 if result.get('parsed_ok') else 0,
+            now,
+            now
+        ))
+
+        return {
+            "status": "success",
+            "rows": 1,
+            "message": f"{result.get('beyanname_tipi')} beyannamesi kaydedildi"
+        }
+
+    except Exception as e:
+        logger.error(f"Beyanname parse hatası: {e}")
+        return {
+            "status": "error",
+            "rows": 0,
+            "message": f"Parse hatası: {str(e)}"
+        }
+
+
+def save_and_parse_tahakkuk(
+    cursor,
+    tenant_id: str,
+    client_id: str,
+    period: str,
+    file_path: Path,
+    original_filename: str
+) -> Dict[str, Any]:
+    """Tahakkuk PDF parse edip database'e yaz"""
+    period_upper = period.upper()
+    now = datetime.utcnow().isoformat()
+
+    try:
+        result = parse_tahakkuk_pdf(file_path)
+
+        if not result.get('parsed_ok'):
+            return {
+                "status": "error",
+                "rows": 0,
+                "message": f"Parse hatası: {', '.join(result.get('parse_errors', []))}"
+            }
+
+        cursor.execute("""
+            INSERT INTO tahakkuk_entries (
+                tenant_id, client_id, period_id,
+                tahakkuk_tipi, donem_yil, donem_ay,
+                vergi_dairesi, vkn, unvan,
+                tahakkuk_no, tahakkuk_tarihi,
+                vergi_turu, vergi_tutari, gecikme_zammi, toplam_borc,
+                vade_tarihi,
+                source_file, raw_text, parsed_ok,
+                created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            tenant_id,
+            client_id,
+            period_upper,
+            result.get('tahakkuk_tipi'),
+            result.get('donem_yil'),
+            result.get('donem_ay'),
+            result.get('vergi_dairesi'),
+            result.get('vkn'),
+            result.get('unvan'),
+            result.get('tahakkuk_no'),
+            result.get('tahakkuk_tarihi'),
+            result.get('vergi_turu'),
+            result.get('vergi_tutari', 0),
+            result.get('gecikme_zammi', 0),
+            result.get('toplam_borc', 0),
+            result.get('vade_tarihi'),
+            original_filename,
+            result.get('raw_text', '')[:10000],  # İlk 10K karakter
+            1 if result.get('parsed_ok') else 0,
+            now,
+            now
+        ))
+
+        return {
+            "status": "success",
+            "rows": 1,
+            "message": f"{result.get('tahakkuk_tipi')} tahakkuku kaydedildi"
+        }
+
+    except Exception as e:
+        logger.error(f"Tahakkuk parse hatası: {e}")
+        return {
+            "status": "error",
+            "rows": 0,
+            "message": f"Parse hatası: {str(e)}"
+        }
+
+
 @router.post("/upload")
 async def upload_donem_zip(
     file: UploadFile = File(..., description="Dönem ZIP dosyası"),
@@ -646,10 +793,34 @@ async def upload_donem_zip(
             with open(zip_path, 'wb') as f:
                 f.write(content)
 
-            # ZIP'i aç
+            # ZIP'i aç (nested ZIP'ler dahil)
+            def extract_all_zips(zip_path: Path, dest_path: Path, depth: int = 0):
+                """ZIP dosyasını ve içindeki nested ZIP'leri recursive olarak aç"""
+                if depth > 3:  # Maximum 3 seviye derinlik
+                    return
+
+                try:
+                    with zipfile.ZipFile(zip_path, 'r') as zf:
+                        zf.extractall(dest_path)
+                except zipfile.BadZipFile:
+                    logger.warning(f"Bozuk ZIP atlandı: {zip_path.name}")
+                    return
+
+                # Nested ZIP'leri bul ve aç
+                for nested_zip in dest_path.rglob('*.zip'):
+                    if nested_zip.name.startswith('.'):
+                        continue
+                    nested_dir = nested_zip.parent / nested_zip.stem
+                    nested_dir.mkdir(exist_ok=True)
+                    extract_all_zips(nested_zip, nested_dir, depth + 1)
+                    # Açılan ZIP'i sil
+                    try:
+                        nested_zip.unlink()
+                    except:
+                        pass
+
             try:
-                with zipfile.ZipFile(zip_path, 'r') as zf:
-                    zf.extractall(tmpdir_path)
+                extract_all_zips(zip_path, tmpdir_path)
             except zipfile.BadZipFile:
                 raise HTTPException(
                     status_code=400,
@@ -677,7 +848,11 @@ async def upload_donem_zip(
                         continue
                     if fpath.name.startswith('__'):
                         continue
-                    if fpath.suffix.lower() in ['.zip']:
+                    # ZIP'ler zaten extract edildi, kalan varsa atla
+                    if fpath.suffix.lower() == '.zip':
+                        continue
+                    # XSLT ve diğer yardımcı dosyaları atla
+                    if fpath.suffix.lower() in ['.xslt', '.xsd', '.id']:
                         continue
 
                     # Dosya tipini algıla
@@ -783,13 +958,39 @@ async def upload_donem_zip(
                             file_result["status"] = "skipped"
                             file_result["message"] = "E-defter yardımcı dosyası"
 
-                    elif doc_type in ["BEYANNAME", "TAHAKKUK", "GECICI_VERGI", "POSET"]:
-                        # PDF dosyaları - şimdilik sadece kaydet, parse yok
+                    elif doc_type in ["BEYANNAME", "GECICI_VERGI", "POSET"]:
+                        # Beyanname PDF dosyaları
                         if suffix == '.pdf':
-                            file_result["status"] = "stored"
-                            file_result["message"] = f"{doc_type} PDF kaydedildi (parse edilmedi)"
+                            parse_result = save_and_parse_beyanname(
+                                cursor,
+                                smmm_id,
+                                client_id,
+                                period_upper,
+                                fpath,
+                                fpath.name
+                            )
+                            file_result["status"] = parse_result["status"]
+                            file_result["rows"] = parse_result["rows"]
+                            file_result["message"] = parse_result["message"]
                         else:
                             file_result["message"] = f"Desteklenmeyen {doc_type} formatı: {suffix}"
+
+                    elif doc_type == "TAHAKKUK":
+                        # Tahakkuk PDF dosyaları
+                        if suffix == '.pdf':
+                            parse_result = save_and_parse_tahakkuk(
+                                cursor,
+                                smmm_id,
+                                client_id,
+                                period_upper,
+                                fpath,
+                                fpath.name
+                            )
+                            file_result["status"] = parse_result["status"]
+                            file_result["rows"] = parse_result["rows"]
+                            file_result["message"] = parse_result["message"]
+                        else:
+                            file_result["message"] = f"Desteklenmeyen tahakkuk formatı: {suffix}"
 
                     elif doc_type == "EFATURA_ARSIV":
                         # E-fatura arşiv dosyaları

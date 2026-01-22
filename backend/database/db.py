@@ -1025,6 +1025,72 @@ def init_database():
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_edefter_hesap ON edefter_entries(hesap_kodu)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_edefter_fis ON edefter_entries(fis_no)")
 
+        # ════════════════════════════════════════════════════════════════
+        # BEYANNAME ENTRIES - Vergi Beyannameleri
+        # ════════════════════════════════════════════════════════════════
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS beyanname_entries (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tenant_id TEXT NOT NULL,
+                client_id TEXT NOT NULL,
+                period_id TEXT NOT NULL,
+                beyanname_tipi TEXT,
+                donem_yil INTEGER,
+                donem_ay INTEGER,
+                donem_tipi TEXT,
+                vergi_dairesi TEXT,
+                vkn TEXT,
+                unvan TEXT,
+                onay_zamani TEXT,
+                matrah_toplam REAL DEFAULT 0,
+                hesaplanan_vergi REAL DEFAULT 0,
+                indirimler_toplam REAL DEFAULT 0,
+                odenecek_vergi REAL DEFAULT 0,
+                devreden_kdv REAL DEFAULT 0,
+                source_file TEXT,
+                raw_text TEXT,
+                parsed_ok INTEGER DEFAULT 0,
+                created_at TEXT DEFAULT (datetime('now')),
+                updated_at TEXT DEFAULT (datetime('now'))
+            )
+        """)
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_beyanname_client_period ON beyanname_entries(client_id, period_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_beyanname_tipi ON beyanname_entries(beyanname_tipi)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_beyanname_vkn ON beyanname_entries(vkn)")
+
+        # ════════════════════════════════════════════════════════════════
+        # TAHAKKUK ENTRIES - Vergi Tahakkuk Fişleri
+        # ════════════════════════════════════════════════════════════════
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS tahakkuk_entries (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tenant_id TEXT NOT NULL,
+                client_id TEXT NOT NULL,
+                period_id TEXT NOT NULL,
+                tahakkuk_tipi TEXT,
+                donem_yil INTEGER,
+                donem_ay INTEGER,
+                vergi_dairesi TEXT,
+                vkn TEXT,
+                unvan TEXT,
+                tahakkuk_no TEXT,
+                tahakkuk_tarihi TEXT,
+                vergi_turu TEXT,
+                vergi_tutari REAL DEFAULT 0,
+                gecikme_zammi REAL DEFAULT 0,
+                toplam_borc REAL DEFAULT 0,
+                vade_tarihi TEXT,
+                source_file TEXT,
+                raw_text TEXT,
+                parsed_ok INTEGER DEFAULT 0,
+                created_at TEXT DEFAULT (datetime('now')),
+                updated_at TEXT DEFAULT (datetime('now'))
+            )
+        """)
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_tahakkuk_client_period ON tahakkuk_entries(client_id, period_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_tahakkuk_tipi ON tahakkuk_entries(tahakkuk_tipi)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_tahakkuk_vkn ON tahakkuk_entries(vkn)")
+
         conn.commit()
         logger.info(f"Database initialized: {DB_PATH}")
 

@@ -1072,3 +1072,313 @@ def parse_edefter_xml(file_path: Path) -> List[Dict[str, Any]]:
 
     logger.info(f"Parsed {len(results)} E-Defter entries from: {file_path.name}")
     return results
+
+
+# =============================================================================
+# BEYANNAME PDF PARSER
+# =============================================================================
+
+def parse_beyanname_pdf(file_path: Path) -> Dict[str, Any]:
+    """
+    Parse Beyanname PDF file (KDV, Muhtasar, Geçici Vergi, Poşet).
+
+    Extracts key tax declaration information from GİB format PDFs.
+
+    Returns dict with beyanname details.
+    """
+    result = {
+        'beyanname_tipi': None,
+        'donem_yil': None,
+        'donem_ay': None,
+        'donem_tipi': None,
+        'vergi_dairesi': None,
+        'vkn': None,
+        'unvan': None,
+        'onay_zamani': None,
+        'matrah_toplam': 0.0,
+        'hesaplanan_vergi': 0.0,
+        'indirimler_toplam': 0.0,
+        'odenecek_vergi': 0.0,
+        'devreden_kdv': 0.0,
+        'raw_text': '',
+        'tables': [],
+        'parsed_ok': False,
+        'parse_errors': []
+    }
+
+    if not file_path.exists():
+        result['parse_errors'].append(f"Dosya bulunamadı: {file_path}")
+        return result
+
+    try:
+        import pdfplumber
+    except ImportError:
+        result['parse_errors'].append("pdfplumber kütüphanesi yüklü değil")
+        return result
+
+    # Dosya adından beyanname tipini belirle
+    filename = file_path.name.upper()
+    if 'KDV' in filename:
+        result['beyanname_tipi'] = 'KDV'
+    elif 'MUHTASAR' in filename:
+        result['beyanname_tipi'] = 'MUHTASAR'
+    elif 'GECICI' in filename or 'GEÇİCİ' in filename or 'KGECICI' in filename:
+        result['beyanname_tipi'] = 'GECICI_VERGI'
+    elif 'POSET' in filename or 'POŞET' in filename:
+        result['beyanname_tipi'] = 'POSET'
+    else:
+        result['beyanname_tipi'] = 'DIGER'
+
+    try:
+        with pdfplumber.open(file_path) as pdf:
+            all_text = []
+            all_tables = []
+
+            for page in pdf.pages:
+                # Metin çıkar
+                text = page.extract_text()
+                if text:
+                    all_text.append(text)
+
+                # Tabloları çıkar
+                tables = page.extract_tables()
+                if tables:
+                    all_tables.extend(tables)
+
+            full_text = '\n'.join(all_text)
+            result['raw_text'] = full_text
+            result['tables'] = all_tables
+
+            # Metin analizi ile veri çıkarma
+            lines = full_text.split('\n')
+
+            for line in lines:
+                line_upper = line.upper()
+
+                # VKN
+                if 'VERGİ KİMLİK' in line_upper or 'VKN' in line_upper:
+                    match = re.search(r'(\d{10,11})', line)
+                    if match:
+                        result['vkn'] = match.group(1)
+
+                # Vergi Dairesi
+                if 'VERGİ DAİRESİ' in line_upper:
+                    result['vergi_dairesi'] = line.strip()
+
+                # Dönem bilgisi
+                if 'YIL' in line_upper and re.search(r'20\d{2}', line):
+                    match = re.search(r'(20\d{2})', line)
+                    if match:
+                        result['donem_yil'] = int(match.group(1))
+
+                # Ay bilgisi - satır bazında ara
+                aylar = ['OCAK', 'ŞUBAT', 'MART', 'NİSAN', 'MAYIS', 'HAZİRAN',
+                         'TEMMUZ', 'AĞUSTOS', 'EYLÜL', 'EKİM', 'KASIM', 'ARALIK']
+                for i, ay in enumerate(aylar, 1):
+                    if ay in line_upper:
+                        result['donem_ay'] = i
+                        break
+
+                # Onay zamanı
+                if 'ONAY ZAMANI' in line_upper:
+                    match = re.search(r'(\d{2}\.\d{2}\.\d{4})', line)
+                    if match:
+                        result['onay_zamani'] = match.group(1)
+
+                # Matrah toplamı - "Matrah Toplamı 2.930.457,62" formatı
+                if 'MATRAH TOPLAMI' in line_upper:
+                    match = re.search(r'([\d.]+,\d{2})', line)
+                    if match:
+                        result['matrah_toplam'] = _parse_tr_number(match.group(1))
+
+                # Hesaplanan KDV - "Hesaplanan Katma Değer Vergisi 443.142,33"
+                if 'HESAPLANAN' in line_upper and 'KATMA DEĞER VERGİSİ' in line_upper:
+                    match = re.search(r'([\d.]+,\d{2})\s*$', line)
+                    if match:
+                        result['hesaplanan_vergi'] = _parse_tr_number(match.group(1))
+
+                # Toplam KDV - "Toplam Katma Değer Vergisi 443.142,85"
+                if 'TOPLAM KATMA DEĞER VERGİSİ' in line_upper:
+                    match = re.search(r'([\d.]+,\d{2})\s*$', line)
+                    if match:
+                        if result['hesaplanan_vergi'] == 0:
+                            result['hesaplanan_vergi'] = _parse_tr_number(match.group(1))
+
+                # İndirimler toplamı - "İndirimler Toplamı 536.440,05"
+                if 'İNDİRİMLER TOPLAMI' in line_upper:
+                    match = re.search(r'([\d.]+,\d{2})', line)
+                    if match:
+                        result['indirimler_toplam'] = _parse_tr_number(match.group(1))
+
+                # Ödenecek vergi - "Ödenmesi Gereken Katma Değer Vergisi 0,00"
+                if 'ÖDENMESİ GEREKEN' in line_upper and 'VERGİ' in line_upper:
+                    match = re.search(r'([\d.]+,\d{2})\s*$', line)
+                    if match:
+                        result['odenecek_vergi'] = _parse_tr_number(match.group(1))
+
+                # Sonraki döneme devreden - "Sonraki Döneme Devreden Katma Değer Vergisi 93.297,20"
+                if 'SONRAKİ DÖNEME DEVREDEN' in line_upper and 'VERGİ' in line_upper:
+                    match = re.search(r'([\d.]+,\d{2})\s*$', line)
+                    if match:
+                        result['devreden_kdv'] = _parse_tr_number(match.group(1))
+
+            # Tüm metin üzerinden regex ile çıkarım (satır bazlı çıkaramazsa)
+            if result['hesaplanan_vergi'] == 0:
+                # "Hesaplanan Katma Değer Vergisi 443.142,33" pattern
+                match = re.search(r'Hesaplanan\s+Katma\s+Değer\s+Vergisi\s+([\d.]+,\d{2})', full_text, re.IGNORECASE)
+                if match:
+                    result['hesaplanan_vergi'] = _parse_tr_number(match.group(1))
+
+            if result['indirimler_toplam'] == 0:
+                # "İndirimler Toplamı 536.440,05"
+                match = re.search(r'İndirimler\s+Toplamı\s+([\d.]+,\d{2})', full_text, re.IGNORECASE)
+                if match:
+                    result['indirimler_toplam'] = _parse_tr_number(match.group(1))
+
+            if result['devreden_kdv'] == 0:
+                # "Sonraki Döneme Devreden Katma Değer Vergisi 93.297,20"
+                match = re.search(r'Sonraki\s+Döneme\s+Devreden\s+Katma\s+Değer\s+Vergisi\s+([\d.]+,\d{2})', full_text, re.IGNORECASE)
+                if match:
+                    result['devreden_kdv'] = _parse_tr_number(match.group(1))
+
+            if result['odenecek_vergi'] == 0:
+                # "Ödenmesi Gereken Katma Değer Vergisi 0,00" veya "Bu Dönemde Ödenmesi Gereken"
+                match = re.search(r'Ödenmesi\s+Gereken\s+Katma\s+Değer\s+Vergisi\s+([\d.]+,\d{2})', full_text, re.IGNORECASE)
+                if match:
+                    result['odenecek_vergi'] = _parse_tr_number(match.group(1))
+
+            result['parsed_ok'] = True
+
+    except Exception as e:
+        result['parse_errors'].append(f"PDF parse hatası: {str(e)}")
+        logger.error(f"Beyanname PDF parse hatası {file_path}: {e}")
+
+    logger.info(f"Parsed beyanname PDF: {file_path.name} - Tip: {result['beyanname_tipi']}")
+    return result
+
+
+def parse_tahakkuk_pdf(file_path: Path) -> Dict[str, Any]:
+    """
+    Parse Tahakkuk PDF file (vergi tahakkuk fişi).
+
+    Extracts tax assessment details from GİB format PDFs.
+
+    Returns dict with tahakkuk details.
+    """
+    result = {
+        'tahakkuk_tipi': None,
+        'donem_yil': None,
+        'donem_ay': None,
+        'vergi_dairesi': None,
+        'vkn': None,
+        'unvan': None,
+        'tahakkuk_no': None,
+        'tahakkuk_tarihi': None,
+        'vergi_turu': None,
+        'vergi_tutari': 0.0,
+        'gecikme_zammi': 0.0,
+        'toplam_borc': 0.0,
+        'vade_tarihi': None,
+        'raw_text': '',
+        'parsed_ok': False,
+        'parse_errors': []
+    }
+
+    if not file_path.exists():
+        result['parse_errors'].append(f"Dosya bulunamadı: {file_path}")
+        return result
+
+    try:
+        import pdfplumber
+    except ImportError:
+        result['parse_errors'].append("pdfplumber kütüphanesi yüklü değil")
+        return result
+
+    # Dosya adından tahakkuk tipini belirle
+    filename = file_path.name.upper()
+    if 'KDV' in filename:
+        result['tahakkuk_tipi'] = 'KDV'
+        result['vergi_turu'] = 'KDV'
+    elif 'MUHTASAR' in filename:
+        result['tahakkuk_tipi'] = 'MUHTASAR'
+        result['vergi_turu'] = 'MUHTASAR'
+    elif 'GECICI' in filename or 'GEÇİCİ' in filename or 'KGECICI' in filename:
+        result['tahakkuk_tipi'] = 'GECICI_VERGI'
+        result['vergi_turu'] = 'GEÇİCİ VERGİ'
+    elif 'POSET' in filename or 'POŞET' in filename:
+        result['tahakkuk_tipi'] = 'POSET'
+        result['vergi_turu'] = 'POŞET VERGİSİ'
+    else:
+        result['tahakkuk_tipi'] = 'DIGER'
+
+    try:
+        with pdfplumber.open(file_path) as pdf:
+            all_text = []
+
+            for page in pdf.pages:
+                text = page.extract_text()
+                if text:
+                    all_text.append(text)
+
+            full_text = '\n'.join(all_text)
+            result['raw_text'] = full_text
+
+            lines = full_text.split('\n')
+
+            for line in lines:
+                line_upper = line.upper()
+
+                # VKN
+                if 'VERGİ KİMLİK' in line_upper or 'VKN' in line_upper:
+                    match = re.search(r'(\d{10,11})', line)
+                    if match:
+                        result['vkn'] = match.group(1)
+
+                # Vergi Dairesi
+                if 'VERGİ DAİRESİ' in line_upper:
+                    result['vergi_dairesi'] = line.strip()
+
+                # Tahakkuk No
+                if 'TAHAKKUK NO' in line_upper or 'FİŞ NO' in line_upper:
+                    match = re.search(r'(\d+)', line)
+                    if match:
+                        result['tahakkuk_no'] = match.group(1)
+
+                # Tarih
+                if 'TARİH' in line_upper:
+                    match = re.search(r'(\d{2}[./]\d{2}[./]\d{4})', line)
+                    if match:
+                        result['tahakkuk_tarihi'] = match.group(1).replace('/', '.')
+
+                # Dönem yılı
+                if 'YIL' in line_upper or 'DÖNEM' in line_upper:
+                    match = re.search(r'(20\d{2})', line)
+                    if match:
+                        result['donem_yil'] = int(match.group(1))
+
+                # Vergi tutarı
+                if 'VERGİ' in line_upper and 'TUTARI' in line_upper:
+                    match = re.search(r'([\d.,]+)\s*$', line)
+                    if match:
+                        result['vergi_tutari'] = _parse_tr_number(match.group(1))
+
+                # Toplam borç
+                if 'TOPLAM' in line_upper and ('BORÇ' in line_upper or 'TUTAR' in line_upper):
+                    match = re.search(r'([\d.,]+)\s*$', line)
+                    if match:
+                        result['toplam_borc'] = _parse_tr_number(match.group(1))
+
+                # Vade tarihi
+                if 'VADE' in line_upper:
+                    match = re.search(r'(\d{2}[./]\d{2}[./]\d{4})', line)
+                    if match:
+                        result['vade_tarihi'] = match.group(1).replace('/', '.')
+
+            result['parsed_ok'] = True
+
+    except Exception as e:
+        result['parse_errors'].append(f"PDF parse hatası: {str(e)}")
+        logger.error(f"Tahakkuk PDF parse hatası {file_path}: {e}")
+
+    logger.info(f"Parsed tahakkuk PDF: {file_path.name} - Tip: {result['tahakkuk_tipi']}")
+    return result
