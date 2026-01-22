@@ -93,11 +93,7 @@ def parse_mizan_file(file_path: Path) -> List[Dict[str, Any]]:
 
     lines = content.strip().split('\n')
 
-    # Detect delimiter (semicolon or comma)
-    first_line = lines[0] if lines else ""
-    delimiter = ';' if ';' in first_line else ','
-
-    # Try to find header row
+    # Try to find header row FIRST (delimiter detection needs header line)
     header_idx = None
     for i, line in enumerate(lines):
         line_upper = line.upper()
@@ -108,6 +104,10 @@ def parse_mizan_file(file_path: Path) -> List[Dict[str, Any]]:
     if header_idx is not None:
         # Parse as structured CSV with header
         header_line = lines[header_idx]
+
+        # Detect delimiter from HEADER LINE (not first line which may be metadata)
+        delimiter = ';' if ';' in header_line else ','
+
         header = [c.strip() for c in header_line.split(delimiter)]
 
         for line in lines[header_idx + 1:]:
@@ -131,10 +131,10 @@ def parse_mizan_file(file_path: Path) -> List[Dict[str, Any]]:
                 continue
 
             hesap_adi = _try_get(row, ['Hesap Adi', 'HESAP ADI', 'HesapAdi', 'hesap_adi', 'Ad'])
-            borc_str = _try_get(row, ['Borc', 'BORC', 'Borc Toplami', 'DonemBorc'])
-            alacak_str = _try_get(row, ['Alacak', 'ALACAK', 'Alacak Toplami', 'DonemAlacak'])
-            bakiye_borc_str = _try_get(row, ['Bakiye Borc', 'Borc Bakiye', 'BorcBakiye', 'BORC BAKIYE', 'BORC BAKIYESI'])
-            bakiye_alacak_str = _try_get(row, ['Bakiye Alacak', 'Alacak Bakiye', 'AlacakBakiye', 'ALACAK BAKIYE', 'ALACAK BAKIYESI'])
+            borc_str = _try_get(row, ['Borç', 'BORÇ', 'Borc', 'BORC', 'Borç Toplamı', 'Borc Toplami', 'DonemBorc'])
+            alacak_str = _try_get(row, ['Alacak', 'ALACAK', 'Alacak Toplamı', 'Alacak Toplami', 'DonemAlacak'])
+            bakiye_borc_str = _try_get(row, ['Borç Bakiyesi', 'BORÇ BAKİYESİ', 'Borç Bakiye', 'BORÇ BAKİYE', 'Bakiye Borc', 'Borc Bakiye', 'BorcBakiye', 'BORC BAKIYE', 'BORC BAKIYESI'])
+            bakiye_alacak_str = _try_get(row, ['Alacak Bakiyesi', 'ALACAK BAKİYESİ', 'Alacak Bakiye', 'ALACAK BAKİYE', 'Bakiye Alacak', 'AlacakBakiye', 'ALACAK BAKIYE', 'ALACAK BAKIYESI'])
 
             results.append({
                 'hesap_kodu': hesap_kodu,

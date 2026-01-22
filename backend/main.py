@@ -32,6 +32,7 @@ from api.v2.periods import router as periods_router
 from api.v2.bulk_upload import router as bulk_upload_router
 from api.v2.mizan_data import router as mizan_data_router
 from api.v2.donem_complete import router as donem_complete_router
+from api.v2.upload import router as upload_router
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -152,6 +153,7 @@ app.include_router(periods_router, prefix="/api/v2")
 app.include_router(bulk_upload_router, prefix="/api/v2")
 app.include_router(mizan_data_router)  # Prefix already in router
 app.include_router(donem_complete_router)  # TEK ENDPOINT - TÜM VERİ
+app.include_router(upload_router)  # ZIP UPLOAD - FAZ 1
 # --- /LYNTOS v2 API ---
 
 app.add_middleware(
