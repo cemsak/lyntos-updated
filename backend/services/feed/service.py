@@ -1,31 +1,157 @@
 """
 Feed Service
-Manages feed items for LYNTOS cockpit
+Manages feed items for LYNTOS cockpit - NOW USES DATABASE
 LYNTOS Anayasa: Evidence-gated, Explainability Contract
+
+V2 Refactor: Persistent storage in feed_items table
 """
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 import uuid
+import json
+import logging
 
+from database.db import get_connection
 from schemas.feed import (
     FeedItem, FeedScope, FeedImpact, EvidenceRef, FeedAction,
     FeedCategory, FeedSeverity, EvidenceStatus, ActionStatus
 )
 
+logger = logging.getLogger(__name__)
+
 
 class FeedService:
     """
-    Feed Service - manages feed items
+    Feed Service - manages feed items with DATABASE persistence
 
-    Note: In production, this would connect to database.
-    For V1, we use in-memory storage. Data is added via add_feed_item().
+    V2: All data stored in feed_items table (no more in-memory loss)
     """
 
-    def __init__(self):
-        self._feed_items: Dict[str, List[FeedItem]] = {}  # key: "{client_id}:{period}"
+    def add_item(
+        self,
+        tenant_id: str,
+        client_id: str,
+        period_id: str,
+        item_type: str,
+        title: str,
+        message: str = None,
+        severity: str = "INFO",
+        metadata: dict = None
+    ) -> int:
+        """
+        Add a feed item to the database
 
-    def _get_key(self, client_id: str, period: str) -> str:
-        return f"{client_id}:{period}"
+        Args:
+            tenant_id: SMMM identifier
+            client_id: Client identifier
+            period_id: Period (e.g., "2025-Q2")
+            item_type: Type of item ('risk', 'alert', 'info', 'upload', 'system')
+            title: Title of the feed item
+            message: Optional detailed message
+            severity: Severity level ('CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO')
+            metadata: Optional JSON metadata
+
+        Returns:
+            ID of inserted item
+        """
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO feed_items (tenant_id, client_id, period_id, type, title, message, severity, metadata)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                tenant_id,
+                client_id,
+                period_id,
+                item_type,
+                title,
+                message,
+                severity,
+                json.dumps(metadata) if metadata else None
+            ))
+            conn.commit()
+            item_id = cursor.lastrowid
+            logger.info(f"[FeedService] Added item {item_id}: {title} ({severity})")
+            return item_id
+
+    def get_feed(
+        self,
+        client_id: str,
+        period_id: str,
+        tenant_id: str = None,
+        unread_only: bool = False,
+        limit: int = 50
+    ) -> List[Dict[str, Any]]:
+        """
+        Get feed items for a specific client/period
+
+        Args:
+            client_id: Client identifier
+            period_id: Period (e.g., "2025-Q2")
+            tenant_id: Optional SMMM filter
+            unread_only: If True, only return unread items
+            limit: Max items to return
+
+        Returns:
+            List of feed item dicts
+        """
+        with get_connection() as conn:
+            cursor = conn.cursor()
+
+            query = """
+                SELECT id, tenant_id, client_id, period_id, type, title, message,
+                       severity, is_read, metadata, created_at
+                FROM feed_items
+                WHERE client_id = ? AND period_id = ?
+            """
+            params = [client_id, period_id]
+
+            if tenant_id:
+                query += " AND tenant_id = ?"
+                params.append(tenant_id)
+
+            if unread_only:
+                query += " AND is_read = 0"
+
+            # Order by severity (CRITICAL first) then by created_at (newest first)
+            query += """
+                ORDER BY
+                    CASE severity
+                        WHEN 'CRITICAL' THEN 1
+                        WHEN 'HIGH' THEN 2
+                        WHEN 'MEDIUM' THEN 3
+                        WHEN 'LOW' THEN 4
+                        ELSE 5
+                    END,
+                    created_at DESC
+                LIMIT ?
+            """
+            params.append(limit)
+
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+
+            return [dict(row) for row in rows]
+
+    def mark_as_read(self, item_id: int) -> bool:
+        """Mark a feed item as read"""
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("UPDATE feed_items SET is_read = 1 WHERE id = ?", (item_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+
+    def get_unread_count(self, client_id: str, period_id: str) -> int:
+        """Get count of unread items for a client/period"""
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT COUNT(*) FROM feed_items
+                WHERE client_id = ? AND period_id = ? AND is_read = 0
+            """, (client_id, period_id))
+            return cursor.fetchone()[0]
+
+    # Legacy compatibility methods for existing code
 
     def get_feed_items(
         self,
@@ -36,38 +162,80 @@ class FeedService:
         category_filter: Optional[List[FeedCategory]] = None
     ) -> List[FeedItem]:
         """
-        Get feed items for a specific client/period
-
-        Args:
-            smmm_id: SMMM identifier
-            client_id: Client (mukellef) identifier
-            period: Period (e.g., "2024-Q1")
-            severity_filter: Optional filter by severity levels
-            category_filter: Optional filter by categories
-
-        Returns:
-            List of FeedItem objects
+        Legacy method - returns FeedItem objects for backward compatibility
+        Reads from database and converts to FeedItem schema
         """
-        key = self._get_key(client_id, period)
-        items = self._feed_items.get(key, [])
+        items = self.get_feed(client_id, period, tenant_id=smmm_id)
 
-        # Apply filters
-        if severity_filter:
-            items = [i for i in items if i.severity in severity_filter]
-        if category_filter:
-            items = [i for i in items if i.category in category_filter]
+        # Convert DB rows to FeedItem objects
+        feed_items = []
+        for row in items:
+            try:
+                # Map severity string to enum
+                severity_map = {
+                    'CRITICAL': FeedSeverity.CRITICAL,
+                    'HIGH': FeedSeverity.HIGH,
+                    'MEDIUM': FeedSeverity.MEDIUM,
+                    'LOW': FeedSeverity.LOW,
+                    'INFO': FeedSeverity.INFO
+                }
+                severity = severity_map.get(row.get('severity', 'INFO'), FeedSeverity.INFO)
 
-        # Sort by severity (CRITICAL first) then by score (descending)
-        severity_order = {
-            FeedSeverity.CRITICAL: 0,
-            FeedSeverity.HIGH: 1,
-            FeedSeverity.MEDIUM: 2,
-            FeedSeverity.LOW: 3,
-            FeedSeverity.INFO: 4
-        }
-        items.sort(key=lambda x: (severity_order[x.severity], -x.score))
+                # Filter by severity if specified
+                if severity_filter and severity not in severity_filter:
+                    continue
 
-        return items
+                # Create EvidenceRef from row data
+                evidence_ref = EvidenceRef(
+                    ref_id=f"EVID-{row['id']}",
+                    source_type="mizan",
+                    description=row.get('message', '') or row['title'],
+                    status=EvidenceStatus.AVAILABLE,
+                    file_path=None,
+                    account_code=None,
+                    document_date=None,
+                    metadata={}
+                )
+
+                # Create FeedAction
+                action = FeedAction(
+                    action_id=f"ACT-{row['id']}",
+                    description="Kontrol et ve degerlendir",
+                    responsible="SMMM",
+                    deadline=None,
+                    status=ActionStatus.PENDING,
+                    priority=1 if severity in [FeedSeverity.CRITICAL, FeedSeverity.HIGH] else 2,
+                    related_evidence=[f"EVID-{row['id']}"]
+                )
+
+                # Create FeedItem
+                feed_item = FeedItem(
+                    id=str(row['id']),
+                    title=row['title'],
+                    summary=row.get('message', '') or '',
+                    why=f"VDK Analiz - {row.get('type', 'risk')}",
+                    severity=severity,
+                    category=FeedCategory.VDK,  # Default category for analysis results
+                    score=70 if severity == FeedSeverity.HIGH else 50,
+                    scope=FeedScope(
+                        smmm_id=row.get('tenant_id', smmm_id),
+                        client_id=row['client_id'],
+                        period=row['period_id']
+                    ),
+                    impact=FeedImpact(
+                        amount_try=0.0,
+                        pct=None,
+                        points=None
+                    ),
+                    evidence_refs=[evidence_ref],
+                    actions=[action]
+                )
+                feed_items.append(feed_item)
+            except Exception as e:
+                logger.warning(f"[FeedService] Error converting row to FeedItem: {e}")
+                continue
+
+        return feed_items
 
     def get_critical_and_high(
         self,
@@ -84,11 +252,17 @@ class FeedService:
         )
 
     def add_feed_item(self, item: FeedItem) -> FeedItem:
-        """Add a feed item"""
-        key = self._get_key(item.scope.client_id, item.scope.period)
-        if key not in self._feed_items:
-            self._feed_items[key] = []
-        self._feed_items[key].append(item)
+        """Legacy method - adds a FeedItem to database"""
+        self.add_item(
+            tenant_id=item.scope.smmm_id,
+            client_id=item.scope.client_id,
+            period_id=item.scope.period,
+            item_type='risk' if item.severity in [FeedSeverity.CRITICAL, FeedSeverity.HIGH] else 'info',
+            title=item.title,
+            message=item.subtitle,
+            severity=item.severity.value if hasattr(item.severity, 'value') else str(item.severity),
+            metadata={'score': item.score, 'category': str(item.category)}
+        )
         return item
 
 

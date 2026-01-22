@@ -9,6 +9,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { getAuthToken } from '../../_lib/auth';
 import type {
   CorporateEventType,
   TTK376Request,
@@ -189,7 +190,7 @@ export function useEventTypes(companyType?: string) {
         if (companyType) params.set('company_type', companyType);
 
         const res = await fetch(`/api/v1/corporate/event-types?${params}`, {
-          headers: { Authorization: localStorage.getItem('lyntos_token') || '' },
+          headers: { Authorization: getAuthToken() || '' },
         });
 
         if (!res.ok) {
@@ -243,7 +244,7 @@ export function useEventType(eventCode: string | null) {
       try {
         setLoading(true);
         const res = await fetch(`/api/v1/corporate/event-types/${eventCode}`, {
-          headers: { Authorization: localStorage.getItem('lyntos_token') || '' },
+          headers: { Authorization: getAuthToken() || '' },
         });
 
         if (!res.ok) throw new Error('Islem tipi bulunamadi');
@@ -308,7 +309,7 @@ export function useTTK376Analysis() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: localStorage.getItem('lyntos_token') || '',
+          Authorization: getAuthToken() || '',
         },
         body: JSON.stringify(request),
       });
@@ -370,7 +371,7 @@ export function useMinCapitalRequirements() {
     const fetchData = async () => {
       try {
         const res = await fetch('/api/v1/corporate/min-capital-requirements', {
-          headers: { Authorization: localStorage.getItem('lyntos_token') || '' },
+          headers: { Authorization: getAuthToken() || '' },
         });
 
         if (!res.ok) {
@@ -410,7 +411,7 @@ export function useGKQuorumGuide() {
     const fetchData = async () => {
       try {
         const res = await fetch('/api/v1/corporate/gk-quorum-guide', {
-          headers: { Authorization: localStorage.getItem('lyntos_token') || '' },
+          headers: { Authorization: getAuthToken() || '' },
         });
 
         if (!res.ok) throw new Error('Nisap rehberi yuklenemedi');

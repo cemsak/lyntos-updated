@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { Badge } from '../shared/Badge';
+import { getAuthToken } from '../../_lib/auth';
 
 interface EvidenceItem {
   id: string;
@@ -75,7 +76,7 @@ export function EvidenceViewer({ isOpen, onClose, evidenceRefs, title = 'Kanıt 
     if (!item.url && item.ref) {
       const downloadUrl = `/api/v1/documents/document/${encodeURIComponent(item.ref)}`;
       try {
-        const token = localStorage.getItem('lyntos_token');
+        const token = getAuthToken();
         if (!token) {
           setError('Kanıt görüntülemek için önce veri yükleyin.');
           return;

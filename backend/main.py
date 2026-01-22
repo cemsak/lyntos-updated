@@ -18,6 +18,8 @@ from api.v1.ai import router as ai_router
 from api.v1.notifications import router as notifications_router
 from api.v1.chat import router as chat_router
 from api.v1.user import router as user_router
+from api.v1.defterler import router as defterler_router
+from api.v1.beyannameler import router as beyannameler_router
 from api.v2.validate_vdk import router as vdk_validate_router
 from api.v2.donem_sync import router as donem_sync_router
 from api.v2.mizan_sync import router as mizan_sync_router
@@ -28,6 +30,8 @@ from api.v2.brief import router as brief_router
 from api.v2.dossier import router as dossier_router
 from api.v2.periods import router as periods_router
 from api.v2.bulk_upload import router as bulk_upload_router
+from api.v2.mizan_data import router as mizan_data_router
+from api.v2.donem_complete import router as donem_complete_router
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -131,6 +135,8 @@ app.include_router(ai_router, prefix="/api/v1", tags=["AI"])
 app.include_router(notifications_router, prefix="/api/v1", tags=["Notifications"])
 app.include_router(chat_router, prefix="/api/v1", tags=["Chat"])
 app.include_router(user_router, prefix="/api/v1", tags=["User"])
+app.include_router(defterler_router, prefix="/api/v1", tags=["Defterler"])
+app.include_router(beyannameler_router, prefix="/api/v1", tags=["Beyannameler"])
 # --- /LYNTOS v1 API ---
 
 # --- LYNTOS v2 API ---
@@ -144,6 +150,8 @@ app.include_router(brief_router, prefix="/api/v2")
 app.include_router(dossier_router, prefix="/api/v2")
 app.include_router(periods_router, prefix="/api/v2")
 app.include_router(bulk_upload_router, prefix="/api/v2")
+app.include_router(mizan_data_router)  # Prefix already in router
+app.include_router(donem_complete_router)  # TEK ENDPOINT - TÜM VERİ
 # --- /LYNTOS v2 API ---
 
 app.add_middleware(

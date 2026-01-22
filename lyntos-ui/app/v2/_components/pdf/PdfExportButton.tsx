@@ -1,6 +1,7 @@
 'use client';
 import React, { useState } from 'react';
 import { useDashboardScope } from '../scope/ScopeProvider';
+import { getAuthToken } from '../../_lib/auth';
 
 type ExportStatus = 'idle' | 'preparing' | 'generating' | 'ready' | 'error';
 
@@ -22,7 +23,7 @@ export function PdfExportButton() {
     setProgress(10);
 
     try {
-      const token = localStorage.getItem('lyntos_token');
+      const token = getAuthToken();
       if (!token) {
         setError('PDF oluşturmak için önce veri yükleyin.');
         setStatus('error');

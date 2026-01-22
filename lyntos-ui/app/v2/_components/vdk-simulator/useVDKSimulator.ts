@@ -8,6 +8,7 @@
  */
 
 import { useState, useCallback } from 'react';
+import { getAuthToken } from '../../_lib/auth';
 import type { SimulationResult, SimulationResponse } from './types';
 
 interface UseVDKSimulatorOptions {
@@ -37,7 +38,7 @@ export function useVDKSimulator({
           {
             method: 'POST',
             headers: {
-              Authorization: localStorage.getItem('lyntos_token') || '', // Dev auth header
+              Authorization: getAuthToken() || '', // Dev auth header
             },
           }
         );

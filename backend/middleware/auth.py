@@ -3,7 +3,7 @@ Authentication & Authorization Middleware
 
 Supports:
 - JWT Bearer tokens (production)
-- DEV_* shortcut tokens (development only)
+- DEV_* shortcut tokens (development only, when LYNTOS_DEV_AUTH_BYPASS=1)
 """
 
 from fastapi import HTTPException, Header
@@ -11,6 +11,7 @@ from typing import Optional
 import jwt
 import os
 import sys
+import logging
 from pathlib import Path
 
 # Add parent to path for imports
@@ -18,43 +19,58 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from database.db import get_connection
 
+logger = logging.getLogger(__name__)
+
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "LYNTOS_SECRET_CHANGE_IN_PRODUCTION")
 ALGORITHM = "HS256"
+
+# Dev auth bypass - only enabled when LYNTOS_DEV_AUTH_BYPASS=1
+DEV_AUTH_BYPASS = os.getenv("LYNTOS_DEV_AUTH_BYPASS", "0") == "1"
+DEV_TOKEN = "DEV_HKOZKAN"
+
+
+def _get_dev_user(user_id: str) -> dict:
+    """Get user from DB for dev bypass"""
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM users WHERE id = ?", [user_id])
+        row = cursor.fetchone()
+
+        if not row:
+            raise HTTPException(401, f"Dev user {user_id} not found in DB")
+
+        return dict(row)
 
 
 async def verify_token(authorization: Optional[str] = Header(None)) -> dict:
     """
     Verify JWT token and return user info
 
-    For development, accepts:
-    - Authorization: Bearer <token>
-    - Authorization: DEV_HKOZKAN (shortcut for testing)
+    For development (LYNTOS_DEV_AUTH_BYPASS=1), accepts:
+    - Authorization: Bearer DEV_HKOZKAN
+    - Authorization: DEV_HKOZKAN
     """
 
     if not authorization:
         raise HTTPException(401, "Missing Authorization header")
 
-    # Development shortcut (remove in production)
-    if authorization.startswith("DEV_"):
-        user_id = authorization.replace("DEV_", "")
+    # Extract token (handle both "Bearer X" and raw "X" formats)
+    if authorization.startswith("Bearer "):
+        token = authorization[7:]  # len("Bearer ") == 7
+    else:
+        token = authorization
 
-        with get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM users WHERE id = ?", [user_id])
-            row = cursor.fetchone()
+    # Dev bypass: accept DEV_HKOZKAN when LYNTOS_DEV_AUTH_BYPASS=1
+    if DEV_AUTH_BYPASS and token.startswith("DEV_"):
+        user_id = token[4:]  # len("DEV_") == 4
+        logger.debug(f"[AUTH] Dev bypass active for user: {user_id}")
+        return _get_dev_user(user_id)
 
-            if not row:
-                raise HTTPException(401, f"User {user_id} not found")
-
-            # Convert Row to dict
-            return dict(row)
+    # Production: require Bearer format for JWT
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(401, "Invalid Authorization format (expected: Bearer <token>)")
 
     # Production JWT validation
-    if not authorization.startswith("Bearer "):
-        raise HTTPException(401, "Invalid Authorization format")
-
-    token = authorization.replace("Bearer ", "")
-
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id = payload.get("sub") or payload.get("user_id")

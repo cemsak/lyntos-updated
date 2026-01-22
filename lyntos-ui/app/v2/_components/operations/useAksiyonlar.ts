@@ -8,6 +8,7 @@
  */
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useDashboardScope, useScopeComplete } from '../scope/useDashboardScope';
+import { getAuthToken } from '../../_lib/auth';
 import { ENDPOINTS, buildScopedUrl } from '../contracts/endpoints';
 import type { AksiyonItem, AksiyonOncelik, AksiyonKaynak, AksiyonTipi } from './types';
 
@@ -214,9 +215,7 @@ export function useAksiyonlar(): UseAksiyonlarResult {
         period: scope.period,
       });
 
-      const token = typeof window !== 'undefined'
-        ? localStorage.getItem('lyntos_token')
-        : null;
+      const token = getAuthToken();
       if (!token) {
         // Token yoksa empty state göster
         setAksiyonlar([]);

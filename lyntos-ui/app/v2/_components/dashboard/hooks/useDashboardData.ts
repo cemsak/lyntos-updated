@@ -24,11 +24,12 @@ import {
 
 // API base URL - from centralized config
 import { API_BASE_URL } from '../../../_lib/config/api';
+import { getAuthToken } from '../../../_lib/auth';
 const API_BASE = API_BASE_URL;
 
-// Auth header - dynamically get token from localStorage
+// Auth header - uses centralized getAuthToken with dev bypass support
 function getAuthHeader(): Record<string, string> {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('lyntos_token') : null;
+  const token = getAuthToken();
   return {
     'Authorization': token || '',
     'Content-Type': 'application/json',

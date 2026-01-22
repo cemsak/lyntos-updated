@@ -74,6 +74,12 @@ def _get_mizan_data_from_db(tenant_id: str, client_id: str, period_id: str) -> d
     """
     Fetch mizan data from database for portfolio calculation.
     Returns dict with totals and key account balances, or None if no data.
+
+    Financial Calculations:
+    - Revenue = Sum of accounts 600, 601, 602 (Alacak)
+    - Profit = Sum of 600-699 Alacak - Sum of 600-699 Borc
+    - Assets = Sum of 100-299 Borc (Debit balance = asset)
+    - Liabilities = Sum of 300-599 Alacak (Credit balance = liability)
     """
     try:
         conn = _get_db()
@@ -97,7 +103,7 @@ def _get_mizan_data_from_db(tenant_id: str, client_id: str, period_id: str) -> d
             conn.close()
             return None
 
-        # Get key account balances for analysis
+        # Get all account balances for analysis
         cursor.execute("""
             SELECT hesap_kodu, hesap_adi, borc_bakiye, alacak_bakiye
             FROM mizan_entries
@@ -106,42 +112,102 @@ def _get_mizan_data_from_db(tenant_id: str, client_id: str, period_id: str) -> d
         """, (tenant_id, client_id, period_id))
 
         accounts = {r["hesap_kodu"]: dict(r) for r in cursor.fetchall()}
+        conn.close()
 
-        # Calculate ciro from 600 (Satis Gelirleri) accounts
-        ciro = 0
+        # Initialize financial metrics
+        revenue = 0  # Ciro/Gelir: 600, 601, 602 hesaplari
+        total_income_credit = 0  # 600-699 Alacak toplami
+        total_income_debit = 0   # 600-699 Borc toplami
+        total_assets = 0  # 100-299 Borc bakiye (varliklar)
+        total_liabilities = 0  # 300-599 Alacak bakiye (borclar)
+        equity = 0  # 500-599 ozkaynaklar
+        devreden_kdv = 0  # 190/191 hesaplari
+
         for kod, hesap in accounts.items():
-            if kod.startswith("600"):
-                ciro += hesap.get("alacak_bakiye", 0) or 0
+            borc = hesap.get("borc_bakiye", 0) or 0
+            alacak = hesap.get("alacak_bakiye", 0) or 0
+            kod_prefix = kod[:3] if len(kod) >= 3 else kod
 
-        # Calculate kar/zarar from 690 (Donem Kari/Zarari)
-        kar_zarar = 0
+            # Revenue: 600, 601, 602 accounts (Sales/Income)
+            if kod_prefix in ["600", "601", "602"]:
+                revenue += alacak
+
+            # Income statement: 600-699
+            if kod_prefix.startswith("6"):
+                total_income_credit += alacak
+                total_income_debit += borc
+
+            # Assets: 100-299 (Debit balance represents assets)
+            if kod_prefix[0] in ["1", "2"]:
+                total_assets += borc - alacak  # Net debit = asset value
+
+            # Liabilities: 300-499 (Credit balance represents liabilities)
+            if kod_prefix[0] in ["3", "4"]:
+                total_liabilities += alacak - borc  # Net credit = liability value
+
+            # Equity: 500-599
+            if kod_prefix[0] == "5":
+                equity += alacak - borc
+
+            # Devreden KDV: 190, 191
+            if kod in ["190", "191"]:
+                devreden_kdv += borc
+
+        # Calculate profit (Kar/Zarar)
+        profit = total_income_credit - total_income_debit
+
+        # Calculate kar_zarar from 690 if available
+        kar_zarar = profit
         for kod, hesap in accounts.items():
             if kod.startswith("690"):
                 kar_zarar = (hesap.get("alacak_bakiye", 0) or 0) - (hesap.get("borc_bakiye", 0) or 0)
-
-        # Get devreden KDV from 190/191
-        devreden_kdv = 0
-        for kod, hesap in accounts.items():
-            if kod in ["190", "191"]:
-                devreden_kdv += hesap.get("borc_bakiye", 0) or 0
-
-        conn.close()
+                break
 
         return {
             "entry_count": row["entry_count"],
             "toplam_borc": row["toplam_borc"] or 0,
             "toplam_alacak": row["toplam_alacak"] or 0,
-            "ciro": ciro,
+            # New financial metrics
+            "revenue": revenue,
+            "profit": profit,
+            "total_assets": total_assets,
+            "total_liabilities": total_liabilities,
+            "equity": equity,
+            # Legacy fields
+            "ciro": revenue,
             "kar_zarar": kar_zarar,
             "devreden_kdv": devreden_kdv,
             "accounts": accounts,
-            "source": "database"
+            "data_source": "database"
         }
 
     except Exception as e:
         import logging
         logging.getLogger("contracts").warning(f"Database read error: {e}")
         return None
+
+
+def _period_to_dates(period: str) -> tuple:
+    """Convert period string (e.g., '2025-Q2') to start/end dates"""
+    if not period or "-Q" not in period:
+        return (None, None)
+    try:
+        year, q = period.split("-Q")
+        quarter = int(q)
+        start_month = (quarter - 1) * 3 + 1
+        end_month = quarter * 3
+        start_date = f"{year}-{start_month:02d}-01"
+        # Calculate last day of end month
+        if end_month in [1, 3, 5, 7, 8, 10, 12]:
+            end_day = 31
+        elif end_month in [4, 6, 9, 11]:
+            end_day = 30
+        else:  # February
+            end_day = 28  # Simplified
+        end_date = f"{year}-{end_month:02d}-{end_day}"
+        return (start_date, end_date)
+    except Exception:
+        return (None, None)
 
 
 # --- Sprint-3 KPI helpers (backend is source of truth) ---
@@ -729,23 +795,78 @@ async def contracts_portfolio(
 ):
     """
     Sprint-3: KPI'lar backend contract'tan üretilecek (tek kaynak gerçek).
+    V2 LIVE DATA: Database first, JSON fallback.
+
     Geriye dönük uyumluluk:
       - smmm_id/client_id parametreleri de kabul edilir.
     Not: Parametre verilmezse de contract döner (UI kırılmasın), fakat warnings'e ctx eksikliği eklenir.
     """
-    c = _read_json(CONTRACTS_DIR / "portfolio_customer_summary.json")
-
-    if (c is None) or (not isinstance(c, dict)):
-        p = CONTRACTS_DIR / "portfolio_customer_summary.json"
-        raise HTTPException(status_code=500, detail="PORTFOLIO_CONTRACT_INVALID path={} exists={}".format(str(p), str(p.exists())))
-    if (c is None) or (not isinstance(c, dict)):
-        raise HTTPException(status_code=500, detail="PORTFOLIO:invalid_contract_object (portfolio_customer_summary.json)")
-
-
-    # ctx normalize (multi-tenant forward)
-    smmm_n = smmm or smmm_id
+    # ROBUST parameter normalization - fix parameter blindness
+    smmm_n = smmm or smmm_id or user.get("id")  # Use authenticated user as fallback
     client_n = client or client_id
     period_n = period
+
+    # Logic guard - need at least client and period for DB lookup
+    if not client_n or not period_n:
+        # Still return a response but with warning
+        c = _read_json(CONTRACTS_DIR / "portfolio_customer_summary.json")
+        if (c is None) or (not isinstance(c, dict)):
+            c = {"kind": "portfolio_customer_summary", "warnings": [], "totals": {}}
+        c["data_source"] = "json_fallback"
+        c.setdefault("warnings", []).append("CTX:missing_client_or_period")
+        return c
+
+    # V2 LIVE DATA: Try database first with tenant fallback
+    db_data = None
+    # Try 1: With user's tenant
+    if smmm_n:
+        db_data = _get_mizan_data_from_db(smmm_n, client_n, period_n)
+    # Try 2: Fallback to SYSTEM tenant if user tenant found nothing
+    if not db_data:
+        db_data = _get_mizan_data_from_db("SYSTEM", client_n, period_n)
+
+    if db_data:
+        # BUILD RESPONSE FROM DATABASE
+        import logging
+        logging.getLogger("contracts").info(f"[PORTFOLIO] Using DATABASE for {client_n}/{period_n} ({db_data['entry_count']} entries)")
+
+        c = {
+            "kind": "portfolio_customer_summary",
+            "data_source": "database",
+            "period_window": {
+                "period": period_n,
+                "start_date": _period_to_dates(period_n)[0] if period_n else None,
+                "end_date": _period_to_dates(period_n)[1] if period_n else None,
+            },
+            "data_quality": {
+                "mizan_entries": db_data["entry_count"],
+                "toplam_borc": db_data["toplam_borc"],
+                "toplam_alacak": db_data["toplam_alacak"],
+            },
+            "totals": {
+                "total_revenue": db_data["revenue"],
+                "total_profit": db_data["profit"],
+                "total_assets": db_data["total_assets"],
+                "total_liabilities": db_data["total_liabilities"],
+                "total_equity": db_data["equity"],
+                "ciro": db_data["ciro"],
+                "kar_zarar": db_data["kar_zarar"],
+                "devreden_kdv": db_data["devreden_kdv"],
+            },
+            "warnings": [],
+            "risks": [],
+        }
+    else:
+        # FALLBACK: Read from static JSON
+        c = _read_json(CONTRACTS_DIR / "portfolio_customer_summary.json")
+
+        if (c is None) or (not isinstance(c, dict)):
+            p = CONTRACTS_DIR / "portfolio_customer_summary.json"
+            raise HTTPException(status_code=500, detail="PORTFOLIO_CONTRACT_INVALID path={} exists={}".format(str(p), str(p.exists())))
+
+        c["data_source"] = "json_fallback"
+        if smmm_n and client_n and period_n:
+            c.setdefault("warnings", []).append("DB:no_mizan_entries_found:using_json_fallback")
 
     # contract üstüne bağlamı yaz (opsiyonel)
     if smmm_n:

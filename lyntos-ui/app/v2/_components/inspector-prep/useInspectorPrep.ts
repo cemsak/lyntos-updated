@@ -8,6 +8,7 @@
  */
 
 import { useState, useCallback } from 'react';
+import { getAuthToken } from '../../_lib/auth';
 import type {
   PreparationNote,
   PreparationProgress,
@@ -32,7 +33,7 @@ export function useInspectorPrep({ clientId, period }: UseInspectorPrepOptions) 
         `/api/v1/inspector-prep/notes/${clientId}?period=${period}`,
         {
           headers: {
-            Authorization: localStorage.getItem('lyntos_token') || '',
+            Authorization: getAuthToken() || '',
           },
         }
       );
@@ -57,7 +58,7 @@ export function useInspectorPrep({ clientId, period }: UseInspectorPrepOptions) 
         `/api/v1/inspector-prep/progress/${clientId}?period=${period}`,
         {
           headers: {
-            Authorization: localStorage.getItem('lyntos_token') || '',
+            Authorization: getAuthToken() || '',
           },
         }
       );
@@ -82,7 +83,7 @@ export function useInspectorPrep({ clientId, period }: UseInspectorPrepOptions) 
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: localStorage.getItem('lyntos_token') || '',
+            Authorization: getAuthToken() || '',
           },
           body: JSON.stringify({
             client_id: clientId,
@@ -128,7 +129,7 @@ export function useInspectorPrep({ clientId, period }: UseInspectorPrepOptions) 
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: localStorage.getItem('lyntos_token') || '',
+            Authorization: getAuthToken() || '',
           },
           body: JSON.stringify({
             client_id: clientId,

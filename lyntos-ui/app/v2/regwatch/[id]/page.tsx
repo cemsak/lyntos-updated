@@ -16,6 +16,7 @@ import {
   Users,
   Bell
 } from 'lucide-react';
+import { getAuthToken } from '../../_lib/auth';
 
 interface RegWatchItem {
   id: string;
@@ -97,7 +98,7 @@ export default function RegWatchDetailPage() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const token = localStorage.getItem('lyntos_token');
+        const token = getAuthToken();
         if (!token) {
           console.error('[RegWatch] No auth token found');
           setItem(null);

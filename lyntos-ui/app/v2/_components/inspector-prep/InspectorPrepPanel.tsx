@@ -21,6 +21,7 @@ import {
   FileCheck,
   Loader2,
 } from 'lucide-react';
+import { getAuthToken } from '../../_lib/auth';
 import { QuestionCard } from './QuestionCard';
 import { useInspectorPrep } from './useInspectorPrep';
 import type { KurganAlarm } from '../vdk-simulator/types';
@@ -143,7 +144,7 @@ export function InspectorPrepPanel({
         `/api/v1/inspector-prep/export-pdf/${clientId}?period=${period}`,
         {
           headers: {
-            Authorization: localStorage.getItem('lyntos_token') || '',
+            Authorization: getAuthToken() || '',
           },
         }
       );

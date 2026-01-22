@@ -1,6 +1,7 @@
 'use client';
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { setSourceCache } from '../contracts/map';
+import { getAuthToken } from '../../_lib/auth';
 
 interface Source {
   id: string;
@@ -25,9 +26,9 @@ export function SourcesProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     async function fetchSources() {
       try {
-        const token = localStorage.getItem('lyntos_token');
+        const token = getAuthToken();
         if (!token) {
-          console.warn('[SourcesProvider] No auth token found');
+          console.warn('[SourcesProvider] No auth token found (set NEXT_PUBLIC_DEV_AUTH_BYPASS=1 for dev mode)');
           setIsLoaded(true);
           return;
         }

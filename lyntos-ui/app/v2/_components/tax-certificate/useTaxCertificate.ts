@@ -7,6 +7,7 @@
  */
 
 import { useState, useCallback } from 'react';
+import { getAuthToken } from '../../_lib/auth';
 import type { UploadResponse, TaxCertificateData, ConfirmResponse } from './types';
 
 interface UseTaxCertificateOptions {
@@ -33,7 +34,7 @@ export function useTaxCertificate({ clientId, onSuccess, onError }: UseTaxCertif
         method: 'POST',
         body: formData,
         headers: {
-          'Authorization': localStorage.getItem('lyntos_token') || '', // Dev auth header
+          'Authorization': getAuthToken() || '', // Dev auth header
         },
       });
 
@@ -123,7 +124,7 @@ export function useTaxCertificate({ clientId, onSuccess, onError }: UseTaxCertif
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': localStorage.getItem('lyntos_token') || '',
+          'Authorization': getAuthToken() || '',
         },
         body: JSON.stringify(apiData),
       });

@@ -8,6 +8,7 @@
  */
 
 import { useState, useCallback } from 'react';
+import { getAuthToken } from '../../_lib/auth';
 import type { TaxAnalysisResult, FinancialDataInput } from './types';
 
 interface UseVergusAnalysisOptions {
@@ -33,7 +34,7 @@ export function useVergusAnalysis({
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: localStorage.getItem('lyntos_token') || '',
+            Authorization: getAuthToken() || '',
           },
           body: JSON.stringify({
             client_id: clientId,
@@ -70,7 +71,7 @@ export function useVergusAnalysis({
         `/api/v1/vergus/quick-check/${clientId}?period=${period}`,
         {
           headers: {
-            Authorization: localStorage.getItem('lyntos_token') || '',
+            Authorization: getAuthToken() || '',
           },
         }
       );

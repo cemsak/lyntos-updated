@@ -8,6 +8,7 @@
  */
 import { useState, useCallback, useRef } from 'react';
 import { API_BASE_URL } from '../../_lib/config/api';
+import { getAuthToken } from '../../_lib/auth';
 
 const API_BASE = API_BASE_URL;
 
@@ -143,9 +144,7 @@ export function useRegWatchScan(): UseRegWatchScanResult {
     setError(null);
 
     try {
-      const token = typeof window !== 'undefined'
-        ? localStorage.getItem('lyntos_token')
-        : null;
+      const token = getAuthToken();
       if (!token) {
         // Token yoksa tarama yapılamaz, empty state göster
         setIsScanning(false);

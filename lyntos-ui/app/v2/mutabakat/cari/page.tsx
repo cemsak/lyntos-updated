@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { Card } from '../../_components/shared/Card';
 import { Badge } from '../../_components/shared/Badge';
+import { getAuthToken } from '../../_lib/auth';
 
 interface CariHesap {
   hesapKodu: string;
@@ -40,7 +41,7 @@ export default function CariMutabakatPage() {
       setLoading(true);
       setError(null);
       try {
-        const token = localStorage.getItem('lyntos_token');
+        const token = getAuthToken();
         if (!token) {
           // Token yoksa empty state göster
           setHesaplar([]);
@@ -81,7 +82,7 @@ export default function CariMutabakatPage() {
     setIsRefreshing(true);
     setError(null);
     try {
-      const token = localStorage.getItem('lyntos_token');
+      const token = getAuthToken();
         if (!token) {
           // Token yoksa işlem yapma
           setIsRefreshing(false);

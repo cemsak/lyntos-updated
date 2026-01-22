@@ -1,0 +1,364 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><?xml-stylesheet type="text/xsl" href="berat.xslt"?><edefter:berat xmlns:edefter="http://www.edefter.gov.tr" xmlns:ds="http://www.w3.org/2000/09/xmldsig#" xmlns:xades="http://uri.etsi.org/01903/v1.3.2#" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.edefter.gov.tr ../xsd/edefter.xsd"> 
+
+<xbrli:xbrl xmlns:edefterek="http://www.edefter.gov.tr/ek" xmlns:gl-bus="http://www.xbrl.org/int/gl/bus/2006-10-25" xmlns:gl-cor="http://www.xbrl.org/int/gl/cor/2006-10-25" xmlns:gl-muc="http://www.xbrl.org/int/gl/muc/2006-10-25" xmlns:gl-plt="http://www.xbrl.org/int/gl/plt/2006-10-25" xmlns:iso4217="http://www.xbrl.org/2003/iso4217" xmlns:iso639="http://www.xbrl.org/2005/iso639" xmlns:link="http://www.xbrl.org/2003/linkbase" xmlns:xbrli="http://www.xbrl.org/2003/instance" xmlns:xlink="http://www.w3.org/1999/xlink" xsi:schemaLocation="http://www.xbrl.org/int/gl/plt/2006-10-25 ../xsd/2006-10-25/plt/case-c-b/gl-plt-2006-10-25.xsd">
+    <link:schemaRef xlink:href="../xsd/2006-10-25/plt/case-c-b/gl-plt-2006-10-25.xsd" xlink:type="simple"/>
+    <xbrli:context id="ledger_context">
+        <xbrli:entity>
+            <xbrli:identifier scheme="http://www.gib.gov.tr">0480525636</xbrli:identifier>
+            <xbrli:segment>
+                <gl-cor:uniqueID contextRef="ledger_context">51205936-345d-4b8e-b22b-eb8179bb40e3</gl-cor:uniqueID>
+                <gl-bus:measurableQuantity contextRef="ledger_context" unitRef="countable">11.87</gl-bus:measurableQuantity>
+            </xbrli:segment>
+        </xbrli:entity>
+        <xbrli:period>
+            <xbrli:instant>2025-12-13</xbrli:instant>
+        </xbrli:period>
+    </xbrli:context>
+    <xbrli:unit id="try">
+        <xbrli:measure>iso4217:TRY</xbrli:measure>
+    </xbrli:unit>
+    <xbrli:unit id="countable">
+        <xbrli:measure>xbrli:pure</xbrli:measure>
+    </xbrli:unit>
+    <gl-cor:accountingEntries>
+        <gl-cor:documentInfo>
+            <gl-cor:entriesType contextRef="ledger_context">ledger</gl-cor:entriesType>
+            <gl-cor:uniqueID contextRef="ledger_context">KEB202509000009</gl-cor:uniqueID>
+            <gl-cor:language contextRef="ledger_context">iso639:tr</gl-cor:language>
+            <gl-cor:creationDate contextRef="ledger_context">2025-12-13</gl-cor:creationDate>
+            <gl-bus:creator contextRef="ledger_context">SMMM İSMAİL HAKKI ÖZKAN</gl-bus:creator>
+            <gl-cor:entriesComment contextRef="ledger_context">01 Eylül 2025 - 30 Eylül 2025 arası ALANYA ÖZKAN KIRTASİYE MAT.YAY.İNŞ.TİC.LTD.ŞTİ.'ye ait büyük defter beratı.</gl-cor:entriesComment>
+            <gl-cor:periodCoveredStart contextRef="ledger_context">2025-09-01</gl-cor:periodCoveredStart>
+            <gl-cor:periodCoveredEnd contextRef="ledger_context">2025-09-30</gl-cor:periodCoveredEnd>
+            <gl-bus:sourceApplication contextRef="ledger_context">8810234738##TÜRMOB-TESMER EĞİTİM YAYIN VE YAZILIM HİZMETLERİ İŞLETMESİ##LUCA E-DEFTER UYGULAMASI##1.0</gl-bus:sourceApplication>
+        </gl-cor:documentInfo>
+        <gl-cor:entityInformation>
+            <gl-bus:entityPhoneNumber>
+                <gl-bus:phoneNumberDescription contextRef="ledger_context">main</gl-bus:phoneNumberDescription>
+                <gl-bus:phoneNumber contextRef="ledger_context">2425138920</gl-bus:phoneNumber>
+            </gl-bus:entityPhoneNumber>
+            <gl-bus:entityFaxNumberStructure>
+                <gl-bus:entityFaxNumber contextRef="ledger_context">2425135683</gl-bus:entityFaxNumber>
+            </gl-bus:entityFaxNumberStructure>
+            <gl-bus:entityEmailAddressStructure>
+                <gl-bus:entityEmailAddress contextRef="ledger_context">ozkan07@hotmail.com</gl-bus:entityEmailAddress>
+            </gl-bus:entityEmailAddressStructure>
+            <gl-bus:organizationIdentifiers>
+                <gl-bus:organizationIdentifier contextRef="ledger_context">ALANYA ÖZKAN KIRTASİYE MAT.YAY.İNŞ.TİC.LTD.ŞTİ.</gl-bus:organizationIdentifier>
+                <gl-bus:organizationDescription contextRef="ledger_context">Kurum Unvanı</gl-bus:organizationDescription>
+            </gl-bus:organizationIdentifiers>
+            <gl-bus:organizationAddress>
+                <gl-bus:organizationBuildingNumber contextRef="ledger_context">44/A</gl-bus:organizationBuildingNumber>
+                <gl-bus:organizationAddressStreet contextRef="ledger_context">TEVFİKİYE CAD</gl-bus:organizationAddressStreet>
+                <gl-bus:organizationAddressStreet2 contextRef="ledger_context">ŞEKERHANE MAH.</gl-bus:organizationAddressStreet2>
+                <gl-bus:organizationAddressCity contextRef="ledger_context">Antalya</gl-bus:organizationAddressCity>
+                <gl-bus:organizationAddressZipOrPostalCode contextRef="ledger_context">07400</gl-bus:organizationAddressZipOrPostalCode>
+                <gl-bus:organizationAddressCountry contextRef="ledger_context">Türkiye</gl-bus:organizationAddressCountry>
+            </gl-bus:organizationAddress>
+            <gl-bus:entityWebSite>
+                <gl-bus:webSiteURL contextRef="ledger_context">www.ozkankirtasiye.com</gl-bus:webSiteURL>
+            </gl-bus:entityWebSite>
+            <gl-bus:businessDescription contextRef="ledger_context">47.62.0.1.00</gl-bus:businessDescription>
+            <gl-bus:fiscalYearStart contextRef="ledger_context">2025-01-01</gl-bus:fiscalYearStart>
+            <gl-bus:fiscalYearEnd contextRef="ledger_context">2025-12-31</gl-bus:fiscalYearEnd>
+            <gl-bus:accountantInformation>
+                <gl-bus:accountantName contextRef="ledger_context">SMMM İSMAİL HAKKI ÖZKAN</gl-bus:accountantName>
+                <gl-bus:accountantAddress>
+                    <gl-bus:accountantBuildingNumber contextRef="ledger_context">47/6</gl-bus:accountantBuildingNumber>
+                    <gl-bus:accountantStreet contextRef="ledger_context">BÜYÜK HASBAHÇE </gl-bus:accountantStreet>
+                    <gl-bus:accountantAddressStreet2 contextRef="ledger_context">BÜYÜK HASBAHÇE</gl-bus:accountantAddressStreet2>
+                    <gl-bus:accountantCity contextRef="ledger_context">Antalya</gl-bus:accountantCity>
+                    <gl-bus:accountantCountry contextRef="ledger_context">Türkiye</gl-bus:accountantCountry>
+                    <gl-bus:accountantZipOrPostalCode contextRef="ledger_context">07400</gl-bus:accountantZipOrPostalCode>
+                </gl-bus:accountantAddress>
+                <gl-bus:accountantEngagementTypeDescription contextRef="ledger_context">SMMM Sözleşmesi, 2015-06-15, 2015/194/1-S / 1</gl-bus:accountantEngagementTypeDescription>
+                <gl-bus:accountantContactInformation>
+                    <gl-bus:accountantContactPhone>
+                        <gl-bus:accountantContactPhoneNumberDescription contextRef="ledger_context">bookkeeper</gl-bus:accountantContactPhoneNumberDescription>
+                        <gl-bus:accountantContactPhoneNumber contextRef="ledger_context">2425115817</gl-bus:accountantContactPhoneNumber>
+                    </gl-bus:accountantContactPhone>
+                    <gl-bus:accountantContactFax>
+                        <gl-bus:accountantContactFaxNumber contextRef="ledger_context">2425115817</gl-bus:accountantContactFaxNumber>
+                    </gl-bus:accountantContactFax>
+                    <gl-bus:accountantContactEmail>
+                        <gl-bus:accountantContactEmailAddress contextRef="ledger_context">alanyamuhasebe@hotmail.com</gl-bus:accountantContactEmailAddress>
+                    </gl-bus:accountantContactEmail>
+                </gl-bus:accountantContactInformation>
+            </gl-bus:accountantInformation>
+        </gl-cor:entityInformation>
+        <gl-cor:entryHeader>
+            <gl-cor:qualifierEntry contextRef="ledger_context">standard</gl-cor:qualifierEntry>
+            <gl-cor:entryDetail>
+                <gl-cor:lineNumber contextRef="ledger_context">1</gl-cor:lineNumber>
+                <gl-cor:account>
+                    <gl-cor:accountMainID contextRef="ledger_context">391</gl-cor:accountMainID>
+                    <gl-cor:accountMainDescription contextRef="ledger_context">Hesaplanan KDV</gl-cor:accountMainDescription>
+                </gl-cor:account>
+                <gl-cor:amount contextRef="ledger_context" decimals="INF" unitRef="try">1021187.66</gl-cor:amount>
+                <gl-cor:debitCreditCode contextRef="ledger_context">D</gl-cor:debitCreditCode>
+                <gl-cor:xbrlInfo>
+                    <gl-cor:xbrlInclude contextRef="ledger_context">period_change</gl-cor:xbrlInclude>
+                </gl-cor:xbrlInfo>
+            </gl-cor:entryDetail>
+            <gl-cor:entryDetail>
+                <gl-cor:lineNumber contextRef="ledger_context">2</gl-cor:lineNumber>
+                <gl-cor:account>
+                    <gl-cor:accountMainID contextRef="ledger_context">391</gl-cor:accountMainID>
+                    <gl-cor:accountMainDescription contextRef="ledger_context">Hesaplanan KDV</gl-cor:accountMainDescription>
+                </gl-cor:account>
+                <gl-cor:amount contextRef="ledger_context" decimals="INF" unitRef="try">1021187.66</gl-cor:amount>
+                <gl-cor:debitCreditCode contextRef="ledger_context">C</gl-cor:debitCreditCode>
+                <gl-cor:xbrlInfo>
+                    <gl-cor:xbrlInclude contextRef="ledger_context">period_change</gl-cor:xbrlInclude>
+                </gl-cor:xbrlInfo>
+            </gl-cor:entryDetail>
+            <gl-cor:entryDetail>
+                <gl-cor:lineNumber contextRef="ledger_context">3</gl-cor:lineNumber>
+                <gl-cor:account>
+                    <gl-cor:accountMainID contextRef="ledger_context">191</gl-cor:accountMainID>
+                    <gl-cor:accountMainDescription contextRef="ledger_context">İndirilecek KDV</gl-cor:accountMainDescription>
+                </gl-cor:account>
+                <gl-cor:amount contextRef="ledger_context" decimals="INF" unitRef="try">589401.54</gl-cor:amount>
+                <gl-cor:debitCreditCode contextRef="ledger_context">D</gl-cor:debitCreditCode>
+                <gl-cor:xbrlInfo>
+                    <gl-cor:xbrlInclude contextRef="ledger_context">period_change</gl-cor:xbrlInclude>
+                </gl-cor:xbrlInfo>
+            </gl-cor:entryDetail>
+            <gl-cor:entryDetail>
+                <gl-cor:lineNumber contextRef="ledger_context">4</gl-cor:lineNumber>
+                <gl-cor:account>
+                    <gl-cor:accountMainID contextRef="ledger_context">191</gl-cor:accountMainID>
+                    <gl-cor:accountMainDescription contextRef="ledger_context">İndirilecek KDV</gl-cor:accountMainDescription>
+                </gl-cor:account>
+                <gl-cor:amount contextRef="ledger_context" decimals="INF" unitRef="try">589401.54</gl-cor:amount>
+                <gl-cor:debitCreditCode contextRef="ledger_context">C</gl-cor:debitCreditCode>
+                <gl-cor:xbrlInfo>
+                    <gl-cor:xbrlInclude contextRef="ledger_context">period_change</gl-cor:xbrlInclude>
+                </gl-cor:xbrlInfo>
+            </gl-cor:entryDetail>
+            <gl-cor:entryDetail>
+                <gl-cor:lineNumber contextRef="ledger_context">5</gl-cor:lineNumber>
+                <gl-cor:account>
+                    <gl-cor:accountMainID contextRef="ledger_context">600</gl-cor:accountMainID>
+                    <gl-cor:accountMainDescription contextRef="ledger_context">Yurt İçi Satışlar</gl-cor:accountMainDescription>
+                </gl-cor:account>
+                <gl-cor:amount contextRef="ledger_context" decimals="INF" unitRef="try">112985.00</gl-cor:amount>
+                <gl-cor:debitCreditCode contextRef="ledger_context">D</gl-cor:debitCreditCode>
+                <gl-cor:xbrlInfo>
+                    <gl-cor:xbrlInclude contextRef="ledger_context">period_change</gl-cor:xbrlInclude>
+                </gl-cor:xbrlInfo>
+            </gl-cor:entryDetail>
+            <gl-cor:entryDetail>
+                <gl-cor:lineNumber contextRef="ledger_context">6</gl-cor:lineNumber>
+                <gl-cor:account>
+                    <gl-cor:accountMainID contextRef="ledger_context">600</gl-cor:accountMainID>
+                    <gl-cor:accountMainDescription contextRef="ledger_context">Yurt İçi Satışlar</gl-cor:accountMainDescription>
+                </gl-cor:account>
+                <gl-cor:amount contextRef="ledger_context" decimals="INF" unitRef="try">12652083.50</gl-cor:amount>
+                <gl-cor:debitCreditCode contextRef="ledger_context">C</gl-cor:debitCreditCode>
+                <gl-cor:xbrlInfo>
+                    <gl-cor:xbrlInclude contextRef="ledger_context">period_change</gl-cor:xbrlInclude>
+                </gl-cor:xbrlInfo>
+            </gl-cor:entryDetail>
+            <gl-cor:entryDetail>
+                <gl-cor:lineNumber contextRef="ledger_context">7</gl-cor:lineNumber>
+                <gl-cor:account>
+                    <gl-cor:accountMainID contextRef="ledger_context">601</gl-cor:accountMainID>
+                    <gl-cor:accountMainDescription contextRef="ledger_context">Yurt Dışı Satışlar</gl-cor:accountMainDescription>
+                </gl-cor:account>
+                <gl-cor:amount contextRef="ledger_context" decimals="INF" unitRef="try">0.00</gl-cor:amount>
+                <gl-cor:debitCreditCode contextRef="ledger_context">D</gl-cor:debitCreditCode>
+                <gl-cor:xbrlInfo>
+                    <gl-cor:xbrlInclude contextRef="ledger_context">period_change</gl-cor:xbrlInclude>
+                </gl-cor:xbrlInfo>
+            </gl-cor:entryDetail>
+            <gl-cor:entryDetail>
+                <gl-cor:lineNumber contextRef="ledger_context">8</gl-cor:lineNumber>
+                <gl-cor:account>
+                    <gl-cor:accountMainID contextRef="ledger_context">601</gl-cor:accountMainID>
+                    <gl-cor:accountMainDescription contextRef="ledger_context">Yurt Dışı Satışlar</gl-cor:accountMainDescription>
+                </gl-cor:account>
+                <gl-cor:amount contextRef="ledger_context" decimals="INF" unitRef="try">0.00</gl-cor:amount>
+                <gl-cor:debitCreditCode contextRef="ledger_context">C</gl-cor:debitCreditCode>
+                <gl-cor:xbrlInfo>
+                    <gl-cor:xbrlInclude contextRef="ledger_context">period_change</gl-cor:xbrlInclude>
+                </gl-cor:xbrlInfo>
+            </gl-cor:entryDetail>
+            <gl-cor:entryDetail>
+                <gl-cor:lineNumber contextRef="ledger_context">9</gl-cor:lineNumber>
+                <gl-cor:account>
+                    <gl-cor:accountMainID contextRef="ledger_context">602</gl-cor:accountMainID>
+                    <gl-cor:accountMainDescription contextRef="ledger_context">Diğer Gelirler Hesabı</gl-cor:accountMainDescription>
+                </gl-cor:account>
+                <gl-cor:amount contextRef="ledger_context" decimals="INF" unitRef="try">0.00</gl-cor:amount>
+                <gl-cor:debitCreditCode contextRef="ledger_context">D</gl-cor:debitCreditCode>
+                <gl-cor:xbrlInfo>
+                    <gl-cor:xbrlInclude contextRef="ledger_context">period_change</gl-cor:xbrlInclude>
+                </gl-cor:xbrlInfo>
+            </gl-cor:entryDetail>
+            <gl-cor:entryDetail>
+                <gl-cor:lineNumber contextRef="ledger_context">10</gl-cor:lineNumber>
+                <gl-cor:account>
+                    <gl-cor:accountMainID contextRef="ledger_context">602</gl-cor:accountMainID>
+                    <gl-cor:accountMainDescription contextRef="ledger_context">Diğer Gelirler Hesabı</gl-cor:accountMainDescription>
+                </gl-cor:account>
+                <gl-cor:amount contextRef="ledger_context" decimals="INF" unitRef="try">60920.14</gl-cor:amount>
+                <gl-cor:debitCreditCode contextRef="ledger_context">C</gl-cor:debitCreditCode>
+                <gl-cor:xbrlInfo>
+                    <gl-cor:xbrlInclude contextRef="ledger_context">period_change</gl-cor:xbrlInclude>
+                </gl-cor:xbrlInfo>
+            </gl-cor:entryDetail>
+        </gl-cor:entryHeader>
+    </gl-cor:accountingEntries>
+</xbrli:xbrl>
+<ds:SignatureValue>MGUCMQDmir1SBWUUlkSOB7Le1CIKqy/p/jyimFdi2LFw5Y3UOnK9BO75fYq/sT/H3memODICMC7i
+c3Pf6LSCj7VGn5Hq5vyuHJCSlIN/6xqkAvBnG/HpOZGUfkhj0X21fcpSsOFMaw==</ds:SignatureValue><ds:Signature Id="Signature-Id-f65e6579-5f0d-4dda-a4f3-5c17a1fa5efd">
+<ds:SignedInfo>
+<ds:CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+<ds:SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha384"/>
+<ds:Reference Id="Reference-Id-8b48151e-b8a7-4998-9142-233d9c7382e2" Type="http://uri.etsi.org/01903#SignedProperties" URI="#Signed-Properties-Id-7a17ce9f-ee20-4d55-9106-7a341a3b4613">
+<ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>
+<ds:DigestValue>i88GFJgSENN7q4klIvBrdFUFk12+xDoDJpjMNQcOQyA=</ds:DigestValue>
+</ds:Reference>
+<ds:Reference Id="Reference-Id-925dbee9-32bf-4304-9b0e-18e9a626a37c" URI="">
+<ds:Transforms>
+<ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
+</ds:Transforms>
+<ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>
+<ds:DigestValue>9PwfqtCRS7F57Oaw4qWDHWQ39UI/O58jsPrAck+6ObM=</ds:DigestValue>
+</ds:Reference>
+</ds:SignedInfo>
+<ds:SignatureValue Id="Signature-Value-Id-7db90f94-4a4a-41d9-a7c6-85388de8966a">MGUCMQDiwFcgFC3/di7Asit65ixQzB4xyWfCRiO1NDTbgOHMBMhbezuFtYvJS5PfOJtzEPACMB7A
+CWOyOX7vohDTosPmcNdA5ST/BRD4mhczPtENNZvR47MLMdpD2hAyXMGdrpu2ag==</ds:SignatureValue>
+<ds:KeyInfo>
+<ds:X509Data>
+<ds:X509Certificate>MIIEhzCCBA2gAwIBAgIHBDr6G1IIZzAKBggqhkjOPQQDAzCB0TELMAkGA1UEBhMCVFIxGDAWBgNV
+BAcMD0dlYnplIC0gS29jYWVsaTFHMEUGA1UECgw+VMO8cmtpeWUgQmlsaW1zZWwgdmUgVGVrbm9s
+b2ppayBBcmHFn3TEsXJtYSBLdXJ1bXUgLSBUw5xCxLBUQUsxEDAOBgNVBAsMB0LEsExHRU0xTTBL
+BgNVBAMMRE1hbGkgTcO8aMO8ciBFbGVrdHJvbmlrIFNlcnRpZmlrYSBIaXptZXQgU2HEn2xhecSx
+Y8Sxc8SxIC0gU8O8csO8bSAzMB4XDTI1MTAxODEzMTUwNloXDTI4MTAxNzEzMTUwNlowdjETMBEG
+A1UEBRMKMDQ4MDUyNTYzNjFfMF0GA1UEAwxWQUxBTllBIMOWWktBTiBLSVJUQVPEsFlFIE1BVEJB
+QUNJTElLIFlBWUlOQ0lMSUsgxLBOxZ5BQVQgVMSwQ0FSRVQgTMSwTcSwVEVEIMWexLBSS0VUxLAw
+djAQBgcqhkjOPQIBBgUrgQQAIgNiAASA/i/l9Mw51haEHg7/N+x7FY1EchWRkGXsis44JFv2fl6a
+97TsZUzzWEbD/JFvW1RDFX1gQeiizJFz84uHgMSM2qpu47F8M5A1y/fJIK23fbhn6uVML78DYmYq
+beGab0CjggILMIICBzAfBgNVHSMEGDAWgBQGOWgRLQQLgBS9tzmCqwTI9tipfDAdBgNVHQ4EFgQU
+ga4aeJUqYmkBh5PNzna11wPUdVwwDgYDVR0PAQH/BAQDAgeAMIHGBgNVHSAEgb4wgbswgbgGC2CG
+GAECAQEFBwQBMIGoMCoGCCsGAQUFBwIBFh5odHRwOi8vZGVwby5rYW11c20uZ292LnRyL2lsa2Uw
+egYIKwYBBQUHAgIwbgxsQnUgc2VydGlmaWthIGlsZSBpbGdpbGkgc2VydGlmaWthIHV5Z3VsYW1h
+IGVzYXNsYXLEsW7EsSBva3VtYWsgacOnaW4gYmVsaXJ0aWxlbiB3ZWIgc2l0ZXNpbmkgeml5YXJl
+dCBlZGluaXouMAwGA1UdEwEB/wQCMAAwFgYDVR0lBA8wDQYLYIYYAQIBAQUHMgEwQQYDVR0fBDow
+ODA2oDSgMoYwaHR0cDovL2RlcG8ua2FtdXNtLmdvdi50ci9rdXJ1bXNhbC9tbWVzaHMtczMuY3Js
+MIGCBggrBgEFBQcBAQR2MHQwPAYIKwYBBQUHMAKGMGh0dHA6Ly9kZXBvLmthbXVzbS5nb3YudHIv
+a3VydW1zYWwvbW1lc2hzLXMzLmNydDA0BggrBgEFBQcwAYYoaHR0cDovL2Npc2R1cG1tczMua3Vy
+dW1zYWwua2FtdXNtLmdvdi50cjAKBggqhkjOPQQDAwNoADBlAjADtnwWrv1W6lsZnEmHyu7ObthD
+m9u/W8gduOSH6d8L7vCzp+RSlQVDdwnK8TWel6oCMQCT9nRTHqSPNddnx99N9qFdC2pUTtFPjJ7S
+DD3WRZqTrlvFjlLk49UbQBxOGuyz1Mk=</ds:X509Certificate>
+<ds:X509SubjectName>CN=ALANYA ÖZKAN KIRTASİYE MATBAACILIK YAYINCILIK İNŞAAT TİCARET LİMİTED ŞİRKETİ, SERIALNUMBER=0480525636</ds:X509SubjectName></ds:X509Data>
+<ds:KeyValue>
+<dsig11:ECKeyValue xmlns:dsig11="http://www.w3.org/2009/xmldsig11#">
+<dsig11:PublicKey>BID+L+X0zDnWFoQeDv837HsVjURyFZGQZeyKzjgkW/Z+Xpr3tOxlTPNYRsP8kW9bVEMVfWBB6KLM
+kXPzi4eAxIzaqm7jsXwzkDXL98kgrbd9uGfq5UwvvwNiZipt4ZpvQA==</dsig11:PublicKey>
+<dsig11:NamedCurve>urn:oid:1.3.132.0.34</dsig11:NamedCurve>
+</dsig11:ECKeyValue>
+</ds:KeyValue>
+</ds:KeyInfo>
+<ds:Object Id="Object-Id-7ec17993-2a5c-446f-9278-5865e582a687"><xades:QualifyingProperties Target="#Signature-Id-f65e6579-5f0d-4dda-a4f3-5c17a1fa5efd">
+<xades:SignedProperties Id="Signed-Properties-Id-7a17ce9f-ee20-4d55-9106-7a341a3b4613">
+<xades:SignedSignatureProperties>
+<xades:SigningTime>2025-12-13T15:10:16.877+03:00</xades:SigningTime>
+<xades:SigningCertificate>
+<xades:Cert>
+<xades:CertDigest>
+<ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>
+<ds:DigestValue>SQCYWpGomdrnpXf5xXLAzeOmeU3GVa2xdyo2+o0I/YM=</ds:DigestValue>
+</xades:CertDigest>
+<xades:IssuerSerial>
+<ds:X509IssuerName>CN=Mali Mühür Elektronik Sertifika Hizmet Sağlayıcısı - Sürüm 3,OU=BİLGEM,O=Türkiye Bilimsel ve Teknolojik Araştırma Kurumu - TÜBİTAK,L=Gebze - Kocaeli,C=TR</ds:X509IssuerName>
+<ds:X509SerialNumber>1190745781438567</ds:X509SerialNumber>
+</xades:IssuerSerial>
+</xades:Cert>
+</xades:SigningCertificate>
+</xades:SignedSignatureProperties>
+<xades:SignedDataObjectProperties>
+<xades:DataObjectFormat ObjectReference="#Reference-Id-925dbee9-32bf-4304-9b0e-18e9a626a37c">
+<xades:MimeType>text/xml</xades:MimeType>
+</xades:DataObjectFormat>
+</xades:SignedDataObjectProperties>
+</xades:SignedProperties>
+<xades:UnsignedProperties>
+<xades:UnsignedSignatureProperties>
+
+<xades:SignatureTimeStamp Id="SignatureTimeStamp-Id-1247c7db-4914-42ac-a6f8-31748323d9be">
+<xades:EncapsulatedTimeStamp>MIIJJwYJKoZIhvcNAQcCoIIJGDCCCRQCAQMxDTALBglghkgBZQMEAgMwgYsGCyqGSIb3DQEJEAEE
+oHwEejB4AgEBBgtghhgBAgEBBQcDATAvMAsGCWCGSAFlAwQCAQQgxozlUF2UyEa0thVsEx9srMNt
+CXt01KiTMjNY0zsUOeICBQC4utlpGBMyMDI1MTIxMzEyMTAxNi41NTlaMAMCAQECFIJiwhNX827h
+yF/zIMvV1k0pADBdoIIEtDCCBLAwggQ2oAMCAQICBwC6U8J4BJMwCgYIKoZIzj0EAwMwgcYxCzAJ
+BgNVBAYTAlRSMRgwFgYDVQQHDA9HZWJ6ZSAtIEtvY2FlbGkxRzBFBgNVBAoMPlTDvHJraXllIEJp
+bGltc2VsIHZlIFRla25vbG9qaWsgQXJhxZ90xLFybWEgS3VydW11IC0gVMOcQsSwVEFLMRAwDgYD
+VQQLDAdCxLBMR0VNMUIwQAYDVQQDDDlLYW11IFNNIEvDtmsgU2VydGlmaWthIEhpem1ldCBTYcSf
+bGF5xLFjxLFzxLEgLSBTw7xyw7xtIDYwHhcNMjUwODA3MTI0MTA2WhcNMjgwODA2MTI0MTA2WjBL
+MQswCQYDVQQGEwJUUjEQMA4GA1UECgwHVFVCSVRBSzEqMCgGA1UEAwwhS2FtdSBTTSBaYW1hbiBE
+YW1nYXNpIFN1bnVjdXN1IFMxMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxxNZyu5q
+Dp3HORkD5jgyUaIn3gWwJYmMyqflBq+7mQrQL85ga1Jbf1gXme9b7DudxrZFr9Xq7Tbvx/iTcxD7
+nVCifnfODsu+AXM2F7MfZNGJMa7EVyfmWvlbgy41BqIqqsiSkRzGT/jfO6TFVc8ENmOfQucuOoQP
+TPFyRifLc0bGSN/7MdBKiSULsmhT760RSLSQ7skEHi+oe2AHlOioCJz1gQo0l8XCh279V3cQldKx
+WjuoIw0gGiYYrbzyf42W3raAqd2Gvf4pWleWEypc54254alRbzag708LlefTPH9hE5KPaN7MBp+0
+y+LSlkqCgb4sW6gvKqQiOObCw8+UVQIDAQABo4IBvDCCAbgwHwYDVR0jBBgwFoAUMMvWgRAjLJ9E
+Mg/gunvxicLAOdowHQYDVR0OBBYEFMXuNU3jjzfcDYCvCJUpM8cASwv2MA4GA1UdDwEB/wQEAwIG
+wDCBuwYDVR0gBIGzMIGwMIGtBgtghhgBAgEBBQcDATCBnTAqBggrBgEFBQcCARYeaHR0cDovL2Rl
+cG8ua2FtdXNtLmdvdi50ci9pbGtlMG8GCCsGAQUFBwICMGMMYUJ1IHNlcnRpZmlrYSBpbGUgaWxn
+aWxpIHNlcnRpZmlrYSBpbGtlbGVyaW5pIG9rdW1hayBpw6dpbiBiZWxpcnRpbGVuIHdlYiBzaXRl
+c2luaSB6aXlhcmV0IGVkaW5pei4wCQYDVR0TBAIwADAWBgNVHSUBAf8EDDAKBggrBgEFBQcDCDA8
+BgNVHR8ENTAzMDGgL6AthitodHRwOi8vZGVwby5rYW11c20uZ292LnRyL25lcy9rb2tzaHMudjYu
+Y3JsMEcGCCsGAQUFBwEBBDswOTA3BggrBgEFBQcwAoYraHR0cDovL2RlcG8ua2FtdXNtLmdvdi50
+ci9uZXMva29rc2hzLnY2LmNydDAKBggqhkjOPQQDAwNoADBlAjBcYjxN9IT7TvCh+WYzw0IzH+a/
+EAwcQ9LMTd53Jmq9RfqM7VKgvkTIOoqQpFlqbooCMQDI41ZUSxhCJKrCoe7wmxC20YQ29EKmR7oB
+0Uh3QoUFWn/isj/X5V4uml4m5LSWEtoxggO4MIIDtAIBATCB0jCBxjELMAkGA1UEBhMCVFIxGDAW
+BgNVBAcMD0dlYnplIC0gS29jYWVsaTFHMEUGA1UECgw+VMO8cmtpeWUgQmlsaW1zZWwgdmUgVGVr
+bm9sb2ppayBBcmHFn3TEsXJtYSBLdXJ1bXUgLSBUw5xCxLBUQUsxEDAOBgNVBAsMB0LEsExHRU0x
+QjBABgNVBAMMOUthbXUgU00gS8O2ayBTZXJ0aWZpa2EgSGl6bWV0IFNhxJ9sYXnEsWPEsXPEsSAt
+IFPDvHLDvG0gNgIHALpTwngEkzALBglghkgBZQMEAgOgggG4MBoGCSqGSIb3DQEJAzENBgsqhkiG
+9w0BCRABBDBPBgkqhkiG9w0BCQQxQgRAUunD5kBunc4n8OkBAC8gK552UgUZIY2wFuhgbe8j2K8S
+fU69WABysowKF4pkhEjm7NRj1Bjxc2lLujlkucdhgDCCAUcGCyqGSIb3DQEJEAIvMYIBNjCCATIw
+ggEuMIIBKjALBglghkgBZQMEAgMEQNKCa8TaBlZgHh07CbAc0ng5j9Rf95FSZUT3WbyaRlqiUyBC
+HVv+6O05LYHTliiaAGcZ3ipWhryhGUbvxz1sLo0wgdgwgcykgckwgcYxCzAJBgNVBAYTAlRSMRgw
+FgYDVQQHDA9HZWJ6ZSAtIEtvY2FlbGkxRzBFBgNVBAoMPlTDvHJraXllIEJpbGltc2VsIHZlIFRl
+a25vbG9qaWsgQXJhxZ90xLFybWEgS3VydW11IC0gVMOcQsSwVEFLMRAwDgYDVQQLDAdCxLBMR0VN
+MUIwQAYDVQQDDDlLYW11IFNNIEvDtmsgU2VydGlmaWthIEhpem1ldCBTYcSfbGF5xLFjxLFzxLEg
+LSBTw7xyw7xtIDYCBwC6U8J4BJMwDQYJKoZIhvcNAQENBQAEggEAk5ONqJFtHbLkEMsFHqeO48zQ
+QlEBesA8+3JWV88U6DF60XQxkqN6By5yihhd3JSQvhrxXTw8X9TF8GkmgTSzSdMWHJphnVssjtDg
+2whVCODhehBWCzNdqAlKBC17JtMbqTcm+EbkjC+RCc0c7aqhEdtSKGtHmMUavvb45WxyuIrifvQZ
+JR/5BFf52/1Z6UtmfDWvyBJsVyj5//yXSAT9/i0R2B+G+xn7zTSBKMyqJwr4XBUcmMHr4xkfUrn4
+oPoIntYFEycwBlolcjPuDsRouvtXeUR9zRzRIjP7hvRMfVg4g5t0x+vd74PZiRf/yy3e59kbf2pF
+vl6Nb7sS2YdXbQ==</xades:EncapsulatedTimeStamp>
+</xades:SignatureTimeStamp><xades:CounterSignature><ds:Signature Id="_f2b36519-5133-4fce-96bd-3206aa894aee"><ds:SignedInfo Id="_b671e24d-19fe-4491-8236-2409def35887"><ds:CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315#WithComments"/><ds:SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"/><ds:Reference URI="#Signature-Value-Id-7db90f94-4a4a-41d9-a7c6-85388de8966a"><ds:Transforms><ds:Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315#WithComments"/></ds:Transforms><ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/><ds:DigestValue>xozlUF2UyEa0thVsEx9srMNtCXt01KiTMjNY0zsUOeI=</ds:DigestValue></ds:Reference><ds:Reference Id="_20ddbf48-de6c-4caf-a8b0-63c82ebec3a4" Type="http://uri.etsi.org/01903#SignedProperties" URI="#_a52b552a-052a-46e4-ae10-176d4c1e6260"><ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/><ds:DigestValue>rLYdE18Dlup26yH0SgDsuV93sMYDK7ttNieXlBD0TnY=</ds:DigestValue></ds:Reference></ds:SignedInfo><ds:SignatureValue Id="_941b9fea-9574-4f3a-b55e-8232b5191e8f">Y3e8hmtWK3dnC00Y0jFv2pMgQrCga/+sV4bCTMm5jO33rOKV2dd856a69HiIXQRTyvoHQf10b83/
+5639tKYDhLNtc57NXFARAgnsanZlZpBFLMEGP6DrLNx/mc9GLefdH7+AJvaobuYf1jiW5UrbUE0l
+vamTspicTEe7ONG+pR+C5K8Ek8fjEn8wRlOLDI8SzJRwPmn4GEhZ9ZJh/gs/jQ/le3WV72AbDfLk
+o4oLqofYbFX0Kiuki/CnyKyGuFg/omRq+uoPoHjcu4W8S+x6xs2F8UxG9si7KYEGCQpVrk0tEYf1
+2cwTXuJjTYP6+nUz0nHxDlcbK9OAMf3OI2OgQQ==</ds:SignatureValue><ds:KeyInfo><ds:X509Data><ds:X509SubjectName>CN=GELİR İDARESİ BAŞKANLIĞI,2.5.4.5=#130a33393030333833363639</ds:X509SubjectName><ds:X509Certificate>MIIE/DCCBIKgAwIBAgIHR4UKTCxmLDAKBggqhkjOPQQDAzCB0TELMAkGA1UEBhMCVFIxGDAWBgNV
+BAcMD0dlYnplIC0gS29jYWVsaTFHMEUGA1UECgw+VMO8cmtpeWUgQmlsaW1zZWwgdmUgVGVrbm9s
+b2ppayBBcmHFn3TEsXJtYSBLdXJ1bXUgLSBUw5xCxLBUQUsxEDAOBgNVBAsMB0LEsExHRU0xTTBL
+BgNVBAMMRE1hbGkgTcO8aMO8ciBFbGVrdHJvbmlrIFNlcnRpZmlrYSBIaXptZXQgU2HEn2xhecSx
+Y8Sxc8SxIC0gU8O8csO8bSAzMB4XDTI0MDEwMjEyMjUwNVoXDTI3MDEwMTEyMjUwNVowPTETMBEG
+A1UEBRMKMzkwMDM4MzY2OTEmMCQGA1UEAwwdR0VMxLBSIMSwREFSRVPEsCBCQcWeS0FOTEnEnkkw
+ggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQC1PyGTcXO+7ohK6kgGu6eWDKA/EJfzoSEh
+N50aqvGYdoRGF5zHLXSeLXrD3p+fJveWetEi3GCNK8zP6udOE4WlUEI4dsq0di5QkMbMEp/oeYGY
+KYeeomNgEy3Yj00Vz/PqBqi2HQ20noRCQUHQUCNsOmQyy8gFyfqaCtCU5/Em0c3GEh6fwNCun3tn
+B+N6bbAHEQC6+QvpcFwekIhGT6xqPXveIoSuvycl48NHVko/Jk3jAOjEeuebnDGfiU96i0z04xhV
+Xk5K1Qe2muGxJRXt6VuUT/WsERePM24WdBrMJfO5pwNQ2bkiAXo/mwQogrL6Gwbyfy2EhMG80IEp
+47FzAgMBAAGjggILMIICBzAfBgNVHSMEGDAWgBQGOWgRLQQLgBS9tzmCqwTI9tipfDAdBgNVHQ4E
+FgQU4xqMNET7HmdTq3lxvf3kXCDZqrswDgYDVR0PAQH/BAQDAgeAMIHGBgNVHSAEgb4wgbswgbgG
+C2CGGAECAQEFBwQBMIGoMCoGCCsGAQUFBwIBFh5odHRwOi8vZGVwby5rYW11c20uZ292LnRyL2ls
+a2UwegYIKwYBBQUHAgIwbgxsQnUgc2VydGlmaWthIGlsZSBpbGdpbGkgc2VydGlmaWthIHV5Z3Vs
+YW1hIGVzYXNsYXLEsW7EsSBva3VtYWsgacOnaW4gYmVsaXJ0aWxlbiB3ZWIgc2l0ZXNpbmkgeml5
+YXJldCBlZGluaXouMAwGA1UdEwEB/wQCMAAwFgYDVR0lBA8wDQYLYIYYAQIBAQUHMgEwQQYDVR0f
+BDowODA2oDSgMoYwaHR0cDovL2RlcG8ua2FtdXNtLmdvdi50ci9rdXJ1bXNhbC9tbWVzaHMtczMu
+Y3JsMIGCBggrBgEFBQcBAQR2MHQwPAYIKwYBBQUHMAKGMGh0dHA6Ly9kZXBvLmthbXVzbS5nb3Yu
+dHIva3VydW1zYWwvbW1lc2hzLXMzLmNydDA0BggrBgEFBQcwAYYoaHR0cDovL2Npc2R1cG1tczMu
+a3VydW1zYWwua2FtdXNtLmdvdi50cjAKBggqhkjOPQQDAwNoADBlAjBMKTJqXNaWxbNYW1AppS5H
+QHfm7oml7wCYPzGIbALXNnut1haJKolZU4N4l92gWm8CMQCoGNW22F0J5JSuqOLCVLRsLsnbSeA5
+KvidQ0sI2WpnRR6D6mRmOxH1lTdXEbQTdos=</ds:X509Certificate></ds:X509Data></ds:KeyInfo><ds:Object><xades:QualifyingProperties Target="#_f2b36519-5133-4fce-96bd-3206aa894aee"><xades:SignedProperties Id="_a52b552a-052a-46e4-ae10-176d4c1e6260"><xades:SignedSignatureProperties><xades:SigningTime>2025-12-13T15:11:00.797+03:00</xades:SigningTime><xades:SigningCertificate><xades:Cert><xades:CertDigest><ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/><ds:DigestValue>D+m0S+XMvHWOm37IDQQijuxbdMlJAPLVtUDBtD0nH3I=</ds:DigestValue></xades:CertDigest><xades:IssuerSerial><ds:X509IssuerName>CN=Mali Mühür Elektronik Sertifika Hizmet Sağlayıcısı - Sürüm 3,OU=BİLGEM,O=Türkiye Bilimsel ve Teknolojik Araştırma Kurumu - TÜBİTAK,L=Gebze - Kocaeli,C=TR</ds:X509IssuerName><ds:X509SerialNumber>20131002620601900</ds:X509SerialNumber></xades:IssuerSerial></xades:Cert></xades:SigningCertificate><xades:SignerRole><xades:ClaimedRoles><xades:ClaimedRole>Tedarikçi</xades:ClaimedRole></xades:ClaimedRoles></xades:SignerRole></xades:SignedSignatureProperties></xades:SignedProperties></xades:QualifyingProperties></ds:Object></ds:Signature></xades:CounterSignature></xades:UnsignedSignatureProperties>
+</xades:UnsignedProperties>
+</xades:QualifyingProperties>
+</ds:Object>
+</ds:Signature></edefter:berat>

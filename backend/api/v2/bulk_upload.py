@@ -24,6 +24,7 @@ import os
 import sys
 
 from services.parse_service import trigger_parse_for_document
+from services.feed.service import get_feed_service
 
 logger = logging.getLogger(__name__)
 
@@ -416,6 +417,25 @@ async def upload_zip(
                                 filename
                             )
                             logger.info(f"Parsed {filename}: {parse_result.get('status')}, inserted={parse_result.get('inserted_count', 0)}")
+
+                            # Add feed notification on successful parse
+                            if parse_result.get('status') == 'OK':
+                                try:
+                                    feed_service = get_feed_service()
+                                    inserted = parse_result.get('inserted_count', 0)
+                                    feed_service.add_item(
+                                        tenant_id=tenant_id,
+                                        client_id=client_id,
+                                        period_id=period,
+                                        item_type='upload',
+                                        title=f'Yeni veri yuklendi: {filename}',
+                                        message=f'Mizan verisi basariyla islendi. {inserted} kayit eklendi. Analiz guncellendi.',
+                                        severity='INFO',
+                                        metadata={'doc_id': doc_id, 'filename': filename, 'inserted_count': inserted}
+                                    )
+                                except Exception as fe:
+                                    logger.warning(f"Feed notification failed: {fe}")
+
                         except Exception as pe:
                             logger.warning(f"Parse failed for {filename}: {pe}")
                             parse_result = {'status': 'ERROR', 'message': str(pe)}

@@ -2,12 +2,13 @@
  * Central Authentication Helper
  * LYNTOS V2 - Merkezi auth token yönetimi
  *
- * Development mode: DEV_HKOZKAN fallback aktif
- * Production mode: Token yoksa hata fırlatılır
+ * Dev bypass: Set NEXT_PUBLIC_DEV_AUTH_BYPASS=1 in .env.local
+ * When enabled and no token exists, automatically uses DEV_HKOZKAN
+ * Production: Token yoksa hata fırlatılır
  */
 
-// Development mode check - Next.js environment
-const IS_DEV = process.env.NODE_ENV === 'development';
+// Dev bypass check - explicit env var (NEXT_PUBLIC_ prefix required for client-side access)
+const DEV_AUTH_BYPASS = process.env.NEXT_PUBLIC_DEV_AUTH_BYPASS === '1';
 const DEV_TOKEN = 'DEV_HKOZKAN';
 
 export class AuthError extends Error {
@@ -19,18 +20,18 @@ export class AuthError extends Error {
 
 /**
  * Get auth token from localStorage
- * In development mode, falls back to DEV_HKOZKAN if no token
+ * If NEXT_PUBLIC_DEV_AUTH_BYPASS=1 and no token, falls back to DEV_HKOZKAN
  */
 export function getAuthToken(): string | null {
   if (typeof window === 'undefined') {
-    // SSR - use dev token in development
-    return IS_DEV ? DEV_TOKEN : null;
+    // SSR - use dev token if bypass enabled
+    return DEV_AUTH_BYPASS ? DEV_TOKEN : null;
   }
 
   const token = localStorage.getItem('lyntos_token');
 
-  // Development fallback
-  if (!token && IS_DEV) {
+  // Dev bypass fallback
+  if (!token && DEV_AUTH_BYPASS) {
     return DEV_TOKEN;
   }
 

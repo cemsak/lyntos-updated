@@ -4,6 +4,7 @@
  */
 
 import { useState, useCallback } from 'react';
+import { getAuthToken } from '../../_lib/auth';
 import { TaxpayerData } from './dataAggregator';
 
 // VDK Assessment result (matches backend output)
@@ -52,9 +53,7 @@ export function useVdkValidation(): UseVdkValidationReturn {
     setError(null);
 
     try {
-      const token = typeof window !== 'undefined'
-        ? localStorage.getItem('lyntos_token')
-        : null;
+      const token = getAuthToken();
       if (!token) {
         // Token yoksa validasyon yapılamaz
         setLoading(false);

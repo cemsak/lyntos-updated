@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { getAuthToken } from '../../_lib/auth';
 import type { RiskReviewItem, RiskQueueStats, RiskLevel } from './types';
 import { getRiskLevelFromScore } from './types';
 
@@ -133,7 +134,7 @@ export function useRiskReviewQueue(): UseRiskReviewQueueResult {
     setError(null);
 
     try {
-      const token = localStorage.getItem('lyntos_token');
+      const token = getAuthToken();
       if (!token) {
         // Token yoksa empty state göster
         setItems([]);

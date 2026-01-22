@@ -8,6 +8,7 @@
  */
 
 import { useState, useCallback } from 'react';
+import { getAuthToken } from '../../_lib/auth';
 import type { ChecklistResponse } from './types';
 
 interface UseDocumentChecklistOptions {
@@ -35,7 +36,7 @@ export function useDocumentChecklist({
         `/api/v1/documents/checklist/${clientId}?period=${period}`,
         {
           headers: {
-            Authorization: localStorage.getItem('lyntos_token') || '',
+            Authorization: getAuthToken() || '',
           },
         }
       );
@@ -74,7 +75,7 @@ export function useDocumentChecklist({
         const response = await fetch('/api/v1/documents/upload', {
           method: 'POST',
           headers: {
-            Authorization: localStorage.getItem('lyntos_token') || '',
+            Authorization: getAuthToken() || '',
           },
           body: formData,
         });
@@ -105,7 +106,7 @@ export function useDocumentChecklist({
           {
             method: 'DELETE',
             headers: {
-              Authorization: localStorage.getItem('lyntos_token') || '',
+              Authorization: getAuthToken() || '',
             },
           }
         );
@@ -131,7 +132,7 @@ export function useDocumentChecklist({
         {
           method: 'POST',
           headers: {
-            Authorization: localStorage.getItem('lyntos_token') || '',
+            Authorization: getAuthToken() || '',
           },
         }
       );
