@@ -460,7 +460,7 @@ async def search_ttsg(request: TTSGSearchRequest):
     """Search TTSG"""
     from services.ttsg_scraper import TTSGScraper
 
-    scraper = TTSGScraper(demo_mode=True)  # Demo mode for now
+    scraper = TTSGScraper(demo_mode=False)  # Demo mode for now
 
     if request.city:
         results = scraper.search_by_city(request.city, request.change_type)
@@ -480,7 +480,7 @@ async def scrape_pilot_region(region: str = "Alanya"):
     """Scrape pilot region for TTSG updates"""
     from services.ttsg_scraper import TTSGScraper
 
-    scraper = TTSGScraper(demo_mode=True)
+    scraper = TTSGScraper(demo_mode=False)
     results = scraper.scrape_for_pilot_region(region)
 
     return {
@@ -500,7 +500,7 @@ async def get_daily_ttsg():
     """Get today's TTSG gazette"""
     from services.ttsg_scraper import TTSGScraper
 
-    scraper = TTSGScraper(demo_mode=True)
+    scraper = TTSGScraper(demo_mode=False)
     results = scraper.get_daily_gazette()
 
     return {

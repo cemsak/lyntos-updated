@@ -67,18 +67,18 @@ export function QuestionCard({
   };
 
   const severityColors: Record<string, string> = {
-    critical: '#cd3d64',
-    high: '#e56f4a',
-    medium: '#f5a623',
-    low: '#0caf60',
+    critical: '#F0282D',
+    high: '#FA841E',
+    medium: '#FFB114',
+    low: '#00A651',
   };
 
-  const severityColor = severityColors[severity] || '#697386';
+  const severityColor = severityColors[severity] || '#5A5A5A';
 
   return (
-    <div className="bg-white rounded-xl border border-[#e3e8ee] overflow-hidden">
+    <div className="bg-white rounded-xl border border-[#E5E5E5] overflow-hidden">
       {/* Question Header */}
-      <div className="p-4 border-b border-[#e3e8ee]">
+      <div className="p-4 border-b border-[#E5E5E5]">
         <div className="flex items-start gap-3">
           <div
             className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[12px] font-bold flex-shrink-0"
@@ -87,10 +87,10 @@ export function QuestionCard({
             {question.index + 1}
           </div>
           <div className="flex-1">
-            <p className="text-[14px] font-medium text-[#1a1f36] leading-relaxed">
+            <p className="text-[14px] font-medium text-[#2E2E2E] leading-relaxed">
               &quot;{question.question}&quot;
             </p>
-            <p className="text-[11px] text-[#697386] mt-1">
+            <p className="text-[11px] text-[#5A5A5A] mt-1">
               {ruleName} &bull; {ruleId}
             </p>
           </div>
@@ -99,10 +99,10 @@ export function QuestionCard({
 
       {/* Answer Suggestions */}
       {question.template && (
-        <div className="p-4 border-b border-[#e3e8ee]">
+        <div className="p-4 border-b border-[#E5E5E5]">
           <button
             onClick={() => setShowSuggestions(!showSuggestions)}
-            className="flex items-center gap-2 text-[13px] font-medium text-[#635bff] mb-3 w-full"
+            className="flex items-center gap-2 text-[13px] font-medium text-[#0049AA] mb-3 w-full"
           >
             <Lightbulb className="w-4 h-4" />
             Tavsiye Edilen Cevap Yaklasimi
@@ -116,17 +116,17 @@ export function QuestionCard({
           {showSuggestions && (
             <div className="space-y-3">
               {/* Suggested Approaches */}
-              <div className="p-3 bg-[#635bff]/5 rounded-lg">
-                <p className="text-[11px] font-medium text-[#635bff] mb-2">
+              <div className="p-3 bg-[#0049AA]/5 rounded-lg">
+                <p className="text-[11px] font-medium text-[#0049AA] mb-2">
                   Kullanilabilecek ifadeler:
                 </p>
                 <ul className="space-y-1">
                   {question.template.suggested_approaches.map((approach, i) => (
                     <li
                       key={i}
-                      className="text-[12px] text-[#697386] flex items-start gap-2"
+                      className="text-[12px] text-[#5A5A5A] flex items-start gap-2"
                     >
-                      <span className="text-[#0caf60]">&bull;</span>
+                      <span className="text-[#00A651]">&bull;</span>
                       {approach}
                     </li>
                   ))}
@@ -134,17 +134,17 @@ export function QuestionCard({
               </div>
 
               {/* Avoid Phrases */}
-              <div className="p-3 bg-[#cd3d64]/5 rounded-lg">
-                <p className="text-[11px] font-medium text-[#cd3d64] mb-2">
+              <div className="p-3 bg-[#F0282D]/5 rounded-lg">
+                <p className="text-[11px] font-medium text-[#F0282D] mb-2">
                   Kacinilmasi gereken ifadeler:
                 </p>
                 <ul className="space-y-1">
                   {question.template.avoid_phrases.map((phrase, i) => (
                     <li
                       key={i}
-                      className="text-[12px] text-[#697386] flex items-start gap-2"
+                      className="text-[12px] text-[#5A5A5A] flex items-start gap-2"
                     >
-                      <span className="text-[#cd3d64]">&times;</span>
+                      <span className="text-[#F0282D]">&times;</span>
                       &quot;{phrase}&quot;
                     </li>
                   ))}
@@ -152,11 +152,11 @@ export function QuestionCard({
               </div>
 
               {/* Sample Answer */}
-              <div className="p-3 bg-[#f6f9fc] rounded-lg">
-                <p className="text-[11px] font-medium text-[#1a1f36] mb-2">
+              <div className="p-3 bg-[#F5F6F8] rounded-lg">
+                <p className="text-[11px] font-medium text-[#2E2E2E] mb-2">
                   Ornek cevap sablonu:
                 </p>
-                <p className="text-[12px] text-[#697386] italic leading-relaxed">
+                <p className="text-[12px] text-[#5A5A5A] italic leading-relaxed">
                   &quot;{question.template.sample_answer}&quot;
                 </p>
               </div>
@@ -166,16 +166,16 @@ export function QuestionCard({
       )}
 
       {/* Preparation Notes */}
-      <div className="p-4 border-b border-[#e3e8ee]">
+      <div className="p-4 border-b border-[#E5E5E5]">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            <MessageSquare className="w-4 h-4 text-[#697386]" />
-            <p className="text-[13px] font-medium text-[#1a1f36]">
+            <MessageSquare className="w-4 h-4 text-[#5A5A5A]" />
+            <p className="text-[13px] font-medium text-[#2E2E2E]">
               Hazirlik Notlariniz
             </p>
           </div>
           {hasUnsavedChanges && (
-            <span className="text-[10px] text-[#f5a623]">
+            <span className="text-[10px] text-[#FFB114]">
               Kaydedilmemis degisiklik
             </span>
           )}
@@ -184,13 +184,13 @@ export function QuestionCard({
           value={note}
           onChange={(e) => handleNoteChange(e.target.value)}
           placeholder="Bu soru icin kendi hazirlik notlarinizi yazin..."
-          className="w-full h-24 px-3 py-2 text-[13px] bg-[#f6f9fc] border border-[#e3e8ee] rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-[#635bff]/20 text-[#1a1f36] placeholder:text-[#697386]"
+          className="w-full h-24 px-3 py-2 text-[13px] bg-[#F5F6F8] border border-[#E5E5E5] rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-[#0049AA]/20 text-[#2E2E2E] placeholder:text-[#5A5A5A]"
         />
         <div className="flex justify-end mt-2">
           <button
             onClick={handleSave}
             disabled={isSaving || !hasUnsavedChanges}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium text-white bg-[#635bff] hover:bg-[#5851ea] rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium text-white bg-[#0049AA] hover:bg-[#00287F] rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {isSaving ? (
               <>
@@ -211,8 +211,8 @@ export function QuestionCard({
       {question.relatedDocuments.length > 0 && (
         <div className="p-4">
           <div className="flex items-center gap-2 mb-3">
-            <FileText className="w-4 h-4 text-[#697386]" />
-            <p className="text-[13px] font-medium text-[#1a1f36]">
+            <FileText className="w-4 h-4 text-[#5A5A5A]" />
+            <p className="text-[13px] font-medium text-[#2E2E2E]">
               Ilgili Belgeler
             </p>
           </div>
@@ -220,14 +220,14 @@ export function QuestionCard({
             {question.relatedDocuments.map((doc) => (
               <div
                 key={doc.id}
-                className="flex items-center justify-between p-2 bg-[#f6f9fc] rounded-lg"
+                className="flex items-center justify-between p-2 bg-[#F5F6F8] rounded-lg"
               >
                 <div className="flex items-center gap-2">
                   <span
                     className={
                       doc.status === 'pending'
-                        ? 'text-[#f5a623]'
-                        : 'text-[#0caf60]'
+                        ? 'text-[#FFB114]'
+                        : 'text-[#00A651]'
                     }
                   >
                     {doc.status === 'pending' ? '\u2610' : '\u2611'}
@@ -235,8 +235,8 @@ export function QuestionCard({
                   <span
                     className={`text-[12px] ${
                       doc.status === 'pending'
-                        ? 'text-[#1a1f36]'
-                        : 'text-[#697386] line-through'
+                        ? 'text-[#2E2E2E]'
+                        : 'text-[#5A5A5A] line-through'
                     }`}
                   >
                     {doc.name}
@@ -245,12 +245,12 @@ export function QuestionCard({
                 {doc.status === 'pending' ? (
                   <button
                     onClick={() => onDocumentUpload(doc.id)}
-                    className="px-2 py-1 text-[10px] font-medium text-[#635bff] hover:bg-[#635bff]/10 rounded transition-colors"
+                    className="px-2 py-1 text-[10px] font-medium text-[#0049AA] hover:bg-[#0049AA]/10 rounded transition-colors"
                   >
                     Yukle
                   </button>
                 ) : (
-                  <span className="flex items-center gap-1 text-[10px] text-[#0caf60]">
+                  <span className="flex items-center gap-1 text-[10px] text-[#00A651]">
                     <Check className="w-3 h-3" />
                     Hazir
                   </span>

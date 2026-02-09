@@ -270,6 +270,23 @@ async function detectExcelType(
     };
   }
 
+  // ═══ İÇERİK ANALİZİ (dosya adından tespit edilemezse) ═══
+  // Excel dosyasının ilk birkaç KB'ını string olarak okuyup header pattern'leri ara
+  try {
+    const contentResult = analyzeExcelContent(_content);
+    if (contentResult) {
+      return {
+        ...base,
+        fileType: contentResult.fileType,
+        confidence: contentResult.confidence,
+        detectionMethod: 'content' as const,
+        metadata: { donem },
+      };
+    }
+  } catch {
+    // İçerik analizi başarısız - UNKNOWN olarak devam et
+  }
+
   // ═══ BILINMEYEN ═══
   return {
     ...base,
@@ -278,6 +295,90 @@ async function detectExcelType(
     detectionMethod: 'filename',
     metadata: { donem },
   };
+}
+
+/**
+ * Excel dosyasının ham byte içeriğinden tip tespit et.
+ *
+ * XLSX dosyaları aslında ZIP arşividir. İçindeki shared strings veya
+ * sheet verilerinde Türkçe muhasebe terimleri aranır.
+ *
+ * Mizan: hesap_kodu + hesap_adi + borc + alacak → MIZAN_EXCEL
+ * Yevmiye: fis_no + tarih + borc + alacak → YEVMIYE_EXCEL
+ * Kebir: hesap_kodu + tarih + fis_no + bakiye → KEBIR_EXCEL
+ */
+function analyzeExcelContent(
+  content: ArrayBuffer,
+): { fileType: DetectedFileType; confidence: number } | null {
+  // XLSX binary'nin ilk ~50KB'ını string'e çevir ve keyword ara
+  // ZIP PK header (50 4B 03 04) kontrolü
+  const bytes = new Uint8Array(content.slice(0, Math.min(content.byteLength, 50000)));
+
+  // PK header kontrolü (XLSX = ZIP)
+  if (bytes[0] !== 0x50 || bytes[1] !== 0x4B) {
+    return null; // XLSX değil
+  }
+
+  // Binary'yi lowercase text'e dönüştür (XML ve shared strings içindeki keyword'leri yakala)
+  let text = '';
+  for (let i = 0; i < bytes.length; i++) {
+    const c = bytes[i];
+    // Printable ASCII + Türkçe UTF-8 range
+    if ((c >= 32 && c <= 126) || c >= 128) {
+      text += String.fromCharCode(c);
+    } else {
+      text += ' ';
+    }
+  }
+  const lowerText = text.toLowerCase();
+
+  // Mizan keyword'leri (en az 3 eşleşme gerekli)
+  const mizanKeywords = [
+    'hesap kodu', 'hesapkodu', 'hesap_kodu',
+    'hesap adi', 'hesapadi', 'hesap_adi', 'hesap adı',
+    'borc', 'borç', 'dönem borç', 'donem borc',
+    'alacak', 'dönem alacak', 'donem alacak',
+    'bakiye', 'borc bakiye', 'borç bakiye', 'alacak bakiye',
+  ];
+  const mizanMatches = mizanKeywords.filter(k => lowerText.includes(k)).length;
+  if (mizanMatches >= 3) {
+    return { fileType: 'MIZAN_EXCEL', confidence: 92 };
+  }
+
+  // Yevmiye keyword'leri
+  const yevmiyeKeywords = [
+    'fis no', 'fiş no', 'fis_no', 'madde no',
+    'yevmiye', 'fis aciklama', 'fiş açıklama',
+    'hesap kodu', 'hesapkodu',
+    'borc', 'borç', 'alacak',
+  ];
+  const yevmiyeMatches = yevmiyeKeywords.filter(k => lowerText.includes(k)).length;
+  // Yevmiye'de "fis" keyword'ü zorunlu
+  const hasFis = lowerText.includes('fis') || lowerText.includes('fiş') || lowerText.includes('madde');
+  if (yevmiyeMatches >= 3 && hasFis) {
+    return { fileType: 'YEVMIYE_EXCEL', confidence: 90 };
+  }
+
+  // Kebir keyword'leri
+  const kebirKeywords = [
+    'kebir', 'kebİr',
+    'hesap kodu', 'hesapkodu',
+    'tarih',
+    'borc', 'borç', 'alacak', 'bakiye',
+    'madde', 'evrak',
+  ];
+  const kebirMatches = kebirKeywords.filter(k => lowerText.includes(k)).length;
+  const hasKebir = lowerText.includes('kebir') || lowerText.includes('kebİr');
+  if (kebirMatches >= 3 && hasKebir) {
+    return { fileType: 'KEBIR_EXCEL', confidence: 90 };
+  }
+
+  // Genel muhasebe dosyası olabilir ama tipi belirlenemedi
+  if (mizanMatches >= 2) {
+    return { fileType: 'MIZAN_EXCEL', confidence: 65 };
+  }
+
+  return null;
 }
 
 /**
@@ -396,7 +497,7 @@ async function detectCSVType(
 
   // 3. Ozel CSV tipleri
   if (!bankaInfo) {
-    // Mizan CSV
+    // Mizan CSV (dosya adından)
     if (lowerName.includes('mizan')) {
       return {
         ...base,
@@ -407,6 +508,36 @@ async function detectCSVType(
       };
     }
 
+    // 4. İÇERİK BAZLI CSV TİP TESPİTİ
+    // Dosya adından belirlenemezse ilk 5 satırı analiz et
+    if (content.byteLength > 0) {
+      const csvContentResult = analyzeCSVContent(content);
+      if (csvContentResult) {
+        if (csvContentResult.fileType === 'BANKA_EKSTRE_CSV') {
+          // Banka olarak tespit edildiyse banka bilgilerini ekle
+          const ayInfo = extractAy(fileName);
+          return {
+            ...base,
+            fileType: 'BANKA_EKSTRE_CSV',
+            confidence: csvContentResult.confidence,
+            detectionMethod: 'content',
+            metadata: {
+              banka: 'DIGER' as BankaKodu,
+              bankaAdi: 'İçerikten Tespit',
+              donem: extractPeriodFromPath(base.originalPath),
+              ay: ayInfo?.ayAdi,
+            },
+          };
+        }
+        return {
+          ...base,
+          fileType: csvContentResult.fileType,
+          confidence: csvContentResult.confidence,
+          detectionMethod: 'content',
+          metadata: { donem: extractPeriodFromPath(base.originalPath) },
+        };
+      }
+    }
   }
 
   if (bankaInfo) {
@@ -433,6 +564,100 @@ async function detectCSVType(
     detectionMethod: 'filename',
     metadata: {},
   };
+}
+
+/**
+ * CSV dosyasının içeriğinden tip tespit et.
+ *
+ * İlk 5 satırı parse edip sütun yapısından dosya tipini belirler:
+ * - Mizan: hesap_kodu (3+ haneli) + hesap_adi + borc + alacak pattern
+ * - Banka: tarih (DD.MM.YYYY) + açıklama + tutar/borç/alacak + bakiye pattern
+ */
+function analyzeCSVContent(
+  content: ArrayBuffer,
+): { fileType: DetectedFileType; confidence: number } | null {
+  let text = '';
+  try {
+    const decoder = new TextDecoder('utf-8');
+    text = decoder.decode(content.slice(0, 8000)); // İlk 8KB
+  } catch {
+    try {
+      const decoder = new TextDecoder('iso-8859-9');
+      text = decoder.decode(content.slice(0, 8000));
+    } catch {
+      return null;
+    }
+  }
+
+  if (!text.trim()) return null;
+
+  const lines = text.split('\n').slice(0, 10); // İlk 10 satır
+  const lowerText = text.toLowerCase();
+
+  // ═══ MİZAN TESPİTİ ═══
+  // Header'da mizan keyword'leri var mı?
+  const mizanHeaderKeywords = [
+    'hesap kodu', 'hesap_kodu', 'hesapkodu', 'hsp kodu', 'hspkodu',
+    'hesap adi', 'hesap_adi', 'hesapadi', 'hesap adı',
+    'borc', 'borç', 'dönem borç', 'donem borc',
+    'alacak', 'dönem alacak',
+    'bakiye', 'borc bakiye', 'borç bakiye', 'alacak bakiye',
+  ];
+  const mizanHeaderMatches = mizanHeaderKeywords.filter(k => lowerText.includes(k)).length;
+
+  if (mizanHeaderMatches >= 3) {
+    return { fileType: 'MIZAN_EXCEL', confidence: 88 };
+  }
+
+  // Veri satırlarında 3+ haneli hesap kodu pattern'i var mı?
+  let accountCodeCount = 0;
+  for (const line of lines) {
+    // 3 haneli hesap kodu ile başlayan satır (100, 102, 320 vb.)
+    if (/^\s*\d{3}[.\s,;]/.test(line) || /^"?\d{3}[.\s,;"]/.test(line)) {
+      accountCodeCount++;
+    }
+  }
+  if (accountCodeCount >= 3) {
+    return { fileType: 'MIZAN_EXCEL', confidence: 72 };
+  }
+
+  // ═══ BANKA EKSTRESİ TESPİTİ ═══
+  // Header'da banka keyword'leri var mı?
+  const bankaHeaderKeywords = [
+    'tarih', 'aciklama', 'açıklama',
+    'tutar', 'islem', 'işlem',
+    'bakiye', 'borc', 'borç', 'alacak',
+    'referans', 'dekont',
+  ];
+  const bankaHeaderMatches = bankaHeaderKeywords.filter(k => lowerText.includes(k)).length;
+
+  // Veri satırlarında tarih pattern'i var mı? (DD.MM.YYYY)
+  let dateCount = 0;
+  for (const line of lines) {
+    if (/\d{2}\.\d{2}\.\d{4}/.test(line)) {
+      dateCount++;
+    }
+  }
+
+  if (bankaHeaderMatches >= 3 && dateCount >= 2) {
+    return { fileType: 'BANKA_EKSTRE_CSV', confidence: 78 };
+  }
+
+  // Tarih ağırlıklı veri + tutarlar varsa banka
+  if (dateCount >= 3) {
+    // Türkçe sayı formatı kontrolü (1.234,56)
+    let amountCount = 0;
+    for (const line of lines) {
+      if (/\d{1,3}(\.\d{3})*,\d{2}/.test(line)) {
+        amountCount++;
+      }
+    }
+    if (amountCount >= 2) {
+      return { fileType: 'BANKA_EKSTRE_CSV', confidence: 65 };
+    }
+  }
+
+  return null;
 }
 
 /**

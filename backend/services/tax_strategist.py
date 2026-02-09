@@ -1,14 +1,21 @@
 """
 VERGUS Tax Strategist Service
-Sprint 9.0 - LYNTOS V2
+Sprint 9.0 → IS-2 - LYNTOS V2
 
 Analyzes client financial data and identifies applicable tax optimization strategies.
+Mizan bazli otomatik mali profil cikarimi, NACE filtreleme, Asgari KV, coklu KV oran destegi.
 """
 
 import json
+import logging
+import sqlite3
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
+
+logger = logging.getLogger(__name__)
+
+DB_PATH = Path(__file__).parent.parent / "database" / "lyntos.db"
 
 
 @dataclass
@@ -60,41 +67,265 @@ class TaxStrategist:
                 return json.load(f)
         return {"strategies": [], "tax_rates": {}}
 
+    def auto_extract_financial_data(self, client_id: str, period_id: str) -> Dict[str, Any]:
+        """Mizan ve clients tablosundan mali profil cikar - MOCK VERi YOK"""
+        financial_data: Dict[str, Any] = {}
+        try:
+            conn = sqlite3.connect(str(DB_PATH))
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+
+            # --- Client bilgileri (NACE, sektor) ---
+            cursor.execute(
+                "SELECT nace_code, sector, name FROM clients WHERE id = ?",
+                (client_id,)
+            )
+            client_row = cursor.fetchone()
+            if client_row:
+                financial_data["sektor"] = client_row["nace_code"] or ""
+                financial_data["nace_code"] = client_row["nace_code"] or ""
+                financial_data["client_name"] = client_row["name"] or ""
+
+            # --- Mizan'dan gelir/gider cikarimi ---
+            # 600 alacak = Yurt Ici Satislar
+            cursor.execute("""
+                SELECT COALESCE(SUM(alacak_bakiye), 0) as toplam
+                FROM mizan_entries
+                WHERE client_id = ? AND period_id = ? AND hesap_kodu LIKE '600%'
+            """, (client_id, period_id))
+            yurt_ici = cursor.fetchone()["toplam"]
+
+            # 601 alacak = Yurt Disi Satislar (ihracat)
+            cursor.execute("""
+                SELECT COALESCE(SUM(alacak_bakiye), 0) as toplam
+                FROM mizan_entries
+                WHERE client_id = ? AND period_id = ? AND hesap_kodu LIKE '601%'
+            """, (client_id, period_id))
+            yurt_disi = cursor.fetchone()["toplam"]
+
+            # 610 satis iadeleri (borc bakiye)
+            cursor.execute("""
+                SELECT COALESCE(SUM(borc_bakiye), 0) as toplam
+                FROM mizan_entries
+                WHERE client_id = ? AND period_id = ? AND hesap_kodu LIKE '610%'
+            """, (client_id, period_id))
+            satis_iadeleri = cursor.fetchone()["toplam"]
+
+            # 620+621 Satilan Mal Maliyeti (borc bakiye)
+            cursor.execute("""
+                SELECT COALESCE(SUM(borc_bakiye), 0) as toplam
+                FROM mizan_entries
+                WHERE client_id = ? AND period_id = ?
+                  AND (hesap_kodu LIKE '620%' OR hesap_kodu LIKE '621%')
+            """, (client_id, period_id))
+            satis_maliyeti = cursor.fetchone()["toplam"]
+
+            # 760 Pazarlama + 770 Genel Yonetim + 780 Finansman giderleri
+            cursor.execute("""
+                SELECT COALESCE(SUM(borc_bakiye), 0) as toplam
+                FROM mizan_entries
+                WHERE client_id = ? AND period_id = ?
+                  AND (hesap_kodu LIKE '760%' OR hesap_kodu LIKE '770%' OR hesap_kodu LIKE '780%')
+            """, (client_id, period_id))
+            faaliyet_giderleri = cursor.fetchone()["toplam"]
+
+            # 640-649 diger gelirler (alacak)
+            cursor.execute("""
+                SELECT COALESCE(SUM(alacak_bakiye), 0) as toplam
+                FROM mizan_entries
+                WHERE client_id = ? AND period_id = ?
+                  AND hesap_kodu >= '640' AND hesap_kodu < '650'
+            """, (client_id, period_id))
+            diger_gelirler = cursor.fetchone()["toplam"]
+
+            # 654-659 diger giderler (borc)
+            cursor.execute("""
+                SELECT COALESCE(SUM(borc_bakiye), 0) as toplam
+                FROM mizan_entries
+                WHERE client_id = ? AND period_id = ?
+                  AND hesap_kodu >= '654' AND hesap_kodu < '660'
+            """, (client_id, period_id))
+            diger_giderler = cursor.fetchone()["toplam"]
+
+            # 335 personel borclari → personel sayisi proxy
+            cursor.execute("""
+                SELECT COUNT(DISTINCT hesap_kodu) as hesap_sayisi,
+                       COALESCE(SUM(alacak_bakiye), 0) as toplam_borc
+                FROM mizan_entries
+                WHERE client_id = ? AND period_id = ? AND hesap_kodu LIKE '335%'
+            """, (client_id, period_id))
+            personel_row = cursor.fetchone()
+            personel_borc = personel_row["toplam_borc"]
+            # Asgari ucret bazli personel tahmini
+            asgari_ucret = 22104
+            personel_sayisi = max(1, int(personel_borc / asgari_ucret)) if personel_borc > 0 else 0
+
+            # 263 ArGe giderleri
+            cursor.execute("""
+                SELECT COALESCE(SUM(borc_bakiye), 0) as toplam
+                FROM mizan_entries
+                WHERE client_id = ? AND period_id = ? AND hesap_kodu LIKE '263%'
+            """, (client_id, period_id))
+            arge_giderleri = cursor.fetchone()["toplam"]
+
+            conn.close()
+
+            # --- Hesaplamalar ---
+            brut_satislar = yurt_ici + yurt_disi
+            net_satislar = brut_satislar - satis_iadeleri
+            brut_kar = net_satislar - satis_maliyeti
+            faaliyet_kari = brut_kar - faaliyet_giderleri
+            vergi_oncesi_kar = faaliyet_kari + diger_gelirler - diger_giderler
+
+            # KV orani belirle
+            nace_code = financial_data.get("sektor", "")
+            ihracat_orani = (yurt_disi / brut_satislar * 100) if brut_satislar > 0 else 0
+            kv_orani = self._determine_kv_rate(nace_code, ihracat_orani)
+
+            kv_matrahi = max(vergi_oncesi_kar, 0)
+            hesaplanan_kv = kv_matrahi * kv_orani
+
+            financial_data["toplam_hasilat"] = brut_satislar
+            financial_data["yurt_ici_satislar"] = yurt_ici
+            financial_data["ihracat_hasilat"] = yurt_disi
+            financial_data["satis_iadeleri"] = satis_iadeleri
+            financial_data["net_satislar"] = net_satislar
+            financial_data["satis_maliyeti"] = satis_maliyeti
+            financial_data["brut_kar"] = brut_kar
+            financial_data["faaliyet_giderleri"] = faaliyet_giderleri
+            financial_data["faaliyet_kari"] = faaliyet_kari
+            financial_data["diger_gelirler"] = diger_gelirler
+            financial_data["diger_giderler"] = diger_giderler
+            financial_data["vergi_oncesi_kar"] = vergi_oncesi_kar
+            financial_data["kv_matrahi"] = kv_matrahi
+            financial_data["kv_orani"] = kv_orani
+            financial_data["hesaplanan_kv"] = hesaplanan_kv
+            financial_data["personel_sayisi"] = personel_sayisi
+            financial_data["personel_borc_toplam"] = personel_borc
+            financial_data["arge_giderleri"] = arge_giderleri
+            financial_data["ortalama_maas"] = asgari_ucret
+            financial_data["veri_kaynagi"] = "mizan"
+
+            logger.info(
+                f"Mali profil cikarildi: {client_id}/{period_id} "
+                f"hasilat={brut_satislar:,.2f} matrah={kv_matrahi:,.2f} kv_orani={kv_orani}"
+            )
+
+        except Exception as e:
+            logger.error(f"Mali profil cikarma hatasi: {e}")
+            financial_data["veri_kaynagi"] = "hata"
+            financial_data["hata"] = str(e)
+
+        return financial_data
+
+    def _determine_kv_rate(self, nace_code: str, ihracat_orani: float = 0) -> float:
+        """
+        KV oranini NACE kodu ve ihracat oranina gore belirle
+        KVK 32: Genel %25
+        KVK 32/7: Ihracatci %20 (ihracat/hasilat > %50)
+        KVK 32/7-a: Uretici (NACE 10-33) %24
+        7440 SK: Finans (NACE 64-66) %30
+        """
+        if not nace_code:
+            return 0.25
+
+        nace_2 = nace_code[:2] if len(nace_code) >= 2 else ""
+
+        # Finans sektoru: %30
+        if nace_2 in ("64", "65", "66"):
+            return 0.30
+
+        # Ihracatci: %20 (ihracat hasilatin %50'sinden fazla)
+        if ihracat_orani > 50:
+            return 0.20
+
+        # Uretim sektoru (imalat NACE 10-33): %24
+        try:
+            nace_int = int(nace_2)
+            if 10 <= nace_int <= 33:
+                return 0.24
+        except (ValueError, TypeError):
+            pass
+
+        # Genel oran
+        return 0.25
+
+    def _check_asgari_kv(self, hasilat: float, hesaplanan_kv: float, period: str) -> Dict[str, Any]:
+        """
+        Asgari Kurumlar Vergisi kontrolu (KVK Gecici 15 / 7524 SK)
+        2025: hasilat * %2 (gecis donemi)
+        2026+: hasilat * %4
+        """
+        try:
+            yil = int(period.split("-")[0]) if "-" in period else int(period[:4])
+        except (ValueError, TypeError):
+            yil = 2025
+
+        if yil <= 2024:
+            return {"uygulanabilir": False, "aciklama": "Asgari KV 2025'ten itibaren yururlukte"}
+
+        if yil == 2025:
+            oran = 0.02
+            aciklama = "2025 gecis donemi: hasilat x %2"
+        else:
+            oran = 0.04
+            aciklama = f"{yil}: hasilat x %4"
+
+        asgari_kv = hasilat * oran
+        asgari_kv_asimi = hesaplanan_kv < asgari_kv
+
+        return {
+            "uygulanabilir": True,
+            "asgari_kv_tutari": round(asgari_kv, 2),
+            "hesaplanan_kv": round(hesaplanan_kv, 2),
+            "asgari_kv_asimi": asgari_kv_asimi,
+            "fark": round(asgari_kv - hesaplanan_kv, 2) if asgari_kv_asimi else 0,
+            "oran": oran,
+            "aciklama": aciklama,
+            "mevzuat": "KVK Gecici 15 (7524 SK)",
+            "uyari": (
+                f"Hesaplanan KV ({hesaplanan_kv:,.0f} TL) asgari KV'nin ({asgari_kv:,.0f} TL) altinda. "
+                f"Asgari KV odenmesi gerekecektir. Bazi istisna/indirimler kisitlanabilir."
+            ) if asgari_kv_asimi else None
+        }
+
     def analyze(
         self,
         client_id: str,
         client_name: str,
         period: str,
-        financial_data: Dict[str, Any]
+        financial_data: Dict[str, Any],
+        nace_code: Optional[str] = None
     ) -> TaxAnalysisResult:
         """
-        Analyze client financial data and identify tax optimization opportunities
-
-        Args:
-            client_id: Client identifier
-            client_name: Client name
-            period: Tax period (e.g., "2024")
-            financial_data: Financial data including:
-                - toplam_hasilat: Total revenue
-                - ihracat_hasilat: Export revenue
-                - kv_matrahi: Corporate tax base
-                - hesaplanan_kv: Calculated corporate tax
-                - personel_sayisi: Number of employees
-                - arge_personel: R&D personnel count
-                - sektor: Sector code
-                - uretim_faaliyeti: Has production activity
-                - sanayi_sicil: Has industrial registry
-                - teknokent: Is in technopark
-                - arge_merkezi: Has R&D center
-                - ihracat_orani: Export ratio
-                - istirak_temettu: Dividend from subsidiaries
-                - yurt_disi_hizmet: Foreign service revenue
-
-        Returns:
-            TaxAnalysisResult with identified opportunities
+        Analyze client financial data and identify tax optimization opportunities.
+        NACE kodu ile strateji filtreleme, coklu KV oran destegi, Asgari KV kontrolu.
         """
+        # NACE kodu varsa financial_data'ya ekle
+        if nace_code:
+            financial_data["sektor"] = nace_code
+            financial_data["nace_code"] = nace_code
+
+        # KV oranini belirle
+        sektor = financial_data.get("sektor", financial_data.get("nace_code", ""))
+        hasilat = financial_data.get("toplam_hasilat", 0)
+        ihracat = financial_data.get("ihracat_hasilat", 0)
+        ihracat_orani = (ihracat / hasilat * 100) if hasilat > 0 else 0
+        kv_orani = financial_data.get("kv_orani") or self._determine_kv_rate(sektor, ihracat_orani)
+        financial_data["kv_orani"] = kv_orani
+
+        # Matrah yoksa veya hesaplanan KV yoksa yeniden hesapla
+        matrah = financial_data.get("kv_matrahi", 0)
+        if matrah > 0 and not financial_data.get("hesaplanan_kv"):
+            financial_data["hesaplanan_kv"] = matrah * kv_orani
+
         # Build client profile
         profile = self._build_profile(financial_data)
+        profile["nace_code"] = sektor
+        profile["kv_orani"] = kv_orani
+
+        # NACE bazli strateji filtreleme icin nace bilgisini sakla
+        financial_data["_nace_code"] = sektor
 
         # Find applicable strategies
         opportunities = self._find_opportunities(profile, financial_data)
@@ -104,6 +335,15 @@ class TaxStrategist:
 
         # Build summary
         summary = self._build_summary(opportunities, total_saving, financial_data)
+
+        # Asgari KV kontrolu
+        hesaplanan_kv = financial_data.get("hesaplanan_kv", 0)
+        asgari_kv = self._check_asgari_kv(hasilat, hesaplanan_kv, period)
+        summary["asgari_kv_kontrolu"] = asgari_kv
+        summary["kv_orani"] = kv_orani
+
+        # Veri kaynagi bilgisi
+        summary["veri_kaynagi"] = financial_data.get("veri_kaynagi", "manuel")
 
         return TaxAnalysisResult(
             client_id=client_id,
@@ -181,8 +421,10 @@ class TaxStrategist:
         profile: Dict,
         financial_data: Dict
     ) -> bool:
-        """Check if a strategy is applicable to the client"""
+        """Check if a strategy is applicable to the client. NACE bazli filtreleme dahil."""
         strategy_id = strategy.get("id", "")
+        nace_code = financial_data.get("_nace_code", financial_data.get("sektor", ""))
+        nace_2 = nace_code[:2] if nace_code and len(nace_code) >= 2 else ""
 
         # Finance sector exclusions
         if profile["finans_sektoru"] and strategy_id == "STR-003":
@@ -192,17 +434,23 @@ class TaxStrategist:
         if strategy_id == "STR-001":  # Ihracat indirimi
             return profile["ihracat_var"]
 
-        # Production-related strategies
-        if strategy_id == "STR-002":  # Sanayi sicil
-            return profile["uretim_var"] and not profile["ihracat_var"]
+        # Sanayi sicil: sadece NACE 10-33 (imalat sektoru)
+        if strategy_id == "STR-002":
+            try:
+                nace_int = int(nace_2) if nace_2 else 0
+                is_imalat = 10 <= nace_int <= 33
+            except (ValueError, TypeError):
+                is_imalat = False
+            return is_imalat and (profile["uretim_var"] or is_imalat)
 
         # R&D center
         if strategy_id == "STR-004":
             return profile["arge_var"] or financial_data.get("arge_personel", 0) >= 10
 
-        # Technopark
+        # Teknokent: sadece NACE 62xx (yazilim) veya zaten teknokentte
         if strategy_id == "STR-005":
-            return profile["teknokent"] or profile["faaliyet_turu"] == "yazilim"
+            is_yazilim = nace_2 == "62"
+            return profile["teknokent"] or is_yazilim
 
         # Investment incentive
         if strategy_id == "STR-006":
@@ -216,13 +464,18 @@ class TaxStrategist:
         if strategy_id == "STR-011":
             return financial_data.get("yurt_disi_hizmet", 0) > 0
 
-        # SGK strategies - applicable to all
+        # SGK strategies - applicable to all with personnel
         if strategy.get("category") == "SGK":
-            return True
+            return financial_data.get("personel_sayisi", 0) > 0
 
         # Uyumlu mukellef - check conditions
         if strategy_id == "STR-003":
             return not profile["finans_sektoru"]
+
+        # Asgari KV etki analizi
+        if strategy_id == "STR-020":
+            hasilat = financial_data.get("toplam_hasilat", 0)
+            return hasilat > 0
 
         return True
 
@@ -232,24 +485,25 @@ class TaxStrategist:
         profile: Dict,
         financial_data: Dict
     ) -> float:
-        """Calculate potential saving for a strategy"""
+        """Calculate potential saving for a strategy. Coklu KV oran destegi."""
         strategy_id = strategy.get("id", "")
+        kv_orani = financial_data.get("kv_orani", 0.25)
 
-        # Ihracat KV indirimi
+        # Ihracat KV indirimi: 5 puan indirim (KVK 32/7)
         if strategy_id == "STR-001":
             hasilat = financial_data.get("toplam_hasilat", 0)
             ihracat = financial_data.get("ihracat_hasilat", 0)
             matrah = financial_data.get("kv_matrahi", 0)
             if hasilat > 0:
                 ihracat_matrahi = matrah * (ihracat / hasilat)
-                return ihracat_matrahi * 0.05
+                return ihracat_matrahi * 0.05  # 5 puan indirim
 
-        # Sanayi sicil indirimi
+        # Sanayi sicil indirimi: 1 puan indirim (KVK 32/8)
         if strategy_id == "STR-002":
             matrah = financial_data.get("kv_matrahi", 0)
             return matrah * 0.01
 
-        # Vergiye uyumlu mukellef
+        # Vergiye uyumlu mukellef: hesaplanan KV'nin %5'i
         if strategy_id == "STR-003":
             hesaplanan_kv = financial_data.get("hesaplanan_kv", 0)
             return min(hesaplanan_kv * 0.05, 9900000)
@@ -258,26 +512,25 @@ class TaxStrategist:
         if strategy_id == "STR-004":
             arge_personel = financial_data.get("arge_personel", 0)
             avg_salary = financial_data.get("ortalama_maas", 50000)
-            return arge_personel * avg_salary * 0.80 * 12  # 80% terkin
+            return arge_personel * avg_salary * 0.80 * 12
 
         # Teknokent KV istisnasi
         if strategy_id == "STR-005":
             teknokent_kazanc = financial_data.get("teknokent_kazanc", 0)
             if teknokent_kazanc > 0:
-                return teknokent_kazanc * 0.25  # Saved from 25% KV
-            # Estimate if not in technopark yet
+                return teknokent_kazanc * kv_orani
             if profile["faaliyet_turu"] == "yazilim":
-                return financial_data.get("kv_matrahi", 0) * 0.25 * 0.5  # Estimate 50%
+                return financial_data.get("kv_matrahi", 0) * kv_orani * 0.5
 
         # Istirak kazanclari
         if strategy_id == "STR-007":
             istirak = financial_data.get("istirak_temettu", 0)
-            return istirak * 0.25  # Saved from 25% KV
+            return istirak * kv_orani
 
         # Yurt disi hizmet indirimi
         if strategy_id == "STR-011":
             yurt_disi = financial_data.get("yurt_disi_hizmet", 0)
-            return yurt_disi * 0.50 * 0.25  # 50% indirim, 25% KV
+            return yurt_disi * 0.50 * kv_orani
 
         # SGK 5 puan
         if strategy_id == "STR-014":
@@ -288,11 +541,16 @@ class TaxStrategist:
         # Asgari ucret destegi
         if strategy_id == "STR-016":
             personel = financial_data.get("personel_sayisi", 0)
-            return personel * 1000 * 12  # Max 1000 TL/ay/kisi
+            return personel * 1000 * 12
+
+        # Asgari KV etki analizi (STR-020)
+        if strategy_id == "STR-020":
+            # Bu strateji tasarruf degil, bilgilendirme amacli
+            return 0
 
         # Default: estimate based on matrah
         matrah = financial_data.get("kv_matrahi", 0)
-        return matrah * 0.01  # Conservative 1% estimate
+        return matrah * 0.01
 
     def _create_opportunity(
         self,

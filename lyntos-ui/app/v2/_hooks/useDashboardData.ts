@@ -98,15 +98,12 @@ export function useDashboardData(
     const apiBase = getApiBaseUrl();
     const url = `${apiBase}/api/v2/donem/status/${encodeURIComponent(period)}?tenant_id=${encodeURIComponent(tenantId)}&client_id=${encodeURIComponent(clientId)}`;
 
-    console.log('[DashboardData] Fetching:', url);
-
     try {
       const response = await fetch(url);
 
       if (!response.ok) {
         if (response.status === 404) {
           // No data for this period - not an error, just empty
-          console.log('[DashboardData] No data for period:', period);
           setData(null);
           setIsLoading(false);
           return;
@@ -115,12 +112,6 @@ export function useDashboardData(
       }
 
       const result = await response.json();
-
-      console.log('[DashboardData] Response:', {
-        periodId: result.periodId,
-        totalCount: result.totalCount,
-        docTypes: Object.keys(result.byDocType || {})
-      });
 
       setData({
         periodId: result.periodId || period,

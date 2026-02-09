@@ -1,19 +1,21 @@
 /**
  * Dashboard V3 Layout
- * Uses existing ScopeProvider + SourcesProvider + DashboardShell
+ *
+ * NOT: DashboardShell KULLANILMAMALI!
+ * Çünkü üst layout (/v2/layout.tsx) zaten DashboardShell içeriyor.
+ * Next.js'de layout'lar iç içe geçer ve çift sidebar oluşur.
+ *
+ * Bu layout sadece Dashboard V3'e özel provider'lar ekler.
  */
 
 import { Suspense } from 'react';
-import { ScopeProvider } from '../_components/scope/ScopeProvider';
-import { SourcesProvider } from '../_components/sources/SourcesProvider';
-import { DashboardShell } from '../_components/layout/DashboardShell';
 
-function LoadingShell() {
+function LoadingIndicator() {
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+    <div className="flex items-center justify-center p-8">
       <div className="flex flex-col items-center gap-4">
-        <div className="animate-spin h-8 w-8 border-3 border-slate-300 border-t-indigo-600 rounded-full" />
-        <p className="text-sm text-slate-600">Dashboard V3 Yukleniyor...</p>
+        <div className="animate-spin h-8 w-8 border-3 border-[#B4B4B4] border-t-[#0049AA] rounded-full" />
+        <p className="text-sm text-[#5A5A5A]">Dashboard V3 Yükleniyor...</p>
       </div>
     </div>
   );
@@ -24,15 +26,11 @@ export default function DashboardV3Layout({
 }: {
   children: React.ReactNode;
 }) {
+  // DashboardShell üst layout'ta (/v2/layout.tsx) zaten mevcut
+  // Burada sadece children'ı geçiriyoruz
   return (
-    <Suspense fallback={<LoadingShell />}>
-      <ScopeProvider>
-        <SourcesProvider>
-          <DashboardShell>
-            {children}
-          </DashboardShell>
-        </SourcesProvider>
-      </ScopeProvider>
+    <Suspense fallback={<LoadingIndicator />}>
+      {children}
     </Suspense>
   );
 }

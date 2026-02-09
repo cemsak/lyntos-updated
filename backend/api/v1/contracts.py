@@ -14,6 +14,17 @@ import re
 import sqlite3
 
 from schemas.response_envelope import wrap_response
+from config.economic_rates import get_faiz_oranlari, get_doviz_fallback, get_son_guncelleme
+from config.sector_data import get_sector_for_nace, get_static_meta
+
+# Database connection helper
+DATABASE_PATH = Path(__file__).resolve().parent.parent.parent / "database" / "lyntos.db"
+
+def get_db_connection():
+    """Get SQLite database connection with row factory"""
+    conn = sqlite3.connect(str(DATABASE_PATH))
+    conn.row_factory = sqlite3.Row
+    return conn
 
 # Multi-tenant auth & audit
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -80,10 +91,36 @@ def _get_mizan_data_from_db(tenant_id: str, client_id: str, period_id: str) -> d
     - Profit = Sum of 600-699 Alacak - Sum of 600-699 Borc
     - Assets = Sum of 100-299 Borc (Debit balance = asset)
     - Liabilities = Sum of 300-599 Alacak (Credit balance = liability)
+
+    Period formatı normalize edilir: 2025-Q1 → 2025_Q1 (DB formatı).
+    Sadece istenen client_id için veri döner — fallback yapılmaz.
     """
     try:
         conn = _get_db()
         cursor = conn.cursor()
+
+        # Dönem formatını normalize et: tire → alt çizgi (DB formatı)
+        normalized_period = period_id.replace('-', '_').upper()
+
+        # İstenen client + dönem için veri ara
+        cursor.execute("""
+            SELECT DISTINCT tenant_id, client_id, period_id
+            FROM mizan_entries
+            WHERE client_id = ? AND period_id = ?
+            LIMIT 1
+        """, (client_id, normalized_period))
+        db_match = cursor.fetchone()
+
+        if db_match:
+            actual_tenant_id = db_match["tenant_id"]
+            actual_client_id = db_match["client_id"]
+            actual_period_id = db_match["period_id"]
+            _kurgan_logger.info(f"[MIZAN_DB] Eşleşme bulundu: tenant={actual_tenant_id}, client={actual_client_id}, period={actual_period_id}")
+        else:
+            # Veri bulunamadı — None dön, başka mükelleflere FALLBACK YAPMA
+            _kurgan_logger.info(f"[MIZAN_DB] client_id={client_id}, period={normalized_period} için mizan verisi bulunamadı")
+            conn.close()
+            return None
 
         # Get entry count and totals
         cursor.execute("""
@@ -95,7 +132,7 @@ def _get_mizan_data_from_db(tenant_id: str, client_id: str, period_id: str) -> d
                 SUM(alacak_bakiye) as alacak_bakiye_toplam
             FROM mizan_entries
             WHERE tenant_id = ? AND client_id = ? AND period_id = ?
-        """, (tenant_id, client_id, period_id))
+        """, (actual_tenant_id, actual_client_id, actual_period_id))
 
         row = cursor.fetchone()
 
@@ -109,7 +146,7 @@ def _get_mizan_data_from_db(tenant_id: str, client_id: str, period_id: str) -> d
             FROM mizan_entries
             WHERE tenant_id = ? AND client_id = ? AND period_id = ?
             ORDER BY hesap_kodu
-        """, (tenant_id, client_id, period_id))
+        """, (actual_tenant_id, actual_client_id, actual_period_id))
 
         accounts = {r["hesap_kodu"]: dict(r) for r in cursor.fetchall()}
         conn.close()
@@ -2849,21 +2886,104 @@ def _get_portfolio_data_for_kurgan(smmm_id: str, client_id: str, period: str) ->
         "banka_data": {},
         "kdv_data": {},
         "inflation_data": {},
-        "data_source": "none"
+        "data_source": "none",
+        "nace_code": None  # Data enrichment icin
     }
+
+    # Client NACE kodunu al
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT nace_code, name FROM clients WHERE id = ?", (client_id,))
+        client_row = cursor.fetchone()
+        if client_row and client_row["nace_code"]:
+            portfolio_data["nace_code"] = client_row["nace_code"]
+            # NACE bazlı sektör devreden KDV ortalaması
+            _nace_pref = client_row["nace_code"][:2]
+            portfolio_data["sektor_devreden_kdv_ortalama"] = get_sector_for_nace(_nace_pref).get("devreden_kdv_ort", 100000)
+            # KRİTİK: KURGAN Calculator 'nace_kodu' bekliyor (underscore ile)
+            portfolio_data["nace_kodu"] = client_row["nace_code"]
+            portfolio_data["faaliyet_kodu"] = client_row["nace_code"]
+            portfolio_data["client_name"] = client_row["name"] or client_id
+            _kurgan_logger.info(f"[KURGAN] Client NACE kodu: {client_row['nace_code']}")
+        conn.close()
+    except Exception as e:
+        _kurgan_logger.warning(f"[KURGAN] Client NACE kodu alinamadi: {e}")
 
     # Sprint 9: First try database (mizan_entries table)
     db_data = _get_mizan_data_from_db(smmm_id, client_id, period)
 
     if db_data and db_data.get("entry_count", 0) > 0:
-        _kurgan_logger.info(f"Database'den {db_data['entry_count']} mizan kaydı okundu: {client_id}/{period}")
+        _kurgan_logger.info(f"[KURGAN DEBUG] Database'den {db_data['entry_count']} mizan kaydı okundu: {client_id}/{period}")
+        _kurgan_logger.info(f"[KURGAN DEBUG] accounts sayısı: {len(db_data.get('accounts', {}))}")
+        _kurgan_logger.info(f"[KURGAN DEBUG] Veri kaynağı: DATABASE")
         portfolio_data["data_source"] = "database"
-        portfolio_data["ciro"] = db_data.get("ciro", 0)
-        portfolio_data["kar_zarar"] = db_data.get("kar_zarar", 0)
+        ciro = db_data.get("ciro", 0)
+        kar_zarar = db_data.get("kar_zarar", 0)
+        portfolio_data["ciro"] = ciro
+        portfolio_data["kar_zarar"] = kar_zarar
+        portfolio_data["net_kar"] = kar_zarar  # Alias
         portfolio_data["devreden_kdv"] = db_data.get("devreden_kdv", 0)
         portfolio_data["mizan_entry_count"] = db_data.get("entry_count", 0)
         portfolio_data["toplam_borc"] = db_data.get("toplam_borc", 0)
         portfolio_data["toplam_alacak"] = db_data.get("toplam_alacak", 0)
+        portfolio_data["aktif_toplam"] = db_data.get("total_assets", 1)
+        portfolio_data["pasif_toplam"] = db_data.get("total_liabilities", 0)
+        portfolio_data["ozkaynak"] = db_data.get("equity", 0)
+
+        # KRİTİK: KRG-08 için kar_marji hesapla (KURGAN'ın beklediği format)
+        if ciro and ciro > 0:
+            portfolio_data["kar_marji"] = kar_zarar / ciro
+            _kurgan_logger.info(f"[KURGAN] Kar marjı hesaplandı: {kar_zarar}/{ciro} = %{(kar_zarar/ciro)*100:.2f}")
+        else:
+            portfolio_data["kar_marji"] = 0
+            _kurgan_logger.warning("[KURGAN] Ciro 0, kar marjı hesaplanamadı")
+
+        # KRİTİK: KRG-15 için toplam_vergi_beyani (Mizan'dan 360 hesap grubu)
+        vergi_hesaplari = db_data.get("accounts", {})
+        toplam_vergi = 0
+        for hesap_kodu, hesap in vergi_hesaplari.items():
+            # 360-369: Ödenecek Vergi ve Fonlar
+            if hesap_kodu.startswith("36"):
+                toplam_vergi += abs(hesap.get("alacak_bakiye", 0) - hesap.get("borc_bakiye", 0))
+        portfolio_data["toplam_vergi_beyani"] = toplam_vergi
+        if ciro and ciro > 0:
+            _kurgan_logger.info(f"[KURGAN] Vergi yükü hesaplandı: {toplam_vergi}/{ciro} = %{(toplam_vergi/ciro)*100:.2f}")
+
+        # KRİTİK: accounts → hesaplar dönüşümü (KURGAN analizi için gerekli)
+        raw_accounts = db_data.get("accounts", {})
+        hesaplar = {}
+        for kod, hesap in raw_accounts.items():
+            ana_kod = kod.split(".")[0]
+            borc = hesap.get("borc_bakiye", 0) or 0
+            alacak = hesap.get("alacak_bakiye", 0) or 0
+
+            # MUHASEBE KURALI: Aktif hesaplar (1xx, 2xx) = Borç - Alacak
+            #                  Pasif hesaplar (3xx, 4xx, 5xx) = Alacak - Borç
+            # Bu sayede bakiyeler her zaman pozitif olur
+            if ana_kod[0] in ["3", "4", "5"]:
+                bakiye = alacak - borc  # Pasif hesaplar için
+            else:
+                bakiye = borc - alacak  # Aktif hesaplar için
+
+            if ana_kod not in hesaplar:
+                hesaplar[ana_kod] = {
+                    "bakiye": 0, "borc_toplam": 0, "alacak_toplam": 0,
+                    "alt_hesaplar": [], "alt_kirilim_var": False
+                }
+            hesaplar[ana_kod]["bakiye"] += bakiye
+            hesaplar[ana_kod]["borc_toplam"] += borc
+            hesaplar[ana_kod]["alacak_toplam"] += alacak
+            if "." in kod:
+                hesaplar[ana_kod]["alt_kirilim_var"] = True
+                hesaplar[ana_kod]["alt_hesaplar"].append({
+                    "kod": kod, "ad": hesap.get("hesap_adi", ""), "bakiye": bakiye
+                })
+        portfolio_data["hesaplar"] = hesaplar
+        # KRİTİK: _get_kritik_mizan_hesaplari için raw accounts da ekle
+        portfolio_data["accounts"] = raw_accounts
+        _kurgan_logger.info(f"[KURGAN DEBUG] hesaplar dict'e {len(hesaplar)} ana hesap eklendi")
+        _kurgan_logger.info(f"[KURGAN DEBUG] accounts dict'e {len(raw_accounts)} raw hesap eklendi")
 
         # Calculate zarar_donem_sayisi from kar_zarar
         if portfolio_data["kar_zarar"] < 0:
@@ -2871,60 +2991,10 @@ def _get_portfolio_data_for_kurgan(smmm_id: str, client_id: str, period: str) ->
 
         return portfolio_data
 
-    # Fallback to JSON file if no database data
-    _kurgan_logger.info(f"Database'de veri yok, JSON'a fallback: {client_id}/{period}")
-    portfolio_path = CONTRACTS_DIR / "portfolio_customer_summary.json"
-
-    if portfolio_path.exists():
-        try:
-            raw = json.loads(portfolio_path.read_text(encoding="utf-8"))
-            portfolio_data["data_source"] = "json"
-
-            # KPI'lardan veri cek
-            kpis = raw.get("kpis", {})
-            data_quality = raw.get("data_quality", {})
-
-            # Ciro ve kar/zarar tahmini (bank rows'tan)
-            bank_total = data_quality.get("bank_rows_total", 0)
-            bank_in_period = data_quality.get("bank_rows_in_period", 0)
-
-            if bank_total > 0:
-                # Basit tahmin: her banka satiri ortalama 10000 TL islem
-                portfolio_data["ciro"] = bank_total * 10000
-
-            # Kurgan risk skorundan ters hesaplama (varsa)
-            kurgan_score = kpis.get("kurgan_risk_score")
-            if kurgan_score is not None and kurgan_score < 70:
-                # Dusuk skor = sorunlu veriler
-                portfolio_data["zarar_donem_sayisi"] = 2 if kurgan_score < 50 else 1
-                portfolio_data["devreden_kdv"] = 150000 if kurgan_score < 60 else 80000
-
-            # Inflation data kontrol
-            inflation_status = kpis.get("inflation_status", "absent")
-            if inflation_status == "missing_data":
-                portfolio_data["inflation_data"] = {
-                    "fixed_asset_register.csv": None,
-                    "stock_movement.csv": None,
-                    "equity_breakdown.csv": None
-                }
-            elif inflation_status == "computed":
-                portfolio_data["inflation_data"] = {
-                    "fixed_asset_register.csv": True,
-                    "stock_movement.csv": True,
-                    "equity_breakdown.csv": True
-                }
-
-            # Warnings'dan risk faktorleri cikar
-            warnings = data_quality.get("warnings", [])
-            for w in warnings:
-                if "zarar" in str(w).lower():
-                    portfolio_data["zarar_donem_sayisi"] = max(portfolio_data["zarar_donem_sayisi"], 3)
-                if "kdv" in str(w).lower():
-                    portfolio_data["devreden_kdv"] = max(portfolio_data["devreden_kdv"], 200000)
-
-        except Exception as e:
-            _kurgan_logger.warning(f"Portfolio veri okuma hatasi: {e}")
-
+    # VERİ YOK — no_data döndür (JSON fallback KALDIRILDI)
+    _kurgan_logger.info(f"[KURGAN] Database'de mizan verisi yok: {client_id}/{period} → no_data döndürülüyor")
+    portfolio_data["data_source"] = "none"
+    portfolio_data["no_data"] = True
     return portfolio_data
 
 
@@ -2943,6 +3013,102 @@ def _get_banka_data_for_kurgan(client_id: str, period: str) -> dict | None:
             _kurgan_logger.warning(f"Banka veri okuma hatasi: {e}")
 
     return None
+
+
+def _get_mukellef_bilgileri(client_id: str) -> dict:
+    """
+    AI Danışman için mükellef bilgilerini al.
+    SMMM/YMM'nin müvekkilini tanımlayan bilgiler.
+    """
+    mukellef = {
+        "ad": client_id,
+        "vkn": "",
+        "sektor": "",
+        "nace_kodu": "",
+        "vergi_dairesi": "",
+    }
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT name, tax_id, sector, nace_code, tax_office
+            FROM clients
+            WHERE id = ?
+        """, (client_id,))
+        row = cursor.fetchone()
+        if row:
+            mukellef = {
+                "ad": row["name"] or client_id,
+                "vkn": row["tax_id"] or "",
+                "sektor": row["sector"] or "",
+                "nace_kodu": row["nace_code"] or "",
+                "vergi_dairesi": row["tax_office"] or "",
+            }
+        conn.close()
+    except Exception as e:
+        _kurgan_logger.warning(f"Mükellef bilgisi alınamadı: {e}")
+
+    return mukellef
+
+
+def _get_kritik_mizan_hesaplari(portfolio_data: dict) -> dict:
+    """
+    AI Danışman için kritik mizan hesaplarını özetle.
+    SMMM/YMM için önemli hesap bakiyeleri.
+
+    NOT: Hesap kodları alt hesap içerebilir (örn: 100.01, 431.01)
+    Bu yüzden prefix bazlı toplama yapılır.
+    """
+    accounts = portfolio_data.get("accounts", {})
+
+    def sum_by_prefix(prefix: str) -> float:
+        """Belirli prefix ile başlayan tüm hesapların bakiyesini topla"""
+        total = 0
+        for kod, hesap in accounts.items():
+            if kod.startswith(prefix):
+                # bakiye veya borc_bakiye - alacak_bakiye
+                bakiye = hesap.get("bakiye", 0) or 0
+                if bakiye == 0:
+                    borc = hesap.get("borc_bakiye", 0) or 0
+                    alacak = hesap.get("alacak_bakiye", 0) or 0
+                    bakiye = borc - alacak
+                total += bakiye
+        return total
+
+    kritik = {
+        # VARLIK (Aktif hesaplar - borç bakiyesi pozitif)
+        "kasa_100": sum_by_prefix("100"),
+        "banka_102": sum_by_prefix("102"),
+        "alicilar_120": sum_by_prefix("120"),
+        "stoklar_15x": sum_by_prefix("15"),  # 150-159 stok hesapları
+        "indirilecek_kdv_191": sum_by_prefix("191"),
+
+        # KAYNAK (Pasif hesaplar - alacak bakiyesi pozitif, negatif olarak gelir)
+        "saticilar_320": abs(sum_by_prefix("320")),  # Satıcılar (alacak bakiyesi)
+        "ortaklardan_alacaklar_131": sum_by_prefix("131"),
+        "ortaklara_borclar_331": abs(sum_by_prefix("331")),  # Kısa vadeli ortaklara borç
+        "ortaklara_borclar_431": abs(sum_by_prefix("431")),  # Uzun vadeli ortaklara borç
+        "odenecek_vergi_360": abs(sum_by_prefix("36")),  # Ödenecek vergiler
+        "sermaye_500": abs(sum_by_prefix("500")),  # Sermaye
+        "gecmis_yil_zararlar_580": sum_by_prefix("580"),  # Geçmiş yıl zararları (pozitif = zarar)
+        "donem_kar_zarar_590": sum_by_prefix("590"),  # Dönem kar/zarar
+
+        # GELİR TABLOSU (Gelirler alacak bakiyesi = negatif gelir)
+        "yurtici_satislar_600": abs(sum_by_prefix("600")),  # Net satışlar
+        "satis_maliyeti_620": sum_by_prefix("620"),  # Satış maliyeti (borç bakiyesi)
+        "faaliyet_giderleri_63x": sum_by_prefix("63"),  # Faaliyet giderleri
+        "finansman_giderleri_66x": sum_by_prefix("66"),  # Finansman giderleri
+
+        # HESAPLANAN ORANLAR (portfolio_data'dan al)
+        "aktif_toplami": portfolio_data.get("aktif_toplam", 0) or portfolio_data.get("total_assets", 0),
+        "pasif_toplami": portfolio_data.get("pasif_toplam", 0) or portfolio_data.get("total_liabilities", 0),
+        "ciro": portfolio_data.get("ciro", 0),
+        "brut_kar": portfolio_data.get("brut_kar", 0),
+        "net_kar": portfolio_data.get("kar_zarar", 0) or portfolio_data.get("net_kar", 0),
+    }
+
+    return kritik
 
 
 @router.get("/contracts/kurgan-risk")
@@ -2973,6 +3139,30 @@ async def get_kurgan_risk(
         # Portfolio verisi al
         portfolio_data = _get_portfolio_data_for_kurgan(smmm_id, client_id, period)
 
+        # VERİ YOK KONTROLÜ — JSON fallback kaldırıldı
+        if portfolio_data.get("no_data"):
+            _kurgan_logger.info(f"[KURGAN] Veri yok, no_data yanıtı: {client_id}/{period}")
+            return JSONResponse(content={
+                "success": True,
+                "data": {
+                    "status": "no_data",
+                    "message": "Bu dönem için mizan verisi bulunamadı. Lütfen önce veri yükleyin.",
+                    "kurgan_risk": None,
+                    "risk_summary": None,
+                    "urgent_actions": None,
+                    "category_analysis": None,
+                    "kurgan_scenarios": None,
+                    "ttk_376": None,
+                    "ortulu_sermaye": None,
+                    "finansman_gider_kisitlamasi": None,
+                    "muhtemel_cezalar": None,
+                    "what_to_do": "Lütfen dönem verilerini yükleyin",
+                    "time_estimate": "-",
+                    "vdk_reference": "",
+                    "effective_date": "",
+                }
+            })
+
         # Banka verisi al (opsiyonel)
         banka_data = _get_banka_data_for_kurgan(client_id, period)
 
@@ -2982,6 +3172,19 @@ async def get_kurgan_risk(
         services_path = str(BACKEND_DIR / "services")
         if services_path not in sys.path:
             sys.path.insert(0, services_path)
+
+        # Data Enrichment - AI + TCMB + Sector Benchmark
+        try:
+            from data_enrichment import enrich_portfolio_data
+            # Client NACE kodunu al (varsa)
+            nace_code = portfolio_data.get("nace_code")
+            # Async enrichment
+            import asyncio
+            enriched_data = await enrich_portfolio_data(portfolio_data, nace_code)
+            portfolio_data = enriched_data
+            _kurgan_logger.info(f"[KURGAN] Data enrichment tamamlandi: {enriched_data.get('enrichment_sources', [])}")
+        except Exception as enrich_err:
+            _kurgan_logger.warning(f"[KURGAN] Data enrichment hatasi (devam ediliyor): {enrich_err}")
 
         from kurgan_calculator import KurganCalculator
         calculator = KurganCalculator()
@@ -3021,6 +3224,184 @@ async def get_kurgan_risk(
         elif "KRITIK" in risk_level_display:
             risk_level_display = "KRITIK"
 
+        # V2: Detayli analiz verileri
+        v2_data = {}
+        if kurgan_result.risk_summary:
+            v2_data["risk_summary"] = kurgan_result.risk_summary
+        if kurgan_result.urgent_actions:
+            v2_data["urgent_actions"] = kurgan_result.urgent_actions
+        if kurgan_result.category_analysis:
+            v2_data["category_analysis"] = kurgan_result.category_analysis
+        if kurgan_result.kurgan_scenarios:
+            v2_data["kurgan_scenarios"] = kurgan_result.kurgan_scenarios
+        if kurgan_result.ttk_376:
+            v2_data["ttk_376"] = kurgan_result.ttk_376
+        if kurgan_result.ortulu_sermaye:
+            v2_data["ortulu_sermaye"] = kurgan_result.ortulu_sermaye
+        if kurgan_result.finansman_gider_kisitlamasi:
+            v2_data["finansman_gider_kisitlamasi"] = kurgan_result.finansman_gider_kisitlamasi
+        if kurgan_result.muhtemel_cezalar:
+            v2_data["muhtemel_cezalar"] = kurgan_result.muhtemel_cezalar
+        if kurgan_result.mukellef_finansal_oranlari:
+            v2_data["mukellef_finansal_oranlari"] = kurgan_result.mukellef_finansal_oranlari
+
+        # Sektör Bilgisi (Vergi Levhasından) + TCMB Güncel Verileri
+        sektor_bilgisi = None
+        tcmb_verileri = None
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT nace_code, nace_description, sector, tax_office
+                FROM clients WHERE id = ?
+            """, (client_id,))
+            client_row = cursor.fetchone()
+            conn.close()
+
+            _kurgan_logger.info(f"[KURGAN] Client DB sorgusu: client_id={client_id}, sonuç={dict(client_row) if client_row else 'None'}")
+
+            if client_row and client_row["nace_code"]:
+                nace_code = client_row["nace_code"]
+                nace_prefix = nace_code[:2] if nace_code else "47"
+
+                # Sektör ortalamaları — config/sector_averages.json'dan yüklenir
+                sektor_data = get_sector_for_nace(nace_prefix)
+
+                # TCMB EVDS'den dinamik sektör verilerini çek
+                evds_data = {}
+                try:
+                    from services.tcmb_evds_service import get_sector_data_for_nace, get_tuik_vergi_yuku
+                    evds_data = get_sector_data_for_nace(nace_code)
+                    vergi_yuku = get_tuik_vergi_yuku(nace_prefix)
+                    _kurgan_logger.info(f"[KURGAN] EVDS sektör verileri alındı: NACE={nace_code}")
+                except Exception as evds_err:
+                    _kurgan_logger.warning(f"[KURGAN] EVDS servisi hatası: {evds_err}")
+                    vergi_yuku = sektor_data.get("vergi_yuku", 0.02)
+
+                sektor_bilgisi = {
+                    "nace_kodu": nace_code,
+                    "nace_adi": client_row["nace_description"] or sektor_data.get("adi", "Bilinmiyor"),
+                    "sektor_adi": client_row["sector"] or sektor_data.get("adi", "Bilinmiyor"),
+                    "vergi_dairesi": client_row["tax_office"],
+
+                    # GİB Vergi İstatistikleri 2024
+                    "sektor_vergi_yuku": vergi_yuku,
+
+                    # Likidite Oranları (TCMB EVDS)
+                    "cari_oran": evds_data.get("cari_oran"),
+                    "asit_test_orani": evds_data.get("asit_test_orani"),
+                    "nakit_orani": evds_data.get("nakit_orani"),
+
+                    # Finansal Yapı Oranları (TCMB EVDS)
+                    "yabanci_kaynak_aktif": evds_data.get("yabanci_kaynak_aktif"),
+                    "ozkaynak_aktif": evds_data.get("ozkaynak_aktif"),
+                    "donen_varlik_aktif": evds_data.get("donen_varlik_aktif"),
+                    "duran_varlik_aktif": evds_data.get("duran_varlik_aktif"),
+                    "banka_kredileri_orani": evds_data.get("banka_kredileri_orani"),
+
+                    # Karlılık Oranları (TCMB EVDS)
+                    "net_kar_marji": evds_data.get("net_kar_marji"),
+                    "brut_kar_marji": evds_data.get("brut_kar_marji"),
+                    "faaliyet_kar_marji": evds_data.get("faaliyet_kar_marji"),
+                    "roa": evds_data.get("roa"),
+                    "faaliyet_gider_orani": evds_data.get("faaliyet_gider_orani"),
+                    "faiz_gider_orani": evds_data.get("faiz_gider_orani"),
+
+                    # Devir Hızları (TCMB EVDS)
+                    "alacak_devir_hizi": evds_data.get("alacak_devir_hizi"),
+                    "borc_devir_hizi": evds_data.get("borc_devir_hizi"),
+                    "calisma_sermaye_devir": evds_data.get("calisma_sermaye_devir"),
+
+                    # Eski alanlar (geriye uyumluluk)
+                    "sektor_kar_marji": evds_data.get("net_kar_marji") or sektor_data["kar_marji"],
+                    "sektor_stok_devir": evds_data.get("alacak_devir_hizi") or sektor_data["stok_devir"],
+                    "sektor_yabanci_kaynak_orani": evds_data.get("yabanci_kaynak_aktif"),
+
+                    # Meta
+                    "kaynak": "TCMB EVDS + GİB 2024" if evds_data else f"Statik veriler ({get_static_meta()['veri_yili']})",
+                    "veri_kaynak": "evds_canli" if evds_data else "statik_2023",
+                    "veri_yili": evds_data.get("veri_yili", "2024"),
+                    "guncelleme_tarihi": evds_data.get("guncelleme_tarihi") or datetime.utcnow().strftime("%Y-%m-%d")
+                }
+                _kurgan_logger.info(f"[KURGAN] Sektör bilgisi oluşturuldu: NACE={nace_code}, kaynak={sektor_bilgisi['kaynak']}")
+            else:
+                _kurgan_logger.warning(f"[KURGAN] Client NACE kodu yok: {client_id}")
+
+            # TCMB Güncel Verileri - Döviz Kurları + Faiz Oranları
+            try:
+                import urllib.request
+                import ssl
+
+                # SSL context (TCMB bazen sertifika sorunları yaşıyor)
+                ssl_context = ssl.create_default_context()
+                ssl_context.check_hostname = False
+                ssl_context.verify_mode = ssl.CERT_NONE
+
+                # TCMB günlük kur XML
+                tcmb_url = "https://www.tcmb.gov.tr/kurlar/today.xml"
+                req = urllib.request.Request(tcmb_url)
+                req.add_header('User-Agent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36')
+
+                with urllib.request.urlopen(req, timeout=10, context=ssl_context) as response:
+                    xml_text = response.read().decode('utf-8')
+
+                    # USD kuru
+                    usd_match = re.search(r'<Currency[^>]*Kod="USD"[^>]*>.*?<ForexSelling>([0-9.]+)</ForexSelling>', xml_text, re.DOTALL)
+                    usd_kur = float(usd_match.group(1)) if usd_match else 43.50
+
+                    # EUR kuru
+                    eur_match = re.search(r'<Currency[^>]*Kod="EUR"[^>]*>.*?<ForexSelling>([0-9.]+)</ForexSelling>', xml_text, re.DOTALL)
+                    eur_kur = float(eur_match.group(1)) if eur_match else 52.00
+
+                    # GBP kuru
+                    gbp_match = re.search(r'<Currency[^>]*Kod="GBP"[^>]*>.*?<ForexSelling>([0-9.]+)</ForexSelling>', xml_text, re.DOTALL)
+                    gbp_kur = float(gbp_match.group(1)) if gbp_match else 54.00
+
+                    # Bülten tarihi
+                    tarih_match = re.search(r'Tarih="([^"]+)"', xml_text)
+                    bulten_tarihi = tarih_match.group(1) if tarih_match else datetime.utcnow().strftime("%d.%m.%Y")
+
+                    _faiz = get_faiz_oranlari()
+                    tcmb_verileri = {
+                        "usd_kuru": round(usd_kur, 4),
+                        "eur_kuru": round(eur_kur, 4),
+                        "gbp_kuru": round(gbp_kur, 4),
+                        "politika_faizi": _faiz["politika_faizi"],
+                        "enflasyon_yillik": _faiz["enflasyon_yillik"],
+                        "reeskont_faizi": _faiz["reeskont_faizi"],
+                        "gecikme_faizi_aylik": _faiz["gecikme_zammi_aylik"],
+                        "tecil_faizi_yillik": _faiz["tecil_faizi_yillik"],
+                        "bulten_tarihi": bulten_tarihi,
+                        "guncelleme_zamani": datetime.utcnow().isoformat() + "Z",
+                        "kaynak": "TCMB Günlük Kur Bülteni",
+                        "son_guncelleme_oranlar": get_son_guncelleme()
+                    }
+                    _kurgan_logger.info(f"[KURGAN] TCMB verileri: USD={usd_kur:.4f}, EUR={eur_kur:.4f}, Tarih={bulten_tarihi}")
+            except Exception as tcmb_err:
+                _kurgan_logger.warning(f"[KURGAN] TCMB verileri alınamadı (fallback kullanılıyor): {tcmb_err}")
+                _faiz_fb = get_faiz_oranlari()
+                _doviz_fb = get_doviz_fallback()
+                tcmb_verileri = {
+                    "usd_kuru": _doviz_fb["usd_kuru"],
+                    "eur_kuru": _doviz_fb["eur_kuru"],
+                    "gbp_kuru": _doviz_fb["gbp_kuru"],
+                    "politika_faizi": _faiz_fb["politika_faizi"],
+                    "enflasyon_yillik": _faiz_fb["enflasyon_yillik"],
+                    "reeskont_faizi": _faiz_fb["reeskont_faizi"],
+                    "gecikme_faizi_aylik": _faiz_fb["gecikme_zammi_aylik"],
+                    "tecil_faizi_yillik": _faiz_fb["tecil_faizi_yillik"],
+                    "bulten_tarihi": datetime.utcnow().strftime("%d.%m.%Y"),
+                    "guncelleme_zamani": datetime.utcnow().isoformat() + "Z",
+                    "kaynak": "TCMB (önbellek - bağlantı hatası)",
+                    "son_guncelleme_oranlar": get_son_guncelleme()
+                }
+
+        except Exception as e:
+            _kurgan_logger.error(f"[KURGAN] Sektör/TCMB bilgisi hatası: {e}", exc_info=True)
+
+        v2_data["sektor_bilgisi"] = sektor_bilgisi
+        v2_data["tcmb_verileri"] = tcmb_verileri
+
         data = {
             "kurgan_risk": {
                 "score": kurgan_result.score,
@@ -3028,6 +3409,8 @@ async def get_kurgan_risk(
                 "warnings": kurgan_result.warnings,
                 "action_items": kurgan_result.action_items,
                 "criteria_scores": kurgan_result.criteria_scores,
+                "data_source": portfolio_data.get("data_source", "none"),
+                "mizan_entry_count": portfolio_data.get("mizan_entry_count", 0),
                 "analysis": {
                     "expert": {
                         "score": kurgan_result.score,
@@ -3038,17 +3421,11 @@ async def get_kurgan_risk(
                         "trust_score": 1.0,
                         "computed_at": datetime.utcnow().isoformat() + "Z"
                     },
-                    "ai": {
-                        "confidence": 0.35,
-                        "suggestion": "Banka islem hacmi son donemde degiskenlik gosteriyor. Nakit akis paternleri ve kasa hareketleri detayli incelenebilir.",
-                        "disclaimer": "Bu bir AI tahminidir. Dogrulanmamis bilgi icerebilir.",
-                        "evidence_refs": [],
-                        "trust_score": 0.0,
-                        "model": "claude-sonnet-4",
-                        "computed_at": datetime.utcnow().isoformat() + "Z"
-                    }
+                    "ai": None
                 }
             },
+            # V2 Genisletilmis Alanlar
+            **v2_data,
             "what_to_do": " -> ".join(what_to_do) if what_to_do else "Her sey yolunda",
             "time_estimate": time_estimate,
             "checklist_url": "/static/kurgan-checklist.pdf",
@@ -3069,6 +3446,164 @@ async def get_kurgan_risk(
     except Exception as e:
         _kurgan_logger.error(f"KURGAN risk hatasi: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"KURGAN hesaplama hatasi: {str(e)}")
+
+
+@router.get("/contracts/vdk-oracle")
+async def get_vdk_oracle(
+    client_id: str = Query(..., description="Musteri ID"),
+    period: str = Query(..., description="Donem (YYYY-QN)"),
+    user: dict = Depends(verify_token)
+):
+    """
+    VDK Oracle - Birlesik Risk Analizi
+
+    kurgan-risk + vdk-simulator verilerini tek endpoint'te birlestir.
+    VDK Oracle tab'i icin kullanilir.
+
+    Returns:
+        Mevcut kurgan-risk verisi + simulator alarm'lari
+    """
+    smmm_id = user["id"]
+    await check_client_access(user, client_id)
+
+    try:
+        # 1. Mevcut kurgan-risk verisini al (ayni logic)
+        # get_kurgan_risk'i dahili olarak cagir
+        kurgan_response = await get_kurgan_risk(
+            client_id=client_id,
+            period=period,
+            user=user
+        )
+
+        # wrap_response sonucu dict dondurur
+        kurgan_data = kurgan_response.get("data", kurgan_response) if isinstance(kurgan_response, dict) else {}
+
+        # 2. KurganSimulator calistir (alarm'lar, sorular, belgeler)
+        simulator_data = {}
+        try:
+            from services.kurgan_simulator import get_kurgan_simulator
+            from api.v1.vdk_simulator import get_mizan_data, get_client_info, get_nace_info, get_tax_certificates
+
+            # Client bilgisi al
+            client = get_client_info(client_id)
+            if not client:
+                client = {
+                    "id": client_id,
+                    "name": client_id.replace("_", " ").title(),
+                    "vkn": None,
+                    "nace_code": None,
+                    "sector": None
+                }
+
+            # NACE bilgisi
+            sector_group = None
+            nace_code = client.get("nace_code")
+            if nace_code:
+                nace_info = get_nace_info(nace_code)
+                if nace_info:
+                    sector_group = nace_info.get("sector_group")
+
+            # Sektör verileri - EVDS + statik fallback
+            sektor_bilgisi = {}
+            if nace_code:
+                nace_prefix = nace_code[:2]
+                sektor_data = get_sector_for_nace(nace_prefix)
+                try:
+                    from services.tcmb_evds_service import get_sector_data_for_nace
+                    evds_data = get_sector_data_for_nace(nace_code)
+                except Exception:
+                    evds_data = {}
+                sektor_bilgisi = {
+                    "nakit_orani": evds_data.get("nakit_orani"),
+                    "cari_oran": evds_data.get("cari_oran"),
+                    "alacak_devir_hizi": evds_data.get("alacak_devir_hizi") or sektor_data.get("stok_devir"),
+                    "net_kar_marji": evds_data.get("net_kar_marji") or sektor_data.get("kar_marji"),
+                    "vergi_yuku": sektor_data.get("vergi_yuku", 0.02),
+                }
+                _kurgan_logger.info(f"[VDK-ORACLE] Sektor bilgisi olusturuldu: NACE={nace_code}")
+
+            # Mizan verisi
+            mizan_data = get_mizan_data(client_id, period)
+
+            # Vergi tasdik belgesi
+            tax_certs = get_tax_certificates(client_id)
+
+            # Simulator calistir
+            simulator = get_kurgan_simulator()
+            sim_result = simulator.simulate(
+                client_id=client_id,
+                client_name=client.get("name", client_id),
+                period=period or "2025/Q1",
+                nace_code=nace_code,
+                sector_group=sector_group,
+                mizan_data=mizan_data,
+                tax_certificates=tax_certs,
+                risky_suppliers=[],
+                sector_averages=sektor_bilgisi
+            )
+
+            sim_dict = sim_result.to_dict()
+
+            # Audit probability hesapla
+            risk_score = sim_dict.get("risk_score", 0)
+            if risk_score >= 70:
+                audit_probability = min(95, 80 + (risk_score - 70) * 0.5)
+            elif risk_score >= 50:
+                audit_probability = 50 + (risk_score - 50) * 1.5
+            elif risk_score >= 25:
+                audit_probability = 20 + (risk_score - 25) * 1.2
+            else:
+                audit_probability = 5 + risk_score * 0.6
+
+            simulator_data = {
+                "risk_score": sim_dict.get("risk_score", 0),
+                "risk_level": sim_dict.get("risk_level", "low"),
+                "audit_probability": round(audit_probability, 1),
+                "alarms": sim_dict.get("alarms", []),
+                "triggered_count": sim_dict.get("triggered_count", 0),
+                "total_documents": sim_dict.get("total_documents", 0),
+                "prepared_documents": sim_dict.get("prepared_documents", 0),
+                "simulated_at": sim_dict.get("simulated_at", ""),
+            }
+
+            _kurgan_logger.info(
+                f"[VDK-ORACLE] Simulator tamamlandi: "
+                f"risk_score={simulator_data['risk_score']}, "
+                f"triggered={simulator_data['triggered_count']}, "
+                f"docs={simulator_data['total_documents']}"
+            )
+
+        except Exception as sim_err:
+            _kurgan_logger.error(f"[VDK-ORACLE] Simulator hatasi: {sim_err}", exc_info=True)
+            simulator_data = {
+                "risk_score": None,
+                "risk_level": "error",
+                "audit_probability": None,
+                "alarms": [],
+                "triggered_count": 0,
+                "total_documents": 0,
+                "prepared_documents": 0,
+                "simulated_at": "",
+                "error": f"Simulator hesaplama hatasi: {str(sim_err)}"
+            }
+
+        # 3. Birlestir
+        result = dict(kurgan_data)
+        result["simulator"] = simulator_data
+
+        return wrap_response(
+            endpoint_name="vdk_oracle",
+            smmm_id=smmm_id,
+            client_id=client_id,
+            period=period,
+            data=result
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        _kurgan_logger.error(f"VDK Oracle hatasi: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"VDK Oracle hesaplama hatasi: {str(e)}")
 
 
 @router.get("/contracts/data-quality")
@@ -4109,3 +4644,206 @@ async def resolve_sources(refs: list, user: dict = Depends(verify_token)):
     except Exception as e:
         _kurgan_logger.error(f"Source resolve error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
+# VDK AI ANALYSIS ENDPOINT
+# =============================================================================
+
+from pydantic import BaseModel
+from typing import Optional as OptionalType, List as ListType
+
+
+class VdkAiAnalysisRequest(BaseModel):
+    """VDK AI Analiz istegi"""
+    client_id: str
+    period: str
+    analysis_type: str  # "quick_summary", "detailed", "izah_text", "question"
+    context: OptionalType[dict] = None  # question, scenario, focus_area, conversation_history
+
+
+@router.post("/contracts/vdk-ai-analysis")
+async def vdk_ai_analysis(
+    request_body: VdkAiAnalysisRequest,
+    user: dict = Depends(verify_token)
+):
+    """
+    VDK Risk Analizi - AI Destekli Analiz
+
+    Claude + OpenAI orkestrasyon ile akilli analiz.
+
+    analysis_type:
+    - quick_summary: Hizli ozet (OpenAI GPT-4o-mini) - ucuz, hizli
+    - detailed: Detayli analiz (Claude) - derin mevzuat analizi
+    - izah_text: Izah metni uretimi (Claude) - savunma metni
+    - question: Serbest soru (karmasikliga gore otomatik secim)
+
+    context:
+    - question: Serbest soru metni
+    - scenario: KURGAN senaryo kodu (KRG-01 vb.)
+    - focus_area: Odak alani (kasa, ortaklar, kdv, sermaye vb.)
+    - conversation_history: Onceki mesajlar [{role, content}]
+    """
+    smmm_id = user["id"]
+    client_id = request_body.client_id
+    period = request_body.period
+    analysis_type = request_body.analysis_type
+    context = request_body.context or {}
+
+    # DEBUG: İstek loglama
+    _kurgan_logger.info(f"[VDK-AI] ═══════════════════════════════════════════════")
+    _kurgan_logger.info(f"[VDK-AI] İSTEK ALINDI: type={analysis_type}, client={client_id}, period={period}")
+    _kurgan_logger.info(f"[VDK-AI] Context: {list(context.keys()) if context else 'None'}")
+
+    # Verify client access
+    await check_client_access(user, client_id)
+
+    try:
+        # 1. Once KURGAN risk verisi al
+        portfolio_data = _get_portfolio_data_for_kurgan(smmm_id, client_id, period)
+        banka_data = _get_banka_data_for_kurgan(client_id, period)
+
+        # KRİTİK: Data enrichment yap - kurgan-risk ile aynı sonuç için
+        try:
+            from data_enrichment import enrich_portfolio_data
+            nace_code = portfolio_data.get("nace_code")
+            enriched_data = await enrich_portfolio_data(portfolio_data, nace_code)
+            portfolio_data = enriched_data
+            _kurgan_logger.info(f"[AI ANALYSIS] Data enrichment tamamlandi: {enriched_data.get('enrichment_sources', [])}")
+        except Exception as enrich_err:
+            _kurgan_logger.warning(f"[AI ANALYSIS] Data enrichment hatasi (devam ediliyor): {enrich_err}")
+
+        import sys
+        services_path = str(BACKEND_DIR / "services")
+        if services_path not in sys.path:
+            sys.path.insert(0, services_path)
+
+        from kurgan_calculator import KurganCalculator
+        from dataclasses import asdict
+
+        calculator = KurganCalculator()
+        kurgan_result = calculator.calculate(
+            portfolio_data=portfolio_data,
+            banka_data=banka_data
+        )
+
+        # Mükellef bilgilerini al
+        mukellef_bilgi = _get_mukellef_bilgileri(client_id)
+
+        # Kritik mizan hesaplarını al
+        kritik_hesaplar = _get_kritik_mizan_hesaplari(portfolio_data)
+
+        # DEBUG: Kritik hesaplar loglama
+        _kurgan_logger.info(f"[AI ANALYSIS DEBUG] portfolio_data keys: {list(portfolio_data.keys())}")
+        _kurgan_logger.info(f"[AI ANALYSIS DEBUG] accounts count: {len(portfolio_data.get('accounts', {}))}")
+        _kurgan_logger.info(f"[AI ANALYSIS DEBUG] kritik_hesaplar: kasa={kritik_hesaplar.get('kasa_100')}, ortaklar_431={kritik_hesaplar.get('ortaklara_borclar_431')}, ciro={kritik_hesaplar.get('ciro')}")
+
+        # Risk data dict - ZENGİNLEŞTİRİLMİŞ
+        risk_data = {
+            # Temel risk metrikleri
+            "score": kurgan_result.score,
+            "risk_level": kurgan_result.risk_level,
+            "warnings": kurgan_result.warnings,
+            "action_items": kurgan_result.action_items,
+            "category_analysis": kurgan_result.category_analysis,
+            "kurgan_scenarios": kurgan_result.kurgan_scenarios,
+            "ttk_376": kurgan_result.ttk_376,
+            "ortulu_sermaye": kurgan_result.ortulu_sermaye,
+            "finansman_gider_kisitlamasi": kurgan_result.finansman_gider_kisitlamasi,
+            "risk_summary": kurgan_result.risk_summary,
+            "urgent_actions": kurgan_result.urgent_actions,
+
+            # MÜKELLEFİ TANIMLAYAN BİLGİLER (YENİ)
+            "mukellef": mukellef_bilgi,
+            "donem": period,
+
+            # KRİTİK MİZAN HESAPLARI (YENİ)
+            "kritik_hesaplar": kritik_hesaplar,
+
+            # KURGAN SENARYO DETAYLARI (YENİ)
+            "tetiklenen_senaryolar": [
+                {
+                    "id": s.get("senaryo_id"),
+                    "ad": s.get("senaryo_adi"),
+                    "tetikleme_nedeni": s.get("tetikleme_nedeni"),
+                    "risk_puani": s.get("risk_puani"),
+                    "kanitlar": s.get("kanitlar", []),
+                }
+                for s in kurgan_result.kurgan_scenarios if s.get("tetiklendi")
+            ],
+        }
+
+        # 2. AI Orchestrator'i cagir
+        ai_services_path = str(BACKEND_DIR / "services" / "ai")
+        if ai_services_path not in sys.path:
+            sys.path.insert(0, ai_services_path)
+
+        from ai.orchestrator import get_orchestrator
+        orchestrator = get_orchestrator()
+
+        # Analiz tipine gore AI cagir
+        ai_response = None
+        if analysis_type == "quick_summary":
+            ai_response = await orchestrator.vdk_quick_summary(risk_data)
+
+        elif analysis_type == "detailed":
+            focus_area = context.get("focus_area")
+            ai_response = await orchestrator.vdk_detailed_analysis(risk_data, focus_area)
+
+        elif analysis_type == "izah_text":
+            scenario = context.get("scenario", "Genel izah")
+            specific_issue = context.get("specific_issue")
+            ai_response = await orchestrator.vdk_generate_izah(scenario, risk_data, specific_issue)
+
+        elif analysis_type == "question":
+            question = context.get("question", "")
+            conversation_history = context.get("conversation_history", [])
+            if not question:
+                raise HTTPException(status_code=400, detail="question alani zorunlu")
+            ai_response = await orchestrator.vdk_answer_question(question, risk_data, conversation_history)
+
+        else:
+            raise HTTPException(status_code=400, detail=f"Gecersiz analysis_type: {analysis_type}")
+
+        if not ai_response:
+            raise HTTPException(status_code=500, detail="AI yaniti alinamadi")
+
+        # Cost estimate (rough)
+        cost_per_1k_tokens = {
+            "claude-sonnet-4-20250514": 0.003,
+            "gpt-4o": 0.005,
+            "gpt-4o-mini": 0.00015,
+        }
+        model = ai_response.model or "unknown"
+        tokens = ai_response.tokens_used or 0
+        cost = cost_per_1k_tokens.get(model, 0.001) * (tokens / 1000)
+
+        return {
+            "schema": {
+                "name": "vdk_ai_analysis",
+                "version": "v2.0",
+                "generated_at": _iso_utc()
+            },
+            "ai_provider": ai_response.provider.value if ai_response.provider else "unknown",
+            "model": model,
+            "response": {
+                "content": ai_response.content,
+                "success": ai_response.success,
+                "error": ai_response.error,
+            },
+            "tokens_used": {
+                "total": tokens,
+                "input": ai_response.metadata.get("input_tokens") or ai_response.metadata.get("prompt_tokens", 0) if ai_response.metadata else 0,
+                "output": ai_response.metadata.get("output_tokens") or ai_response.metadata.get("completion_tokens", 0) if ai_response.metadata else 0,
+            },
+            "cost_estimate": f"${cost:.4f} USD",
+            "processing_time_ms": ai_response.processing_time_ms,
+            "risk_summary": risk_data.get("risk_summary"),
+            "trust_score": 0.85 if ai_response.success else 0.0
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        _kurgan_logger.error(f"VDK AI analysis error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"VDK AI analiz hatasi: {str(e)}")

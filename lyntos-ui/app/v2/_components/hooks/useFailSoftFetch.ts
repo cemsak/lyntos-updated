@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { PanelEnvelope, createLoadingEnvelope, createErrorEnvelope, createMissingEnvelope } from '../contracts/envelope';
+import { PanelEnvelope, createLoadingEnvelope, createErrorEnvelope, createMissingEnvelope, createScopeEnvelope } from '../contracts/envelope';
 import { useDashboardScope, useScopeComplete } from '../scope/useDashboardScope';
 import { buildScopedUrl, type ScopeParams } from '../contracts/endpoints';
 import { getAuthToken } from '../../_lib/auth';
@@ -22,7 +22,7 @@ function createEmptyEnvelope<T>(reason: string): PanelEnvelope<T> {
 }
 
 export function useFailSoftFetch<T>(
-  endpoint: string,
+  endpoint: string | null,
   normalizer: (raw: unknown, requestId?: string) => PanelEnvelope<T>,
   options: FetchOptions = {}
 ): PanelEnvelope<T> {
@@ -44,9 +44,9 @@ export function useFailSoftFetch<T>(
     if (!token) {
       return createEmptyEnvelope<T>('Veri yüklemek için önce dönem seçin.');
     }
-    // If scope not complete, show missing state
+    // If scope not complete, show scope guide (info, not error)
     if (!scopeComplete) {
-      return createMissingEnvelope<T>('Scope seçilmedi. Lütfen SMMM, Mükellef ve Dönem seçin.');
+      return createScopeEnvelope<T>('Mükellef ve dönem seçin.');
     }
     // Only show loading if we'll actually fetch
     return createLoadingEnvelope<T>();
@@ -66,9 +66,15 @@ export function useFailSoftFetch<T>(
   const fetchData = useCallback(async (attempt = 0) => {
     if (abortRef.current) abortRef.current.abort();
 
+    // Endpoint null ise fetch yapma
+    if (!endpoint) {
+      setEnvelope(createMissingEnvelope<T>('Endpoint belirtilmedi.'));
+      return;
+    }
+
     // Check preconditions BEFORE setting loading state
     if (!scopeComplete) {
-      setEnvelope(createMissingEnvelope<T>('Scope seçilmedi. Lütfen SMMM, Mükellef ve Dönem seçin.'));
+      setEnvelope(createScopeEnvelope<T>('Mükellef ve dönem seçin.'));
       return;
     }
 

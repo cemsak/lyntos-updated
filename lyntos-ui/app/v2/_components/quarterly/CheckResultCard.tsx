@@ -19,17 +19,17 @@ export function CheckResultCard({ result }: CheckResultCardProps) {
   const statusConfig = {
     pass: {
       icon: CheckCircle2,
-      bgColor: 'bg-green-50',
-      borderColor: 'border-green-200',
-      iconColor: 'text-green-500',
-      textColor: 'text-green-700'
+      bgColor: 'bg-[#ECFDF5]',
+      borderColor: 'border-[#AAE8B8]',
+      iconColor: 'text-[#00A651]',
+      textColor: 'text-[#00804D]'
     },
     fail: {
       icon: XCircle,
-      bgColor: 'bg-red-50',
-      borderColor: 'border-red-200',
-      iconColor: 'text-red-500',
-      textColor: 'text-red-700'
+      bgColor: 'bg-[#FEF2F2]',
+      borderColor: 'border-[#FFC7C9]',
+      iconColor: 'text-[#F0282D]',
+      textColor: 'text-[#BF192B]'
     },
     partial: {
       icon: AlertTriangle,
@@ -40,10 +40,10 @@ export function CheckResultCard({ result }: CheckResultCardProps) {
     },
     skip: {
       icon: MinusCircle,
-      bgColor: 'bg-gray-50',
-      borderColor: 'border-gray-200',
-      iconColor: 'text-gray-400',
-      textColor: 'text-gray-600'
+      bgColor: 'bg-[#F5F6F8]',
+      borderColor: 'border-[#E5E5E5]',
+      iconColor: 'text-[#969696]',
+      textColor: 'text-[#5A5A5A]'
     }
   };
 
@@ -69,11 +69,11 @@ export function CheckResultCard({ result }: CheckResultCardProps) {
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-mono text-gray-400">{result.ruleId}</span>
+            <span className="text-xs font-mono text-[#969696]">{result.ruleId}</span>
             <span className={`text-xs px-1.5 py-0.5 rounded ${
-              result.severity === 'critical' ? 'bg-red-100 text-red-700' :
+              result.severity === 'critical' ? 'bg-[#FEF2F2] text-[#BF192B]' :
               result.severity === 'warning' ? 'bg-yellow-100 text-yellow-700' :
-              'bg-gray-100 text-gray-600'
+              'bg-[#F5F6F8] text-[#5A5A5A]'
             }`}>
               {result.severity === 'critical' ? 'Kritik' :
                result.severity === 'warning' ? 'Uyari' : 'Bilgi'}
@@ -86,17 +86,17 @@ export function CheckResultCard({ result }: CheckResultCardProps) {
 
         {result.difference !== undefined && result.status === 'fail' && (
           <div className="text-right">
-            <p className="text-xs text-gray-500">Fark</p>
-            <p className="font-mono font-bold text-red-600">
+            <p className="text-xs text-[#969696]">Fark</p>
+            <p className="font-mono font-bold text-[#BF192B]">
               {formatValue(result.difference)} TL
             </p>
           </div>
         )}
 
         {isExpanded ? (
-          <ChevronUp className="w-5 h-5 text-gray-400" />
+          <ChevronUp className="w-5 h-5 text-[#969696]" />
         ) : (
-          <ChevronDown className="w-5 h-5 text-gray-400" />
+          <ChevronDown className="w-5 h-5 text-[#969696]" />
         )}
       </button>
 
@@ -112,14 +112,14 @@ export function CheckResultCard({ result }: CheckResultCardProps) {
           {(result.expected !== null || result.actual !== null) && (
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div className="bg-white/70 rounded-lg p-3">
-                <p className="text-xs text-gray-500 mb-1">Beklenen</p>
-                <p className="font-mono font-semibold text-gray-800">
+                <p className="text-xs text-[#969696] mb-1">Beklenen</p>
+                <p className="font-mono font-semibold text-[#2E2E2E]">
                   {formatValue(result.expected)} {typeof result.expected === 'number' ? 'TL' : ''}
                 </p>
               </div>
               <div className="bg-white/70 rounded-lg p-3">
-                <p className="text-xs text-gray-500 mb-1">Bulunan</p>
-                <p className="font-mono font-semibold text-gray-800">
+                <p className="text-xs text-[#969696] mb-1">Bulunan</p>
+                <p className="font-mono font-semibold text-[#2E2E2E]">
                   {formatValue(result.actual)} {typeof result.actual === 'number' ? 'TL' : ''}
                 </p>
               </div>
@@ -129,29 +129,29 @@ export function CheckResultCard({ result }: CheckResultCardProps) {
           {/* Evidence */}
           <div className="space-y-2 mb-4">
             <div className="flex items-start gap-2 text-xs">
-              <FileText className="w-4 h-4 text-gray-400 mt-0.5" />
+              <FileText className="w-4 h-4 text-[#969696] mt-0.5" />
               <div>
-                <span className="text-gray-500">Kaynak A:</span>{' '}
-                <span className="font-medium text-gray-700">{result.evidenceA.source}</span>
-                <span className="text-gray-400"> &rarr; </span>
-                <span className="text-gray-600">{result.evidenceA.field}</span>
+                <span className="text-[#969696]">Kaynak A:</span>{' '}
+                <span className="font-medium text-[#5A5A5A]">{result.evidenceA.source}</span>
+                <span className="text-[#969696]"> &rarr; </span>
+                <span className="text-[#5A5A5A]">{result.evidenceA.field}</span>
               </div>
             </div>
             <div className="flex items-start gap-2 text-xs">
-              <FileText className="w-4 h-4 text-gray-400 mt-0.5" />
+              <FileText className="w-4 h-4 text-[#969696] mt-0.5" />
               <div>
-                <span className="text-gray-500">Kaynak B:</span>{' '}
-                <span className="font-medium text-gray-700">{result.evidenceB.source}</span>
-                <span className="text-gray-400"> &rarr; </span>
-                <span className="text-gray-600">{result.evidenceB.field}</span>
+                <span className="text-[#969696]">Kaynak B:</span>{' '}
+                <span className="font-medium text-[#5A5A5A]">{result.evidenceB.source}</span>
+                <span className="text-[#969696]"> &rarr; </span>
+                <span className="text-[#5A5A5A]">{result.evidenceB.field}</span>
               </div>
             </div>
           </div>
 
           {/* Suggestion */}
           {result.suggestion && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
-              <p className="text-xs text-blue-700">
+            <div className="bg-[#E6F9FF] border border-[#ABEBFF] rounded-lg p-3 mb-3">
+              <p className="text-xs text-[#0049AA]">
                 <span className="font-semibold">Oneri:</span> {result.suggestion}
               </p>
             </div>
@@ -159,7 +159,7 @@ export function CheckResultCard({ result }: CheckResultCardProps) {
 
           {/* Legal basis */}
           {result.legalBasis && (
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-[#969696]">
               Yasal Dayanak: {result.legalBasis}
             </p>
           )}

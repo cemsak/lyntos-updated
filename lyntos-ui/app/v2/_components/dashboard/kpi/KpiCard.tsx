@@ -22,11 +22,11 @@ export function KpiCard({ data, onClick, showInfo = true, onInfoClick }: KpiCard
 
   // Status-based background classes
   const statusBgClass = {
-    success: 'bg-emerald-50 border-emerald-200',
-    warning: 'bg-amber-50 border-amber-200',
-    error: 'bg-red-50 border-red-200',
-    info: 'bg-blue-50 border-blue-200',
-    neutral: 'bg-white border-slate-200',
+    success: 'bg-[#ECFDF5] border-[#AAE8B8]',
+    warning: 'bg-[#FFFBEB] border-[#FFF08C]',
+    error: 'bg-[#FEF2F2] border-[#FFC7C9]',
+    info: 'bg-[#E6F9FF] border-[#ABEBFF]',
+    neutral: 'bg-white border-[#E5E5E5]',
   }[status];
 
   // Trend icon
@@ -37,10 +37,10 @@ export function KpiCard({ data, onClick, showInfo = true, onInfoClick }: KpiCard
       : Minus;
 
   const trendColorClass = trend?.direction === 'up'
-    ? 'text-emerald-600'
+    ? 'text-[#00804D]'
     : trend?.direction === 'down'
-      ? 'text-red-600'
-      : 'text-slate-400';
+      ? 'text-[#BF192B]'
+      : 'text-[#969696]';
 
   return (
     <div
@@ -53,7 +53,7 @@ export function KpiCard({ data, onClick, showInfo = true, onInfoClick }: KpiCard
     >
       {/* Header: Label + Badge */}
       <div className="flex items-start justify-between mb-3">
-        <span className="text-sm font-medium text-slate-600 leading-tight">
+        <span className="text-sm font-medium text-[#5A5A5A] leading-tight">
           {label}
         </span>
         {badge && (
@@ -68,7 +68,7 @@ export function KpiCard({ data, onClick, showInfo = true, onInfoClick }: KpiCard
 
       {/* Value */}
       <div className="flex items-baseline gap-2 mb-1">
-        <span className="text-2xl font-bold text-slate-800 font-mono">
+        <span className="text-2xl font-bold text-[#2E2E2E] font-mono">
           {value}
         </span>
         {trend && (
@@ -81,14 +81,14 @@ export function KpiCard({ data, onClick, showInfo = true, onInfoClick }: KpiCard
 
       {/* Sub Label */}
       {subLabel && (
-        <p className="text-xs text-slate-500">{subLabel}</p>
+        <p className="text-xs text-[#969696]">{subLabel}</p>
       )}
 
       {/* Footer: Detail Link + Info */}
-      <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-200/50">
+      <div className="flex items-center justify-between mt-3 pt-2 border-t border-[#E5E5E5]/50">
         {detailUrl ? (
           <button
-            className="text-xs text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-0.5"
+            className="text-xs text-[#0049AA] hover:text-[#0049AA] font-medium flex items-center gap-0.5"
             onClick={(e) => {
               e.stopPropagation();
               // Navigate to detail
@@ -107,7 +107,7 @@ export function KpiCard({ data, onClick, showInfo = true, onInfoClick }: KpiCard
               e.stopPropagation();
               onInfoClick();
             }}
-            className="text-slate-400 hover:text-slate-600 transition-colors"
+            className="text-[#969696] hover:text-[#5A5A5A] transition-colors"
           >
             <Info className="w-4 h-4" />
           </button>

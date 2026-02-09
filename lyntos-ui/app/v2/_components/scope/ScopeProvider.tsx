@@ -1,6 +1,8 @@
 'use client';
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
+import { useLayoutContext } from '../layout/useLayoutContext';
+import type { Client, Period, User } from '../layout/types';
 
 export interface DashboardScope {
   smmm_id: string;
@@ -11,6 +13,9 @@ export interface DashboardScope {
 
 interface ScopeContextValue {
   scope: DashboardScope;
+  selectedClient: Client | null;
+  selectedPeriod: Period | null;
+  user: User | null;
   setScope: (updates: Partial<DashboardScope>) => void;
   isReady: boolean;
 }
@@ -24,41 +29,59 @@ export function ScopeProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [scope, setScopeState] = useState<DashboardScope>(DEFAULT_SCOPE);
   const [isReady, setIsReady] = useState(false);
-  const isInitialMount = useRef(true);
 
-  // Initialize from URL on mount
+  // LayoutContext'ten seçimleri al - BU KRİTİK BAĞLANTI!
+  const { selectedClient, selectedPeriod, user } = useLayoutContext();
+
+  // Track if we've done initial load - ONLY ONCE
+  const hasInitialized = useRef(false);
+  // Track if we're updating URL ourselves (to prevent re-reading)
+  const isUpdatingUrl = useRef(false);
+
+  // SMMM GÜVENİ: Boş başlat
   useEffect(() => {
-    const urlScope: DashboardScope = {
-      smmm_id: searchParams.get('smmm') || searchParams.get('smmm_id') || '',
-      client_id: searchParams.get('client') || searchParams.get('client_id') || '',
-      period: searchParams.get('period') || '',
-      advanced: searchParams.get('adv') === 'true',
-    };
+    if (hasInitialized.current) return;
+    hasInitialized.current = true;
 
-    // Try localStorage fallback if URL is empty
-    if (!urlScope.smmm_id || !urlScope.client_id || !urlScope.period) {
-      try {
-        const stored = localStorage.getItem('lyntos_scope');
-        if (stored) {
-          const parsed = JSON.parse(stored) as Partial<DashboardScope>;
-          urlScope.smmm_id = urlScope.smmm_id || parsed.smmm_id || '';
-          urlScope.client_id = urlScope.client_id || parsed.client_id || '';
-          urlScope.period = urlScope.period || parsed.period || '';
-        }
-      } catch {
-        // Ignore parse errors
-      }
+    // URL parametrelerini temizle (varsa)
+    const currentParams = new URLSearchParams(searchParams.toString());
+    if (currentParams.has('smmm') || currentParams.has('client') || currentParams.has('period')) {
+      router.replace(pathname, { scroll: false });
     }
 
-    setScopeState(urlScope);
+    // Boş scope ile başla
+    setScopeState(DEFAULT_SCOPE);
     setIsReady(true);
-    isInitialMount.current = false;
-  }, [searchParams]);
+  }, []); // Empty dependency - run only once
 
-  // Sync scope changes to URL (separate effect to avoid setState-in-render)
+  // LayoutContext değişikliklerini ScopeProvider'a senkronize et
+  // Bu kritik! Header'daki dropdown seçimleri dashboard'a yansısın
   useEffect(() => {
-    // Skip on initial mount to avoid unnecessary URL update
-    if (isInitialMount.current || !isReady) return;
+    if (!isReady) return;
+
+    // LYNTOS Sprint Fix: period.code kullan (2025-Q1 formatı)
+    // period.id = CLIENT_048_5F970880_2025_Q1 (frontend internal)
+    // period.code = 2025-Q1 (database formatı - API için kullan)
+    const newScope: DashboardScope = {
+      smmm_id: user?.id || '',  // SMMM ID = user ID
+      client_id: selectedClient?.id || '',
+      period: selectedPeriod?.code || '',  // code kullan, id değil!
+      advanced: scope.advanced, // Mevcut değeri koru
+    };
+
+    // Sadece değişiklik varsa güncelle
+    if (
+      newScope.smmm_id !== scope.smmm_id ||
+      newScope.client_id !== scope.client_id ||
+      newScope.period !== scope.period
+    ) {
+      setScopeState(newScope);
+    }
+  }, [selectedClient, selectedPeriod, user, isReady]);
+
+  // Sync scope changes to URL
+  useEffect(() => {
+    if (!isReady || !hasInitialized.current) return;
 
     const params = new URLSearchParams();
     if (scope.smmm_id) params.set('smmm', scope.smmm_id);
@@ -71,11 +94,14 @@ export function ScopeProvider({ children }: { children: ReactNode }) {
 
     // Only update if URL actually changed
     if (newUrl !== currentUrl) {
+      isUpdatingUrl.current = true;
       router.replace(newUrl, { scroll: false });
+      // Reset flag after a tick
+      setTimeout(() => { isUpdatingUrl.current = false; }, 100);
     }
   }, [scope, pathname, router, searchParams, isReady]);
 
-  // Update scope without direct router call
+  // Update scope - this is the ONLY way to change scope after init
   const setScope = useCallback((updates: Partial<DashboardScope>) => {
     setScopeState(prev => {
       const next = { ...prev, ...updates };
@@ -85,7 +111,7 @@ export function ScopeProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  return <ScopeContext.Provider value={{ scope, setScope, isReady }}>{children}</ScopeContext.Provider>;
+  return <ScopeContext.Provider value={{ scope, selectedClient, selectedPeriod, user, setScope, isReady }}>{children}</ScopeContext.Provider>;
 }
 
 export function useDashboardScope(): ScopeContextValue {
@@ -97,4 +123,13 @@ export function useDashboardScope(): ScopeContextValue {
 export function useScopeComplete(): boolean {
   const { scope, isReady } = useDashboardScope();
   return isReady && Boolean(scope.smmm_id && scope.client_id && scope.period);
+}
+
+// SMMM GÜVENİ: Scope'u sıfırla (test ve debug için)
+export function clearScopeStorage(): void {
+  try {
+    localStorage.removeItem('lyntos_scope');
+  } catch {
+    // Ignore
+  }
 }

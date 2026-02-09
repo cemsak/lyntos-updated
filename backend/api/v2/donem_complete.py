@@ -8,8 +8,15 @@ Frontend artık localStorage kullanmayacak, her şey buradan gelecek.
 
 Kaynaklar:
 1. mizan_entries tablosu (Database)
-2. document_uploads tablosu (Yüklenen dosyalar)
+2. document_uploads tablosu (Yüklenen dosyalar - TEK KAYNAK)
 3. Hesaplanan analizler (VDK risk, oranlar)
+
+NOT: Disk fallback KALDIRILDI (2026-01-26)
+     Tüm veri document_uploads tablosu üzerinden takip edilir.
+     Bu sayede:
+     - Test/demo verisi yanlışlıkla gösterilmez
+     - Tüm giriş noktaları aynı kaynağı kullanır
+     - Dedupe ve tracking tutarlı çalışır
 """
 
 from fastapi import APIRouter, HTTPException, Query
@@ -20,12 +27,14 @@ from datetime import datetime
 import sqlite3
 import logging
 import json
+import csv
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v2/donem", tags=["donem-complete"])
 
 DB_PATH = Path(__file__).parent.parent.parent / "database" / "lyntos.db"
+DATA_DIR = Path(__file__).parent.parent.parent / "data"
 
 
 # ============== PYDANTIC MODELS ==============
@@ -101,6 +110,20 @@ class DonemMeta(BaseModel):
     analyzed_at: Optional[str] = None
 
 
+class EDefterDurum(BaseModel):
+    """E-Defter durum bilgisi - edefter_entries tablosundan"""
+    has_yevmiye: bool = False
+    has_kebir: bool = False
+    has_yevmiye_berat: bool = False
+    has_kebir_berat: bool = False
+    has_defter_raporu: bool = False
+    yevmiye_satir: int = 0
+    kebir_satir: int = 0
+    yevmiye_berat_satir: int = 0
+    kebir_berat_satir: int = 0
+    defter_tipi_list: List[str] = Field(default_factory=list)
+
+
 class DonemCompleteResponse(BaseModel):
     """Tam dönem response - TEK ENDPOINT TÜM VERİ"""
     ok: bool = True
@@ -109,6 +132,7 @@ class DonemCompleteResponse(BaseModel):
     files: List[DonemFileSummary] = Field(default_factory=list)
     mizan: Optional[Dict[str, Any]] = None  # hesaplar + summary
     analysis: Optional[DonemAnalysis] = None
+    edefter_durum: Optional[EDefterDurum] = None
     message: Optional[str] = None
 
 
@@ -118,70 +142,82 @@ VDK_CRITERIA = [
     {
         "kodu": "K-09",
         "adi": "Kasa/Aktif Toplam Oranı",
-        "esik": 0.15,
+        "esik_uyari": 0.05,
+        "esik_kritik": 0.15,
         "hesap_kodu": "100",
         "paylda_prefix": ["100"],
         "paydada": "aktif_toplam",
-        "severity": "kritik",
         "aciklama": "Kasa bakiyesinin aktif toplamına oranı",
-        "mevzuat": "VUK Md. 171"
+        "mevzuat": "VUK Md. 171",
+        "oneri_uyari": "Kasa bakiyesi aktif toplamın %5'ini aşmaktadır. Nakit yoğunluk incelenmelidir.",
+        "oneri_kritik": "Kasa bakiyesi aktif toplamın %15'ini aşmaktadır. VDK denetiminde kasa sayımı istenecektir.",
     },
     {
         "kodu": "TF-01",
         "adi": "Ortaklardan Alacak/Sermaye",
-        "esik": 0.25,
+        "esik_uyari": 0.10,
+        "esik_kritik": 0.25,
         "hesap_kodu": "131",
         "paylda_prefix": ["131"],
         "paydada": "sermaye",
-        "severity": "kritik",
         "aciklama": "Ortaklardan alacakların sermayeye oranı",
-        "mevzuat": "Kurumlar Vergisi Kanunu Md. 13"
+        "mevzuat": "KVK Md. 13 (Transfer Fiyatlandırması)",
+        "oneri_uyari": "Ortaklardan alacak sermayenin %10'unu aşmaktadır. Transfer fiyatlandırması incelenmelidir.",
+        "oneri_kritik": "Ortaklardan alacak sermayenin %25'ini aşmaktadır. KVK 13 kapsamında emsal faiz hesaplanmalıdır.",
     },
     {
         "kodu": "OS-01",
-        "adi": "İlişkili Kişilere Borç/Özkaynak",
-        "esik": 3.0,
+        "adi": "İlişkili Kişilere Borç/Özkaynak (Örtülü Sermaye)",
+        "esik_uyari": 1.5,
+        "esik_kritik": 3.0,
         "hesap_kodu": "331",
         "paylda_prefix": ["331"],
         "paydada": "ozsermaye",
-        "severity": "kritik",
-        "aciklama": "Ortaklara borçların öz sermayeye oranı (örtülü sermaye)",
-        "mevzuat": "KVK Md. 12"
+        "aciklama": "Ortaklara borçların öz sermayeye oranı (örtülü sermaye kontrolü)",
+        "mevzuat": "KVK Md. 12",
+        "oneri_uyari": "İlişkili kişi borcu öz sermayenin 1.5 katını aşmaktadır. Örtülü sermaye riski başlıyor.",
+        "oneri_kritik": "İlişkili kişi borcu öz sermayenin 3 katını aşmaktadır. KVK 12 uyarınca örtülü sermaye oluşmuştur.",
     },
     {
         "kodu": "SA-01",
         "adi": "Alacak Tahsilat Süresi",
-        "esik": 365,
+        "esik_uyari": 90,
+        "esik_kritik": 365,
         "hesap_kodu": "120",
         "paylda_prefix": ["120", "121"],
         "paydada": "ciro",
         "formula": "gun",
-        "severity": "uyari",
         "aciklama": "Ticari alacakların ortalama tahsilat süresi",
-        "mevzuat": "VDK 2025 Yönergesi"
+        "mevzuat": "VDK Denetim Yönergesi",
+        "oneri_uyari": "Tahsilat süresi 90 günü aşmaktadır. Alacak yaşlandırması gözden geçirilmelidir.",
+        "oneri_kritik": "Tahsilat süresi 1 yılı aşmaktadır. Şüpheli alacak karşılığı değerlendirilmelidir (VUK 323).",
     },
     {
         "kodu": "SD-01",
         "adi": "Stok Devir Süresi",
-        "esik": 365,
+        "esik_uyari": 120,
+        "esik_kritik": 365,
         "hesap_kodu": "15",
         "paylda_prefix": ["15"],
         "paydada": "satilan_mal",
         "formula": "gun",
-        "severity": "uyari",
         "aciklama": "Stokların ortalama devir süresi",
-        "mevzuat": "VDK 2025 Yönergesi"
+        "mevzuat": "VDK Denetim Yönergesi",
+        "oneri_uyari": "Stok devir süresi 120 günü aşmaktadır. Stok sayımı ve değerleme kontrol edilmelidir.",
+        "oneri_kritik": "Stok devir süresi 1 yılı aşmaktadır. Fiktif stok veya değer düşüklüğü riski incelenmelidir.",
     },
     {
         "kodu": "KDV-01",
         "adi": "Devreden KDV / Satışlar",
-        "esik": 0.18,
+        "esik_uyari": 0.10,
+        "esik_kritik": 0.18,
         "hesap_kodu": "190",
         "paylda_prefix": ["190"],
         "paydada": "ciro",
-        "severity": "uyari",
         "aciklama": "Devreden KDV'nin satışlara oranı",
-        "mevzuat": "KDV Kanunu Md. 29"
+        "mevzuat": "KDVK Md. 29",
+        "oneri_uyari": "Devreden KDV satışların %10'unu aşmaktadır. Yüksek KDV iade riski oluşabilir.",
+        "oneri_kritik": "Devreden KDV satışların %18'ini aşmaktadır. SMİYB riski incelenmelidir.",
     },
 ]
 
@@ -193,6 +229,13 @@ def get_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
+
+
+# ============== HELPER: Disk fallback fonksiyonları KALDIRILDI ==============
+# Tarih: 2026-01-26
+# Sebep: Tüm veri document_uploads tablosu üzerinden takip edilecek
+#        Disk'teki test/demo verisi yanlışlıkla gösterilmeyecek
+# ==============================================================================
 
 
 def calculate_mizan_summary(entries: List[Dict]) -> Dict[str, Any]:
@@ -209,6 +252,17 @@ def calculate_mizan_summary(entries: List[Dict]) -> Dict[str, Any]:
     sermaye = 0.0
     ciro = 0.0
     satilan_mal = 0.0
+
+    # TDHP Gelir Tablosu kalemleri
+    brut_satislar = 0.0       # 600 alacak
+    satis_iadeleri = 0.0      # 610, 611 borç
+    satis_maliyeti = 0.0      # 620, 621, 622 borç
+    pazarlama_gideri = 0.0    # 631, 760 (yansıtılmışsa 631)
+    genel_yonetim_gideri = 0.0  # 632, 770 (yansıtılmışsa 632)
+    finansman_gideri = 0.0    # 660, 780 (yansıtılmışsa 660)
+    diger_gelirler = 0.0      # 640-649 alacak
+    diger_giderler = 0.0      # 654-659 borç
+    tesvik_gelirleri = 0.0    # 602 alacak (SSK/teşvik)
 
     for entry in entries:
         kod = entry.get('hesap_kodu', '')
@@ -232,19 +286,54 @@ def calculate_mizan_summary(entries: List[Dict]) -> Dict[str, Any]:
             ozsermaye += alacak - borc
             if kod.startswith('500'):
                 sermaye += alacak - borc
-        # Gelirler (6xx)
+        # Gelirler ve Giderler (6xx) - TDHP Gelir Tablosu düzeni
         elif kod.startswith('6'):
             if kod.startswith('600'):
+                brut_satislar += alacak - borc
                 ciro += alacak - borc
-            elif kod.startswith('620') or kod.startswith('621'):
+            elif kod.startswith('602'):
+                tesvik_gelirleri += alacak - borc
+            elif kod.startswith('610') or kod.startswith('611'):
+                satis_iadeleri += borc - alacak
+            elif kod.startswith('620') or kod.startswith('621') or kod.startswith('622'):
+                satis_maliyeti += borc - alacak
                 satilan_mal += borc - alacak
+            elif kod.startswith('631'):
+                pazarlama_gideri += borc - alacak
+            elif kod.startswith('632'):
+                genel_yonetim_gideri += borc - alacak
+            elif kod.startswith('660'):
+                finansman_gideri += borc - alacak
+            elif kod[:3] >= '640' and kod[:3] <= '649':
+                diger_gelirler += alacak - borc
+            elif kod[:3] >= '654' and kod[:3] <= '659':
+                diger_giderler += borc - alacak
+            # Genel gelir/gider toplamları
             gelir_toplam += alacak - borc
-        # Giderler (7xx)
+        # Giderler (7xx) - maliyet yansıtma hesapları
         elif kod.startswith('7'):
             gider_toplam += borc - alacak
 
     pasif_toplam = ozsermaye + yabanci_kaynak
-    net_kar = gelir_toplam - gider_toplam
+
+    # ═══════════════════════════════════════════════════════════════
+    # NET KAR HESAPLAMASI - TDHP Gelir Tablosu Düzeni
+    # ═══════════════════════════════════════════════════════════════
+    # Brüt Satışlar = 600 alacak - 610 borç - 611 borç
+    net_satislar = brut_satislar - satis_iadeleri + tesvik_gelirleri
+    # Brüt Kâr = Net Satışlar - Satılan Malın Maliyeti (620+621+622)
+    brut_kar = net_satislar - satis_maliyeti
+    # Faaliyet Kârı = Brüt Kâr - Pazarlama - Genel Yönetim - Finansman
+    faaliyet_kari = brut_kar - pazarlama_gideri - genel_yonetim_gideri - finansman_gideri
+    # Diğer Faaliyetler = 640-649 gelir - 654-659 gider
+    diger_faaliyetler = diger_gelirler - diger_giderler
+    # Vergi Öncesi Kâr
+    vergi_oncesi_kar = faaliyet_kari + diger_faaliyetler
+    # Tahmini Kurumlar Vergisi (%25)
+    tahmini_kv = max(vergi_oncesi_kar * 0.25, 0)
+    # Net Kâr
+    net_kar = vergi_oncesi_kar - tahmini_kv
+
     fark = abs(toplam_borc - toplam_alacak)
     dengeli = fark < 1.0  # 1 TL tolerans
 
@@ -264,11 +353,32 @@ def calculate_mizan_summary(entries: List[Dict]) -> Dict[str, Any]:
         "sermaye": round(sermaye, 2),
         "ciro": round(ciro, 2),
         "satilan_mal": round(satilan_mal, 2),
+        # TDHP Gelir Tablosu detayları
+        "brut_satislar": round(brut_satislar, 2),
+        "satis_iadeleri": round(satis_iadeleri, 2),
+        "tesvik_gelirleri": round(tesvik_gelirleri, 2),
+        "net_satislar": round(net_satislar, 2),
+        "satis_maliyeti": round(satis_maliyeti, 2),
+        "brut_kar": round(brut_kar, 2),
+        "pazarlama_gideri": round(pazarlama_gideri, 2),
+        "genel_yonetim_gideri": round(genel_yonetim_gideri, 2),
+        "finansman_gideri": round(finansman_gideri, 2),
+        "faaliyet_kari": round(faaliyet_kari, 2),
+        "diger_gelirler": round(diger_gelirler, 2),
+        "diger_giderler": round(diger_giderler, 2),
+        "vergi_oncesi_kar": round(vergi_oncesi_kar, 2),
+        "tahmini_kv": round(tahmini_kv, 2),
     }
 
 
 def calculate_vdk_risks(entries: List[Dict], summary: Dict) -> List[Dict]:
-    """VDK risk kriterlerini hesapla"""
+    """
+    VDK risk kriterlerini hesapla - İki seviyeli eşik sistemi.
+
+    Her kriter için uyarı ve kritik eşik değerleri vardır:
+    - Uyarı: SMMM'nin dikkat etmesi gereken seviye
+    - Kritik: VDK denetiminde sorun yaratacak seviye
+    """
 
     risks = []
 
@@ -295,32 +405,45 @@ def calculate_vdk_risks(entries: List[Dict], summary: Dict) -> List[Dict]:
         payda_key = kriter["paydada"]
         payda_value = summary.get(payda_key, 0)
 
-        # Özel hesaplamalar
+        # Hesaplama
         if payda_value == 0:
             hesaplanan = 0
             durum = "eksik_veri"
+            severity = "bilgi"
+            oneri = None
         else:
             if kriter.get("formula") == "gun":
-                # Gün hesaplama (365 * oran)
                 hesaplanan = (paylda_value / payda_value) * 365
             else:
                 hesaplanan = paylda_value / payda_value
 
-            esik = kriter["esik"]
-            if hesaplanan > esik:
+            esik_kritik = kriter["esik_kritik"]
+            esik_uyari = kriter["esik_uyari"]
+
+            if hesaplanan > esik_kritik:
                 durum = "asim"
+                severity = "kritik"
+                oneri = kriter.get("oneri_kritik")
+            elif hesaplanan > esik_uyari:
+                durum = "asim"
+                severity = "uyari"
+                oneri = kriter.get("oneri_uyari")
             else:
                 durum = "normal"
+                severity = "bilgi"
+                oneri = None
 
         risks.append({
             "kriter_kodu": kriter["kodu"],
             "kriter_adi": kriter["adi"],
-            "severity": kriter["severity"] if durum == "asim" else "bilgi",
+            "severity": severity,
             "hesaplanan_deger": round(hesaplanan, 4),
-            "esik_deger": kriter["esik"],
+            "esik_deger": kriter["esik_kritik"],
+            "esik_uyari": kriter.get("esik_uyari", 0),
+            "esik_kritik": kriter.get("esik_kritik", 0),
             "durum": durum,
             "aciklama": kriter["aciklama"],
-            "oneri": f"Bu oran {kriter['esik']} üzerinde olmamalı" if durum == "asim" else None,
+            "oneri": oneri,
             "mevzuat_ref": kriter.get("mevzuat")
         })
 
@@ -398,25 +521,66 @@ async def get_donem_complete(
             for row in file_rows
         ]
 
-        # Dosya türlerine göre kontrol
+        # Dosya türlerine göre kontrol (SADECE document_uploads tablosundan)
         doc_types = set(f.doc_type for f in files)
         has_mizan = "MIZAN" in doc_types
         has_beyanname = "BEYANNAME" in doc_types
         has_banka = "BANKA" in doc_types
+        has_tahakkuk = "TAHAKKUK" in doc_types
+        has_edefter = "EDEFTER_YEVMIYE" in doc_types or "EDEFTER_KEBIR" in doc_types or "EDEFTER_BERAT" in doc_types
 
-        # 2. MİZAN VERİSİNİ ÇEK
+        # E-DEFTER DURUM: edefter_entries tablosundan defter tipi kontrolü
+        edefter_durum_data = None
+        try:
+            cursor.execute("""
+                SELECT defter_tipi, COUNT(*) as satir_sayisi
+                FROM edefter_entries
+                WHERE client_id = ? AND period_id = ?
+                GROUP BY defter_tipi
+            """, (client_id, period))
+            edefter_rows = cursor.fetchall()
+            defter_map = {row["defter_tipi"]: row["satir_sayisi"] for row in edefter_rows}
+
+            if defter_map:
+                edefter_durum_data = EDefterDurum(
+                    has_yevmiye="Y" in defter_map,
+                    has_kebir="K" in defter_map,
+                    has_yevmiye_berat="YB" in defter_map,
+                    has_kebir_berat="KB" in defter_map,
+                    has_defter_raporu="DR" in defter_map,
+                    yevmiye_satir=defter_map.get("Y", 0),
+                    kebir_satir=defter_map.get("K", 0),
+                    yevmiye_berat_satir=defter_map.get("YB", 0),
+                    kebir_berat_satir=defter_map.get("KB", 0),
+                    defter_tipi_list=list(defter_map.keys()),
+                )
+                # E-defter varsa doc_types'a da ekle (belge durumu için)
+                if defter_map.get("Y"):
+                    has_edefter = True
+        except Exception as edefter_err:
+            logger.warning(f"E-Defter durum sorgusu hatası (görmezden gelindi): {edefter_err}")
+
+        # NOT: Disk fallback KALDIRILDI (2026-01-26)
+        # Tüm veri document_uploads tablosu üzerinden takip edilir
+        # Test/demo verisi yanlışlıkla gösterilmez
+
+        # 2. MİZAN VERİSİNİ ÇEK - SADECE Database'den
+        # TÜM kayıtları çek (özet ve VDK analizi için hepsi gerekli)
         cursor.execute("""
             SELECT hesap_kodu, hesap_adi, borc_bakiye, alacak_bakiye
             FROM mizan_entries
             WHERE client_id = ? AND period_id = ?
             ORDER BY hesap_kodu
-            LIMIT ?
-        """, (client_id, period, limit_accounts))
+        """, (client_id, period))
 
         mizan_rows = cursor.fetchall()
 
         mizan_data = None
         analysis_data = None
+
+        # NOT: Disk fallback KALDIRILDI (2026-01-26)
+        # Mizan verisi SADECE mizan_entries tablosundan okunur
+        # Bu tablo document_uploads üzerinden yüklenen dosyalardan beslenir
 
         if mizan_rows:
             # Mizan hesaplarını dönüştür
@@ -430,16 +594,19 @@ async def get_donem_complete(
                 for row in mizan_rows
             ]
 
-            # Özet hesapla
+            # Özet hesapla (TÜM hesaplar dahil - 6xx gelir/gider hesapları için şart)
             summary = calculate_mizan_summary(mizan_entries)
 
-            # VDK risk analizi
+            # VDK risk analizi (TÜM hesaplar dahil)
             vdk_risks = calculate_vdk_risks(mizan_entries, summary)
             risk_score, risk_level = calculate_risk_score(vdk_risks)
 
+            # Hesap listesini limitle (özet ve analiz zaten tüm veriden hesaplandı)
+            hesaplar_limited = mizan_entries[:limit_accounts] if include_accounts else []
+
             mizan_data = {
                 "summary": summary,
-                "hesaplar": mizan_entries if include_accounts else [],
+                "hesaplar": hesaplar_limited,
             }
 
             analysis_data = DonemAnalysis(
@@ -499,6 +666,7 @@ async def get_donem_complete(
             files=files,
             mizan=mizan_data,
             analysis=analysis_data,
+            edefter_durum=edefter_durum_data,
             message=message
         )
 

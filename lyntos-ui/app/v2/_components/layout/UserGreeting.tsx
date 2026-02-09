@@ -28,9 +28,9 @@ export function UserGreeting() {
 
   return (
     <div className="hidden lg:block">
-      <span className="text-[14px] text-[#697386]">
+      <span className="text-[14px] text-[#5A5A5A]">
         {greeting},{' '}
-        <span className="font-medium text-[#1a1f36]">
+        <span className="font-medium text-[#2E2E2E]">
           {firstName} {honorific}
         </span>
       </span>

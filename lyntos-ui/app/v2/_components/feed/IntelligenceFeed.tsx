@@ -119,12 +119,12 @@ export function IntelligenceFeed({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-            <Bell className="w-5 h-5 text-blue-600" />
+          <h2 className="text-lg font-bold text-[#2E2E2E] flex items-center gap-2">
+            <Bell className="w-5 h-5 text-[#0049AA]" />
             {title}
           </h2>
           {urgentCount > 0 && (
-            <span className="bg-red-100 text-red-700 text-xs font-bold px-2 py-0.5 rounded-full">
+            <span className="bg-[#FEF2F2] text-[#BF192B] text-xs font-bold px-2 py-0.5 rounded-full">
               {urgentCount} Acil
             </span>
           )}
@@ -133,7 +133,7 @@ export function IntelligenceFeed({
         {/* Filter controls */}
         {showFilters && (
           <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-slate-400" />
+            <Filter className="w-4 h-4 text-[#969696]" />
             <div className="flex gap-1">
               <FilterButton
                 active={filterSeverity === 'ALL'}
@@ -181,7 +181,7 @@ export function IntelligenceFeed({
       {sortedItems.length > maxVisible && (
         <button
           onClick={() => setShowAll(!showAll)}
-          className="w-full flex items-center justify-center gap-2 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-colors"
+          className="w-full flex items-center justify-center gap-2 py-2 text-sm font-medium text-[#5A5A5A] hover:text-[#2E2E2E] hover:bg-[#F5F6F8] rounded-lg transition-colors"
         >
           {showAll ? (
             <>
@@ -213,8 +213,8 @@ function FilterButton({ active, onClick, count, severity, children }: FilterButt
   const baseClasses = "text-xs font-medium px-2 py-1 rounded transition-colors";
   const activeClasses = severity
     ? `${SEVERITY_CONFIG[severity].bgColor} ${SEVERITY_CONFIG[severity].color}`
-    : 'bg-blue-100 text-blue-700';
-  const inactiveClasses = "bg-slate-100 text-slate-600 hover:bg-slate-200";
+    : 'bg-[#E6F9FF] text-[#0049AA]';
+  const inactiveClasses = "bg-[#F5F6F8] text-[#5A5A5A] hover:bg-[#E5E5E5]";
 
   return (
     <button
@@ -231,11 +231,11 @@ function FilterButton({ active, onClick, count, severity, children }: FilterButt
 function EmptyState({ filtered }: { filtered: boolean }) {
   return (
     <div className="flex flex-col items-center justify-center py-12 text-center">
-      <BellOff className="w-12 h-12 text-slate-300 mb-4" />
-      <h3 className="text-lg font-medium text-slate-600 mb-1">
+      <BellOff className="w-12 h-12 text-[#B4B4B4] mb-4" />
+      <h3 className="text-lg font-medium text-[#5A5A5A] mb-1">
         {filtered ? 'Bu filtrede öğe yok' : 'Tüm işlemler tamamlandı'}
       </h3>
-      <p className="text-sm text-slate-400">
+      <p className="text-sm text-[#969696]">
         {filtered
           ? 'Farklı bir filtre deneyin'
           : 'Harika! Şu an bekleyen kritik iş yok.'}

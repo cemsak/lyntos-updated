@@ -14,27 +14,28 @@ interface GeciciVergiPanelProps {
 }
 
 const DURUM_ICONS: Record<KontrolDurumu, React.ReactNode> = {
-  tamamlandi: <CheckCircle2 className="w-5 h-5 text-green-600" />,
-  bekliyor: <Clock className="w-5 h-5 text-slate-400" />,
-  uyari: <AlertTriangle className="w-5 h-5 text-amber-500" />,
-  hata: <XCircle className="w-5 h-5 text-red-500" />,
-  uygulanamaz: <Minus className="w-5 h-5 text-slate-300" />,
+  tamamlandi: <CheckCircle2 className="w-5 h-5 text-[#00804D]" />,
+  bekliyor: <Clock className="w-5 h-5 text-[#969696]" />,
+  uyari: <AlertTriangle className="w-5 h-5 text-[#FFB114]" />,
+  hata: <XCircle className="w-5 h-5 text-[#F0282D]" />,
+  uygulanamaz: <Minus className="w-5 h-5 text-[#B4B4B4]" />,
 };
 
 const RISK_COLORS: Record<RiskSeviyesi, string> = {
-  dusuk: 'bg-green-50 text-green-700 border-green-200',
-  orta: 'bg-amber-50 text-amber-700 border-amber-200',
-  yuksek: 'bg-orange-50 text-orange-700 border-orange-200',
-  kritik: 'bg-red-50 text-red-700 border-red-200',
+  dusuk: 'bg-[#ECFDF5] text-[#00804D] border-[#AAE8B8]',
+  orta: 'bg-[#FFFBEB] text-[#FA841E] border-[#FFF08C]',
+  yuksek: 'bg-[#FFFBEB] text-[#FA841E] border-[#FFF08C]',
+  kritik: 'bg-[#FEF2F2] text-[#BF192B] border-[#FFC7C9]',
 };
 
 export function GeciciVergiPanel({
-  donem = '2025-Q4',
+  donem,  // SMMM GÜVENİ: Varsayılan değer KALDIRILDI - dönem zorunlu
   kontrolDurumlari = {},
   onKontrolClick,
 }: GeciciVergiPanelProps) {
   const [expandedKontrol, setExpandedKontrol] = useState<string | null>(null);
 
+  // REACT RULES OF HOOKS: Tüm hook'lar koşullu return'lerden ÖNCE çağrılmalı
   const kontrollerWithDurum = useMemo(() => {
     return GECICI_VERGI_KONTROLLER.map(kontrol => ({
       ...kontrol,
@@ -51,10 +52,24 @@ export function GeciciVergiPanel({
   }, [kontrollerWithDurum]);
 
   const donemBilgisi = useMemo(() => {
+    // donem yoksa default değerler döndür
+    if (!donem) return { yil: 2025, ceyrek: 4 };
     const match = donem.match(/(\d{4})-Q(\d)/);
     if (!match) return { yil: 2025, ceyrek: 4 };
     return { yil: parseInt(match[1]), ceyrek: parseInt(match[2]) };
   }, [donem]);
+
+  // SMMM GÜVENİ: Dönem yoksa panel render etme - hook'lardan SONRA
+  if (!donem) {
+    return (
+      <Card title="Geçici Vergi Kontrolleri">
+        <div className="py-8 text-center">
+          <span className="text-4xl mb-4 block">📋</span>
+          <p className="text-sm text-[#969696]">Dönem seçildikten sonra kontroller görünecektir.</p>
+        </div>
+      </Card>
+    );
+  }
 
   const toggleExpand = (kontrolId: string) => {
     setExpandedKontrol(prev => prev === kontrolId ? null : kontrolId);
@@ -74,13 +89,13 @@ export function GeciciVergiPanel({
     >
       {/* Progress Bar */}
       <div className="mb-4">
-        <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+        <div className="h-2 bg-[#F5F6F8] rounded-full overflow-hidden">
           <div
-            className="h-full bg-blue-600 rounded-full transition-all duration-500"
+            className="h-full bg-[#0049AA] rounded-full transition-all duration-500"
             style={{ width: `${stats.oran}%` }}
           />
         </div>
-        <div className="flex justify-between mt-1 text-xs text-slate-500">
+        <div className="flex justify-between mt-1 text-xs text-[#969696]">
           <span>%{stats.oran} tamamlandi</span>
           <span>
             {stats.uyari > 0 && `${stats.uyari} uyari`}
@@ -93,10 +108,10 @@ export function GeciciVergiPanel({
       {/* Kontrol Listesi */}
       <div className="space-y-2 max-h-[400px] overflow-y-auto">
         {kontrollerWithDurum.map((kontrol) => (
-          <div key={kontrol.id} className="border border-slate-200 rounded-lg overflow-hidden">
+          <div key={kontrol.id} className="border border-[#E5E5E5] rounded-lg overflow-hidden">
             {/* Kontrol Satiri */}
             <div
-              className="px-4 py-3 cursor-pointer hover:bg-slate-50 transition-colors"
+              className="px-4 py-3 cursor-pointer hover:bg-[#F5F6F8] transition-colors"
               onClick={() => toggleExpand(kontrol.id)}
             >
               <div className="flex items-center gap-3">
@@ -104,14 +119,14 @@ export function GeciciVergiPanel({
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-mono text-slate-400">
+                    <span className="text-xs font-mono text-[#969696]">
                       {kontrol.id}
                     </span>
-                    <h4 className="font-medium text-slate-800 text-sm truncate">
+                    <h4 className="font-medium text-[#2E2E2E] text-sm truncate">
                       {kontrol.baslik}
                     </h4>
                   </div>
-                  <p className="text-xs text-slate-500 truncate">
+                  <p className="text-xs text-[#969696] truncate">
                     {kontrol.aciklama}
                   </p>
                 </div>
@@ -121,28 +136,28 @@ export function GeciciVergiPanel({
                 </span>
 
                 {expandedKontrol === kontrol.id ? (
-                  <ChevronDown className="w-4 h-4 text-slate-400" />
+                  <ChevronDown className="w-4 h-4 text-[#969696]" />
                 ) : (
-                  <ChevronRight className="w-4 h-4 text-slate-400" />
+                  <ChevronRight className="w-4 h-4 text-[#969696]" />
                 )}
               </div>
             </div>
 
             {/* Detay Paneli */}
             {expandedKontrol === kontrol.id && (
-              <div className="px-4 pb-4 pt-0 border-t border-slate-100">
-                <div className="bg-slate-50 rounded-lg p-4 mt-3 space-y-3">
+              <div className="px-4 pb-4 pt-0 border-t border-[#E5E5E5]">
+                <div className="bg-[#F5F6F8] rounded-lg p-4 mt-3 space-y-3">
                   <div>
-                    <h5 className="text-xs font-medium text-slate-700 mb-1">Aciklama</h5>
-                    <p className="text-sm text-slate-600">{kontrol.detayliAciklama}</p>
+                    <h5 className="text-xs font-medium text-[#5A5A5A] mb-1">Aciklama</h5>
+                    <p className="text-sm text-[#5A5A5A]">{kontrol.detayliAciklama}</p>
                   </div>
 
                   <div>
-                    <h5 className="text-xs font-medium text-slate-700 mb-1">Kontrol Noktalari</h5>
+                    <h5 className="text-xs font-medium text-[#5A5A5A] mb-1">Kontrol Noktalari</h5>
                     <ul className="space-y-1">
                       {kontrol.kontrolNoktasi.map((nokta, idx) => (
-                        <li key={idx} className="text-xs text-slate-600 flex items-start gap-1">
-                          <span className="text-slate-400">-</span>
+                        <li key={idx} className="text-xs text-[#5A5A5A] flex items-start gap-1">
+                          <span className="text-[#969696]">-</span>
                           {nokta}
                         </li>
                       ))}
@@ -151,20 +166,20 @@ export function GeciciVergiPanel({
 
                   {kontrol.hesaplamaFormulu && (
                     <div>
-                      <h5 className="text-xs font-medium text-slate-700 mb-1">Hesaplama</h5>
-                      <code className="text-xs bg-slate-200 px-2 py-1 rounded text-slate-700 block">
+                      <h5 className="text-xs font-medium text-[#5A5A5A] mb-1">Hesaplama</h5>
+                      <code className="text-xs bg-[#E5E5E5] px-2 py-1 rounded text-[#5A5A5A] block">
                         {kontrol.hesaplamaFormulu}
                       </code>
                     </div>
                   )}
 
                   <div>
-                    <h5 className="text-xs font-medium text-slate-700 mb-1">Yasal Dayanak</h5>
+                    <h5 className="text-xs font-medium text-[#5A5A5A] mb-1">Yasal Dayanak</h5>
                     <div className="flex flex-wrap gap-1">
                       {kontrol.yasalDayanak.map((dayanak, idx) => (
                         <span
                           key={idx}
-                          className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded"
+                          className="text-xs bg-[#E6F9FF] text-[#0049AA] px-2 py-0.5 rounded"
                         >
                           {dayanak.kanun} Md.{dayanak.madde}
                         </span>
@@ -174,21 +189,21 @@ export function GeciciVergiPanel({
 
                   {kontrol.oneriler.length > 0 && (
                     <div>
-                      <h5 className="text-xs font-medium text-green-700 mb-1">Oneriler</h5>
+                      <h5 className="text-xs font-medium text-[#00804D] mb-1">Oneriler</h5>
                       <ul className="space-y-1">
                         {kontrol.oneriler.map((oneri, idx) => (
-                          <li key={idx} className="text-xs text-slate-600">- {oneri}</li>
+                          <li key={idx} className="text-xs text-[#5A5A5A]">- {oneri}</li>
                         ))}
                       </ul>
                     </div>
                   )}
 
                   {kontrol.uyarilar.length > 0 && (
-                    <div className="bg-amber-50 border border-amber-200 rounded p-2">
-                      <h5 className="text-xs font-medium text-amber-700 mb-1">Dikkat</h5>
+                    <div className="bg-[#FFFBEB] border border-[#FFF08C] rounded p-2">
+                      <h5 className="text-xs font-medium text-[#FA841E] mb-1">Dikkat</h5>
                       <ul className="space-y-1">
                         {kontrol.uyarilar.map((uyari, idx) => (
-                          <li key={idx} className="text-xs text-amber-700">- {uyari}</li>
+                          <li key={idx} className="text-xs text-[#FA841E]">- {uyari}</li>
                         ))}
                       </ul>
                     </div>
@@ -200,7 +215,7 @@ export function GeciciVergiPanel({
                         e.stopPropagation();
                         onKontrolClick?.(kontrol.id);
                       }}
-                      className="px-3 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                      className="px-3 py-1.5 text-xs bg-[#0049AA] text-white rounded hover:bg-[#0049AA] transition-colors"
                     >
                       Kontrolu Baslat
                     </button>
@@ -213,22 +228,22 @@ export function GeciciVergiPanel({
       </div>
 
       {/* Footer */}
-      <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-sm">
+      <div className="pt-4 mt-4 border-t border-[#E5E5E5] flex items-center justify-between text-sm">
         <div className="flex gap-4">
-          <span className="flex items-center gap-1 text-green-600">
+          <span className="flex items-center gap-1 text-[#00804D]">
             <CheckCircle2 className="w-4 h-4" />
             {stats.tamamlanan}
           </span>
-          <span className="flex items-center gap-1 text-amber-500">
+          <span className="flex items-center gap-1 text-[#FFB114]">
             <AlertTriangle className="w-4 h-4" />
             {stats.uyari}
           </span>
-          <span className="flex items-center gap-1 text-red-500">
+          <span className="flex items-center gap-1 text-[#F0282D]">
             <XCircle className="w-4 h-4" />
             {stats.hata}
           </span>
         </div>
-        <button className="text-xs text-slate-500 hover:text-slate-700">
+        <button className="text-xs text-[#969696] hover:text-[#5A5A5A]">
           Rapor Indir
         </button>
       </div>

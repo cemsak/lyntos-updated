@@ -149,7 +149,8 @@ class KurganSimulator:
         sector_group: Optional[str],
         mizan_data: Dict[str, float],
         tax_certificates: List[Dict] = None,
-        risky_suppliers: List[str] = None
+        risky_suppliers: List[str] = None,
+        sector_averages: Optional[Dict[str, Any]] = None
     ) -> SimulationResult:
         """
         Run full KURGAN simulation
@@ -163,6 +164,7 @@ class KurganSimulator:
             mizan_data: Trial balance data {account_code: balance}
             tax_certificates: List of tax certificate data for trend analysis
             risky_suppliers: List of risky supplier VKNs found
+            sector_averages: TCMB EVDS sector ratios (nakit_orani, alacak_devir_hizi, etc.)
 
         Returns:
             SimulationResult with all alarms
@@ -176,7 +178,8 @@ class KurganSimulator:
                 sector_group=sector_group,
                 mizan_data=mizan_data,
                 tax_certificates=tax_certificates or [],
-                risky_suppliers=risky_suppliers or []
+                risky_suppliers=risky_suppliers or [],
+                sector_averages=sector_averages or {}
             )
             alarms.append(alarm)
 
@@ -209,11 +212,13 @@ class KurganSimulator:
         sector_group: Optional[str],
         mizan_data: Dict[str, float],
         tax_certificates: List[Dict],
-        risky_suppliers: List[str]
+        risky_suppliers: List[str],
+        sector_averages: Dict[str, Any] = None
     ) -> KurganAlarm:
         """Evaluate a single KURGAN rule"""
 
         rule_id = rule["id"]
+        sector_averages = sector_averages or {}
 
         # Get sector-specific threshold
         thresholds = rule.get("sector_thresholds", {})
@@ -245,11 +250,11 @@ class KurganSimulator:
 
         # Evaluate based on rule type
         if rule_id == "K-09":
-            alarm = self._eval_kasa_rule(alarm, mizan_data, threshold, sector_group)
+            alarm = self._eval_kasa_rule(alarm, mizan_data, threshold, sector_group, sector_averages)
         elif rule_id == "K-15":
             alarm = self._eval_ortaklar_rule(alarm, mizan_data, threshold)
         elif rule_id == "K-22":
-            alarm = self._eval_stok_rule(alarm, mizan_data, threshold, sector_group)
+            alarm = self._eval_stok_rule(alarm, mizan_data, threshold, sector_group, sector_averages)
         elif rule_id == "K-31":
             alarm = self._eval_alacak_rule(alarm, mizan_data, threshold)
         elif rule_id == "K-24":
@@ -266,7 +271,8 @@ class KurganSimulator:
         alarm: KurganAlarm,
         mizan: Dict,
         threshold: float,
-        sector_group: Optional[str]
+        sector_group: Optional[str],
+        sector_averages: Dict[str, Any] = None
     ) -> KurganAlarm:
         """K-09: High cash balance"""
 
@@ -285,7 +291,9 @@ class KurganSimulator:
         if total_assets > 0:
             ratio = (kasa / total_assets) * 100
             alarm.actual_value = round(ratio, 2)
-            alarm.sector_average = threshold * 0.6  # Approximate sector average
+            # Gerçek sektör ortalaması EVDS'den (nakit_orani = kasa/aktif)
+            _nakit = (sector_averages or {}).get("nakit_orani")
+            alarm.sector_average = round(_nakit * 100, 2) if _nakit is not None else None
 
             if ratio > threshold:
                 alarm.triggered = True
@@ -342,7 +350,8 @@ class KurganSimulator:
         alarm: KurganAlarm,
         mizan: Dict,
         threshold: float,
-        sector_group: Optional[str]
+        sector_group: Optional[str],
+        sector_averages: Dict[str, Any] = None
     ) -> KurganAlarm:
         """K-22: Inventory turnover anomaly"""
 
@@ -352,7 +361,9 @@ class KurganSimulator:
         if stok > 0 and satis_maliyeti > 0:
             turnover = satis_maliyeti / stok
             alarm.actual_value = round(turnover, 2)
-            alarm.sector_average = threshold
+            # Gerçek sektör stok devir hızı EVDS'den
+            _devir = (sector_averages or {}).get("alacak_devir_hizi")
+            alarm.sector_average = round(_devir, 2) if _devir is not None else None
 
             deviation = abs(turnover - threshold) / threshold * 100 if threshold else 0
 

@@ -3,6 +3,22 @@ LYNTOS AI Router
 Intelligent routing of tasks to appropriate AI providers
 """
 
+# .env yüklemesi - provider'lar initialize edilmeden önce
+# NOT: load_dotenv bazı ortamlarda düzgün çalışmıyor, manuel parse kullanıyoruz
+import os
+from pathlib import Path
+
+_env_path = Path(__file__).resolve().parent.parent.parent / ".env"
+if _env_path.exists():
+    with open(_env_path, 'r') as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith('#') and '=' in line:
+                key, value = line.split('=', 1)
+                # Sadece set edilmemişse set et
+                if not os.environ.get(key):
+                    os.environ[key] = value
+
 import logging
 from typing import Dict, List, Optional, Tuple
 
@@ -43,6 +59,9 @@ ROUTING_RULES: Dict[Tuple[TaskType, Optional[Complexity]], AIProvider] = {
     # Medium complexity summarization -> GPT-4o
     (TaskType.SUMMARIZATION, Complexity.MEDIUM): AIProvider.OPENAI_GPT4O,
     (TaskType.SUMMARIZATION, Complexity.HIGH): AIProvider.CLAUDE,
+
+    # VDK Inspector -> Claude (5 uzman perspektifi)
+    (TaskType.VDK_INSPECTOR, None): AIProvider.CLAUDE,
 
     # Default -> Claude
     (TaskType.GENERAL, None): AIProvider.CLAUDE,

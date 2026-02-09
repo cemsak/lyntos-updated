@@ -1,0 +1,26 @@
+{
+  "meta": {
+    "son_guncelleme": "2026-01-15",
+    "guncelleme_notu": "TCMB PPK karari Ocak 2026 + TUIK Aralik 2025"
+  },
+  "faiz_oranlari": {
+    "politika_faizi": 0.45,
+    "enflasyon_yillik": 0.445,
+    "reeskont_faizi": 0.55,
+    "gecikme_zammi_aylik": 0.044,
+    "tecil_faizi_yillik": 0.36
+  },
+  "doviz_fallback": {
+    "usd_kuru": 43.50,
+    "eur_kuru": 52.00,
+    "gbp_kuru": 54.00
+  },
+  "yiufe_endeks": {
+    "2024-12": 2832.15,
+    "2025-01": 2876.43,
+    "2025-02": 2921.08,
+    "2025-03": 2958.74,
+    "kaynak": "TÜİK resmi Yİ-ÜFE verileri (2003=100 bazlı)",
+    "not": "Tahmini değerler KULLANILAMAZ. Sadece TÜİK yayınladığı resmi rakamlar girilmelidir."
+  }
+}

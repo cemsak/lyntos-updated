@@ -1,14 +1,17 @@
 """
-RegWatch Scraper - Sprint R1
+RegWatch Scraper - Sprint R1 → Canlı Mod
 Monitors GIB, Resmi Gazete, TURMOB for mevzuat changes
 
 Uses requests + BeautifulSoup for real web scraping.
-Falls back to cached/demo data if scraping fails.
+Falls back to cached/demo data if scraping fails (WARNING loglanır).
+
+Varsayılan: demo_mode=False (canlı scraping)
 """
 
 import hashlib
 import json
 import re
+import time
 import uuid
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional, Tuple
@@ -29,6 +32,9 @@ logger = logging.getLogger(__name__)
 
 # Request configuration
 REQUEST_TIMEOUT = 30
+MAX_RETRIES = 3
+RETRY_BACKOFF_BASE = 2  # exponential backoff: 2^retry saniye
+
 REQUEST_HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) LYNTOS-RegWatch/1.0',
     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -53,24 +59,41 @@ class BaseScraper:
         raise NotImplementedError
 
     def fetch_page(self, url: str) -> Optional[BeautifulSoup]:
-        """Fetch and parse a web page"""
-        try:
-            response = self.session.get(url, timeout=REQUEST_TIMEOUT)
-            response.raise_for_status()
-            return BeautifulSoup(response.content, 'html.parser')
-        except requests.RequestException as e:
-            self.logger.error(f"Failed to fetch {url}: {e}")
-            return None
+        """Fetch and parse a web page (3x retry with exponential backoff)"""
+        for attempt in range(MAX_RETRIES):
+            try:
+                response = self.session.get(url, timeout=REQUEST_TIMEOUT)
+                response.raise_for_status()
+                return BeautifulSoup(response.content, 'html.parser')
+            except requests.RequestException as e:
+                wait_time = RETRY_BACKOFF_BASE ** attempt
+                self.logger.warning(
+                    f"Fetch attempt {attempt + 1}/{MAX_RETRIES} failed for {url}: {e}"
+                    f" (retry in {wait_time}s)"
+                )
+                if attempt < MAX_RETRIES - 1:
+                    time.sleep(wait_time)
+                else:
+                    self.logger.error(f"All {MAX_RETRIES} attempts failed for {url}")
+        return None
 
     def fetch_text(self, url: str) -> Optional[str]:
-        """Fetch raw text content"""
-        try:
-            response = self.session.get(url, timeout=REQUEST_TIMEOUT)
-            response.raise_for_status()
-            return response.text
-        except requests.RequestException as e:
-            self.logger.error(f"Failed to fetch {url}: {e}")
-            return None
+        """Fetch raw text content (3x retry with exponential backoff)"""
+        for attempt in range(MAX_RETRIES):
+            try:
+                response = self.session.get(url, timeout=REQUEST_TIMEOUT)
+                response.raise_for_status()
+                return response.text
+            except requests.RequestException as e:
+                wait_time = RETRY_BACKOFF_BASE ** attempt
+                self.logger.warning(
+                    f"Fetch text attempt {attempt + 1}/{MAX_RETRIES} failed for {url}: {e}"
+                )
+                if attempt < MAX_RETRIES - 1:
+                    time.sleep(wait_time)
+                else:
+                    self.logger.error(f"All {MAX_RETRIES} attempts failed for {url}")
+        return None
 
     def calculate_impact(self, title: str, content: str = "") -> List[str]:
         """Calculate which rules are impacted by this change"""
@@ -625,7 +648,12 @@ class SGKScraper(BaseScraper):
 
 
 def run_all_scrapers(days: int = 7, demo_mode: bool = False) -> Dict:
-    """Run all scrapers and return summary"""
+    """Run all scrapers and return summary.
+    Varsayılan: demo_mode=False (canlı scraping).
+    Demo mode'a düşülürse WARNING loglanır.
+    """
+    if demo_mode:
+        logger.warning("⚠️ Scraperlar DEMO modunda çalıştırılıyor!")
 
     scrapers = [
         GIBScraper(demo_mode=demo_mode),

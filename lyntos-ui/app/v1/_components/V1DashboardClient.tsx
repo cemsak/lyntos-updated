@@ -293,17 +293,18 @@ export default function V1DashboardClient({ contract, ctx }: Props) {
         <ActionQueuePanel data={data?.actionableTasks?.data} error={errors.actionableTasks} />
       </div>
 
-      {/* Two Column Layout: Expert vs AI */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Left: VDK Expert Analysis (AUTHORITATIVE) */}
+      {/* VDK Expert Analysis (AUTHORITATIVE) - Full Width */}
+      <div className="mb-6">
         <VdkExpertPanel
           analysis={kurganExpert}
           criteriaScores={criteriaScores}
           error={errors.kurgan}
           onSourceClick={handleSourceClick}
         />
+      </div>
 
-        {/* Right: AI Suggestions (SECONDARY with disclaimer) */}
+      {/* AI Suggestions (SECONDARY) - Moved to bottom, collapsible */}
+      <div className="mb-6">
         <AiSuggestionsPanel
           analysis={kurganAi}
           error={errors.kurgan}

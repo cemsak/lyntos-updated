@@ -39,6 +39,9 @@ uvicorn==0.37.0
 wheel==0.45.1
 pdfplumber
 reportlab
+PyMuPDF>=1.24.0
+pytesseract>=0.3.10
+Pillow>=10.0.0
 
 # Added for RegWatch, Evidence Bundle, Rule Library
 pyyaml>=6.0
@@ -46,3 +49,9 @@ jsonschema>=4.20.0
 requests>=2.31.0
 beautifulsoup4>=4.12.0
 apscheduler>=3.10.0
+feedparser>=6.0.0
+
+# Added for GİB Real Data Services (KURGAN)
+aiohttp>=3.9.0
+openpyxl>=3.1.0
+lxml>=5.0.0

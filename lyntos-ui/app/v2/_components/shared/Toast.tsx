@@ -32,17 +32,17 @@ const TOAST_ICONS = {
 };
 
 const TOAST_STYLES = {
-  success: 'bg-green-50 border-green-200 text-green-800',
-  error: 'bg-red-50 border-red-200 text-red-800',
-  warning: 'bg-amber-50 border-amber-200 text-amber-800',
-  info: 'bg-blue-50 border-blue-200 text-blue-800',
+  success: 'bg-[#ECFDF5] border-[#AAE8B8] text-[#005A46]',
+  error: 'bg-[#FEF2F2] border-[#FFC7C9] text-[#980F30]',
+  warning: 'bg-[#FFFBEB] border-[#FFF08C] text-[#E67324]',
+  info: 'bg-[#E6F9FF] border-[#ABEBFF] text-[#00287F]',
 };
 
 const ICON_STYLES = {
-  success: 'text-green-500',
-  error: 'text-red-500',
-  warning: 'text-amber-500',
-  info: 'text-blue-500',
+  success: 'text-[#00A651]',
+  error: 'text-[#F0282D]',
+  warning: 'text-[#FFB114]',
+  info: 'text-[#0078D0]',
 };
 
 function ToastItem({ toast, onDismiss }: { toast: ToastMessage; onDismiss: () => void }) {
@@ -61,7 +61,7 @@ function ToastItem({ toast, onDismiss }: { toast: ToastMessage; onDismiss: () =>
       <span className="text-sm font-medium flex-1">{toast.message}</span>
       <button
         onClick={onDismiss}
-        className="text-slate-400 hover:text-slate-600 transition-colors"
+        className="text-[#969696] hover:text-[#5A5A5A] transition-colors"
       >
         <X className="w-4 h-4" />
       </button>

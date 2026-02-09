@@ -15,6 +15,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useDashboardScope, useScopeComplete } from '../_components/scope/useDashboardScope';
 import { getAuthToken } from '../_lib/auth';
+import { API_BASE_URL } from '../_lib/config/api';
 
 // ============== TYPES ==============
 
@@ -92,6 +93,19 @@ export interface DonemMeta {
   analyzed_at?: string;
 }
 
+export interface EDefterDurum {
+  has_yevmiye: boolean;
+  has_kebir: boolean;
+  has_yevmiye_berat: boolean;
+  has_kebir_berat: boolean;
+  has_defter_raporu: boolean;
+  yevmiye_satir: number;
+  kebir_satir: number;
+  yevmiye_berat_satir: number;
+  kebir_berat_satir: number;
+  defter_tipi_list: string[];
+}
+
 export interface DonemData {
   ok: boolean;
   has_data: boolean;
@@ -102,6 +116,7 @@ export interface DonemData {
     hesaplar: MizanHesap[];
   };
   analysis?: DonemAnalysis;
+  edefter_durum?: EDefterDurum;
   message?: string;
 }
 
@@ -121,6 +136,7 @@ export interface UseDonemDataReturn {
   files: DonemFileSummary[];
   meta: DonemMeta | null;
   hasData: boolean;
+  edefterDurum: EDefterDurum | null;
 }
 
 // ============== API FUNCTION ==============
@@ -139,7 +155,7 @@ async function fetchDonemData(
   });
 
   const response = await fetch(
-    `/api/v2/donem/${encodeURIComponent(clientId)}/${encodeURIComponent(period)}?${params}`,
+    `${API_BASE_URL}/api/v2/donem/${encodeURIComponent(clientId)}/${encodeURIComponent(period)}?${params}`,
     {
       headers: {
         'Authorization': token || '',
@@ -230,6 +246,7 @@ export function useDonemData(options: {
   const files = useMemo(() => data?.files ?? [], [data?.files]);
   const meta = useMemo(() => data?.meta ?? null, [data?.meta]);
   const hasData = useMemo(() => data?.has_data ?? false, [data?.has_data]);
+  const edefterDurum = useMemo(() => data?.edefter_durum ?? null, [data?.edefter_durum]);
 
   return {
     data,
@@ -245,6 +262,7 @@ export function useDonemData(options: {
     files,
     meta,
     hasData,
+    edefterDurum,
   };
 }
 

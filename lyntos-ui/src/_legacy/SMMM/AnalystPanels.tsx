@@ -26,12 +26,13 @@ function Badge({
 }
 
 export default function AnalystPanels({ data }: { data: any }) {
+  // SAHTE VERİ YASAK - Veri yoksa boş mesaj göster
   const vdk =
     data?.vdk_uzmani_yorumu ||
     data?.vdkYorumu ||
-    "VDK yorumu (demo/gerçek): veri yok.";
+    "VDK analizi için mizan verisi yükleyin.";
   const ai =
-    data?.ai_analizi || data?.ai || "AI analiz: veri yoksa normalizer üretir.";
+    data?.ai_analizi || data?.ai || "AI analizi için veri yükleyin.";
   const anomalies = analyzeAnomalies(data);
 
   return (

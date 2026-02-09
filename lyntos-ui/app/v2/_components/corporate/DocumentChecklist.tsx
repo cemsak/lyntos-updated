@@ -43,19 +43,19 @@ export function DocumentChecklist({ event, onClose }: DocumentChecklistProps) {
   };
 
   return (
-    <div className="bg-white rounded-xl border-2 border-[#635bff]/30 p-6">
+    <div className="bg-white rounded-xl border-2 border-[#0049AA]/30 p-6">
       {/* Header */}
       <div className="flex justify-between items-start mb-4">
         <div>
-          <h3 className="text-[16px] font-semibold text-[#1a1f36]">
+          <h3 className="text-[16px] font-semibold text-[#2E2E2E]">
             {event.event_name}
           </h3>
-          <p className="text-[12px] text-[#697386] mt-1">{event.legal_basis}</p>
+          <p className="text-[12px] text-[#5A5A5A] mt-1">{event.legal_basis}</p>
         </div>
         {onClose && (
           <button
             onClick={onClose}
-            className="text-[#697386] hover:text-[#1a1f36] transition-colors p-1"
+            className="text-[#5A5A5A] hover:text-[#2E2E2E] transition-colors p-1"
           >
             <X className="w-5 h-5" />
           </button>
@@ -65,14 +65,14 @@ export function DocumentChecklist({ event, onClose }: DocumentChecklistProps) {
       {/* Progress Bar */}
       <div className="mb-4">
         <div className="flex justify-between text-[12px] mb-1">
-          <span className="text-[#697386]">Ilerleme</span>
-          <span className="font-medium text-[#1a1f36]">
+          <span className="text-[#5A5A5A]">Ilerleme</span>
+          <span className="font-medium text-[#2E2E2E]">
             {checkedCount}/{documents.length}
           </span>
         </div>
-        <div className="h-2 bg-[#e3e8ee] rounded-full overflow-hidden">
+        <div className="h-2 bg-[#E5E5E5] rounded-full overflow-hidden">
           <div
-            className="h-full bg-[#635bff] transition-all duration-300"
+            className="h-full bg-[#0049AA] transition-all duration-300"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -80,12 +80,12 @@ export function DocumentChecklist({ event, onClose }: DocumentChecklistProps) {
 
       {/* Quorum Info */}
       {event.gk_quorum && (
-        <div className="mb-4 p-3 bg-[#f5a623]/10 border border-[#f5a623]/30 rounded-lg">
+        <div className="mb-4 p-3 bg-[#FFB114]/10 border border-[#FFB114]/30 rounded-lg">
           <div className="flex items-center gap-2 mb-2">
-            <Users className="w-4 h-4 text-[#f5a623]" />
-            <span className="text-[13px] font-medium text-[#f5a623]">Genel Kurul Nisabi</span>
+            <Users className="w-4 h-4 text-[#FFB114]" />
+            <span className="text-[13px] font-medium text-[#FFB114]">Genel Kurul Nisabi</span>
           </div>
-          <div className="text-[12px] text-[#697386] space-y-1">
+          <div className="text-[12px] text-[#5A5A5A] space-y-1">
             {Object.entries(event.gk_quorum).map(([type, quorum]) => (
               <div key={type}>
                 <span className="font-medium">{COMPANY_TYPE_LABELS[type] || type}:</span>{' '}
@@ -98,10 +98,10 @@ export function DocumentChecklist({ event, onClose }: DocumentChecklistProps) {
 
       {/* Registration Deadline */}
       {event.registration_deadline && (
-        <div className="mb-4 p-3 bg-[#635bff]/10 border border-[#635bff]/30 rounded-lg">
+        <div className="mb-4 p-3 bg-[#0049AA]/10 border border-[#0049AA]/30 rounded-lg">
           <div className="flex items-center gap-2">
-            <Clock className="w-4 h-4 text-[#635bff]" />
-            <span className="text-[13px] text-[#635bff]">
+            <Clock className="w-4 h-4 text-[#0049AA]" />
+            <span className="text-[13px] text-[#0049AA]">
               Tescil suresi: <strong>{event.registration_deadline} gun</strong>
             </span>
           </div>
@@ -110,21 +110,21 @@ export function DocumentChecklist({ event, onClose }: DocumentChecklistProps) {
 
       {/* Tax Implications */}
       {event.tax_implications && (
-        <div className="mb-4 p-3 bg-[#0caf60]/10 border border-[#0caf60]/30 rounded-lg">
+        <div className="mb-4 p-3 bg-[#00A651]/10 border border-[#00A651]/30 rounded-lg">
           <div className="flex items-center gap-2 mb-2">
-            <CheckCircle2 className="w-4 h-4 text-[#0caf60]" />
-            <span className="text-[13px] font-medium text-[#0caf60]">Vergi Durumu</span>
+            <CheckCircle2 className="w-4 h-4 text-[#00A651]" />
+            <span className="text-[13px] font-medium text-[#00A651]">Vergi Durumu</span>
           </div>
-          <div className="text-[12px] text-[#697386] space-y-1">
+          <div className="text-[12px] text-[#5A5A5A] space-y-1">
             {event.tax_implications.kv_istisna && (
               <div className="flex items-center gap-1">
-                <CheckCircle2 className="w-3 h-3 text-[#0caf60]" />
+                <CheckCircle2 className="w-3 h-3 text-[#00A651]" />
                 Kurumlar Vergisi Istisnasi
               </div>
             )}
             {event.tax_implications.kdv_istisna && (
               <div className="flex items-center gap-1">
-                <CheckCircle2 className="w-3 h-3 text-[#0caf60]" />
+                <CheckCircle2 className="w-3 h-3 text-[#00A651]" />
                 KDV Istisnasi
               </div>
             )}
@@ -133,7 +133,7 @@ export function DocumentChecklist({ event, onClose }: DocumentChecklistProps) {
             )}
             {event.tax_implications.harc && <div>Harc: {event.tax_implications.harc}</div>}
             {event.tax_implications.note && (
-              <div className="mt-1 text-[11px] text-[#f5a623] italic flex items-center gap-1">
+              <div className="mt-1 text-[11px] text-[#FFB114] italic flex items-center gap-1">
                 <AlertCircle className="w-3 h-3" />
                 {event.tax_implications.note}
               </div>
@@ -145,8 +145,8 @@ export function DocumentChecklist({ event, onClose }: DocumentChecklistProps) {
       {/* Document Checklist */}
       <div className="space-y-2">
         <div className="flex items-center gap-2 mb-2">
-          <FileCheck className="w-4 h-4 text-[#635bff]" />
-          <span className="text-[13px] font-medium text-[#1a1f36]">
+          <FileCheck className="w-4 h-4 text-[#0049AA]" />
+          <span className="text-[13px] font-medium text-[#2E2E2E]">
             Gerekli Belgeler
           </span>
         </div>
@@ -155,21 +155,21 @@ export function DocumentChecklist({ event, onClose }: DocumentChecklistProps) {
             key={index}
             className={`flex items-start gap-3 p-2 rounded-lg cursor-pointer transition-colors ${
               checkedDocs[doc]
-                ? 'bg-[#0caf60]/10'
-                : 'hover:bg-[#f6f9fc]'
+                ? 'bg-[#00A651]/10'
+                : 'hover:bg-[#F5F6F8]'
             }`}
           >
             <input
               type="checkbox"
               checked={checkedDocs[doc] || false}
               onChange={() => toggleDoc(doc)}
-              className="mt-0.5 h-4 w-4 text-[#635bff] rounded border-[#e3e8ee] focus:ring-[#635bff]"
+              className="mt-0.5 h-4 w-4 text-[#0049AA] rounded border-[#E5E5E5] focus:ring-[#0049AA]"
             />
             <span
               className={`text-[13px] ${
                 checkedDocs[doc]
-                  ? 'line-through text-[#697386]'
-                  : 'text-[#1a1f36]'
+                  ? 'line-through text-[#5A5A5A]'
+                  : 'text-[#2E2E2E]'
               }`}
             >
               {doc}
@@ -180,18 +180,18 @@ export function DocumentChecklist({ event, onClose }: DocumentChecklistProps) {
 
       {/* Notes */}
       {event.notes && (
-        <div className="mt-4 p-3 bg-[#f6f9fc] border border-[#e3e8ee] rounded-lg">
+        <div className="mt-4 p-3 bg-[#F5F6F8] border border-[#E5E5E5] rounded-lg">
           <div className="flex items-start gap-2">
-            <AlertCircle className="w-4 h-4 text-[#697386] mt-0.5" />
-            <span className="text-[12px] text-[#697386]">{event.notes}</span>
+            <AlertCircle className="w-4 h-4 text-[#5A5A5A] mt-0.5" />
+            <span className="text-[12px] text-[#5A5A5A]">{event.notes}</span>
           </div>
         </div>
       )}
 
       {/* Completion Message */}
       {progress === 100 && (
-        <div className="mt-4 p-3 bg-[#0caf60]/10 border border-[#0caf60]/30 rounded-lg text-center">
-          <span className="text-[13px] text-[#0caf60] font-medium flex items-center justify-center gap-2">
+        <div className="mt-4 p-3 bg-[#00A651]/10 border border-[#00A651]/30 rounded-lg text-center">
+          <span className="text-[13px] text-[#00A651] font-medium flex items-center justify-center gap-2">
             <CheckCircle2 className="w-4 h-4" />
             Tum belgeler hazir!
           </span>

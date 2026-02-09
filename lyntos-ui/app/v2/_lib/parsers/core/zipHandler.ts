@@ -50,9 +50,14 @@ export function getFileExtension(filename: string): string {
   return parts.length > 1 ? parts.pop()!.toLowerCase() : '';
 }
 
-export function extractPeriodFromPath(path: string): string | undefined {
-  // "Q1 E DEFTER 01" -> "2025-01"
-  // "Q1 OZKAN KIRT_OCAK_..." -> "2025-01"
+export function extractPeriodFromPath(path: string, defaultYear?: number): string | undefined {
+  // "Q1 E DEFTER 01" -> "2026-01" (yıl dinamik)
+  // "Q1 OZKAN KIRT_OCAK_..." -> "2026-01"
+  // "2025_Q1/mizan.xlsx" -> "2025-01" (yıl path'den çıkarılır)
+
+  // 1. Path'ten yılı çıkarmaya çalış
+  const yearMatch = path.match(/(20\d{2})/);
+  const year = yearMatch ? parseInt(yearMatch[1], 10) : (defaultYear ?? new Date().getFullYear());
 
   const ayMap: Record<string, string> = {
     'OCAK': '01', 'ocak': '01',
@@ -72,14 +77,14 @@ export function extractPeriodFromPath(path: string): string | undefined {
 
   for (const [ay, num] of Object.entries(ayMap)) {
     if (path.includes(ay) || path.includes(`_${ay}_`)) {
-      return `2025-${num}`;
+      return `${year}-${num}`;
     }
   }
 
   // E DEFTER klasorunden
   const eDefterMatch = path.match(/E DEFTER (\d{2})/i);
   if (eDefterMatch) {
-    return `2025-${eDefterMatch[1]}`;
+    return `${year}-${eDefterMatch[1]}`;
   }
 
   return undefined;

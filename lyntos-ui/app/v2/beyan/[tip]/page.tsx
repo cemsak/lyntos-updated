@@ -20,44 +20,44 @@ export default function BeyanPage() {
   const bilgi = BEYAN_BILGILERI[tip] || { baslik: tip.toUpperCase(), aciklama: 'Beyan hazirlama' };
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6">
+    <div className="min-h-screen bg-[#F5F6F8] p-6">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="flex items-center gap-4 mb-6">
           <button
             onClick={() => router.back()}
-            className="flex items-center gap-2 px-3 py-2 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+            className="flex items-center gap-2 px-3 py-2 text-sm text-[#5A5A5A] hover:text-[#2E2E2E] hover:bg-[#F5F6F8] rounded-lg transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             Geri
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-slate-800">{bilgi.baslik}</h1>
-            <p className="text-slate-600">{bilgi.aciklama}</p>
+            <h1 className="text-2xl font-bold text-[#2E2E2E]">{bilgi.baslik}</h1>
+            <p className="text-[#5A5A5A]">{bilgi.aciklama}</p>
           </div>
         </div>
 
         {/* Content */}
         <Card>
           <div className="flex flex-col items-center justify-center py-12 text-center">
-            <FileText className="w-16 h-16 text-slate-300 mb-4" />
-            <h2 className="text-xl font-semibold text-slate-700 mb-2">
+            <FileText className="w-16 h-16 text-[#B4B4B4] mb-4" />
+            <h2 className="text-xl font-semibold text-[#5A5A5A] mb-2">
               Beyan Hazirlama Modulu
             </h2>
-            <p className="text-slate-500 mb-6 max-w-md">
+            <p className="text-[#969696] mb-6 max-w-md">
               Bu modul Sprint 6'da aktif olacaktir.
               Su an icin GIB portal uzerinden beyan verebilirsiniz.
             </p>
             <div className="flex gap-3">
               <button
                 onClick={() => router.back()}
-                className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+                className="px-4 py-2 border border-[#B4B4B4] rounded-lg hover:bg-[#F5F6F8] transition-colors"
               >
                 Dashboard'a Don
               </button>
               <button
                 onClick={() => window.open('https://ebeyanname.gib.gov.tr', '_blank')}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="px-4 py-2 bg-[#0049AA] text-white rounded-lg hover:bg-[#0049AA] transition-colors"
               >
                 GIB Portal'a Git
               </button>

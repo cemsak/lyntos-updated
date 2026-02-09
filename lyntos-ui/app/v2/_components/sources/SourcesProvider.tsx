@@ -54,11 +54,6 @@ export function SourcesProvider({ children }: { children: ReactNode }) {
 
           // Populate the cache in map.ts
           setSourceCache(mapped);
-
-          // Debug: log SRC-0034 specifically
-          const src34 = mapped.find(s => s.id === 'SRC-0034');
-          console.log('[SourcesProvider] SRC-0034:', src34);
-          console.log('[SourcesProvider] Loaded', mapped.length, 'sources');
         } else {
           console.error('[SourcesProvider] Failed to fetch:', response.status);
         }

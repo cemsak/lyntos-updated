@@ -134,8 +134,9 @@ def migrate_periods(cursor) -> tuple:
     errors = 0
 
     for client_id, period_str in upload_periods:
-        # Generate period_id
-        period_id = f"{client_id}_{period_str}"
+        # Generate period_id - Format standardizasyonu: 2025-Q1 -> 2025_Q1
+        period_normalized = period_str.upper().replace('-', '_')
+        period_id = f"{client_id}_{period_normalized}"
 
         # Check if already exists
         cursor.execute("SELECT id FROM periods WHERE id = ?", (period_id,))

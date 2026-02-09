@@ -25,10 +25,6 @@ function filterHeaders(src: Headers | undefined): Headers {
     });
   }
   
-  // DEBUG
-  console.log("=== PROXY filterHeaders DEBUG ===");
-  console.log("Output headers:", Object.fromEntries(out.entries()));
-  
   return out;
 }
 
@@ -56,18 +52,12 @@ export async function proxyJson(
   const upstreamUrl = buildUpstreamUrl(req, upstreamPath);
   const headers = filterHeaders((req as any).headers);
 
-  console.log("=== PROXY proxyJson DEBUG ===");
-  console.log("Upstream URL:", upstreamUrl);
-  console.log("Authorization being sent:", headers.get("authorization"));
-
   try {
     const upstream = await fetch(upstreamUrl, {
       ...(init || {}),
       cache: "no-store",
       headers: headers,
     });
-
-    console.log("Upstream response status:", upstream.status);
 
     const txt = await upstream.text();
     const respHeaders = new Headers();
@@ -77,7 +67,6 @@ export async function proxyJson(
 
     return new Response(txt, { status: upstream.status, headers: respHeaders });
   } catch (e: any) {
-    console.log("Proxy fetch error:", e.message);
     const respHeaders = new Headers();
     respHeaders.set("content-type", "application/json; charset=utf-8");
     respHeaders.set("x-lyntos-proxy-upstream", upstreamUrl);

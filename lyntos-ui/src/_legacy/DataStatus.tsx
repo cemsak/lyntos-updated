@@ -16,14 +16,15 @@ export default function DataStatus({ data }: { data: any }) {
     [];
   const partners = data?.partner_top5 ?? data?.partners ?? [];
 
-  // normalize tarafında _demo_fill varsa onu kullan; yoksa hepsini true varsay (görsel dolgu amacıyla)
+  // SAHTE VERİ YASAK - Varsayılan true kaldırıldı
+  // Veri yoksa false göster, SMMM'yi yanıltma
   const D: Record<string, boolean> = data?._demo_fill ?? {
-    "kurgan.risk_log": true,
-    "kurgan.beyanname_ozeti": true,
-    "smiyb.skor": true,
-    "radar.skor": true,
-    "mizan.top5": true,
-    partner_top5: true,
+    "kurgan.risk_log": false,
+    "kurgan.beyanname_ozeti": false,
+    "smiyb.skor": false,
+    "radar.skor": false,
+    "mizan.top5": false,
+    partner_top5: false,
   };
 
   const items: Array<{ name: string; ok: boolean; demo: boolean }> = [

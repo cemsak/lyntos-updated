@@ -1,18 +1,5 @@
-/* === FORCE LIGHT MODE === */
-html {
-  color-scheme: light only !important;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: light only !important;
-  }
-}
-/* === END FORCE LIGHT === */
-
 @import "tailwindcss";
-
-/* Google Fonts - IBM Plex Sans (Enterprise typography) */
+@config "../tailwind.config.ts";
 
 /* Tailwind v4 Theme Tokens */
 @theme {
@@ -48,6 +35,18 @@ html {
   --radius: 8px;
 }
 
+/* === FORCE LIGHT MODE === */
+html {
+  color-scheme: light only !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: light only !important;
+  }
+}
+/* === END FORCE LIGHT === */
+
 /* ═══════════════════════════════════════════════════════════════════════════ */
 /* LYNTOS CSS VARIABLES - LIGHT MODE                                            */
 /* ═══════════════════════════════════════════════════════════════════════════ */
@@ -58,18 +57,18 @@ html {
   --lyntos-surface-muted: #f8fafc;
   --lyntos-surface-elevated: #ffffff;
 
-  /* Stripe Design Tokens - Light mode */
+  /* Stripe Design Tokens - Light mode (LYNTOS Blue ile güncellendi) */
   --stripe-bg: #f6f9fc;
   --stripe-card: #ffffff;
   --stripe-border: #e3e8ee;
   --stripe-text: #1a1f36;
   --stripe-text-secondary: #697386;
   --stripe-text-tertiary: #8792a2;
-  --stripe-primary: #635bff;
-  --stripe-primary-hover: #5851ea;
-  --stripe-success: #0caf60;
-  --stripe-warning: #e56f4a;
-  --stripe-danger: #cd3d64;
+  --stripe-primary: #0049AA;         /* ★ LYNTOS Primary Blue */
+  --stripe-primary-hover: #00287F;   /* LYNTOS Blue 900 */
+  --stripe-success: #107C10;         /* LYNTOS Risk Low */
+  --stripe-warning: #FFB900;         /* LYNTOS Risk Medium */
+  --stripe-danger: #A4373A;          /* LYNTOS Risk Critical */
 }
 
 /* Light mode - V2 Dashboard */
@@ -134,12 +133,12 @@ body {
   border-color: #cbd5e1;
 }
 
-/* Status badges */
-.badge-success { background-color: #ecfdf5; color: #059669; }
-.badge-warning { background-color: #fffbeb; color: #d97706; }
-.badge-error { background-color: #fef2f2; color: #dc2626; }
-.badge-info { background-color: #eff6ff; color: #2563eb; }
-.badge-neutral { background-color: #f1f5f9; color: #64748b; }
+/* Status badges - Kartela Uyumlu */
+.badge-success { background-color: #ECFDF5; color: #00804D; }
+.badge-warning { background-color: #FFFBEB; color: #E67324; }
+.badge-error { background-color: #FEF2F2; color: #BF192B; }
+.badge-info { background-color: #E6F9FF; color: #0049AA; }
+.badge-neutral { background-color: #F5F6F8; color: #5A5A5A; }
 
 /* Scrollbar styling - LIGHT */
 ::-webkit-scrollbar {
@@ -162,7 +161,7 @@ body {
 
 /* Focus ring */
 *:focus-visible {
-  outline: 2px solid #3b82f6;
+  outline: 2px solid var(--lyntos-blue-700, #0049AA);
   outline-offset: 2px;
 }
 
@@ -231,12 +230,86 @@ body {
 /* ═══════════════════════════════════════════════════════════════════════════ */
 
 :root {
-  /* Primary: Professional Blue */
-  --lyntos-primary-50: #eff6ff;
-  --lyntos-primary-100: #dbeafe;
-  --lyntos-primary-500: #3b82f6;
-  --lyntos-primary-600: #2563eb;
-  --lyntos-primary-700: #1d4ed8;
+  /* ═══════════════════════════════════════════════════════════════════════════ */
+  /* LYNTOS BLUE SCALE - Karteladan                                              */
+  /* ═══════════════════════════════════════════════════════════════════════════ */
+  --lyntos-blue-900: #00287F;   /* Header gradient start */
+  --lyntos-blue-700: #0049AA;   /* ★ PRIMARY - Butonlar, aktif state */
+  --lyntos-blue-500: #0078D0;   /* Secondary - Links, accents */
+  --lyntos-blue-400: #00B4EB;   /* Tertiary - Hover, highlights */
+  --lyntos-blue-200: #5ED6FF;   /* Light - Hover backgrounds */
+  --lyntos-blue-50:  #ABEBFF;   /* Lightest - Panel backgrounds */
+  --lyntos-blue-25:  #E6F9FF;   /* Ultra light - Subtle backgrounds */
+
+  /* ═══════════════════════════════════════════════════════════════════════════ */
+  /* TURUNCU SCALE - Warning/Orta Risk (Karteladan)                              */
+  /* ═══════════════════════════════════════════════════════════════════════════ */
+  --lyntos-orange-900: #E67324;
+  --lyntos-orange-700: #FA841E;
+  --lyntos-orange-500: #FFB114;  /* ★ PRIMARY WARNING */
+  --lyntos-orange-400: #FFCE19;
+  --lyntos-orange-200: #FFE045;
+  --lyntos-orange-50:  #FFF08C;
+  --lyntos-orange-25:  #FFFBEB;
+
+  /* ═══════════════════════════════════════════════════════════════════════════ */
+  /* YEŞİL SCALE - Success/Düşük Risk (Karteladan)                               */
+  /* ═══════════════════════════════════════════════════════════════════════════ */
+  --lyntos-green-900: #005A46;
+  --lyntos-green-700: #00804D;
+  --lyntos-green-500: #00A651;  /* ★ PRIMARY SUCCESS */
+  --lyntos-green-400: #00CB50;
+  --lyntos-green-200: #6BDB83;
+  --lyntos-green-50:  #AAE8B8;
+  --lyntos-green-25:  #ECFDF5;
+
+  /* ═══════════════════════════════════════════════════════════════════════════ */
+  /* KIRMIZI SCALE - Error/Yüksek-Kritik Risk (Karteladan)                       */
+  /* ═══════════════════════════════════════════════════════════════════════════ */
+  --lyntos-red-900: #980F30;    /* ★ KRITIK RISK */
+  --lyntos-red-700: #BF192B;
+  --lyntos-red-500: #F0282D;    /* ★ YÜKSEK RISK */
+  --lyntos-red-400: #FF555F;
+  --lyntos-red-200: #FF9196;
+  --lyntos-red-50:  #FFC7C9;
+  --lyntos-red-25:  #FEF2F2;
+
+  /* ═══════════════════════════════════════════════════════════════════════════ */
+  /* RISK RENKLERI - Semantic (Karteladan)                                       */
+  /* ═══════════════════════════════════════════════════════════════════════════ */
+  --lyntos-risk-critical: #980F30;  /* Kritik - Koyu kırmızı */
+  --lyntos-risk-high: #F0282D;      /* Yüksek - Kırmızı */
+  --lyntos-risk-medium: #FFB114;    /* Orta - Turuncu */
+  --lyntos-risk-low: #00A651;       /* Düşük - Yeşil */
+
+  --lyntos-risk-critical-bg: #FEF2F2;
+  --lyntos-risk-high-bg: #FFC7C9;
+  --lyntos-risk-medium-bg: #FFFBEB;
+  --lyntos-risk-low-bg: #ECFDF5;
+
+  /* ═══════════════════════════════════════════════════════════════════════════ */
+  /* NÖTR SCALE - Griler (Karteladan)                                            */
+  /* ═══════════════════════════════════════════════════════════════════════════ */
+  --lyntos-neutral-900: #000000;
+  --lyntos-neutral-800: #2E2E2E;   /* ★ PRIMARY TEXT */
+  --lyntos-neutral-600: #5A5A5A;   /* ★ SECONDARY TEXT */
+  --lyntos-neutral-400: #969696;
+  --lyntos-neutral-300: #B4B4B4;
+  --lyntos-neutral-100: #E5E5E5;   /* ★ BORDERS */
+  --lyntos-neutral-50:  #F5F6F8;   /* ★ PAGE BACKGROUND */
+  --lyntos-neutral-25:  #FAFBFC;
+  --lyntos-neutral-bg: #F5F6F8;
+  --lyntos-neutral-card: #FFFFFF;
+  --lyntos-neutral-border: #E5E5E5;
+  --lyntos-neutral-text-dark: #2E2E2E;
+  --lyntos-neutral-text-light: #5A5A5A;
+
+  /* Legacy - Primary: Professional Blue (eski referanslar için) */
+  --lyntos-primary-50: #E6F9FF;
+  --lyntos-primary-100: #ABEBFF;
+  --lyntos-primary-500: #0078D0;
+  --lyntos-primary-600: #0049AA;
+  --lyntos-primary-700: #00287F;
 
   /* Neutral: Slate-based (cleaner than gray) */
   --lyntos-slate-50: #f8fafc;
@@ -305,7 +378,7 @@ body {
   top: 0;
   bottom: 0;
   width: 0.25rem;
-  background-color: #3b82f6;
+  background-color: var(--lyntos-blue-700, #0049AA);  /* ★ LYNTOS Primary */
 }
 
 /* Section header */
@@ -339,7 +412,7 @@ body {
 
 .lyntos-input:focus {
   outline: none;
-  box-shadow: 0 0 0 2px #3b82f6;
+  box-shadow: 0 0 0 2px var(--lyntos-blue-700, #0049AA);
   border-color: transparent;
 }
 
@@ -362,14 +435,14 @@ body {
 
 .lyntos-select:focus {
   outline: none;
-  box-shadow: 0 0 0 2px #3b82f6;
+  box-shadow: 0 0 0 2px var(--lyntos-blue-700, #0049AA);
   border-color: transparent;
 }
 
 /* Button variants */
 .lyntos-btn-primary {
   padding: 0.5rem 1rem;
-  background-color: #3b82f6;
+  background-color: var(--lyntos-blue-700, #0049AA);
   color: #ffffff;
   font-weight: 500;
   border-radius: 0.5rem;
@@ -417,41 +490,278 @@ body {
 }
 
 .lyntos-badge-risk {
-  background-color: #fef2f2;
-  color: #dc2626;
+  background-color: #FEF2F2;
+  color: #BF192B;
 }
 
 .lyntos-badge-success {
-  background-color: #ecfdf5;
-  color: #059669;
+  background-color: #ECFDF5;
+  color: #00804D;
 }
 
 .lyntos-badge-warning {
-  background-color: #fffbeb;
-  color: #d97706;
+  background-color: #FFFBEB;
+  color: #E67324;
 }
 
 .lyntos-badge-info {
-  background-color: #eff6ff;
-  color: #2563eb;
+  background-color: #E6F9FF;
+  color: #0049AA;
 }
 
 .lyntos-badge-neutral {
-  background-color: #f1f5f9;
-  color: #64748b;
+  background-color: #F5F6F8;
+  color: #5A5A5A;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────── */
-/* ANIMATIONS                                                                   */
+/* ANIMATIONS - KAIZEN GÖRSEL SİSTEM                                            */
 /* ─────────────────────────────────────────────────────────────────────────── */
 
+/* Shimmer effect for loading states */
 @keyframes shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
 }
 
-.lyntos-skeleton {
+.lyntos-skeleton,
+.animate-shimmer {
   background: linear-gradient(to right, #f1f5f9, #e2e8f0, #f1f5f9);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
+}
+
+/* Slide up animation */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+/* Slide down animation */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-down {
+  animation: slideDown 0.3s ease-out;
+}
+
+/* Scale in animation */
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.2s ease-out;
+}
+
+/* Pop in animation (spring) */
+@keyframes popIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  70% {
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-pop-in {
+  animation: popIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Glow pulse animation - LYNTOS Blue */
+@keyframes glowPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(0, 73, 170, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 20px 5px rgba(0, 73, 170, 0.2);
+  }
+}
+
+.animate-glow-pulse {
+  animation: glowPulse 2s ease-in-out infinite;
+}
+
+/* Shake animation (for errors) */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+  20%, 40%, 60%, 80% { transform: translateX(4px); }
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+/* Counter animation (for numbers) */
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-count-up {
+  animation: countUp 0.5s ease-out;
+}
+
+/* Stagger animation helper */
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.1s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.2s; }
+.stagger-5 { animation-delay: 0.25s; }
+.stagger-6 { animation-delay: 0.3s; }
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* HOVER EFFECTS - KAIZEN                                                       */
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+/* Card lift effect */
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Card glow effect - LYNTOS Blue */
+.hover-glow {
+  transition: box-shadow 0.2s ease;
+}
+
+.hover-glow:hover {
+  box-shadow: 0 0 20px rgba(0, 73, 170, 0.15);
+}
+
+/* Scale effect */
+.hover-scale {
+  transition: transform 0.15s ease;
+}
+
+.hover-scale:hover {
+  transform: scale(1.02);
+}
+
+.hover-scale:active {
+  transform: scale(0.98);
+}
+
+/* Border glow effect - LYNTOS Blue */
+.hover-border-glow {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-border-glow:hover {
+  border-color: #0078D0;
+  box-shadow: 0 0 0 3px rgba(0, 73, 170, 0.1);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* GRADIENT BACKGROUNDS - KAIZEN                                                */
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+.bg-gradient-primary {
+  background: linear-gradient(135deg, #0049AA 0%, #0078D0 100%);
+}
+
+.bg-gradient-success {
+  background: linear-gradient(135deg, #00A651 0%, #00CB50 100%);
+}
+
+.bg-gradient-warning {
+  background: linear-gradient(135deg, #FFB114 0%, #FFCE19 100%);
+}
+
+.bg-gradient-error {
+  background: linear-gradient(135deg, #F0282D 0%, #FF555F 100%);
+}
+
+.bg-gradient-money {
+  background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+}
+
+.bg-gradient-dark {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+}
+
+.bg-gradient-subtle {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* GLASSMORPHISM - KAIZEN                                                       */
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+.glass-light {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.glass-medium {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.glass-heavy {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* FOCUS STATES - KAIZEN                                                        */
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+.focus-ring {
+  transition: box-shadow 0.15s ease;
+}
+
+.focus-ring:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0, 73, 170, 0.3);
+}
+
+.focus-ring-success:focus {
+  box-shadow: 0 0 0 3px rgba(0, 166, 81, 0.3);
+}
+
+.focus-ring-warning:focus {
+  box-shadow: 0 0 0 3px rgba(255, 177, 20, 0.3);
+}
+
+.focus-ring-error:focus {
+  box-shadow: 0 0 0 3px rgba(240, 40, 45, 0.3);
 }

@@ -24,17 +24,91 @@ interface EvidenceViewerProps {
 export function EvidenceViewer({ isOpen, onClose, evidenceRefs, title = 'Kanıt Dosyaları' }: EvidenceViewerProps) {
   const [selectedEvidence, setSelectedEvidence] = useState<EvidenceItem | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
+  // Dosya URL'ini oluştur
+  const getFileUrl = (item: EvidenceItem): string => {
+    // Eğer item.url varsa ve /api ile başlıyorsa kullan
+    if (item.url && item.url.startsWith('/api')) {
+      return item.url;
+    }
+    // Yoksa evidence endpoint'inden al
+    return `/api/v1/evidence/file/${encodeURIComponent(item.ref)}`;
+  };
+
+  // PDF'i yükle ve göster
+  const loadPdfPreview = async (item: EvidenceItem) => {
+    setError(null);
+    setIsLoading(true);
+    setPdfBlobUrl(null);
+
+    const fileUrl = getFileUrl(item);
+
+    try {
+      const token = getAuthToken();
+      if (!token) {
+        setError('Oturum açmanız gerekiyor.');
+        setIsLoading(false);
+        return;
+      }
+
+      const response = await fetch(fileUrl, {
+        headers: {
+          'Authorization': token,
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          setError('Dosya sunucuda bulunamadı.');
+        } else {
+          setError(`Dosya yüklenemedi (HTTP ${response.status})`);
+        }
+        setIsLoading(false);
+        return;
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      setPdfBlobUrl(url);
+    } catch (err) {
+      setError('Dosya yüklenirken hata oluştu');
+      console.error('[EvidenceViewer] Load error:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Seçili dosya değişince PDF'i yükle
+  useEffect(() => {
+    if (selectedEvidence) {
+      loadPdfPreview(selectedEvidence);
+    }
+    return () => {
+      // Cleanup blob URL
+      if (pdfBlobUrl) {
+        URL.revokeObjectURL(pdfBlobUrl);
+      }
+    };
+  }, [selectedEvidence?.id]);
+
+  // Modal açılınca ilk dosyayı seç
   useEffect(() => {
     if (isOpen && evidenceRefs.length > 0 && !selectedEvidence) {
       setSelectedEvidence(evidenceRefs[0]);
     }
   }, [isOpen, evidenceRefs, selectedEvidence]);
 
+  // Modal kapanınca temizle
   useEffect(() => {
     if (!isOpen) {
       setSelectedEvidence(null);
       setError(null);
+      if (pdfBlobUrl) {
+        URL.revokeObjectURL(pdfBlobUrl);
+        setPdfBlobUrl(null);
+      }
     }
   }, [isOpen]);
 
@@ -46,11 +120,11 @@ export function EvidenceViewer({ isOpen, onClose, evidenceRefs, title = 'Kanıt 
 
   const getKindIcon = (kind: string) => {
     const icons: Record<string, string> = {
-      document: 'D',
-      bundle: 'B',
-      external: 'E',
+      document: '📄',
+      bundle: '📦',
+      external: '🔗',
     };
-    return icons[kind] || 'F';
+    return icons[kind] || '📁';
   };
 
   const getKindLabel = (kind: string) => {
@@ -62,59 +136,23 @@ export function EvidenceViewer({ isOpen, onClose, evidenceRefs, title = 'Kanıt 
     return labels[kind] || kind;
   };
 
-  // Demo fonksiyonlar KALDIRILDI - Sadece gercek dosya indirme desteklenir
-  const handleDownload = async (item: EvidenceItem) => {
-    setError(null);
-
-    // URL varsa aç
-    if (item.url && item.url.startsWith('http')) {
-      window.open(item.url, '_blank');
-      return;
+  // Yeni sekmede aç
+  const handleOpenInNewTab = () => {
+    if (pdfBlobUrl) {
+      window.open(pdfBlobUrl, '_blank');
     }
+  };
 
-    // URL yoksa API endpoint'ini kullan
-    if (!item.url && item.ref) {
-      const downloadUrl = `/api/v1/documents/document/${encodeURIComponent(item.ref)}`;
-      try {
-        const token = getAuthToken();
-        if (!token) {
-          setError('Kanıt görüntülemek için önce veri yükleyin.');
-          return;
-        }
-
-        const response = await fetch(downloadUrl, {
-          headers: {
-            'Authorization': token,
-          },
-        });
-
-        if (!response.ok) {
-          if (response.status === 404) {
-            setError('Dosya bulunamadi. Lutfen belgeyi yukleyin.');
-          } else {
-            setError(`Dosya indirilemedi (HTTP ${response.status})`);
-          }
-          return;
-        }
-
-        const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = item.title || item.ref || 'dosya';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      } catch (err) {
-        setError('Dosya indirilirken hata olustu');
-        console.error('[EvidenceViewer] Download error:', err);
-      }
-      return;
+  // İndir (opsiyonel)
+  const handleDownload = () => {
+    if (pdfBlobUrl && selectedEvidence) {
+      const a = document.createElement('a');
+      a.href = pdfBlobUrl;
+      a.download = selectedEvidence.title || selectedEvidence.ref || 'dosya.pdf';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
     }
-
-    // Hicbir URL yok
-    setError('Dosya URL\'i bulunamadi');
   };
 
   return (
@@ -122,50 +160,47 @@ export function EvidenceViewer({ isOpen, onClose, evidenceRefs, title = 'Kanıt 
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
       onClick={handleBackdropClick}
     >
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5E5E5] bg-[#F5F6F8]">
           <div>
-            <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
-            <p className="text-xs text-slate-500">{evidenceRefs.length} dosya</p>
+            <h2 className="text-lg font-semibold text-[#2E2E2E]">{title}</h2>
+            <p className="text-xs text-[#969696]">{evidenceRefs.length} dosya</p>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
+          <button onClick={onClose} className="text-[#969696] hover:text-[#5A5A5A] text-2xl leading-none">&times;</button>
         </div>
 
         {/* Error Banner */}
         {error && (
-          <div className="px-6 py-3 bg-red-50 border-b border-red-200">
-            <p className="text-sm text-red-700">{error}</p>
+          <div className="px-6 py-3 bg-[#FEF2F2] border-b border-[#FFC7C9]">
+            <p className="text-sm text-[#BF192B]">{error}</p>
           </div>
         )}
 
         {/* Content */}
-        <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 flex overflow-hidden" style={{ minHeight: '500px' }}>
           {/* Left: File List */}
-          <div className="w-1/3 border-r border-slate-200 overflow-y-auto">
+          <div className="w-1/4 border-r border-[#E5E5E5] overflow-y-auto bg-[#F5F6F8]">
             {evidenceRefs.length === 0 ? (
               <div className="p-6 text-center">
-                <span className="text-4xl">O</span>
-                <p className="text-sm text-slate-500 mt-2">Kanıt dosyası bulunamadı</p>
+                <span className="text-4xl">📭</span>
+                <p className="text-sm text-[#969696] mt-2">Kanıt dosyası bulunamadı</p>
               </div>
             ) : (
-              <div className="divide-y divide-slate-100">
+              <div className="divide-y divide-[#E5E5E5]">
                 {evidenceRefs.map((item) => (
                   <button
                     key={item.id}
                     onClick={() => { setSelectedEvidence(item); setError(null); }}
-                    className={`w-full text-left p-4 hover:bg-slate-50 transition-colors ${
-                      selectedEvidence?.id === item.id ? 'bg-blue-50 border-l-4 border-blue-500' : ''
+                    className={`w-full text-left p-3 hover:bg-white transition-colors ${
+                      selectedEvidence?.id === item.id ? 'bg-white border-l-4 border-[#0078D0]' : ''
                     }`}
                   >
-                    <div className="flex items-start gap-3">
-                      <span className="text-xl font-bold text-slate-400">{getKindIcon(item.kind)}</span>
+                    <div className="flex items-start gap-2">
+                      <span className="text-lg">{getKindIcon(item.kind)}</span>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-slate-900 truncate">{item.title}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Badge variant="default">{getKindLabel(item.kind)}</Badge>
-                          {item.size && <span className="text-xs text-slate-400">{item.size}</span>}
-                        </div>
+                        <p className="text-xs font-medium text-[#2E2E2E] truncate">{item.title}</p>
+                        <Badge variant="default" className="mt-1 text-[10px]">{getKindLabel(item.kind)}</Badge>
                       </div>
                     </div>
                   </button>
@@ -174,91 +209,81 @@ export function EvidenceViewer({ isOpen, onClose, evidenceRefs, title = 'Kanıt 
             )}
           </div>
 
-          {/* Right: Preview/Details */}
-          <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Right: PDF Preview */}
+          <div className="flex-1 flex flex-col overflow-hidden bg-[#F5F6F8]">
             {selectedEvidence ? (
               <>
                 {/* Preview Header */}
-                <div className="p-4 border-b border-slate-200 bg-slate-50">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-sm font-semibold text-slate-900">{selectedEvidence.title}</h3>
-                      <p className="text-xs text-slate-500 mt-0.5">{selectedEvidence.ref}</p>
-                    </div>
+                <div className="p-3 border-b border-[#E5E5E5] bg-white flex items-center justify-between">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-sm font-semibold text-[#2E2E2E] truncate">{selectedEvidence.title}</h3>
+                  </div>
+                  <div className="flex gap-2 ml-4">
                     <button
-                      onClick={() => handleDownload(selectedEvidence)}
-                      className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                      onClick={handleOpenInNewTab}
+                      disabled={!pdfBlobUrl || isLoading}
+                      className="px-3 py-1.5 text-xs bg-[#0049AA] text-white rounded hover:bg-[#0049AA] transition-colors disabled:bg-[#B4B4B4] disabled:cursor-not-allowed"
                     >
-                      <span>İndir</span>
+                      Yeni Sekmede Aç
+                    </button>
+                    <button
+                      onClick={handleDownload}
+                      disabled={!pdfBlobUrl || isLoading}
+                      className="px-3 py-1.5 text-xs border border-[#B4B4B4] text-[#5A5A5A] rounded hover:bg-[#F5F6F8] transition-colors disabled:bg-[#F5F6F8] disabled:cursor-not-allowed"
+                    >
+                      İndir
                     </button>
                   </div>
                 </div>
 
-                {/* Preview Area */}
-                <div className="flex-1 overflow-auto p-6 bg-slate-100">
-                  <div className="bg-white rounded-lg shadow-sm p-8 min-h-[300px] flex flex-col items-center justify-center">
-                    <span className="text-6xl font-bold text-slate-300 mb-4">{getKindIcon(selectedEvidence.kind)}</span>
-                    <p className="text-lg font-medium text-slate-900">{selectedEvidence.title}</p>
-                    <p className="text-sm text-slate-500 mt-1">{getKindLabel(selectedEvidence.kind)}</p>
-
-                    {selectedEvidence.uploaded_at && (
-                      <p className="text-xs text-slate-400 mt-4">
-                        Yuklenme: {new Date(selectedEvidence.uploaded_at).toLocaleString('tr-TR')}
-                      </p>
-                    )}
-
-                    {selectedEvidence.page && (
-                      <p className="text-xs text-slate-400 mt-1">
-                        Referans Sayfa: {selectedEvidence.page}
-                      </p>
-                    )}
-
-                    {/* Dosya yoksa bilgi mesaji */}
-                    {!selectedEvidence.url && (
-                      <div className="mt-4 bg-slate-50 border border-slate-200 rounded-lg p-3 text-center max-w-md">
-                        <p className="text-sm text-slate-600">
-                          Bu dosya henuz yuklenmemis olabilir. Indirmek icin butona tiklayin.
-                        </p>
+                {/* PDF Preview Area */}
+                <div className="flex-1 overflow-hidden">
+                  {isLoading ? (
+                    <div className="h-full flex items-center justify-center">
+                      <div className="text-center">
+                        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#0049AA] mx-auto"></div>
+                        <p className="text-sm text-[#969696] mt-3">Dosya yükleniyor...</p>
                       </div>
-                    )}
-
-                    <div className="mt-6 flex gap-3">
-                      <button
-                        onClick={() => handleDownload(selectedEvidence)}
-                        className="px-4 py-2 text-sm bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors"
-                      >
-                        Dosyayi Indir
-                      </button>
-                      {selectedEvidence.url && selectedEvidence.url.startsWith('http') && (
-                        <a
-                          href={selectedEvidence.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-4 py-2 text-sm border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
-                        >
-                          Kaynaga Git
-                        </a>
-                      )}
                     </div>
-                  </div>
+                  ) : pdfBlobUrl ? (
+                    <iframe
+                      src={pdfBlobUrl}
+                      className="w-full h-full border-0"
+                      title={selectedEvidence.title}
+                    />
+                  ) : error ? (
+                    <div className="h-full flex items-center justify-center">
+                      <div className="text-center p-6">
+                        <span className="text-5xl">⚠️</span>
+                        <p className="text-sm text-[#5A5A5A] mt-3">{error}</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="h-full flex items-center justify-center">
+                      <p className="text-sm text-[#969696]">Dosya seçin</p>
+                    </div>
+                  )}
                 </div>
               </>
             ) : (
-              <div className="flex-1 flex items-center justify-center bg-slate-100">
-                <p className="text-sm text-slate-500">Goruntlemek icin dosya secin</p>
+              <div className="flex-1 flex items-center justify-center">
+                <div className="text-center">
+                  <span className="text-5xl">👈</span>
+                  <p className="text-sm text-[#969696] mt-3">Görüntülemek için dosya seçin</p>
+                </div>
               </div>
             )}
           </div>
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
-          <p className="text-xs text-slate-500">
-            Bu dosyalar analiz icin kullanilan kaynaklerdir.
+        <div className="px-6 py-3 border-t border-[#E5E5E5] bg-[#F5F6F8] flex items-center justify-between">
+          <p className="text-xs text-[#969696]">
+            Yüklenen kaynak belgeler - SMMM doğrulaması için
           </p>
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition-colors"
+            className="px-4 py-2 text-sm bg-[#E5E5E5] text-[#5A5A5A] rounded-lg hover:bg-[#B4B4B4] transition-colors"
           >
             Kapat
           </button>

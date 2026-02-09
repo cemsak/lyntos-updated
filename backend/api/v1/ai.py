@@ -50,6 +50,13 @@ class BatchAnalysisRequest(BaseModel):
 class ReviewRequest(BaseModel):
     status: str  # 'approved', 'rejected'
     notes: Optional[str] = None
+
+
+class MevzuatRAGRequest(BaseModel):
+    """Mevzuat RAG sorgusu için istek modeli"""
+    question: str
+    context: Optional[dict] = None  # Mükellef bağlamı (hesap bakiyeleri vb.)
+    include_sources: bool = True  # Kaynak URL'lerini dahil et
     reviewed_by: str = "admin"
 
 
@@ -150,6 +157,34 @@ async def analyze_company_change(request: CompanyAnalysisRequest):
         conn.commit()
 
     result["analysis_id"] = analysis_id
+    return result
+
+
+@router.post("/mevzuat-rag")
+async def mevzuat_rag_query(request: MevzuatRAGRequest):
+    """
+    Mevzuat RAG (Retrieval Augmented Generation) Sorgusu
+
+    YMM/SMMM soruları için mevzuat destekli AI yanıtı üretir.
+    Kaynaklar: mevzuat.gov.tr, dijital.gib.gov.tr, LYNTOS mevzuat veritabanı
+
+    Örnek sorular:
+    - "131 hesap için adat faizi nasıl hesaplanır?"
+    - "TTK 376 sermaye kaybı durumunda ne yapmalıyım?"
+    - "Transfer fiyatlandırması belgeleri nelerdir?"
+    - "VDK KRG-07 senaryosu ne anlama geliyor?"
+    """
+
+    result = analyzer.analyze_with_rag(
+        question=request.question,
+        context=request.context
+    )
+
+    # Kaynakları dahil etme tercihi
+    if not request.include_sources:
+        result.pop("rag_sources", None)
+        result.pop("kaynak_url", None)
+
     return result
 
 

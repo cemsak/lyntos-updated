@@ -7,6 +7,7 @@
 
 import React, { useState } from 'react';
 import { FileText, FolderArchive, Loader2 } from 'lucide-react';
+import { useToast } from '../shared/Toast';
 import { generateQuarterlyEvidenceBundle, downloadQuarterlyPDFOnly } from '../../_lib/evidence';
 import type { EngineCheckReport } from '../../_lib/parsers/crosscheck/types';
 import type { ParsedData } from '../../_hooks/useQuarterlyAnalysis';
@@ -19,6 +20,7 @@ interface ExportButtonsProps {
 }
 
 export function ExportButtons({ report, parsedData, startTime, endTime }: ExportButtonsProps) {
+  const { showToast } = useToast();
   const [isExportingPDF, setIsExportingPDF] = useState(false);
   const [isExportingBundle, setIsExportingBundle] = useState(false);
 
@@ -28,7 +30,7 @@ export function ExportButtons({ report, parsedData, startTime, endTime }: Export
       await downloadQuarterlyPDFOnly(report);
     } catch (error) {
       console.error('PDF export error:', error);
-      alert('PDF olusturulurken hata olustu.');
+      showToast('error', 'PDF olusturulurken hata olustu.');
     } finally {
       setIsExportingPDF(false);
     }
@@ -42,7 +44,7 @@ export function ExportButtons({ report, parsedData, startTime, endTime }: Export
       await generateQuarterlyEvidenceBundle(report, parsedData, startTime, endTime);
     } catch (error) {
       console.error('Bundle export error:', error);
-      alert('Evidence bundle olusturulurken hata olustu.');
+      showToast('error', 'Evidence bundle olusturulurken hata olustu.');
     } finally {
       setIsExportingBundle(false);
     }
@@ -54,7 +56,7 @@ export function ExportButtons({ report, parsedData, startTime, endTime }: Export
       <button
         onClick={handlePDFExport}
         disabled={isExportingPDF}
-        className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        className="flex items-center gap-2 px-4 py-2 bg-[#BF192B] text-white rounded-lg hover:bg-[#BF192B] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         {isExportingPDF ? (
           <Loader2 className="w-4 h-4 animate-spin" />
@@ -68,7 +70,7 @@ export function ExportButtons({ report, parsedData, startTime, endTime }: Export
       <button
         onClick={handleBundleExport}
         disabled={isExportingBundle || !startTime || !endTime}
-        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        className="flex items-center gap-2 px-4 py-2 bg-[#0049AA] text-white rounded-lg hover:bg-[#0049AA] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         {isExportingBundle ? (
           <Loader2 className="w-4 h-4 animate-spin" />

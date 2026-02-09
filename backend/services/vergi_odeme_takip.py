@@ -1,0 +1,474 @@
+"""
+LYNTOS - Vergi Ödeme Takip Servisi
+Tahakkuk ve banka işlemlerini eşleştirerek vergi ödeme durumunu takip eder.
+"""
+
+import sqlite3
+from datetime import datetime, date
+from typing import List, Dict, Any, Optional
+from dataclasses import dataclass
+
+
+@dataclass
+class TahakkukEslestirme:
+    """Tahakkuk-ödeme eşleştirme sonucu"""
+    tahakkuk_id: int
+    tahakkuk_tipi: str
+    donem: str
+    toplam_borc: float
+    vade_tarihi: Optional[str]
+    odeme_durumu: str  # odendi, odenmedi, gecikli_odendi, vadesi_gelmedi
+    odeme_tarihi: Optional[str]
+    odeme_tutari: Optional[float]
+    banka_islem_id: Optional[int]
+    gecikme_gun: int = 0
+    gecikme_zammi: float = 0.0
+    toplam_borc_faizli: float = 0.0
+
+
+# ============================================================================
+# GECİKME ZAMMI ORANLARI (6183 Sayılı Kanun - Madde 51)
+# Kaynak: Hazine ve Maliye Bakanlığı / Cumhurbaşkanı Kararları
+# ============================================================================
+# Gecikme zammı her ay için ayrı ayrı uygulanır.
+# Ay kesirleri tam ay sayılır (1 gün bile gecikse o ay için tam oran uygulanır).
+from datetime import timedelta
+
+GECIKME_ZAMMI_ORANLARI = [
+    # (başlangıç_tarihi, bitiş_tarihi, aylık_oran_yüzde)
+    (datetime(2023, 11, 14), datetime(2024, 5, 20), 3.5),   # %3.5 aylık
+    (datetime(2024, 5, 21), datetime(2025, 11, 12), 4.5),   # %4.5 aylık
+    (datetime(2025, 11, 13), datetime(2099, 12, 31), 3.7),  # %3.7 aylık (güncel)
+]
+
+
+def hesapla_gecikme_zammi(
+    anapara: float,
+    vade_tarihi: date,
+    odeme_tarihi: Optional[date] = None
+) -> Dict[str, Any]:
+    """
+    6183 Sayılı Kanun'a göre gecikme zammı hesaplar.
+
+    Gecikme zammı hesaplama kuralları:
+    1. Vade tarihinden itibaren her ay için ayrı ayrı hesaplanır
+    2. Ay kesirleri tam ay sayılır (1 gün bile geçse o ay için tam oran)
+    3. Farklı dönemlerde farklı oranlar uygulanabilir
+
+    Args:
+        anapara: Vergi borcu tutarı
+        vade_tarihi: Vade tarihi
+        odeme_tarihi: Ödeme tarihi (None ise bugün)
+
+    Returns:
+        {
+            'gecikme_gun': int,
+            'gecikme_ay': int,
+            'gecikme_zammi': float,
+            'toplam_borc': float,
+            'aylik_detay': [...]
+        }
+    """
+    if odeme_tarihi is None:
+        odeme_tarihi = date.today()
+
+    # Convert date to datetime for comparison with GECIKME_ZAMMI_ORANLARI
+    vade_dt = datetime(vade_tarihi.year, vade_tarihi.month, vade_tarihi.day)
+    odeme_dt = datetime(odeme_tarihi.year, odeme_tarihi.month, odeme_tarihi.day)
+
+    # Vade geçmemişse gecikme yok
+    if odeme_dt <= vade_dt:
+        return {
+            'gecikme_gun': 0,
+            'gecikme_ay': 0,
+            'gecikme_zammi': 0.0,
+            'toplam_borc': anapara,
+            'aylik_detay': []
+        }
+
+    gecikme_gun = (odeme_tarihi - vade_tarihi).days
+
+    # Ay sayısını hesapla (ay kesirleri tam ay sayılır)
+    # Örn: 1-30 gün = 1 ay, 31-60 gün = 2 ay, vs.
+    gecikme_ay = (gecikme_gun + 29) // 30  # Yukarı yuvarla
+
+    toplam_zammi = 0.0
+    aylik_detay = []
+
+    # Her ay için ayrı ayrı hesapla
+    current_date = vade_dt
+    for ay_no in range(1, gecikme_ay + 1):
+        # Bu ayın başlangıç ve bitiş tarihleri
+        ay_baslangic = current_date
+        ay_bitis = current_date + timedelta(days=30)
+
+        # Bu tarih aralığında geçerli olan oranı bul
+        oran = 3.7  # Varsayılan güncel oran
+        for baslangic, bitis, ay_oran in GECIKME_ZAMMI_ORANLARI:
+            if baslangic <= ay_baslangic <= bitis:
+                oran = ay_oran
+                break
+
+        # Bu ay için gecikme zammı
+        ay_zammi = anapara * (oran / 100)
+        toplam_zammi += ay_zammi
+
+        aylik_detay.append({
+            'ay_no': ay_no,
+            'tarih_araligi': f"{ay_baslangic.strftime('%d.%m.%Y')} - {ay_bitis.strftime('%d.%m.%Y')}",
+            'oran': oran,
+            'faiz': round(ay_zammi, 2)
+        })
+
+        current_date = ay_bitis
+
+    ortalama_oran = round(sum(d['oran'] for d in aylik_detay) / len(aylik_detay), 2) if aylik_detay else 0
+
+    return {
+        'gecikme_gun': gecikme_gun,
+        'gecikme_ay': gecikme_ay,
+        'gecikme_zammi': round(toplam_zammi, 2),
+        'toplam_borc': round(anapara + toplam_zammi, 2),
+        'ortalama_oran': ortalama_oran,
+        'aylik_detay': aylik_detay
+    }
+
+
+class VergiOdemeTakipServisi:
+    """Vergi ödemelerini tahakkuklarla eşleştirir"""
+
+    # Devlet bankaları - vergi ödemeleri genellikle bunlardan yapılır
+    DEVLET_BANKALARI = ['ZİRAAT', 'ZIRAAT', 'HALKBANK', 'HALK', 'VAKIFBANK', 'VAKIF']
+
+    # Vergi türü anahtar kelimeleri
+    VERGI_KEYWORDS = {
+        'KDV': ['KDV', 'KATMA DEĞER', 'KDVB'],
+        'MUHTASAR': ['MUHTASAR', 'STOPAJ', 'GV STOPAJ', 'MUHT'],
+        'GECICI_VERGI': ['GEÇİCİ', 'GECICI', 'GEÇ.VERGİ'],
+        'KURUMLAR': ['KURUMLAR', 'KV'],
+        'DAMGA': ['DAMGA', 'DV'],
+        'MTV': ['MTV', 'MOTORLU'],
+        'SGK': ['SGK', 'SOSYAL GÜV'],
+        'POSET': ['POŞET', 'POSET', 'GEKAP', 'GERİ KAZANIM']
+    }
+
+    def __init__(self, conn: sqlite3.Connection):
+        self.conn = conn
+        self.conn.row_factory = sqlite3.Row
+
+    def get_tahakkuklar(self, tenant_id: str, client_id: str, period_id: str) -> List[Dict]:
+        """Dönem tahakkuklarını getir"""
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            SELECT id, tahakkuk_tipi, donem_yil, donem_ay, toplam_borc, vade_tarihi,
+                   payment_status, payment_date, payment_amount, gecikme_gun
+            FROM tahakkuk_entries
+            WHERE tenant_id = ? AND client_id = ? AND period_id = ?
+            ORDER BY donem_ay
+        """, (tenant_id, client_id, period_id))
+
+        return [dict(row) for row in cursor.fetchall()]
+
+    def get_banka_islemleri(self, tenant_id: str, client_id: str, period_id: str) -> List[Dict]:
+        """Dönem banka işlemlerini getir (devlet bankalarından giden ödemeler)"""
+        cursor = self.conn.cursor()
+        # Kolonlar: tarih (not islem_tarihi), tutar (not borc/alacak)
+        # Negatif tutar = giden ödeme (çıkış)
+        cursor.execute("""
+            SELECT id, tarih as islem_tarihi, aciklama,
+                   CASE WHEN tutar < 0 THEN ABS(tutar) ELSE 0 END as borc,
+                   CASE WHEN tutar > 0 THEN tutar ELSE 0 END as alacak,
+                   bakiye, banka_adi
+            FROM bank_transactions
+            WHERE tenant_id = ? AND client_id = ? AND period_id = ?
+              AND tutar < 0
+            ORDER BY tarih
+        """, (tenant_id, client_id, period_id))
+
+        return [dict(row) for row in cursor.fetchall()]
+
+    def _parse_vade_tarihi(self, vade_str: Optional[str]) -> Optional[date]:
+        """Vade tarihini parse et"""
+        if not vade_str:
+            return None
+        try:
+            # DD/MM/YYYY format
+            if '/' in vade_str:
+                parts = vade_str.split('/')
+                return date(int(parts[2]), int(parts[1]), int(parts[0]))
+            # YYYY-MM-DD format
+            elif '-' in vade_str:
+                parts = vade_str.split('-')
+                return date(int(parts[0]), int(parts[1]), int(parts[2]))
+        except:
+            return None
+        return None
+
+    def _is_vergi_odemesi(self, aciklama: str, vergi_turu: str) -> bool:
+        """Banka işlemi açıklamasının vergi ödemesi olup olmadığını kontrol et"""
+        aciklama_upper = aciklama.upper()
+
+        # Genel vergi ödeme belirteçleri
+        genel_keywords = ['VERGİ', 'VERGI', 'GİB', 'GIB', 'MALİYE', 'MALIYE', 'TAHAKKUK', 'BEYAN']
+        if not any(k in aciklama_upper for k in genel_keywords):
+            return False
+
+        # Spesifik vergi türü kontrolü
+        keywords = self.VERGI_KEYWORDS.get(vergi_turu, [])
+        if any(k in aciklama_upper for k in keywords):
+            return True
+
+        # "VERGİ TAHSİLATI" gibi genel açıklamalarda da eşleşme izni ver
+        # (tutar bazlı eşleştirme yapılacak)
+        if 'TAHSİLAT' in aciklama_upper or 'TAHSILAT' in aciklama_upper:
+            return True
+
+        # VKN (Vergi Kimlik No) içeren işlemler genelde vergi ödemesi
+        if '048052' in aciklama:  # Özkan Kırtasiye VKN
+            return True
+
+        return False
+
+    def _tutar_eslesiyor_mu(self, tahakkuk_borc: float, odeme_tutari: float,
+                              gecikme_zammi: float = 0, tolerans: float = 0.05) -> tuple:
+        """
+        Tutarların eşleşip eşleşmediğini kontrol et.
+
+        Üç durumu kontrol eder:
+        1. Sadece anapara ile eşleşme (zamanında ödeme)
+        2. Anapara + gecikme zammı ile eşleşme (gecikmeli ödeme)
+        3. Eşleşme yok
+
+        Returns:
+            (eslesme_var: bool, gecikme_zammi_ile: bool)
+        """
+        if tahakkuk_borc == 0:
+            return (False, False)
+
+        # 1. Sadece anapara ile eşleşme kontrolü
+        fark_anapara = abs(tahakkuk_borc - odeme_tutari)
+        if fark_anapara <= (tahakkuk_borc * tolerans):
+            return (True, False)
+
+        # 2. Anapara + gecikme zammı ile eşleşme kontrolü
+        if gecikme_zammi > 0:
+            toplam_faizli = tahakkuk_borc + gecikme_zammi
+            fark_faizli = abs(toplam_faizli - odeme_tutari)
+            if fark_faizli <= (toplam_faizli * tolerans):
+                return (True, True)
+
+        return (False, False)
+
+    def eslesmeleri_bul(self, tenant_id: str, client_id: str, period_id: str) -> List[TahakkukEslestirme]:
+        """Tahakkuk ve banka işlemlerini eşleştir"""
+        tahakkuklar = self.get_tahakkuklar(tenant_id, client_id, period_id)
+        banka_islemleri = self.get_banka_islemleri(tenant_id, client_id, period_id)
+
+        sonuclar = []
+        kullanilan_islemler = set()
+        bugun = date.today()
+
+        for t in tahakkuklar:
+            tahakkuk_id = t['id']
+            vergi_turu = t['tahakkuk_tipi']
+            toplam_borc = t['toplam_borc'] or 0
+            vade_str = t['vade_tarihi']
+            vade_tarihi = self._parse_vade_tarihi(vade_str)
+
+            # Mevcut ödeme durumu varsa kullan
+            if t.get('payment_status') and t.get('payment_date'):
+                sonuclar.append(TahakkukEslestirme(
+                    tahakkuk_id=tahakkuk_id,
+                    tahakkuk_tipi=vergi_turu,
+                    donem=f"{t['donem_yil']}-{t['donem_ay']:02d}" if t['donem_ay'] else str(t['donem_yil']),
+                    toplam_borc=toplam_borc,
+                    vade_tarihi=vade_str,
+                    odeme_durumu=t['payment_status'],
+                    odeme_tarihi=t['payment_date'],
+                    odeme_tutari=t.get('payment_amount'),
+                    banka_islem_id=None,
+                    gecikme_gun=t.get('gecikme_gun') or 0
+                ))
+                continue
+
+            # Banka işlemlerinde eşleşme ara
+            eslesen_islem = None
+            gecikme_zammi_ile_odendi = False
+
+            # Önce potansiyel gecikme zammını hesapla (bugüne kadar)
+            potansiyel_gecikme = 0
+            if vade_tarihi and vade_tarihi < bugun:
+                hesap = hesapla_gecikme_zammi(toplam_borc, vade_tarihi, bugun)
+                potansiyel_gecikme = hesap.get('gecikme_zammi', 0)
+
+            for bi in banka_islemleri:
+                if bi['id'] in kullanilan_islemler:
+                    continue
+
+                aciklama = bi.get('aciklama') or ''
+                borc = bi.get('borc') or 0
+
+                # Vergi ödemesi mi?
+                if not self._is_vergi_odemesi(aciklama, vergi_turu):
+                    continue
+
+                # Tutar eşleşiyor mu? (anapara veya anapara+gecikme zammı)
+                eslesme, faizli_mi = self._tutar_eslesiyor_mu(toplam_borc, borc, potansiyel_gecikme)
+                if eslesme:
+                    eslesen_islem = bi
+                    gecikme_zammi_ile_odendi = faizli_mi
+                    kullanilan_islemler.add(bi['id'])
+                    break
+
+            # Sonucu oluştur
+            if eslesen_islem:
+                odeme_tarihi_str = eslesen_islem['islem_tarihi']
+                try:
+                    odeme_tarihi = datetime.strptime(odeme_tarihi_str, '%Y-%m-%d').date()
+                except:
+                    odeme_tarihi = None
+
+                # Gecikme hesapla
+                gecikme_gun = 0
+                if vade_tarihi and odeme_tarihi and odeme_tarihi > vade_tarihi:
+                    gecikme_gun = (odeme_tarihi - vade_tarihi).days
+
+                odeme_durumu = 'gecikli_odendi' if gecikme_gun > 0 else 'odendi'
+
+                sonuclar.append(TahakkukEslestirme(
+                    tahakkuk_id=tahakkuk_id,
+                    tahakkuk_tipi=vergi_turu,
+                    donem=f"{t['donem_yil']}-{t['donem_ay']:02d}" if t['donem_ay'] else str(t['donem_yil']),
+                    toplam_borc=toplam_borc,
+                    vade_tarihi=vade_str,
+                    odeme_durumu=odeme_durumu,
+                    odeme_tarihi=odeme_tarihi_str,
+                    odeme_tutari=eslesen_islem['borc'],
+                    banka_islem_id=eslesen_islem['id'],
+                    gecikme_gun=gecikme_gun
+                ))
+            else:
+                # Ödeme bulunamadı
+                if vade_tarihi and vade_tarihi > bugun:
+                    odeme_durumu = 'vadesi_gelmedi'
+                    gecikme_gun = 0
+                else:
+                    odeme_durumu = 'odenmedi'
+                    gecikme_gun = (bugun - vade_tarihi).days if vade_tarihi else 0
+
+                sonuclar.append(TahakkukEslestirme(
+                    tahakkuk_id=tahakkuk_id,
+                    tahakkuk_tipi=vergi_turu,
+                    donem=f"{t['donem_yil']}-{t['donem_ay']:02d}" if t['donem_ay'] else str(t['donem_yil']),
+                    toplam_borc=toplam_borc,
+                    vade_tarihi=vade_str,
+                    odeme_durumu=odeme_durumu,
+                    odeme_tarihi=None,
+                    odeme_tutari=None,
+                    banka_islem_id=None,
+                    gecikme_gun=gecikme_gun
+                ))
+
+        return sonuclar
+
+    def guncelle_tahakkuk_durumu(self, eslesmeler: List[TahakkukEslestirme]) -> int:
+        """Tahakkuk tablolarını güncelle"""
+        cursor = self.conn.cursor()
+        guncellenen = 0
+
+        for e in eslesmeler:
+            cursor.execute("""
+                UPDATE tahakkuk_entries
+                SET payment_status = ?,
+                    payment_date = ?,
+                    payment_amount = ?,
+                    payment_transaction_id = ?,
+                    gecikme_gun = ?,
+                    last_payment_check = ?
+                WHERE id = ?
+            """, (
+                e.odeme_durumu,
+                e.odeme_tarihi,
+                e.odeme_tutari,
+                e.banka_islem_id,
+                e.gecikme_gun,
+                datetime.now().isoformat(),
+                e.tahakkuk_id
+            ))
+            guncellenen += cursor.rowcount
+
+        self.conn.commit()
+        return guncellenen
+
+    def get_odeme_ozeti(self, tenant_id: str, client_id: str, period_id: str) -> Dict[str, Any]:
+        """Ödeme durumu özeti"""
+        tahakkuklar = self.get_tahakkuklar(tenant_id, client_id, period_id)
+
+        ozet = {
+            'toplam_tahakkuk': len(tahakkuklar),
+            'odenen': 0,
+            'gecikli_odenen': 0,
+            'odenmemis': 0,
+            'vadesi_gelmemis': 0,
+            'toplam_borc': 0,
+            'odenen_tutar': 0,
+            'kalan_borc': 0,
+            'gecikme_uyarilari': [],
+            'detaylar': []
+        }
+
+        for t in tahakkuklar:
+            status = t.get('payment_status') or 'vadesi_gelmedi'
+            borc = t.get('toplam_borc') or 0
+            odeme = t.get('payment_amount') or 0
+
+            ozet['toplam_borc'] += borc
+
+            if status == 'odendi':
+                ozet['odenen'] += 1
+                ozet['odenen_tutar'] += odeme
+            elif status == 'gecikli_odendi':
+                ozet['gecikli_odenen'] += 1
+                ozet['odenen_tutar'] += odeme
+            elif status == 'odenmedi':
+                ozet['odenmemis'] += 1
+                ozet['kalan_borc'] += borc
+                # Uyarı ekle
+                gecikme = t.get('gecikme_gun') or 0
+                if gecikme > 0:
+                    ozet['gecikme_uyarilari'].append({
+                        'tip': t.get('tahakkuk_tipi'),
+                        'donem': f"{t.get('donem_yil')}-{t.get('donem_ay', 0):02d}",
+                        'gecikme_gun': gecikme,
+                        'mesaj': f"{t.get('tahakkuk_tipi')} vergisi {gecikme} gündür ödenmedi!",
+                        'kritik': gecikme > 30
+                    })
+            else:
+                ozet['vadesi_gelmemis'] += 1
+                ozet['kalan_borc'] += borc
+
+            ozet['detaylar'].append({
+                'id': t['id'],
+                'tip': t.get('tahakkuk_tipi'),
+                'borc': borc,
+                'durum': status,
+                'gecikme': t.get('gecikme_gun') or 0
+            })
+
+        return ozet
+
+
+def update_tahakkuk_payment_status(db_path: str, tenant_id: str, client_id: str, period_id: str) -> Dict[str, Any]:
+    """Tahakkuk ödeme durumlarını güncelle ve özet döndür"""
+    conn = sqlite3.connect(db_path)
+    service = VergiOdemeTakipServisi(conn)
+
+    # Eşleşmeleri bul ve güncelle
+    eslesmeler = service.eslesmeleri_bul(tenant_id, client_id, period_id)
+    service.guncelle_tahakkuk_durumu(eslesmeler)
+
+    # Özeti al
+    ozet = service.get_odeme_ozeti(tenant_id, client_id, period_id)
+
+    conn.close()
+    return ozet

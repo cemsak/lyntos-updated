@@ -66,6 +66,10 @@ export interface KurganSenaryo {
   suresi: string | null; // "30 gun", "15 gun", null
   mevzuat: string[];
   ornekler?: string[];
+  // SMMM/YMM için ek alanlar
+  hesapKodlari?: string[]; // İlgili hesap kodları (131, 431, vb.)
+  esik?: number; // Tetikleme eşiği (oran olarak)
+  kritikUyari?: string; // Özel uyarı mesajı (örn: hapis cezası)
 }
 
 // RAM pattern

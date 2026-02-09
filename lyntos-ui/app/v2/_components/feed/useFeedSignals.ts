@@ -95,9 +95,11 @@ export function useFilteredFeedSignals(severityFilter?: string[]) {
 /**
  * useFeedSignals - Dashboard Feed için sinyal üretici
  *
- * Öncelik sırası:
- * 1. Gerçek mizan verisi varsa → Rule Engine kurallarını çalıştır
- * 2. Gerçek mizan yoksa → Mock data kullan (demo modu)
+ * SIFIR MOCK DATA - Sadece gerçek mizan verisi kullanılır
+ * Veri yoksa boş array döner, UI "Veri yükleyin" mesajı gösterir
+ *
+ * NOT: Bu hook BYPASS durumda - Dashboard artık useBackendFeed kullanıyor
+ * Backend'den gelen feed_items tablosundaki veriler gösteriliyor
  */
 export function useFeedSignals() {
   const { scope } = useDashboardScope();
@@ -113,20 +115,29 @@ export function useFeedSignals() {
     // GERÇEK VERİ MODU
     // ═══════════════════════════════════════════════════════════════════
     if (mizanLoaded && mizanAccounts.length > 0 && mizanSummary) {
-      console.log('[useFeedSignals] Gerçek mizan verisi kullanılıyor:', {
-        accounts: mizanAccounts.length,
-        summary: mizanSummary,
-      });
-
       const feedItems: FeedItem[] = [];
       const now = new Date().toISOString();
-      const period = scope.period || '2026-Q1';
+
+      // SMMM GÜVENİ: Scope eksikse sinyal üretme - fallback YOK
+      if (!scope.period || !scope.client_id || !scope.smmm_id) {
+        const emptyStats = { total: 0, critical: 0, high: 0, medium: 0, low: 0 };
+        return {
+          signals: feedItems,
+          stats: {
+            mizan: emptyStats,
+            crossCheck: emptyStats,
+            combined: emptyStats,
+          },
+        };
+      }
+
+      const period = scope.period;
 
       // Common scope for all items
       const feedScope: FeedScope = {
-        client_id: scope.client_id || 'default-client',
+        client_id: scope.client_id,
         period,
-        smmm_id: scope.smmm_id || 'default-smmm',
+        smmm_id: scope.smmm_id,
       };
 
       // ─────────────────────────────────────────────────────────────────
@@ -575,8 +586,6 @@ export function useFeedSignals() {
         });
       }
 
-      console.log('[useFeedSignals] Gerçek veriden üretilen sinyaller:', feedItems.length);
-
       // Sort by score descending
       feedItems.sort((a, b) => b.score - a.score);
 
@@ -594,8 +603,6 @@ export function useFeedSignals() {
     // VERİ YÜKLENMEMİŞ - BOŞ DURUM
     // Mock data KALDIRILDI - Gerçek mizan verisi yüklenmeden sinyal üretilmez
     // ═══════════════════════════════════════════════════════════════════
-    console.log('[useFeedSignals] Mizan verisi yüklenmemiş - sinyal üretilmiyor');
-
     // Boş sonuç döndür - UI "Veri yükleyin" mesajı gösterecek
     const emptyStats = { total: 0, critical: 0, high: 0, medium: 0, low: 0 };
 

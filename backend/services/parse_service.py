@@ -122,6 +122,7 @@ def _parse_mizan_excel(file_path: Path) -> List[Dict[str, Any]]:
         return results
 
     # Find header row (contains HESAP KODU)
+    # Özkan Kırtasiye format: Row 4 has "HESAP KODU" in it
     header_idx = None
     for i, row in df.iterrows():
         row_str = ' '.join([str(c).upper() for c in row.values if pd.notna(c)])
@@ -133,32 +134,42 @@ def _parse_mizan_excel(file_path: Path) -> List[Dict[str, Any]]:
         logger.warning(f"No header row found in {file_path}")
         return results
 
-    # Set header row
-    df.columns = df.iloc[header_idx].values
+    # Get the header row values
+    header_values = df.iloc[header_idx].values
+
+    # Clean and normalize header values
+    clean_headers = []
+    for i, h in enumerate(header_values):
+        if pd.notna(h):
+            h_str = str(h).strip().upper()
+            # Handle Özkan format where first column is "HESAP KODU"
+            clean_headers.append(h_str)
+        else:
+            clean_headers.append(f'COL_{i}')
+
+    # Set cleaned headers
+    df.columns = clean_headers
     df = df.iloc[header_idx + 1:].reset_index(drop=True)
 
-    # Clean column names
-    df.columns = [str(c).strip() if pd.notna(c) else f'col_{i}' for i, c in enumerate(df.columns)]
-
-    # Find column indices
+    # Find column indices - more flexible matching
     col_map = {}
     for col in df.columns:
-        col_upper = col.upper()
-        if 'HESAP KODU' in col_upper or col_upper == 'HESAPKODU':
+        col_upper = str(col).upper().strip()
+        if col_upper in ['HESAP KODU', 'HESAPKODU', 'HESAP_KODU', 'KOD']:
             col_map['hesap_kodu'] = col
-        elif 'HESAP ADI' in col_upper or 'HESAP ADI' in col_upper:
+        elif col_upper in ['HESAP ADI', 'HESAPADI', 'HESAP_ADI', 'ADI', 'AD']:
             col_map['hesap_adi'] = col
-        elif col_upper == 'BORÇ' or col_upper == 'BORC':
+        elif col_upper in ['BORÇ', 'BORC', 'DÖNEM BORÇ', 'DONEM BORC']:
             col_map['borc'] = col
-        elif col_upper == 'ALACAK':
+        elif col_upper in ['ALACAK', 'DÖNEM ALACAK', 'DONEM ALACAK']:
             col_map['alacak'] = col
-        elif 'BORÇ BAKİYE' in col_upper or 'BORC BAKIYE' in col_upper:
+        elif col_upper in ['BORÇ BAKİYESİ', 'BORC BAKIYESI', 'BORÇ BAKİYE', 'BORC BAKIYE']:
             col_map['borc_bakiye'] = col
-        elif 'ALACAK BAKİYE' in col_upper:
+        elif col_upper in ['ALACAK BAKİYESİ', 'ALACAK BAKIYESI', 'ALACAK BAKİYE']:
             col_map['alacak_bakiye'] = col
 
     if 'hesap_kodu' not in col_map:
-        logger.warning(f"HESAP KODU column not found in {file_path}")
+        logger.warning(f"HESAP KODU column not found in {file_path}. Available columns: {list(df.columns)}")
         return results
 
     for _, row in df.iterrows():
@@ -591,12 +602,15 @@ def trigger_parse_for_document(
 
 def parse_bank_statement(file_path: Path) -> List[Dict[str, Any]]:
     """
-    Parse bank statement CSV file.
+    Parse bank statement file (CSV or Excel).
 
-    Supports Turkish bank statement format:
-    - Delimiter: semicolon (;)
-    - Encoding: windows-1254 or utf-8
-    - Columns: Tarih, Aciklama, Islem Tutari, Bakiye
+    Supports Turkish bank statement formats:
+    - CSV WITH HEADER: Tarih;Açıklama;Tutar;Bakiye
+    - CSV WITHOUT HEADER (Özkan format): 31.01.2025;Z04177;Açıklama;368,00;154.286,48
+    - XLSX: Excel files with similar structure
+
+    Delimiter: semicolon (;) or comma (,)
+    Encoding: windows-1254, utf-8, latin-1, iso-8859-9
 
     Returns list of transactions with normalized fields.
     """
@@ -606,32 +620,25 @@ def parse_bank_statement(file_path: Path) -> List[Dict[str, Any]]:
         logger.warning(f"Bank statement file not found: {file_path}")
         return results
 
+    suffix = file_path.suffix.lower()
+
+    # Excel files (.xlsx, .xls)
+    if suffix in ['.xlsx', '.xls']:
+        return _parse_bank_excel(file_path)
+
     # Extract bank info from filename
-    # Format: Q1 102.01 YKB 1-2-3.csv
     filename = file_path.name
-    hesap_kodu = None
-    banka_adi = None
-
-    # Try to extract account code (102.xx)
-    match = re.search(r'(102\.\d{2})', filename)
-    if match:
-        hesap_kodu = match.group(1)
-
-    # Try to extract bank name
-    bank_names = ['YKB', 'AKBANK', 'HALKBANK', 'ZİRAAT', 'ZIRAAT', 'ALBARAKA',
-                  'GARANTİ', 'İŞBANK', 'VAKIF', 'DENİZ', 'QNB', 'ING', 'TEB']
-    for bank in bank_names:
-        if bank.upper() in filename.upper():
-            banka_adi = bank
-            break
+    hesap_kodu, banka_adi = _extract_bank_info_from_filename(filename)
 
     # Try different encodings
     content = None
-    for encoding in ['utf-8-sig', 'utf-8', 'windows-1254', 'latin-1', 'iso-8859-9']:
+    for encoding in ['utf-8-sig', 'utf-8', 'windows-1254', 'latin-1', 'iso-8859-9', 'cp1254']:
         try:
             with open(file_path, 'r', encoding=encoding) as f:
                 content = f.read()
-            break
+            # Check if content looks valid (has Turkish chars or numbers)
+            if content and (re.search(r'\d{2}\.\d{2}\.\d{4}', content) or 'TARİH' in content.upper()):
+                break
         except (UnicodeDecodeError, UnicodeError):
             continue
 
@@ -639,43 +646,79 @@ def parse_bank_statement(file_path: Path) -> List[Dict[str, Any]]:
         logger.error(f"Could not read bank statement with any encoding: {file_path}")
         return results
 
+    # İçerik bazlı banka tespiti (dosya adında bulamadıysak)
+    if not banka_adi:
+        banka_adi = _detect_bank_from_content(content)
+
     lines = content.strip().split('\n')
+    if not lines:
+        return results
 
     # Detect delimiter
     first_data_line = lines[0] if lines else ""
     delimiter = ';' if ';' in first_data_line else ','
 
-    # Find header row (Tarih, Açıklama, etc.)
+    # Check if first line is a header or data
+    # Data lines start with date pattern: DD.MM.YYYY
+    has_header = False
     header_idx = 0
-    for i, line in enumerate(lines[:10]):  # Check first 10 lines
+
+    for i, line in enumerate(lines[:10]):
         line_upper = line.upper()
-        if 'TARİH' in line_upper or 'TARIH' in line_upper:
+        # Check for header keywords
+        if 'TARİH' in line_upper or 'TARIH' in line_upper or 'AÇIKLAMA' in line_upper:
+            has_header = True
             header_idx = i
             break
+        # Check if line starts with date (no header)
+        if re.match(r'\d{2}\.\d{2}\.\d{4}', line.strip()):
+            has_header = False
+            break
 
-    # Parse header
-    header_line = lines[header_idx]
-    header = [col.strip() for col in header_line.split(delimiter)]
+    if has_header:
+        # Parse with header
+        header_line = lines[header_idx]
+        header = [col.strip() for col in header_line.split(delimiter)]
 
-    # Find column indices
-    tarih_idx = None
-    aciklama_idx = None
-    tutar_idx = None
-    bakiye_idx = None
+        # Find column indices
+        tarih_idx = None
+        aciklama_idx = None
+        tutar_idx = None
+        bakiye_idx = None
 
-    for i, col in enumerate(header):
-        col_upper = col.upper()
-        if 'TARİH' in col_upper or 'TARIH' in col_upper:
-            tarih_idx = i
-        elif 'AÇIKLAMA' in col_upper or 'ACIKLAMA' in col_upper:
-            aciklama_idx = i
-        elif 'TUTAR' in col_upper or 'İŞLEM' in col_upper or 'ISLEM' in col_upper:
-            tutar_idx = i
-        elif 'BAKİYE' in col_upper or 'BAKIYE' in col_upper:
-            bakiye_idx = i
+        for i, col in enumerate(header):
+            col_upper = col.upper()
+            if 'TARİH' in col_upper or 'TARIH' in col_upper:
+                tarih_idx = i
+            elif 'AÇIKLAMA' in col_upper or 'ACIKLAMA' in col_upper:
+                aciklama_idx = i
+            elif 'TUTAR' in col_upper or 'İŞLEM' in col_upper or 'ISLEM' in col_upper:
+                tutar_idx = i
+            elif 'BAKİYE' in col_upper or 'BAKIYE' in col_upper:
+                bakiye_idx = i
+
+        data_start = header_idx + 1
+    else:
+        # No header - Özkan Kırtasiye format
+        # Format: 31.01.2025;Z04177;Açıklama metin;368,00;154.286,48
+        # Columns: Tarih(0), Referans(1), Açıklama(2), Tutar(3), Bakiye(4)
+        tarih_idx = 0
+        aciklama_idx = 2  # Skip reference column, get description
+        tutar_idx = 3
+        bakiye_idx = 4
+        data_start = 0
+
+        # Some files might have: Tarih;Referans;Açıklama;Tutar;Bakiye (5 columns)
+        # Or: Tarih;Açıklama;Tutar;Bakiye (4 columns)
+        first_cols = first_data_line.split(delimiter)
+        if len(first_cols) == 4:
+            # 4 column format: Tarih;Açıklama;Tutar;Bakiye
+            aciklama_idx = 1
+            tutar_idx = 2
+            bakiye_idx = 3
 
     # Parse data rows
-    for line_num, line in enumerate(lines[header_idx + 1:], start=header_idx + 2):
+    for line_num, line in enumerate(lines[data_start:], start=data_start + 1):
         if not line.strip():
             continue
 
@@ -683,15 +726,16 @@ def parse_bank_statement(file_path: Path) -> List[Dict[str, Any]]:
 
         try:
             tarih = cols[tarih_idx].strip() if tarih_idx is not None and tarih_idx < len(cols) else None
+
+            # Skip if not a valid date
+            if not tarih or not re.match(r'\d{2}\.\d{2}\.\d{4}', tarih):
+                continue
+
             aciklama = cols[aciklama_idx].strip() if aciklama_idx is not None and aciklama_idx < len(cols) else None
             tutar_str = cols[tutar_idx].strip() if tutar_idx is not None and tutar_idx < len(cols) else None
             bakiye_str = cols[bakiye_idx].strip() if bakiye_idx is not None and bakiye_idx < len(cols) else None
 
-            # Skip empty rows
-            if not tarih and not aciklama:
-                continue
-
-            # Parse amount (can be negative)
+            # Parse amount (can be negative - indicated by "-" prefix)
             tutar = _parse_tr_number(tutar_str) if tutar_str else 0.0
             bakiye = _parse_tr_number(bakiye_str) if bakiye_str else 0.0
 
@@ -714,6 +758,250 @@ def parse_bank_statement(file_path: Path) -> List[Dict[str, Any]]:
             continue
 
     logger.info(f"Parsed {len(results)} bank transactions from: {file_path.name}")
+    return results
+
+
+def _detect_bank_from_content(text: str) -> Optional[str]:
+    """İçerik bazlı banka ismi tespiti."""
+    text_upper = text.upper()
+    bank_patterns = [
+        ('YAPIKREDI', ['YAPI KREDİ', 'YAPI KREDI', 'YAPIKREDI', 'YKB']),
+        ('ZIRAAT', ['ZİRAAT', 'ZIRAAT', 'T.C. ZİRAAT', 'TC ZIRAAT']),
+        ('GARANTI', ['GARANTİ', 'GARANTI', 'GARANTİ BBVA']),
+        ('AKBANK', ['AKBANK', 'AK BANK']),
+        ('ISBANK', ['İŞ BANK', 'IS BANK', 'İŞBANK', 'ISBANK', 'TÜRKİYE İŞ BANKASI']),
+        ('HALKBANK', ['HALK BANK', 'HALKBANK']),
+        ('VAKIF', ['VAKIF', 'VAKIFBANK', 'VAKIF BANK']),
+        ('DENIZ', ['DENİZ', 'DENIZ', 'DENİZBANK', 'DENIZBANK']),
+        ('QNB', ['QNB', 'FİNANS', 'FINANS']),
+        ('ING', ['ING BANK', 'ING ']),
+        ('TEB', ['TEB ', 'TÜRK EKONOMİ']),
+        ('HSBC', ['HSBC']),
+        ('ALBARAKA', ['ALBARAKA']),
+    ]
+    for bank_name, keywords in bank_patterns:
+        for kw in keywords:
+            if kw in text_upper:
+                return bank_name
+    return None
+
+
+def _extract_bank_info_from_filename(filename: str):
+    """Dosya adından hesap kodu ve banka adı çıkar."""
+    hesap_kodu = None
+    banka_adi = None
+
+    # Try to extract account code (102.xx)
+    match = re.search(r'(102\.\d{2})', filename)
+    if match:
+        hesap_kodu = match.group(1)
+
+    # Try to extract bank name
+    bank_names = ['YKB', 'YAPIKREDI', 'YAPIKRED', 'AKBANK', 'HALKBANK', 'ZİRAAT', 'ZIRAAT',
+                  'ALBARAKA', 'GARANTİ', 'GARANTI', 'İŞBANK', 'ISBANK',
+                  'VAKIF', 'DENİZ', 'DENIZ', 'QNB', 'ING', 'TEB', 'HSBC']
+    for bank in bank_names:
+        if bank.upper() in filename.upper():
+            banka_adi = bank.upper()
+            # Normalize bank names
+            if banka_adi in ('ZIRAAT', 'ZİRAAT'):
+                banka_adi = 'ZIRAAT'
+            elif banka_adi in ('YKB', 'YAPIKREDI', 'YAPIKRED'):
+                banka_adi = 'YAPIKREDI'
+            elif banka_adi in ('GARANTİ', 'GARANTI'):
+                banka_adi = 'GARANTI'
+            elif banka_adi in ('İŞBANK', 'ISBANK'):
+                banka_adi = 'ISBANK'
+            elif banka_adi in ('DENİZ', 'DENIZ'):
+                banka_adi = 'DENIZ'
+            break
+
+    return hesap_kodu, banka_adi
+
+
+def _parse_bank_excel(file_path: Path) -> List[Dict[str, Any]]:
+    """
+    Parse bank statement from Excel file (.xlsx, .xls).
+
+    Improvements:
+    - Borç/Alacak ayrı sütun desteği
+    - Valör, İşlem Tarihi gibi alternatif tarih sütunları
+    - İçerik bazlı banka tespiti
+    - Daha geniş sütun eşleme
+    """
+    results = []
+
+    try:
+        import pandas as pd
+    except ImportError:
+        logger.error("pandas not installed, cannot parse Excel files")
+        return results
+
+    # Extract bank info from filename
+    filename = file_path.name
+    hesap_kodu, banka_adi = _extract_bank_info_from_filename(filename)
+
+    try:
+        df = pd.read_excel(file_path, header=None)
+    except Exception as e:
+        logger.error(f"Could not read bank Excel file {file_path}: {e}")
+        return results
+
+    # İçerik bazlı banka tespiti (dosya adında bulamadıysak)
+    if not banka_adi:
+        try:
+            # İlk 10 satırdan banka adı tespit et
+            preview = ' '.join(
+                str(c) for row_vals in df.head(10).values
+                for c in row_vals if pd.notna(c)
+            )
+            banka_adi = _detect_bank_from_content(preview)
+        except Exception:
+            pass
+
+    # Find header row (contains TARİH/TARIH/DATE)
+    header_idx = None
+    for i, row in df.iterrows():
+        row_str = ' '.join([str(c).upper() for c in row.values if pd.notna(c)])
+        if any(kw in row_str for kw in ('TARİH', 'TARIH', 'DATE', 'VALÖR', 'VALOR')):
+            header_idx = i
+            break
+
+    # If no header found, try to detect data rows (starting with date pattern)
+    if header_idx is None:
+        for i, row in df.iterrows():
+            first_cell = str(row.iloc[0]) if pd.notna(row.iloc[0]) else ''
+            if re.match(r'\d{2}[./]\d{2}[./]\d{4}', first_cell):
+                header_idx = i - 1
+                break
+
+    if header_idx is None:
+        logger.warning(f"No header or data row found in bank Excel: {file_path}")
+        return results
+
+    # Get header values
+    if header_idx >= 0:
+        header_values = df.iloc[header_idx].values
+        clean_headers = []
+        for i, h in enumerate(header_values):
+            if pd.notna(h):
+                clean_headers.append(str(h).strip().upper())
+            else:
+                clean_headers.append(f'COL_{i}')
+        df.columns = clean_headers
+        df = df.iloc[header_idx + 1:].reset_index(drop=True)
+    else:
+        df.columns = [f'COL_{i}' for i in range(len(df.columns))]
+
+    # Gelişmiş sütun eşleme
+    col_map = {}
+    for col in df.columns:
+        col_upper = str(col).upper().strip()
+
+        # Tarih sütunları (öncelik: İşlem Tarihi > Tarih > Valör > Date)
+        if 'tarih' not in col_map:
+            if col_upper in ('TARİH', 'TARIH', 'İŞLEM TARİHİ', 'ISLEM TARIHI', 'DATE'):
+                col_map['tarih'] = col
+        if col_upper in ('VALÖR', 'VALOR', 'VALÖR TARİHİ') and 'tarih' not in col_map:
+            col_map['tarih'] = col
+
+        # Açıklama sütunları
+        if 'aciklama' not in col_map:
+            if any(kw in col_upper for kw in ('AÇIKLAMA', 'ACIKLAMA', 'İŞLEM AÇIKLAMASI',
+                                               'ISLEM ACIKLAMASI', 'DESCRIPTION')):
+                col_map['aciklama'] = col
+
+        # Ayrı Borç/Alacak sütunları
+        if col_upper in ('BORÇ', 'BORC', 'BORÇ TUTAR', 'BORC TUTAR'):
+            col_map['borc'] = col
+        elif col_upper in ('ALACAK', 'ALACAK TUTAR'):
+            col_map['alacak'] = col
+
+        # Tekli tutar sütunu
+        if 'tutar' not in col_map:
+            if any(kw in col_upper for kw in ('TUTAR', 'MİKTAR', 'MIKTAR', 'AMOUNT',
+                                               'İŞLEM TUTARI', 'ISLEM TUTARI')):
+                col_map['tutar'] = col
+
+        # Bakiye
+        if 'bakiye' not in col_map:
+            if any(kw in col_upper for kw in ('BAKİYE', 'BAKIYE', 'BALANCE',
+                                               'GÜNCEL BAKİYE', 'KALAN BAKİYE')):
+                col_map['bakiye'] = col
+
+    # Borç/Alacak varsa ayrı sütun modu
+    has_separate_borc_alacak = 'borc' in col_map and 'alacak' in col_map
+
+    # If columns not found, use positional fallback
+    if 'tarih' not in col_map:
+        col_map['tarih'] = df.columns[0] if len(df.columns) > 0 else None
+    if 'aciklama' not in col_map:
+        col_map['aciklama'] = df.columns[1] if len(df.columns) > 1 else None
+    if not has_separate_borc_alacak and 'tutar' not in col_map:
+        col_map['tutar'] = df.columns[2] if len(df.columns) > 2 else None
+    if 'bakiye' not in col_map:
+        col_map['bakiye'] = df.columns[-1] if len(df.columns) > 3 else None
+
+    for idx, row in df.iterrows():
+        try:
+            tarih = row.get(col_map.get('tarih'))
+            if pd.isna(tarih):
+                continue
+
+            tarih_str = str(tarih).strip()
+
+            # Date string validation + multiple format support
+            if re.match(r'\d{2}[./]\d{2}[./]\d{4}', tarih_str):
+                pass  # DD.MM.YYYY or DD/MM/YYYY — OK
+            elif re.match(r'\d{4}-\d{2}-\d{2}', tarih_str):
+                # YYYY-MM-DD → DD.MM.YYYY
+                parts = tarih_str.split('-')
+                tarih_str = f"{parts[2]}.{parts[1]}.{parts[0]}"
+            elif re.match(r'\d{2}-\d{2}-\d{4}', tarih_str):
+                # DD-MM-YYYY → DD.MM.YYYY
+                tarih_str = tarih_str.replace('-', '.')
+            elif hasattr(tarih, 'strftime'):
+                tarih_str = tarih.strftime('%d.%m.%Y')
+            else:
+                continue
+
+            aciklama = row.get(col_map.get('aciklama'))
+            aciklama = str(aciklama).strip() if pd.notna(aciklama) else ''
+
+            # Tutar hesaplama: ayrı borç/alacak veya tekli tutar
+            if has_separate_borc_alacak:
+                borc = row.get(col_map.get('borc'))
+                borc = _parse_tr_number(str(borc)) if pd.notna(borc) else 0.0
+                alacak = row.get(col_map.get('alacak'))
+                alacak = _parse_tr_number(str(alacak)) if pd.notna(alacak) else 0.0
+                # Net tutar: alacak pozitif, borç negatif
+                tutar = alacak - borc if (alacak > 0 or borc > 0) else 0.0
+            else:
+                tutar = row.get(col_map.get('tutar'))
+                tutar = _parse_tr_number(str(tutar)) if pd.notna(tutar) else 0.0
+
+            bakiye = row.get(col_map.get('bakiye'))
+            bakiye = _parse_tr_number(str(bakiye)) if pd.notna(bakiye) else 0.0
+
+            # Classify transaction type
+            islem_tipi = _classify_bank_transaction(aciklama)
+
+            results.append({
+                'hesap_kodu': hesap_kodu,
+                'banka_adi': banka_adi,
+                'tarih': tarih_str,
+                'aciklama': aciklama,
+                'islem_tipi': islem_tipi,
+                'tutar': tutar,
+                'bakiye': bakiye,
+                'line_number': idx
+            })
+
+        except Exception as e:
+            logger.warning(f"Error parsing bank Excel row {idx}: {e}")
+            continue
+
+    logger.info(f"Parsed {len(results)} bank transactions from Excel: {file_path.name}")
     return results
 
 
@@ -1247,6 +1535,30 @@ def parse_beyanname_pdf(file_path: Path) -> Dict[str, Any]:
                 if match:
                     result['odenecek_vergi'] = _parse_tr_number(match.group(1))
 
+            # ============================================
+            # MUHTASAR - TAHAKKUKA ESAS İCMAL CETVELİ
+            # ============================================
+            if result['beyanname_tipi'] == 'MUHTASAR' and result['odenecek_vergi'] == 0:
+                # Muhtasar'da "Ödenecek 3.103,38" formatı
+                # TAHAKKUKA ESAS İCMAL CETVELİ bölümünde
+                match = re.search(r'Ödenecek\s+([\d.]+,\d{2})', full_text)
+                if match:
+                    result['odenecek_vergi'] = _parse_tr_number(match.group(1))
+
+            # ============================================
+            # POŞET VERGİSİ - ÖDENECEK TOPLAM GEKAP
+            # ============================================
+            if result['beyanname_tipi'] == 'POSET' and result['odenecek_vergi'] == 0:
+                # "ÖDENECEK TOPLAM GEKAP TUTARI 1.090,48" formatı
+                match = re.search(r'ÖDENECEK\s+TOPLAM\s+GEKAP\s+TUTARI\s+([\d.]+,\d{2})', full_text, re.IGNORECASE)
+                if match:
+                    result['odenecek_vergi'] = _parse_tr_number(match.group(1))
+                else:
+                    # Alternatif: "Plastik Poşetten Elde Edilen GEKAP Tutarı" (toplam satış)
+                    match = re.search(r'PLASTİK\s+POŞETTEN\s+ELDE\s+EDİLEN\s+GEKAP\s+TUTARI\s+([\d.]+,\d{2})', full_text, re.IGNORECASE)
+                    if match:
+                        result['odenecek_vergi'] = _parse_tr_number(match.group(1))
+
             result['parsed_ok'] = True
 
     except Exception as e:
@@ -1263,7 +1575,14 @@ def parse_tahakkuk_pdf(file_path: Path) -> Dict[str, Any]:
 
     Extracts tax assessment details from GİB format PDFs.
 
-    Returns dict with tahakkuk details.
+    Bir tahakkuk fişinde birden fazla kalem olabilir:
+    - Ana vergi (0015 KDV, 0003 MUHTASAR, 0058 GEKAP vb.)
+    - Damga vergisi (1048 5035)
+    - Tevkifattan alınan damga (1046 TDMG)
+
+    Ayrıca mahsup olabilir (devreden KDV gibi) - bu durumda ödenecek 0 çıkabilir.
+
+    Returns dict with tahakkuk details including 'kalemler' list.
     """
     result = {
         'tahakkuk_tipi': None,
@@ -1281,7 +1600,9 @@ def parse_tahakkuk_pdf(file_path: Path) -> Dict[str, Any]:
         'vade_tarihi': None,
         'raw_text': '',
         'parsed_ok': False,
-        'parse_errors': []
+        'parse_errors': [],
+        'kalemler': [],  # Her satır için detay
+        'ana_vergi_kodu': None  # 0015, 0003, 0058 vb.
     }
 
     if not file_path.exists():
@@ -1373,6 +1694,96 @@ def parse_tahakkuk_pdf(file_path: Path) -> Dict[str, Any]:
                     match = re.search(r'(\d{2}[./]\d{2}[./]\d{4})', line)
                     if match:
                         result['vade_tarihi'] = match.group(1).replace('/', '.')
+
+            # ============================================
+            # Ana Vergi Kodu - PDF'deki "Ana Vergi Kodu XXXX" satırı
+            # ============================================
+            ana_vergi_match = re.search(r'Ana Vergi Kodu\s+(\d{4})', full_text)
+            if ana_vergi_match:
+                result['ana_vergi_kodu'] = ana_vergi_match.group(1)
+
+            # ============================================
+            # TABLO SATIRLARINI PARSE ET
+            # Format: "KODU ADI MATRAH TAHAKKUK MAHSUP ÖDENECEK VADE"
+            # Örnek: "0015 KDV 1.614.442,02 240.509,80 302.709,94 0,00 28/02/2025"
+            # Örnek: "1048 5035 0,00 443,70 0,00 443,70 28/02/2025"
+            # ============================================
+            kalemler = []
+
+            # Vergi kodu ile başlayan satırları bul (4 haneli kod)
+            # Pattern: 4 haneli kod + isim + sayılar + tarih
+            kalem_pattern = re.compile(
+                r'^(\d{4})\s+(\S+)\s+'  # Kod ve isim
+                r'([\d.,]+)\s+'          # Matrah
+                r'([\d.,]+)\s+'          # Tahakkuk eden
+                r'([\d.,]+)\s+'          # Mahsup edilen
+                r'([\d.,]+)\s+'          # Ödenecek
+                r'(\d{2}/\d{2}/\d{4})',  # Vade tarihi
+                re.MULTILINE
+            )
+
+            for match in kalem_pattern.finditer(full_text):
+                kod = match.group(1)
+                adi = match.group(2)
+                matrah = _parse_tr_number(match.group(3))
+                tahakkuk_eden = _parse_tr_number(match.group(4))
+                mahsup_edilen = _parse_tr_number(match.group(5))
+                odenecek = _parse_tr_number(match.group(6))
+                vade = match.group(7)
+
+                is_ana_vergi = (kod == result['ana_vergi_kodu']) if result['ana_vergi_kodu'] else False
+
+                kalemler.append({
+                    'vergi_kodu': kod,
+                    'vergi_adi': adi,
+                    'matrah': matrah,
+                    'tahakkuk_eden': tahakkuk_eden,
+                    'mahsup_edilen': mahsup_edilen,
+                    'odenecek': odenecek,
+                    'vade_tarihi': vade,
+                    'is_ana_vergi': is_ana_vergi
+                })
+
+            result['kalemler'] = kalemler
+
+            # ============================================
+            # TOPLAM tutarını direkt satırdan al
+            # "TOPLAM 691,10" veya "TOPLAM 1.912,78" formatı
+            # ============================================
+            if result['toplam_borc'] == 0:
+                # Tek başına "TOPLAM" satırını bul
+                match = re.search(r'^TOPLAM\s+([\d.]+,\d{2})\s*$', full_text, re.MULTILINE)
+                if match:
+                    result['toplam_borc'] = _parse_tr_number(match.group(1))
+
+            # Kalemlerden de toplam hesapla (doğrulama için)
+            if kalemler:
+                toplam_from_kalemler = sum(k['odenecek'] for k in kalemler)
+                if result['toplam_borc'] == 0:
+                    result['toplam_borc'] = toplam_from_kalemler
+
+            # ============================================
+            # Dönem ay bilgisini vergilendirme döneminden çıkar
+            # "02/2025-02/2025" veya "01/2025-03/2025" formatı
+            # ============================================
+            if result['donem_ay'] is None:
+                # Aylık dönem: "02/2025-02/2025" -> ay=2
+                match = re.search(r'(\d{2})/(\d{4})-\1/\2', full_text)
+                if match:
+                    result['donem_ay'] = int(match.group(1))
+                    result['donem_yil'] = int(match.group(2))
+                else:
+                    # Çeyreklik dönem: "01/2025-03/2025" -> Q1 (ay=3 olarak kaydet)
+                    match = re.search(r'(\d{2})/(\d{4})-(\d{2})/\2', full_text)
+                    if match:
+                        result['donem_ay'] = int(match.group(3))  # Son ay
+                        result['donem_yil'] = int(match.group(2))
+
+            # ============================================
+            # Vade tarihini kalemlerden al (ilk kalemin vadesi)
+            # ============================================
+            if result['vade_tarihi'] is None and kalemler:
+                result['vade_tarihi'] = kalemler[0]['vade_tarihi']
 
             result['parsed_ok'] = True
 

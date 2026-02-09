@@ -38,7 +38,7 @@ export const RiskProgressBar: React.FC<RiskProgressBarProps> = ({
       {(label || showValue) && (
         <div className="flex items-center justify-between mb-1">
           {label && (
-            <span className="text-sm font-medium text-slate-700">{label}</span>
+            <span className="text-sm font-medium text-[#5A5A5A]">{label}</span>
           )}
           {showValue && (
             <span className={cn('text-sm font-bold', config.color.text)}>
@@ -50,17 +50,17 @@ export const RiskProgressBar: React.FC<RiskProgressBarProps> = ({
       )}
 
       {/* Progress bar */}
-      <div className="relative h-3 bg-slate-100 rounded-full overflow-hidden">
+      <div className="relative h-3 bg-[#F5F6F8] rounded-full overflow-hidden">
         {/* Threshold markers */}
         {showThresholds && thresholds?.warning && (
           <div
-            className="absolute top-0 bottom-0 w-0.5 bg-amber-400 z-10"
+            className="absolute top-0 bottom-0 w-0.5 bg-[#FFCE19] z-10"
             style={{ left: `${(thresholds.warning / max) * 100}%` }}
           />
         )}
         {showThresholds && thresholds?.critical && (
           <div
-            className="absolute top-0 bottom-0 w-0.5 bg-red-400 z-10"
+            className="absolute top-0 bottom-0 w-0.5 bg-[#FF555F] z-10"
             style={{ left: `${(thresholds.critical / max) * 100}%` }}
           />
         )}
@@ -80,7 +80,7 @@ export const RiskProgressBar: React.FC<RiskProgressBarProps> = ({
         <div className="relative h-4 mt-1">
           {thresholds?.warning && (
             <span
-              className="absolute text-xs text-amber-600 transform -translate-x-1/2"
+              className="absolute text-xs text-[#FA841E] transform -translate-x-1/2"
               style={{ left: `${(thresholds.warning / max) * 100}%` }}
             >
               {thresholds.warning}
@@ -89,7 +89,7 @@ export const RiskProgressBar: React.FC<RiskProgressBarProps> = ({
           )}
           {thresholds?.critical && (
             <span
-              className="absolute text-xs text-red-600 transform -translate-x-1/2"
+              className="absolute text-xs text-[#BF192B] transform -translate-x-1/2"
               style={{ left: `${(thresholds.critical / max) * 100}%` }}
             >
               {thresholds.critical}

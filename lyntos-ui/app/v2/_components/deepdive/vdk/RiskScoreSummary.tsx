@@ -15,10 +15,10 @@ interface RiskScoreSummaryProps {
 }
 
 const RISK_LEVEL_CONFIG = {
-  LOW: { bg: 'bg-green-500', text: 'text-green-800', label: 'DUSUK' },
+  LOW: { bg: 'bg-[#00A651]', text: 'text-[#005A46]', label: 'DUSUK' },
   MEDIUM: { bg: 'bg-yellow-500', text: 'text-yellow-800', label: 'ORTA' },
-  HIGH: { bg: 'bg-orange-500', text: 'text-orange-800', label: 'YUKSEK' },
-  CRITICAL: { bg: 'bg-red-500', text: 'text-red-800', label: 'KRITIK' },
+  HIGH: { bg: 'bg-[#FFB114]', text: 'text-[#E67324]', label: 'YUKSEK' },
+  CRITICAL: { bg: 'bg-[#F0282D]', text: 'text-[#980F30]', label: 'KRITIK' },
 };
 
 export function RiskScoreSummary({
@@ -31,9 +31,9 @@ export function RiskScoreSummary({
   const config = RISK_LEVEL_CONFIG[riskLevel] || RISK_LEVEL_CONFIG.LOW;
 
   return (
-    <div className="bg-slate-50 rounded-lg p-4 mb-6">
+    <div className="bg-[#F5F6F8] rounded-lg p-4 mb-6">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-medium text-slate-600">
+        <h3 className="text-sm font-medium text-[#5A5A5A]">
           Risk Özeti
         </h3>
         <span
@@ -44,12 +44,12 @@ export function RiskScoreSummary({
       </div>
 
       {/* Progress Bar */}
-      <div className="relative h-4 bg-slate-200 rounded-full overflow-hidden mb-3">
+      <div className="relative h-4 bg-[#E5E5E5] rounded-full overflow-hidden mb-3">
         <div
           className={`absolute left-0 top-0 h-full ${config.bg} transition-all duration-500`}
           style={{ width: `${Math.min(percentage, 100)}%` }}
         />
-        <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-slate-700">
+        <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-[#5A5A5A]">
           {totalScore} / {maxScore} ({percentage}%)
         </span>
       </div>
@@ -57,26 +57,26 @@ export function RiskScoreSummary({
       {/* Status Counts */}
       <div className="flex gap-4 text-xs">
         <span className="flex items-center gap-1">
-          <span className="w-2 h-2 rounded-full bg-red-500" />
-          <span className="text-slate-600">
+          <span className="w-2 h-2 rounded-full bg-[#F0282D]" />
+          <span className="text-[#5A5A5A]">
             {statusCounts.fail} Fail
           </span>
         </span>
         <span className="flex items-center gap-1">
           <span className="w-2 h-2 rounded-full bg-yellow-500" />
-          <span className="text-slate-600">
+          <span className="text-[#5A5A5A]">
             {statusCounts.warning} Warning
           </span>
         </span>
         <span className="flex items-center gap-1">
-          <span className="w-2 h-2 rounded-full bg-slate-400" />
-          <span className="text-slate-600">
+          <span className="w-2 h-2 rounded-full bg-[#969696]" />
+          <span className="text-[#5A5A5A]">
             {statusCounts.pending} Pending
           </span>
         </span>
         <span className="flex items-center gap-1">
-          <span className="w-2 h-2 rounded-full bg-green-500" />
-          <span className="text-slate-600">
+          <span className="w-2 h-2 rounded-full bg-[#00A651]" />
+          <span className="text-[#5A5A5A]">
             {statusCounts.pass} Pass
           </span>
         </span>

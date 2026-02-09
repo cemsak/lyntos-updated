@@ -36,6 +36,7 @@
   ],
   "exclude": [
     "node_modules",
-    "src/_legacy"
+    "src/_legacy",
+    "__tests__"
   ]
 }

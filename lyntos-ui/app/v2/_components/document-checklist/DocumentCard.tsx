@@ -74,8 +74,8 @@ export function DocumentCard({
     <div
       className={`
         p-4 rounded-lg border-2 transition-all
-        ${isDragOver ? 'border-[#635bff] bg-[#635bff]/5' : 'border-[#e3e8ee]'}
-        ${isUploaded ? 'bg-[#0caf60]/5' : 'bg-white'}
+        ${isDragOver ? 'border-[#0049AA] bg-[#0049AA]/5' : 'border-[#E5E5E5]'}
+        ${isUploaded ? 'bg-[#00A651]/5' : 'bg-white'}
       `}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -89,14 +89,14 @@ export function DocumentCard({
             <p
               className={`text-[13px] font-medium ${
                 isUploaded
-                  ? 'text-[#697386] line-through'
-                  : 'text-[#1a1f36]'
+                  ? 'text-[#5A5A5A] line-through'
+                  : 'text-[#2E2E2E]'
               }`}
             >
               {document.name}
             </p>
             {document.description && (
-              <p className="text-[11px] text-[#697386] mt-0.5">
+              <p className="text-[11px] text-[#5A5A5A] mt-0.5">
                 {document.description}
               </p>
             )}
@@ -120,11 +120,11 @@ export function DocumentCard({
       <div className="mt-3">
         {isUploaded ? (
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-[12px] text-[#0caf60]">
+            <div className="flex items-center gap-2 text-[12px] text-[#00A651]">
               <Check className="w-4 h-4" />
               <span>{document.file_name}</span>
               {document.uploaded_at && (
-                <span className="text-[#697386]">
+                <span className="text-[#5A5A5A]">
                   ({new Date(document.uploaded_at).toLocaleDateString('tr-TR')})
                 </span>
               )}
@@ -135,14 +135,14 @@ export function DocumentCard({
                   href={document.file_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="p-1.5 text-[#697386] hover:text-[#635bff] hover:bg-[#635bff]/10 rounded transition-colors"
+                  className="p-1.5 text-[#5A5A5A] hover:text-[#0049AA] hover:bg-[#0049AA]/10 rounded transition-colors"
                 >
                   <Eye className="w-4 h-4" />
                 </a>
               )}
               <button
                 onClick={onDelete}
-                className="p-1.5 text-[#697386] hover:text-[#cd3d64] hover:bg-[#cd3d64]/10 rounded transition-colors"
+                className="p-1.5 text-[#5A5A5A] hover:text-[#F0282D] hover:bg-[#F0282D]/10 rounded transition-colors"
               >
                 <Trash2 className="w-4 h-4" />
               </button>
@@ -154,21 +154,21 @@ export function DocumentCard({
             <div
               className={`
               p-3 border-2 border-dashed rounded-lg text-center transition-colors
-              ${isDragOver ? 'border-[#635bff] bg-[#635bff]/5' : 'border-[#e3e8ee]'}
+              ${isDragOver ? 'border-[#0049AA] bg-[#0049AA]/5' : 'border-[#E5E5E5]'}
             `}
             >
               {isUploading ? (
-                <div className="flex items-center justify-center gap-2 text-[12px] text-[#697386]">
-                  <div className="w-4 h-4 border-2 border-[#635bff] border-t-transparent rounded-full animate-spin" />
+                <div className="flex items-center justify-center gap-2 text-[12px] text-[#5A5A5A]">
+                  <div className="w-4 h-4 border-2 border-[#0049AA] border-t-transparent rounded-full animate-spin" />
                   Yükleniyor...
                 </div>
               ) : (
                 <label className="cursor-pointer">
-                  <div className="flex items-center justify-center gap-2 text-[12px] text-[#697386]">
+                  <div className="flex items-center justify-center gap-2 text-[12px] text-[#5A5A5A]">
                     <Upload className="w-4 h-4" />
                     <span>
                       Sürükle veya{' '}
-                      <span className="text-[#635bff]">Dosya Seç</span>
+                      <span className="text-[#0049AA]">Dosya Seç</span>
                     </span>
                   </div>
                   <input
@@ -184,7 +184,7 @@ export function DocumentCard({
             {/* Notes Toggle */}
             <button
               onClick={() => setShowNotes(!showNotes)}
-              className="mt-2 text-[11px] text-[#697386] hover:text-[#635bff] transition-colors"
+              className="mt-2 text-[11px] text-[#5A5A5A] hover:text-[#0049AA] transition-colors"
             >
               {showNotes ? '- Not gizle' : '+ Not ekle'}
             </button>
@@ -194,13 +194,13 @@ export function DocumentCard({
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Belge hakkinda not..."
-                className="mt-2 w-full px-2 py-1.5 text-[12px] bg-[#f6f9fc] border border-[#e3e8ee] rounded resize-none h-16 text-[#1a1f36] placeholder:text-[#697386] focus:outline-none focus:ring-2 focus:ring-[#635bff]/20"
+                className="mt-2 w-full px-2 py-1.5 text-[12px] bg-[#F5F6F8] border border-[#E5E5E5] rounded resize-none h-16 text-[#2E2E2E] placeholder:text-[#5A5A5A] focus:outline-none focus:ring-2 focus:ring-[#0049AA]/20"
               />
             )}
 
             {/* Waiting Status Note */}
             {document.status === 'waiting' && document.notes && (
-              <div className="mt-2 flex items-center gap-2 text-[11px] text-[#f5a623]">
+              <div className="mt-2 flex items-center gap-2 text-[11px] text-[#FFB114]">
                 <Clock className="w-3 h-3" />
                 {document.notes}
               </div>

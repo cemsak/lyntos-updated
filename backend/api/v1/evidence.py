@@ -4,13 +4,14 @@ Download evidence bundles as ZIP files with dossier manifest
 """
 
 from fastapi import APIRouter, HTTPException, Query, Depends
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
 import logging
 import json
 import yaml
 from pathlib import Path
 from typing import Optional
 import sys
+import urllib.parse
 
 # Add backend to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -176,3 +177,74 @@ async def list_evidence_rules(user: dict = Depends(verify_token)):
     except Exception as e:
         logger.error(f"List rules error: {e}", exc_info=True)
         raise HTTPException(500, str(e))
+
+
+# ════════════════════════════════════════════════════════════════
+# EVIDENCE FILE DOWNLOAD - Beyanname/Tahakkuk dosyaları için
+# ════════════════════════════════════════════════════════════════
+
+@router.get("/evidence/file/{filename:path}")
+async def download_evidence_file(
+    filename: str,
+    user: dict = Depends(verify_token)
+):
+    """
+    Download an evidence file by filename (Auth Required)
+
+    Searches for the file in known upload directories:
+    - uploads/pilot_ozkan/Q*_extracted/
+    - uploads/{tenant_id}/
+    - data/evidence/
+
+    Returns the file if found, 404 if not.
+    """
+    # Decode URL-encoded filename
+    decoded_filename = urllib.parse.unquote(filename)
+
+    # Security: prevent path traversal
+    if '..' in decoded_filename or decoded_filename.startswith('/'):
+        raise HTTPException(400, "Invalid filename")
+
+    # Known directories to search
+    search_dirs = [
+        BACKEND_DIR / "uploads" / "pilot_ozkan" / "Q1_extracted",
+        BACKEND_DIR / "uploads" / "pilot_ozkan" / "Q2_extracted",
+        BACKEND_DIR / "uploads" / "pilot_ozkan" / "Q3_extracted",
+        BACKEND_DIR / "uploads" / "pilot_ozkan" / "Q4_extracted",
+        BACKEND_DIR / "uploads" / "pilot_ozkan",
+        BACKEND_DIR / "uploads" / "HKOZKAN",
+        BACKEND_DIR / "uploads" / "evidence",
+        BACKEND_DIR / "data" / "evidence",
+    ]
+
+    # Search for file
+    for search_dir in search_dirs:
+        if not search_dir.exists():
+            continue
+
+        file_path = search_dir / decoded_filename
+        if file_path.exists() and file_path.is_file():
+            logger.info(f"[EVIDENCE] Serving file: {file_path}")
+
+            # Determine content type
+            suffix = file_path.suffix.lower()
+            content_types = {
+                '.pdf': 'application/pdf',
+                '.csv': 'text/csv',
+                '.xml': 'application/xml',
+                '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                '.xls': 'application/vnd.ms-excel',
+                '.json': 'application/json',
+                '.txt': 'text/plain',
+            }
+            content_type = content_types.get(suffix, 'application/octet-stream')
+
+            return FileResponse(
+                path=str(file_path),
+                media_type=content_type,
+                filename=decoded_filename
+            )
+
+    # File not found
+    logger.warning(f"[EVIDENCE] File not found: {decoded_filename}")
+    raise HTTPException(404, f"Dosya bulunamadı: {decoded_filename}")

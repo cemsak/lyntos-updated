@@ -82,34 +82,34 @@ export function MissingDataPanel() {
         {data && data.completeness_score >= 100 && data.items.length === 0 ? (
           <div className="text-center py-6">
             <span className="text-3xl">P</span>
-            <p className="text-sm text-green-600 mt-2">Tum veriler tam!</p>
+            <p className="text-sm text-[#00804D] mt-2">Tum veriler tam!</p>
           </div>
         ) : data && data.items.length === 0 && data.completeness_score < 100 ? (
           <div className="text-center py-6">
             <span className="text-3xl">!</span>
-            <p className="text-sm text-amber-600 mt-2">Veri yuklenmesi bekleniyor</p>
-            <p className="text-xs text-slate-500 mt-1">Eksik belgeler icin Upload modulunu kullanin</p>
+            <p className="text-sm text-[#FA841E] mt-2">Veri yuklenmesi bekleniyor</p>
+            <p className="text-xs text-[#969696] mt-1">Eksik belgeler icin Upload modulunu kullanin</p>
           </div>
         ) : (
           <div className="space-y-3 max-h-64 overflow-y-auto">
             {data?.items.map((item) => (
               <div
                 key={item.id}
-                className="flex items-start justify-between p-3 bg-slate-50 rounded-lg border border-slate-100"
+                className="flex items-start justify-between p-3 bg-[#F5F6F8] rounded-lg border border-[#E5E5E5]"
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-sm font-medium text-slate-900 truncate">
+                    <span className="text-sm font-medium text-[#2E2E2E] truncate">
                       {item.description}
                     </span>
                     {getImpactBadge(item.impact)}
                   </div>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-[#969696]">
                     {item.type}
                     {item.deadline && ` • Son: ${item.deadline}`}
                   </p>
                 </div>
-                <button className="ml-3 px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors whitespace-nowrap">
+                <button className="ml-3 px-3 py-1 text-xs bg-[#0049AA] text-white rounded hover:bg-[#0049AA] transition-colors whitespace-nowrap">
                   {item.action}
                 </button>
               </div>

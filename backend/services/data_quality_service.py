@@ -247,9 +247,13 @@ Serbest Muhasebeci Mali Musavir
 
         actions: List[Action] = []
 
-        score = kurgan_result.get("score", 100)
+        score = kurgan_result.get("score")
         risk_level = kurgan_result.get("risk_level", "Dusuk")
         warnings = kurgan_result.get("warnings", [])
+
+        # score = None ise hesaplanamaz demek, kontrol yapma
+        if score is None:
+            return actions
 
         if score < 60:
             severity = "WARNING" if score >= 40 else "ERROR"
@@ -336,45 +340,117 @@ Serbest Muhasebeci Mali Musavir
         portfolio_data: Dict,
         actions: List[Action]
     ) -> int:
-        """Data completeness skorunu hesapla (0-100)"""
+        """
+        GERÇEK veri tamlılık skorunu hesapla (0-100)
 
-        # Toplam veri alanlari
-        total_fields = 20
+        SIFIR TOLERANS: Sahte hesaplama YASAK
+        Sadece veritabanında GERÇEKTEN var olan verileri say
 
-        # Mevcut veri alanlari
-        present_fields = 0
+        Ağırlıklar (toplam 100):
+        - Mizan verisi: 40 puan (temel veri)
+        - Beyanname verisi: 25 puan (vergi uyumu)
+        - Banka verisi: 15 puan (mutabakat)
+        - Enflasyon CSV'leri: 20 puan (3 dosya x ~7 puan)
+        """
 
-        if portfolio_data.get("ciro"):
-            present_fields += 1
-        if portfolio_data.get("kar_zarar") is not None:
-            present_fields += 1
-        if portfolio_data.get("banka_data"):
-            present_fields += 2
-        if portfolio_data.get("kdv_data"):
-            present_fields += 2
+        score = 0
 
+        # 1. MİZAN VERİSİ - 40 puan
+        # Veritabanından gelen gerçek mizan kaydı sayısı
+        mizan_entries = portfolio_data.get("mizan_entries", 0)
+        if mizan_entries > 0:
+            # En az 10 kayıt varsa tam puan
+            mizan_score = min(40, int((mizan_entries / 10) * 40))
+            score += mizan_score
+
+        # 2. BEYANNAME VERİSİ - 25 puan
+        beyanname_entries = portfolio_data.get("beyanname_entries", 0)
+        if beyanname_entries > 0:
+            # En az 1 beyanname varsa tam puan
+            score += 25
+
+        # 3. BANKA VERİSİ - 15 puan
+        banka_data = portfolio_data.get("banka_data")
+        if banka_data and isinstance(banka_data, dict):
+            # Banka mevduat veya hareket verisi varsa
+            if banka_data.get("mevduat_tutari") or banka_data.get("hareket_sayisi"):
+                score += 15
+
+        # 4. ENFLASYON CSV'LERİ - 20 puan (her biri ~7 puan)
         inflation_data = portfolio_data.get("inflation_data", {})
         if inflation_data:
-            inflation_csvs = len([
-                csv for csv in self.REQUIRED_INFLATION_CSVS
-                if inflation_data.get(csv)
-            ])
-            present_fields += inflation_csvs * 2
+            for csv in self.REQUIRED_INFLATION_CSVS:
+                if inflation_data.get(csv):
+                    score += 7  # 3 dosya * 7 = 21, max 20 olacak şekilde clamp
 
-        # Diger alanlar
-        if portfolio_data.get("client_name"):
-            present_fields += 1
-        if portfolio_data.get("period"):
-            present_fields += 1
-        if portfolio_data.get("smmm_name"):
-            present_fields += 1
+        # Maksimum 100
+        return min(100, score)
 
-        # Error sayisi ceza
-        error_count = sum(1 for a in actions if a.severity == "ERROR")
-        penalty = error_count * 5
+    def get_missing_data_list(self, portfolio_data: Dict) -> List[Dict]:
+        """
+        SMMM'ye gösterilecek eksik veri listesi
+        Her eksik veri için: ne eksik, neden önemli, nasıl tamamlanır
+        """
+        missing = []
 
-        score = int((present_fields / total_fields) * 100) - penalty
-        return max(0, min(100, score))
+        # 1. Mizan kontrolü
+        mizan_entries = portfolio_data.get("mizan_entries", 0)
+        if mizan_entries == 0:
+            missing.append({
+                "id": "MIZAN_MISSING",
+                "belge": "Mizan",
+                "aciklama": "Dönem mizanı sisteme yüklenmemiş",
+                "neden_onemli": "Tüm vergi hesaplamaları mizan verisine dayanır",
+                "nasil_tamamlanir": "e-Defter → Mizan → Excel olarak indir → Sisteme yükle",
+                "oncelik": "KRITIK",
+                "puan_etkisi": 40
+            })
+
+        # 2. Beyanname kontrolü
+        beyanname_entries = portfolio_data.get("beyanname_entries", 0)
+        if beyanname_entries == 0:
+            missing.append({
+                "id": "BEYANNAME_MISSING",
+                "belge": "Beyanname",
+                "aciklama": "KDV/Muhtasar beyanname verisi yok",
+                "neden_onemli": "Vergi uyumu analizi için beyanname gerekli",
+                "nasil_tamamlanir": "GİB → Vergi Bilgisi Sorgulama → Beyanname → İndir",
+                "oncelik": "YUKSEK",
+                "puan_etkisi": 25
+            })
+
+        # 3. Banka kontrolü
+        banka_data = portfolio_data.get("banka_data")
+        has_banka = banka_data and isinstance(banka_data, dict) and (
+            banka_data.get("mevduat_tutari") or banka_data.get("hareket_sayisi")
+        )
+        if not has_banka:
+            missing.append({
+                "id": "BANKA_MISSING",
+                "belge": "Banka Hesap Özeti",
+                "aciklama": "Banka hesap hareketleri sisteme yüklenmemiş",
+                "neden_onemli": "Çapraz kontrol ve mutabakat için gerekli",
+                "nasil_tamamlanir": "Banka → Hesap Özeti → Excel/PDF indir → Sisteme yükle",
+                "oncelik": "ORTA",
+                "puan_etkisi": 15
+            })
+
+        # 4. Enflasyon CSV'leri kontrolü
+        inflation_data = portfolio_data.get("inflation_data", {})
+        for csv in self.REQUIRED_INFLATION_CSVS:
+            if not inflation_data.get(csv):
+                info = self.CSV_TRANSLATIONS.get(csv, {"tr": csv, "desc": ""})
+                missing.append({
+                    "id": f"INFL_{csv.upper().replace('.', '_')}",
+                    "belge": info["tr"],
+                    "aciklama": f"{info['desc']} eksik",
+                    "neden_onemli": "TMS 29 enflasyon düzeltmesi için gerekli",
+                    "nasil_tamamlanir": "Şablonu indir → Doldur → Sisteme yükle",
+                    "oncelik": "ORTA",
+                    "puan_etkisi": 7
+                })
+
+        return missing
 
 
 # Singleton instance

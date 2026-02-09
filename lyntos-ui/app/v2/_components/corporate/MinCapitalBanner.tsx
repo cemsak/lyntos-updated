@@ -10,6 +10,7 @@
 import React from 'react';
 import { AlertTriangle, AlertCircle, Info, Calendar } from 'lucide-react';
 import { useMinCapitalRequirements } from './useCorporate';
+import { formatNumber } from '../../_lib/format';
 
 export function MinCapitalBanner() {
   const { data, loading, error } = useMinCapitalRequirements();
@@ -24,30 +25,26 @@ export function MinCapitalBanner() {
   const isUrgent = daysRemaining < 180; // Less than 6 months
   const isCritical = daysRemaining < 90; // Less than 3 months
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('tr-TR').format(value);
-  };
-
   // Determine styling based on urgency
   const styles = isCritical
     ? {
-        bg: 'bg-[#cd3d64]/10',
-        border: 'border-[#cd3d64]',
-        text: 'text-[#cd3d64]',
-        icon: <AlertCircle className="w-6 h-6 text-[#cd3d64]" />,
+        bg: 'bg-[#F0282D]/10',
+        border: 'border-[#F0282D]',
+        text: 'text-[#F0282D]',
+        icon: <AlertCircle className="w-6 h-6 text-[#F0282D]" />,
       }
     : isUrgent
       ? {
-          bg: 'bg-[#f5a623]/10',
-          border: 'border-[#f5a623]',
-          text: 'text-[#f5a623]',
-          icon: <AlertTriangle className="w-6 h-6 text-[#f5a623]" />,
+          bg: 'bg-[#FFB114]/10',
+          border: 'border-[#FFB114]',
+          text: 'text-[#FFB114]',
+          icon: <AlertTriangle className="w-6 h-6 text-[#FFB114]" />,
         }
       : {
-          bg: 'bg-[#635bff]/10',
-          border: 'border-[#635bff]',
-          text: 'text-[#635bff]',
-          icon: <Info className="w-6 h-6 text-[#635bff]" />,
+          bg: 'bg-[#0049AA]/10',
+          border: 'border-[#0049AA]',
+          text: 'text-[#0049AA]',
+          icon: <Info className="w-6 h-6 text-[#0049AA]" />,
         };
 
   return (
@@ -62,45 +59,45 @@ export function MinCapitalBanner() {
             Asgari Sermaye Tamamlama Zorunlulugu
           </h3>
 
-          <p className="text-[13px] text-[#697386] mt-1">
+          <p className="text-[13px] text-[#5A5A5A] mt-1">
             7511 sayili Kanun geregi, mevcut sirketlerin asgari sermayelerini{' '}
-            <strong className="text-[#1a1f36]">{data.deadline_for_existing}</strong>{' '}
+            <strong className="text-[#2E2E2E]">{data.deadline_for_existing}</strong>{' '}
             tarihine kadar tamamlamasi gerekmektedir.
           </p>
 
           <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
             <div className="bg-white/70 rounded-lg p-2">
-              <div className="text-[11px] text-[#697386]">A.S. Asgari Sermaye</div>
-              <div className="text-[14px] font-bold text-[#1a1f36]">
-                {formatCurrency(data.requirements.as.min_capital)} TL
+              <div className="text-[11px] text-[#5A5A5A]">A.S. Asgari Sermaye</div>
+              <div className="text-[14px] font-bold text-[#2E2E2E]">
+                {formatNumber(data.requirements.as.min_capital)} TL
               </div>
             </div>
             <div className="bg-white/70 rounded-lg p-2">
-              <div className="text-[11px] text-[#697386]">Ltd. Asgari Sermaye</div>
-              <div className="text-[14px] font-bold text-[#1a1f36]">
-                {formatCurrency(data.requirements.ltd.min_capital)} TL
+              <div className="text-[11px] text-[#5A5A5A]">Ltd. Asgari Sermaye</div>
+              <div className="text-[14px] font-bold text-[#2E2E2E]">
+                {formatNumber(data.requirements.ltd.min_capital)} TL
               </div>
             </div>
             <div
               className={`rounded-lg p-2 ${
                 isCritical
-                  ? 'bg-[#cd3d64]/20'
+                  ? 'bg-[#F0282D]/20'
                   : isUrgent
-                    ? 'bg-[#f5a623]/20'
+                    ? 'bg-[#FFB114]/20'
                     : 'bg-white/70'
               }`}
             >
-              <div className="text-[11px] text-[#697386] flex items-center gap-1">
+              <div className="text-[11px] text-[#5A5A5A] flex items-center gap-1">
                 <Calendar className="w-3 h-3" />
                 Kalan Sure
               </div>
               <div
                 className={`text-[14px] font-bold ${
                   isCritical
-                    ? 'text-[#cd3d64]'
+                    ? 'text-[#F0282D]'
                     : isUrgent
-                      ? 'text-[#f5a623]'
-                      : 'text-[#1a1f36]'
+                      ? 'text-[#FFB114]'
+                      : 'text-[#2E2E2E]'
                 }`}
               >
                 {daysRemaining} gun
@@ -108,8 +105,8 @@ export function MinCapitalBanner() {
             </div>
           </div>
 
-          <p className="text-[11px] mt-2 text-[#697386] flex items-center gap-1">
-            <AlertTriangle className="w-3 h-3 text-[#f5a623]" />
+          <p className="text-[11px] mt-2 text-[#5A5A5A] flex items-center gap-1">
+            <AlertTriangle className="w-3 h-3 text-[#FFB114]" />
             Suresinde tamamlanmazsa sirket infisah etmis (kendiliginiden sona ermis) sayilir.
           </p>
         </div>

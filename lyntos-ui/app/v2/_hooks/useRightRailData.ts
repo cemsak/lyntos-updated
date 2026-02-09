@@ -149,7 +149,22 @@ export function useRightRailData(
 
     try {
       // Fetch all APIs in parallel
-      const [donemStatus, dataQualityResponse] = await Promise.all([
+      const [rightRailSummary, donemStatus, dataQualityResponse] = await Promise.all([
+        // 0. NEW: Right rail summary API (aggregated data)
+        safeFetch<{
+          data?: {
+            kritikSayisi?: number;
+            yuksekSayisi?: number;
+            eksikBelgeSayisi?: number;
+            oneriler?: Array<{ baslik: string; aciklama: string; oncelik: string }>;
+            kanitPaketi?: {
+              durum?: string;
+              tamamlanan?: string[];
+              progress?: number;
+            };
+          };
+        }>(`${apiBase}/api/v1/contracts/right-rail-summary?period=${encodeURIComponent(period)}&smmm_id=${encodeURIComponent(tenantId)}&client_id=${encodeURIComponent(clientId)}`, {}),
+
         // 1. Donem status (eksik belgeler) - our v2 API
         safeFetch<{
           byDocType?: Record<string, unknown[]>;
@@ -165,6 +180,13 @@ export function useRightRailData(
           score?: number;
         }>(`${apiBase}/api/v1/contracts/data-quality?period=${encodeURIComponent(period)}&smmm_id=${encodeURIComponent(tenantId)}&client_id=${encodeURIComponent(clientId)}`, {}),
       ]);
+
+      // Extract right rail summary data (new aggregated endpoint)
+      const summaryData = rightRailSummary.data || {};
+      const kritikSayisi = summaryData.kritikSayisi ?? 0;
+      const yuksekSayisi = summaryData.yuksekSayisi ?? 0;
+      const kanitPaketiFromApi = summaryData.kanitPaketi || {};
+      const onerilerFromApi = summaryData.oneriler || [];
 
       // Process document status
       const byDocType = donemStatus.byDocType || {};
@@ -218,24 +240,47 @@ export function useRightRailData(
         topRecommendations.push('Tum belgeler tamam');
       }
 
-      // Note: Critical/High counts would come from risk API
-      // For now, we'll use 0 since we don't have that endpoint connected yet
-      // TODO: Add risk endpoint integration when available
+      // Use data from right-rail-summary API if available, otherwise use calculated values
+      // Also merge oneriler from API with generated recommendations
+      const apiRecommendations = onerilerFromApi.map((o: { baslik: string }) => o.baslik);
+      const mergedRecommendations = apiRecommendations.length > 0
+        ? apiRecommendations
+        : topRecommendations;
+
+      // Evidence bundle status from API if available
+      if (kanitPaketiFromApi.durum) {
+        switch (kanitPaketiFromApi.durum) {
+          case 'hazir':
+            evidenceBundleStatus = 'ready';
+            evidenceBundlePercent = 100;
+            break;
+          case 'eksik':
+            evidenceBundleStatus = 'in_progress';
+            evidenceBundlePercent = kanitPaketiFromApi.progress ?? evidenceBundlePercent;
+            break;
+        }
+      }
+
+      // Completed documents from API
+      const apiCompletedDocs = kanitPaketiFromApi.tamamlanan || [];
+      const mergedCompletedDocs = apiCompletedDocs.length > 0
+        ? apiCompletedDocs.map((d: string) => DOC_TYPE_LABELS[d.toUpperCase()] || d)
+        : completedDocuments;
 
       setData({
-        criticalCount: 0,
-        highCount: 0,
+        criticalCount: kritikSayisi,
+        highCount: yuksekSayisi,
         mediumCount: 0,
         lowCount: 0,
-        missingDocCount,
+        missingDocCount: summaryData.eksikBelgeSayisi ?? missingDocCount,
         presentDocCount,
         totalDocCategories: BIG_6_DOC_TYPES.length,
         completionPercent,
         evidenceBundleStatus,
         evidenceBundlePercent,
         dataQualityScore,
-        topRecommendations,
-        completedDocuments,
+        topRecommendations: mergedRecommendations,
+        completedDocuments: mergedCompletedDocs,
         lastUpdated: new Date().toISOString(),
       });
 

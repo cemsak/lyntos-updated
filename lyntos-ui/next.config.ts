@@ -10,6 +10,16 @@ const nextConfig: NextConfig = {
     root: path.join(__dirname),
   },
 
+  // API Proxy - Backend'e yönlendirme
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'http://localhost:8000/api/:path*',
+      },
+    ];
+  },
+
   // Webpack config for pdfjs-dist compatibility
   webpack: (config, { isServer }) => {
     // Disable canvas for pdfjs-dist (not needed for text extraction)

@@ -46,6 +46,18 @@ export interface ClientProfile {
   finans_sektoru: boolean;
 }
 
+export interface AsgariKvKontrol {
+  uygulanabilir: boolean;
+  asgari_kv_tutari?: number;
+  hesaplanan_kv?: number;
+  asgari_kv_asimi?: boolean;
+  fark?: number;
+  oran?: number;
+  aciklama?: string;
+  mevzuat?: string;
+  uyari?: string | null;
+}
+
 export interface AnalysisSummary {
   toplam_firsat: number;
   toplam_potansiyel_tasarruf: number;
@@ -55,16 +67,25 @@ export interface AnalysisSummary {
   acil_aksiyonlar: number;
   en_yuksek_tasarruf: number;
   tavsiye: string;
+  kv_orani?: number;
+  asgari_kv_kontrolu?: AsgariKvKontrol;
+  veri_kaynagi?: string;
 }
 
 export interface TaxAnalysisResult {
   client_id: string;
   client_name: string;
   period: string;
+  nace_code?: string;
   profile: ClientProfile;
   opportunities: TaxOpportunity[];
   total_potential_saving: number;
   summary: AnalysisSummary;
+}
+
+export interface ClientProfileExtended extends ClientProfile {
+  nace_code?: string;
+  kv_orani?: number;
 }
 
 export interface FinancialDataInput {
@@ -111,7 +132,7 @@ export const CATEGORY_CONFIG: Record<
   KURUMLAR_VERGISI: {
     label: 'Kurumlar Vergisi',
     icon: '🏢',
-    color: '#635bff',
+    color: '#0049AA',
   },
   AR_GE: {
     label: 'Ar-Ge Teshvikleri',

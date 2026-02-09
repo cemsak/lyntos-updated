@@ -55,13 +55,13 @@ export function VDKSimulatorPanel({
   // Loading state
   if (isLoading) {
     return (
-      <div className="bg-white rounded-xl border border-[#e3e8ee] p-8">
+      <div className="bg-white rounded-xl border border-[#E5E5E5] p-8">
         <div className="flex flex-col items-center justify-center gap-4">
-          <div className="w-12 h-12 border-4 border-[#635bff] border-t-transparent rounded-full animate-spin" />
-          <p className="text-[14px] text-[#697386]">
+          <div className="w-12 h-12 border-4 border-[#0049AA] border-t-transparent rounded-full animate-spin" />
+          <p className="text-[14px] text-[#5A5A5A]">
             KURGAN simulasyonu calisiyor...
           </p>
-          <p className="text-[12px] text-[#697386]/70">
+          <p className="text-[12px] text-[#5A5A5A]/70">
             Mufettis gozuyle analiz ediliyor
           </p>
         </div>
@@ -72,14 +72,14 @@ export function VDKSimulatorPanel({
   // Error state
   if (error) {
     return (
-      <div className="bg-white rounded-xl border border-[#cd3d64] p-6">
-        <div className="flex items-center gap-3 text-[#cd3d64]">
+      <div className="bg-white rounded-xl border border-[#F0282D] p-6">
+        <div className="flex items-center gap-3 text-[#F0282D]">
           <AlertTriangle className="w-5 h-5" />
           <p className="text-[14px]">{error}</p>
         </div>
         <button
           onClick={handleRefresh}
-          className="mt-4 px-4 py-2 text-[13px] font-medium text-white bg-[#635bff] rounded-lg hover:bg-[#5851ea] transition-colors"
+          className="mt-4 px-4 py-2 text-[13px] font-medium text-white bg-[#0049AA] rounded-lg hover:bg-[#00287F] transition-colors"
         >
           Tekrar Dene
         </button>
@@ -90,18 +90,18 @@ export function VDKSimulatorPanel({
   // Empty state
   if (!result) {
     return (
-      <div className="bg-white rounded-xl border border-[#e3e8ee] p-8">
+      <div className="bg-white rounded-xl border border-[#E5E5E5] p-8">
         <div className="text-center">
-          <Shield className="w-12 h-12 text-[#697386] mx-auto mb-4" />
-          <h3 className="text-[16px] font-semibold text-[#1a1f36] mb-2">
+          <Shield className="w-12 h-12 text-[#5A5A5A] mx-auto mb-4" />
+          <h3 className="text-[16px] font-semibold text-[#2E2E2E] mb-2">
             VDK Simulatoru
           </h3>
-          <p className="text-[14px] text-[#697386] mb-4">
+          <p className="text-[14px] text-[#5A5A5A] mb-4">
             Mufettis gozunden mukellefinizi goruntuleyin
           </p>
           <button
             onClick={handleRefresh}
-            className="px-4 py-2 text-[13px] font-medium text-white bg-[#635bff] rounded-lg hover:bg-[#5851ea] transition-colors"
+            className="px-4 py-2 text-[13px] font-medium text-white bg-[#0049AA] rounded-lg hover:bg-[#00287F] transition-colors"
           >
             Simulasyonu Baslat
           </button>
@@ -115,19 +115,19 @@ export function VDKSimulatorPanel({
   const riskConfig = RISK_LEVEL_CONFIG[result.risk_level];
 
   return (
-    <div className="bg-white rounded-xl border border-[#e3e8ee] overflow-hidden">
+    <div className="bg-white rounded-xl border border-[#E5E5E5] overflow-hidden">
       {/* Header */}
-      <div className="p-4 border-b border-[#e3e8ee]">
+      <div className="p-4 border-b border-[#E5E5E5]">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-[#635bff]/10 flex items-center justify-center">
-              <Target className="w-5 h-5 text-[#635bff]" />
+            <div className="w-10 h-10 rounded-lg bg-[#0049AA]/10 flex items-center justify-center">
+              <Target className="w-5 h-5 text-[#0049AA]" />
             </div>
             <div>
-              <h2 className="text-[16px] font-semibold text-[#1a1f36]">
+              <h2 className="text-[16px] font-semibold text-[#2E2E2E]">
                 VDK Simulatoru
               </h2>
-              <p className="text-[12px] text-[#697386]">
+              <p className="text-[12px] text-[#5A5A5A]">
                 {result.client_name} &bull; {result.period}
               </p>
             </div>
@@ -135,7 +135,7 @@ export function VDKSimulatorPanel({
           <button
             onClick={handleRefresh}
             disabled={isLoading}
-            className="p-2 text-[#697386] hover:text-[#1a1f36] hover:bg-[#f6f9fc] rounded-lg transition-colors disabled:opacity-50"
+            className="p-2 text-[#5A5A5A] hover:text-[#2E2E2E] hover:bg-[#F5F6F8] rounded-lg transition-colors disabled:opacity-50"
           >
             <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
           </button>
@@ -143,7 +143,7 @@ export function VDKSimulatorPanel({
       </div>
 
       {/* Risk Summary */}
-      <div className="p-4 border-b border-[#e3e8ee]">
+      <div className="p-4 border-b border-[#E5E5E5]">
         <div className="flex items-center gap-6">
           {/* Risk Score Circle */}
           <div className="flex items-center gap-3">
@@ -154,7 +154,7 @@ export function VDKSimulatorPanel({
               {result.risk_score}
             </div>
             <div>
-              <p className="text-[12px] text-[#697386]">Risk Skoru</p>
+              <p className="text-[12px] text-[#5A5A5A]">Risk Skoru</p>
               <p
                 className="text-[14px] font-semibold"
                 style={{ color: riskConfig.color }}
@@ -169,26 +169,26 @@ export function VDKSimulatorPanel({
             <StatBox
               value={result.triggered_count}
               label="Alarm"
-              color="#cd3d64"
+              color="#F0282D"
             />
             <StatBox
               value={result.total_documents}
               label="Belge Gerekli"
-              color="#f5a623"
+              color="#FFB114"
             />
             <StatBox
               value={result.prepared_documents}
               label="Hazir"
-              color="#0caf60"
+              color="#00A651"
             />
           </div>
         </div>
 
         {/* Sector Info */}
         {result.nace_code && (
-          <div className="mt-4 flex items-center gap-2 text-[12px] text-[#697386]">
+          <div className="mt-4 flex items-center gap-2 text-[12px] text-[#5A5A5A]">
             <span>Sektor:</span>
-            <span className="font-medium text-[#1a1f36]">
+            <span className="font-medium text-[#2E2E2E]">
               {result.sector_group} (NACE {result.nace_code})
             </span>
           </div>
@@ -200,7 +200,7 @@ export function VDKSimulatorPanel({
         {/* Triggered Alarms */}
         {triggeredAlarms.length > 0 && (
           <div className="mb-6">
-            <h3 className="text-[13px] font-semibold text-[#cd3d64] mb-3 flex items-center gap-2">
+            <h3 className="text-[13px] font-semibold text-[#F0282D] mb-3 flex items-center gap-2">
               <AlertTriangle className="w-4 h-4" />
               Tetiklenen Alarmlar ({triggeredAlarms.length})
             </h3>
@@ -219,11 +219,11 @@ export function VDKSimulatorPanel({
         {/* No Alarms Message */}
         {triggeredAlarms.length === 0 && (
           <div className="text-center py-8 mb-6">
-            <FileCheck className="w-12 h-12 text-[#0caf60] mx-auto mb-3" />
-            <p className="text-[14px] font-medium text-[#0caf60]">
+            <FileCheck className="w-12 h-12 text-[#00A651] mx-auto mb-3" />
+            <p className="text-[14px] font-medium text-[#00A651]">
               Tebrikler! Hicbir alarm tetiklenmedi.
             </p>
-            <p className="text-[12px] text-[#697386] mt-1">
+            <p className="text-[12px] text-[#5A5A5A] mt-1">
               Mukellefiniz KURGAN kriterlerine gore temiz gorunuyor.
             </p>
           </div>
@@ -232,7 +232,7 @@ export function VDKSimulatorPanel({
         {/* Passed Checks */}
         {passedAlarms.length > 0 && (
           <div>
-            <h3 className="text-[13px] font-semibold text-[#0caf60] mb-3 flex items-center gap-2">
+            <h3 className="text-[13px] font-semibold text-[#00A651] mb-3 flex items-center gap-2">
               <FileCheck className="w-4 h-4" />
               Gecen Kontroller ({passedAlarms.length})
             </h3>
@@ -246,18 +246,18 @@ export function VDKSimulatorPanel({
       </div>
 
       {/* Actions Footer */}
-      <div className="p-4 border-t border-[#e3e8ee] bg-[#f6f9fc]">
+      <div className="p-4 border-t border-[#E5E5E5] bg-[#F5F6F8]">
         <div className="flex items-center justify-between">
-          <p className="text-[11px] text-[#697386]">
+          <p className="text-[11px] text-[#5A5A5A]">
             Son simulasyon:{' '}
             {new Date(result.simulated_at).toLocaleString('tr-TR')}
           </p>
           <div className="flex items-center gap-2">
-            <button className="px-3 py-2 text-[12px] font-medium text-[#697386] hover:text-[#1a1f36] border border-[#e3e8ee] bg-white rounded-lg flex items-center gap-1.5 transition-colors">
+            <button className="px-3 py-2 text-[12px] font-medium text-[#5A5A5A] hover:text-[#2E2E2E] border border-[#E5E5E5] bg-white rounded-lg flex items-center gap-1.5 transition-colors">
               <Send className="w-3.5 h-3.5" />
               Mukellefe Gonder
             </button>
-            <button className="px-3 py-2 text-[12px] font-medium text-white bg-[#635bff] hover:bg-[#5851ea] rounded-lg flex items-center gap-1.5 transition-colors">
+            <button className="px-3 py-2 text-[12px] font-medium text-white bg-[#0049AA] hover:bg-[#00287F] rounded-lg flex items-center gap-1.5 transition-colors">
               <FileArchive className="w-3.5 h-3.5" />
               Kanıt Dosyası Oluştur
             </button>
@@ -283,7 +283,7 @@ function StatBox({
       <p className="text-[24px] font-bold" style={{ color }}>
         {value}
       </p>
-      <p className="text-[11px] text-[#697386]">{label}</p>
+      <p className="text-[11px] text-[#5A5A5A]">{label}</p>
     </div>
   );
 }

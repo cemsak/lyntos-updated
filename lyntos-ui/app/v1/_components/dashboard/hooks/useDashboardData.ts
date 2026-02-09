@@ -33,7 +33,7 @@ function createFetchHook<T>(endpoint: string) {
       try {
         const params = new URLSearchParams({
           client_id: options.clientId,
-          period_id: options.period,
+          period: options.period,
         });
 
         const response = await fetch('/api/v1/contracts/' + endpoint + '?' + params, {

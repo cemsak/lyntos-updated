@@ -17,7 +17,7 @@ export type RiskRecord = {
   timestamp: string;
 };
 
-// /api/risk varsa oradan veri çeker; yoksa otomatik MOCK döner
+// /api/risk'ten veri çeker - Mock data YASAK (SMMM güvenliği için)
 export async function fetchRiskData(params: {
   firma: string;
   donem: string;
@@ -44,27 +44,11 @@ export async function fetchRiskData(params: {
         timestamp: json.timestamp ?? new Date().toISOString(),
       };
     }
-  } catch {
-    // sessizce mock'a düş
+  } catch (error) {
+    // API hatası - Mock data YASAK (SMMM'yi yanıltır, Maliye cezası riski)
+    console.error('[LYNTOS] Risk verisi yüklenemedi:', error);
+    throw new Error('Risk verisi yüklenemedi - API bağlantı hatası');
   }
-  const mockTrend = Array.from({ length: 8 }).map((_, i) => ({
-    period: `2025-0${i + 1}`,
-    score: Math.round(55 + 15 * Math.sin(i / 1.8)),
-  }));
-  const mock: RiskRecord = {
-    firma: params.firma,
-    donem: params.donem,
-    risk_skoru: 72,
-    seviyeler: { SMİYB: 0.68, KURGAN: 0.74, RADAR: 0.65 },
-    uyarilar: ["Nakit hareketlerinde anomali", "Cari hesap eşleşmesi zayıf"],
-    trend: mockTrend,
-    anomalies: [
-      { label: "Nakit", value: 18 },
-      { label: "Cari", value: 12 },
-      { label: "POS", value: 9 },
-      { label: "Fatura", value: 7 },
-    ],
-    timestamp: new Date().toISOString(),
-  };
-  return mock;
+  // API başarısız yanıt döndü - Mock data YASAK
+  throw new Error('Risk verisi yüklenemedi - API yanıt hatası');
 }

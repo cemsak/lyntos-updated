@@ -140,30 +140,30 @@ export function RegWatchPanel() {
           <div className="py-4">
             <div className="text-center mb-4">
               <span className="text-3xl mb-2 block">📡</span>
-              <p className="text-sm text-slate-600">
+              <p className="text-sm text-[#5A5A5A]">
                 Mevzuat değişikliklerini otomatik takip edin
               </p>
             </div>
 
             {/* Preview Section */}
-            <div className="mb-4 p-3 bg-slate-50 rounded-lg">
-              <p className="text-xs font-medium text-slate-500 mb-2">Takip Edilecek Kaynaklar</p>
+            <div className="mb-4 p-3 bg-[#F5F6F8] rounded-lg">
+              <p className="text-xs font-medium text-[#969696] mb-2">Takip Edilecek Kaynaklar</p>
               <div className="space-y-2 text-xs">
                 <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 bg-slate-300 rounded-full"></span>
-                  <span className="text-slate-400">GİB - Vergi Mevzuatı</span>
+                  <span className="w-2 h-2 bg-[#B4B4B4] rounded-full"></span>
+                  <span className="text-[#969696]">GİB - Vergi Mevzuatı</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 bg-slate-300 rounded-full"></span>
-                  <span className="text-slate-400">Resmi Gazete - Tebliğler</span>
+                  <span className="w-2 h-2 bg-[#B4B4B4] rounded-full"></span>
+                  <span className="text-[#969696]">Resmi Gazete - Tebliğler</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 bg-slate-300 rounded-full"></span>
-                  <span className="text-slate-400">SGK - Genelgeler</span>
+                  <span className="w-2 h-2 bg-[#B4B4B4] rounded-full"></span>
+                  <span className="text-[#969696]">SGK - Genelgeler</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 bg-slate-300 rounded-full"></span>
-                  <span className="text-slate-400">TÜRMOB - Duyurular</span>
+                  <span className="w-2 h-2 bg-[#B4B4B4] rounded-full"></span>
+                  <span className="text-[#969696]">TÜRMOB - Duyurular</span>
                 </div>
               </div>
             </div>
@@ -172,7 +172,7 @@ export function RegWatchPanel() {
               <button
                 onClick={handleStartTracking}
                 disabled={isStarting}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 bg-[#0049AA] text-white rounded-lg hover:bg-[#0049AA] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isStarting ? 'Başlatılıyor...' : 'Takibi Başlat'}
               </button>
@@ -183,23 +183,23 @@ export function RegWatchPanel() {
           <div className="space-y-4">
             {/* Scanning Animation */}
             {isScanning && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="bg-[#E6F9FF] border border-[#ABEBFF] rounded-lg p-4">
                 <div className="flex items-center gap-3 mb-3">
-                  <Radio className="w-5 h-5 text-blue-600 animate-pulse" />
+                  <Radio className="w-5 h-5 text-[#0049AA] animate-pulse" />
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-blue-800">Tarama Devam Ediyor</p>
-                    <p className="text-xs text-blue-600">
+                    <p className="text-sm font-medium text-[#00287F]">Tarama Devam Ediyor</p>
+                    <p className="text-xs text-[#0049AA]">
                       {currentSourceIndex >= 0 && currentSourceIndex < TRUSTED_SOURCES.length
                         ? `${TRUSTED_SOURCES[currentSourceIndex].icon} ${TRUSTED_SOURCES[currentSourceIndex].name}`
                         : 'Baslaniyor...'}
                     </p>
                   </div>
-                  <span className="text-sm font-bold text-blue-700">{scanProgress}%</span>
+                  <span className="text-sm font-bold text-[#0049AA]">{scanProgress}%</span>
                 </div>
                 {/* Progress Bar */}
-                <div className="w-full bg-blue-200 rounded-full h-2">
+                <div className="w-full bg-[#ABEBFF] rounded-full h-2">
                   <div
-                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                    className="bg-[#0049AA] h-2 rounded-full transition-all duration-300"
                     style={{ width: `${scanProgress}%` }}
                   />
                 </div>
@@ -210,8 +210,8 @@ export function RegWatchPanel() {
             {!isScanning && scanResults.length > 0 && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-slate-700">
-                    <CheckCircle2 className="w-4 h-4 inline-block mr-1 text-green-600" />
+                  <p className="text-sm font-medium text-[#5A5A5A]">
+                    <CheckCircle2 className="w-4 h-4 inline-block mr-1 text-[#00804D]" />
                     {scanResults.length} degisiklik bulundu
                   </p>
                   <Badge variant="success">Tarama Tamamlandi</Badge>
@@ -223,13 +223,13 @@ export function RegWatchPanel() {
                       href={result.url || `/v2/regwatch/${result.id}`}
                       target={result.url?.startsWith('http') ? '_blank' : undefined}
                       rel={result.url?.startsWith('http') ? 'noopener noreferrer' : undefined}
-                      className="block p-3 bg-slate-50 rounded-lg border border-slate-100 hover:border-blue-300 hover:bg-blue-50/50 transition-colors"
+                      className="block p-3 bg-[#F5F6F8] rounded-lg border border-[#E5E5E5] hover:border-[#5ED6FF] hover:bg-[#E6F9FF]/50 transition-colors"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-slate-900">{result.title}</p>
-                          <p className="text-xs text-slate-500 mt-0.5">{result.source} • {result.date}</p>
-                          <p className="text-xs text-slate-600 mt-1">{result.summary}</p>
+                          <p className="text-sm font-medium text-[#2E2E2E]">{result.title}</p>
+                          <p className="text-xs text-[#969696] mt-0.5">{result.source} • {result.date}</p>
+                          <p className="text-xs text-[#5A5A5A] mt-1">{result.summary}</p>
                         </div>
                         <Badge variant={result.priority === 'high' ? 'error' : result.priority === 'medium' ? 'warning' : 'default'}>
                           {result.priority === 'high' ? 'Yuksek' : result.priority === 'medium' ? 'Orta' : 'Dusuk'}
@@ -244,17 +244,17 @@ export function RegWatchPanel() {
             {/* Stats Row (from backend) */}
             {!isScanning && scanResults.length === 0 && data?.stats && (
               <div className="flex gap-4">
-                <div className="flex-1 text-center p-3 bg-slate-50 rounded-lg">
-                  <p className="text-2xl font-bold text-slate-900">{data.stats.last_7_days}</p>
-                  <p className="text-xs text-slate-500">Son 7 gun</p>
+                <div className="flex-1 text-center p-3 bg-[#F5F6F8] rounded-lg">
+                  <p className="text-2xl font-bold text-[#2E2E2E]">{data.stats.last_7_days}</p>
+                  <p className="text-xs text-[#969696]">Son 7 gun</p>
                 </div>
-                <div className="flex-1 text-center p-3 bg-slate-50 rounded-lg">
-                  <p className="text-2xl font-bold text-slate-900">{data.stats.last_30_days}</p>
-                  <p className="text-xs text-slate-500">Son 30 gun</p>
+                <div className="flex-1 text-center p-3 bg-[#F5F6F8] rounded-lg">
+                  <p className="text-2xl font-bold text-[#2E2E2E]">{data.stats.last_30_days}</p>
+                  <p className="text-xs text-[#969696]">Son 30 gun</p>
                 </div>
-                <div className="flex-1 text-center p-3 bg-amber-50 rounded-lg">
-                  <p className="text-2xl font-bold text-amber-600">{data.pending_count}</p>
-                  <p className="text-xs text-slate-500">Bekleyen</p>
+                <div className="flex-1 text-center p-3 bg-[#FFFBEB] rounded-lg">
+                  <p className="text-2xl font-bold text-[#FA841E]">{data.pending_count}</p>
+                  <p className="text-xs text-[#969696]">Bekleyen</p>
                 </div>
               </div>
             )}
@@ -265,11 +265,11 @@ export function RegWatchPanel() {
                 {data.events.map((evt) => (
                   <div
                     key={evt.id}
-                    className="flex items-center justify-between p-2 bg-slate-50 rounded border border-slate-100"
+                    className="flex items-center justify-between p-2 bg-[#F5F6F8] rounded border border-[#E5E5E5]"
                   >
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-slate-900 truncate">{evt.title}</p>
-                      <p className="text-xs text-slate-500">{evt.source} • {evt.date}</p>
+                      <p className="text-xs font-medium text-[#2E2E2E] truncate">{evt.title}</p>
+                      <p className="text-xs text-[#969696]">{evt.source} • {evt.date}</p>
                     </div>
                     <Badge variant={evt.status === 'pending' ? 'warning' : evt.status === 'approved' ? 'success' : 'error'}>
                       {evt.status === 'pending' ? 'Bekliyor' : evt.status === 'approved' ? 'Onayli' : 'Red'}
@@ -281,16 +281,16 @@ export function RegWatchPanel() {
 
             {/* No results message */}
             {!isScanning && scanResults.length === 0 && (!data?.events || data.events.length === 0) && (
-              <p className="text-sm text-slate-500 text-center py-2">
+              <p className="text-sm text-[#969696] text-center py-2">
                 Tarama baslatmak icin asagidaki butona tiklayin
               </p>
             )}
 
             {/* Trusted Sources Toggle */}
-            <div className="border-t border-slate-200 pt-3">
+            <div className="border-t border-[#E5E5E5] pt-3">
               <button
                 onClick={() => setShowSources(!showSources)}
-                className="flex items-center justify-between w-full text-sm text-slate-600 hover:text-slate-900"
+                className="flex items-center justify-between w-full text-sm text-[#5A5A5A] hover:text-[#2E2E2E]"
               >
                 <span>Guvenilir Kaynaklar ({TRUSTED_SOURCES.length})</span>
                 {showSources ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -303,11 +303,11 @@ export function RegWatchPanel() {
                       href={source.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-2 p-2 bg-slate-50 rounded text-xs hover:bg-slate-100 transition-colors"
+                      className="flex items-center gap-2 p-2 bg-[#F5F6F8] rounded text-xs hover:bg-[#F5F6F8] transition-colors"
                     >
                       <span>{source.icon}</span>
-                      <span className="flex-1 truncate text-slate-700">{source.name}</span>
-                      <ExternalLink className="w-3 h-3 text-slate-400" />
+                      <span className="flex-1 truncate text-[#5A5A5A]">{source.name}</span>
+                      <ExternalLink className="w-3 h-3 text-[#969696]" />
                     </a>
                   ))}
                 </div>
@@ -316,7 +316,7 @@ export function RegWatchPanel() {
 
             {/* Last Scan Time */}
             {(lastScanTime || data?.last_scan) && (
-              <p className="text-xs text-slate-400 text-center">
+              <p className="text-xs text-[#969696] text-center">
                 Son tarama: {new Date(lastScanTime || data?.last_scan || '').toLocaleString('tr-TR')}
               </p>
             )}
@@ -326,14 +326,14 @@ export function RegWatchPanel() {
               <button
                 onClick={handleScan}
                 disabled={isScanning}
-                className="flex-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 px-3 py-2 text-sm bg-[#0049AA] text-white rounded-lg hover:bg-[#0049AA] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isScanning ? 'Taraniyor...' : 'Simdi Tara'}
               </button>
               <button
                 onClick={handleStopTracking}
                 disabled={isScanning}
-                className="px-3 py-2 text-sm text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
+                className="px-3 py-2 text-sm text-[#BF192B] border border-[#FFC7C9] rounded-lg hover:bg-[#FEF2F2] transition-colors disabled:opacity-50"
               >
                 Durdur
               </button>

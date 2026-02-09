@@ -228,7 +228,9 @@ def get_period(client_id: str, period_code: str):
     conn = get_db()
     cursor = conn.cursor()
 
-    period_id = f"{client_id}_{period_code.upper()}"
+    # Format standardizasyonu: 2025-Q1 -> 2025_Q1 (alt çizgi kullan)
+    period_normalized = period_code.upper().replace('-', '_')
+    period_id = f"{client_id}_{period_normalized}"
 
     cursor.execute("""
         SELECT p.*,
@@ -276,7 +278,9 @@ def create_period(period: PeriodCreate):
         raise HTTPException(status_code=404, detail=f"Mükellef bulunamadı: {period.client_id}")
 
     period_code = period.period_code.upper()
-    period_id = f"{period.client_id}_{period_code}"
+    # Format standardizasyonu: 2025-Q1 -> 2025_Q1 (alt çizgi kullan)
+    period_normalized = period_code.replace('-', '_')
+    period_id = f"{period.client_id}_{period_normalized}"
 
     # Check if exists
     cursor.execute("SELECT id FROM periods WHERE id = ?", (period_id,))
@@ -324,7 +328,9 @@ def ensure_period(request: EnsurePeriodRequest):
     cursor = conn.cursor()
 
     period_code = request.period_code.upper()
-    period_id = f"{request.client_id}_{period_code}"
+    # Format standardizasyonu: 2025-Q1 -> 2025_Q1 (alt çizgi kullan)
+    period_normalized = period_code.replace('-', '_')
+    period_id = f"{request.client_id}_{period_normalized}"
 
     # Check if exists
     cursor.execute("SELECT id FROM periods WHERE id = ?", (period_id,))
@@ -363,7 +369,9 @@ def delete_period(client_id: str, period_code: str):
     conn = get_db()
     cursor = conn.cursor()
 
-    period_id = f"{client_id}_{period_code.upper()}"
+    # Format standardizasyonu: 2025-Q1 -> 2025_Q1 (alt çizgi kullan)
+    period_normalized = period_code.upper().replace('-', '_')
+    period_id = f"{client_id}_{period_normalized}"
 
     cursor.execute("SELECT id FROM periods WHERE id = ?", (period_id,))
     if not cursor.fetchone():
@@ -408,7 +416,9 @@ def get_document_status(client_id: str, period_code: str):
     cursor = conn.cursor()
 
     period_code = period_code.upper()
-    period_id = f"{client_id}_{period_code}"
+    # Format standardizasyonu: 2025-Q1 -> 2025_Q1 (alt çizgi kullan)
+    period_normalized = period_code.replace('-', '_')
+    period_id = f"{client_id}_{period_normalized}"
 
     # Get period
     cursor.execute("SELECT * FROM periods WHERE id = ?", (period_id,))

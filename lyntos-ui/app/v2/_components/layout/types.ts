@@ -37,7 +37,26 @@ export interface Period {
   endDate: string;        // "2025-06-30"
   isActive: boolean;      // Aktif beyanname dönemi mi?
   isCurrent: boolean;     // Şu anki dönem mi?
+  year: number;           // 2025
+  periodType: 'quarter' | 'month';  // Çeyrek veya ay
+  periodNumber: number;   // 1-4 for quarter, 1-12 for month
 }
+
+// Türkçe çeyrek isimleri
+export const QUARTERS_TR: Record<number, string> = {
+  1: '1. Çeyrek',
+  2: '2. Çeyrek',
+  3: '3. Çeyrek',
+  4: '4. Çeyrek',
+};
+
+// Türkçe ay isimleri
+export const MONTHS_TR: Record<number, string> = {
+  1: 'Ocak', 2: 'Şubat', 3: 'Mart',
+  4: 'Nisan', 5: 'Mayıs', 6: 'Haziran',
+  7: 'Temmuz', 8: 'Ağustos', 9: 'Eylül',
+  10: 'Ekim', 11: 'Kasım', 12: 'Aralık',
+};
 
 // Layout context
 export interface LayoutContextType {
@@ -51,13 +70,18 @@ export interface LayoutContextType {
   setSelectedClient: (client: Client | null) => void;
   setSelectedPeriod: (period: Period | null) => void;
   refreshPeriods: (clientId: string) => Promise<void>;
+  refreshClients: () => Promise<void>;
+  /** Header selector'ları vurgulama (ScopeGuide tarafından tetiklenir) */
+  highlightSelectors: boolean;
+  setHighlightSelectors: (value: boolean) => void;
 }
 
-// Risk level colors (Stripe palette)
+// Risk level colors (LYNTOS Kartela Uyumlu - design-tokens.ts)
+// Renk değerleri: KRITIK=#980F30, YUKSEK=#F0282D, ORTA=#FFB114, DUSUK=#00A651, NORMAL=#5A5A5A
 export const RISK_COLORS = {
-  kritik: { bg: 'bg-[#cd3d64]', text: 'text-[#cd3d64]', dot: 'bg-[#cd3d64]' },
-  yuksek: { bg: 'bg-[#e56f4a]', text: 'text-[#e56f4a]', dot: 'bg-[#e56f4a]' },
-  orta: { bg: 'bg-[#f5a623]', text: 'text-[#f5a623]', dot: 'bg-[#f5a623]' },
-  dusuk: { bg: 'bg-[#0caf60]', text: 'text-[#0caf60]', dot: 'bg-[#0caf60]' },
-  belirsiz: { bg: 'bg-[#697386]', text: 'text-[#697386]', dot: 'bg-[#697386]' },
+  kritik: { bg: 'bg-[#980F30]', text: 'text-[#980F30]', dot: 'bg-[#980F30]' },  // LYNTOS Kritik
+  yuksek: { bg: 'bg-[#F0282D]', text: 'text-[#BF192B]', dot: 'bg-[#F0282D]' },  // LYNTOS Yüksek
+  orta: { bg: 'bg-[#FFB114]', text: 'text-[#E67324]', dot: 'bg-[#FFB114]' },    // LYNTOS Orta
+  dusuk: { bg: 'bg-[#00A651]', text: 'text-[#00804D]', dot: 'bg-[#00A651]' },   // LYNTOS Düşük
+  belirsiz: { bg: 'bg-[#5A5A5A]', text: 'text-[#5A5A5A]', dot: 'bg-[#5A5A5A]' }, // LYNTOS Nötr
 } as const;

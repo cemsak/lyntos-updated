@@ -82,11 +82,11 @@ export function AksiyonKuyruguPanel({
             <span className={`font-semibold ${config.color}`}>
               {config.label} ({aksiyonListesi.length})
             </span>
-            <span className="text-sm text-slate-500">
+            <span className="text-sm text-[#969696]">
               — {config.labelTr}
             </span>
           </div>
-          <span className="text-slate-400">
+          <span className="text-[#969696]">
             {acik ? '▲' : '▼'}
           </span>
         </button>
@@ -106,7 +106,7 @@ export function AksiyonKuyruguPanel({
             {!tumunuGoster && aksiyonListesi.length > maxGosterim && (
               <button
                 onClick={() => setTumunuGoster(true)}
-                className="w-full py-2 text-sm text-slate-500 hover:text-slate-700"
+                className="w-full py-2 text-sm text-[#969696] hover:text-[#5A5A5A]"
               >
                 +{aksiyonListesi.length - maxGosterim} daha fazla goster
               </button>
@@ -129,8 +129,8 @@ export function AksiyonKuyruguPanel({
     >
       {/* Acil uyari */}
       {hesaplananStats.acil > 0 && (
-        <div className="flex items-center gap-2 mb-4 p-2 bg-red-50 border-l-4 border-red-400 rounded-md">
-          <span className="text-red-600 font-medium">
+        <div className="flex items-center gap-2 mb-4 p-2 bg-[#FEF2F2] border-l-4 border-[#FF555F] rounded-md">
+          <span className="text-[#BF192B] font-medium">
             🔴 {hesaplananStats.acil} acil iş bekliyor!
           </span>
         </div>
@@ -140,8 +140,8 @@ export function AksiyonKuyruguPanel({
       {aksiyonlar.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-8 text-center">
           <span className="text-4xl mb-2">✅</span>
-          <p className="text-green-700 font-medium">Tum isler tamamlandı!</p>
-          <p className="text-sm text-slate-500">
+          <p className="text-[#00804D] font-medium">Tum isler tamamlandı!</p>
+          <p className="text-sm text-[#969696]">
             Bugun icin bekleyen is yok
           </p>
         </div>
@@ -160,7 +160,7 @@ export function AksiyonKuyruguPanel({
 
       {/* Alt Ozet */}
       {(hesaplananStats.bugunTamamlanan > 0 || hesaplananStats.buHaftaTamamlanan > 0) && (
-        <div className="pt-3 mt-4 border-t border-slate-100 text-sm text-slate-500 flex items-center justify-between">
+        <div className="pt-3 mt-4 border-t border-[#E5E5E5] text-sm text-[#969696] flex items-center justify-between">
           <span>
             ✅ Bugun tamamlanan: {hesaplananStats.bugunTamamlanan} is
           </span>

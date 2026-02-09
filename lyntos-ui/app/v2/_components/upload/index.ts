@@ -1,9 +1,6 @@
 // LYNTOS Upload Module - Public API
 // Sprint 5: SMMM-friendly document upload with auto-classification
 
-// Main component
-export { UploadZone } from './UploadZone';
-
 // Types
 export type {
   DocumentType,

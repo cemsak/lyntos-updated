@@ -13,6 +13,7 @@ export type PanelStatus =
   | 'ok'        // Veri basariyla yuklendi
   | 'empty'     // Veri var ama bos
   | 'missing'   // Veri eksik (belge yuklenmemis)
+  | 'scope'     // Mukellef/donem secilmemis (bilgi, hata degil)
   | 'auth'      // Yetki gerekli
   | 'error';    // Hata olustu
 

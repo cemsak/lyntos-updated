@@ -34,7 +34,13 @@ export type BelgeTipi =
 
   // LEGACY - Backward compatibility
   | 'MIZAN'
-  | 'E_DEFTER';
+  | 'E_DEFTER'
+
+  // CARİ HESAP
+  | 'cari_hesap_ekstresi'  // Cari Hesap Ekstresi
+
+  // DİĞER - Sınıflandırılamayan belgeler
+  | 'diger';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // BELGE KATEGORİLERİ
@@ -183,22 +189,22 @@ export const BELGE_TANIMLARI: Record<BelgeTipi, BelgeTanimi> = {
   },
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // ZORUNLU - FATURALAR
+  // ÖNERİLEN - FATURALAR (Anomali analizi için)
   // ═══════════════════════════════════════════════════════════════════════════
   e_fatura_listesi: {
     tip: 'e_fatura_listesi',
     ad: 'E-Fatura Listesi',
     kisaAd: 'E-Fatura',
-    aciklama: 'Dönem e-fatura ve e-arşiv fatura listesi. GİB portalından alınır.',
-    zorunlu: true,
+    aciklama: 'Dönem e-fatura ve e-arşiv listesi. Anomali tespiti için önerilir.',
+    zorunlu: false,  // ÖNERİLEN - anomali analizi için kullanılır
     periyot: 'aylik',
     kategori: 'fatura',
     kaynak: 'GİB e-Fatura',
     format: ['xml', 'xlsx', 'zip'],
     icon: 'FileText',
     label_tr: 'E-Fatura Listesi',
-    gerekliMi: true,
-    aciklama_tr: 'Dönem e-fatura ve e-arşiv listesi',
+    gerekliMi: false,  // ÖNERİLEN - detaylı cross-check için
+    aciklama_tr: 'Anomali tespiti için önerilir',
   },
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -464,6 +470,43 @@ export const BELGE_TANIMLARI: Record<BelgeTipi, BelgeTanimi> = {
     gerekliMi: true,
     aciklama_tr: 'Aylık e-defter berat dosyası (XML)',
   },
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CARİ HESAP
+  // ═══════════════════════════════════════════════════════════════════════════
+  cari_hesap_ekstresi: {
+    tip: 'cari_hesap_ekstresi',
+    ad: 'Cari Hesap Ekstresi',
+    kisaAd: 'Cari',
+    aciklama: 'Cari hesap mutabakat ekstreleri. 120/320 hesaplar için detaylı ekstreler.',
+    zorunlu: false,
+    periyot: 'ceyreklik',
+    kategori: 'banka',
+    kaynak: 'Muhasebe Yazılımı',
+    format: ['xlsx', 'csv', 'pdf'],
+    icon: 'ArrowRightLeft',
+    label_tr: 'Cari Hesap Ekstresi',
+    gerekliMi: false,
+    aciklama_tr: 'Cari hesap mutabakat ekstreleri',
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // DİĞER - Sınıflandırılamayan Belgeler
+  // ═══════════════════════════════════════════════════════════════════════════
+  diger: {
+    tip: 'diger',
+    ad: 'Diğer Belgeler',
+    kisaAd: 'Diğer',
+    aciklama: 'Sınıflandırılamayan veya özel belgeler.',
+    zorunlu: false,
+    periyot: 'aylik',
+    kategori: 'defter',
+    kaynak: 'Çeşitli',
+    format: ['pdf', 'xlsx', 'csv', 'xml', 'zip'],
+    icon: 'File',
+    label_tr: 'Diğer Belgeler',
+    gerekliMi: false,
+    aciklama_tr: 'Sınıflandırılamayan belgeler',
+  },
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -547,7 +590,8 @@ export type BelgeKategorisiUI =
   | 'e_fatura'        // E-Fatura/E-Arşiv listesi
   | 'banka'           // Banka ekstreleri
   | 'tahakkuk'        // Vergi tahakkukları
-  | 'mali_tablolar';  // Bilanço, Gelir Tablosu (opsiyonel)
+  | 'mali_tablolar'   // Bilanço, Gelir Tablosu (opsiyonel)
+  | 'cari_hesap';     // Cari Hesap Ekstresi (opsiyonel)
 
 export interface BelgeKategorisiTanim {
   kategori: BelgeKategorisiUI;
@@ -598,9 +642,9 @@ export const BELGE_KATEGORILERI_UI: Record<BelgeKategorisiUI, BelgeKategorisiTan
     kategori: 'e_fatura',
     ad: 'E-Fatura Listesi',
     kisaAd: 'E-Fatura',
-    aciklama: 'Dönem e-fatura ve e-arşiv listesi.',
+    aciklama: 'Anomali tespiti için önerilir.',
     icon: 'FileText',
-    zorunlu: true,
+    zorunlu: false,  // ÖNERİLEN - anomali analizi için
     altTipler: ['e_fatura_listesi'],
     spikyTip: 'e_fatura_listesi',
   },
@@ -633,6 +677,16 @@ export const BELGE_KATEGORILERI_UI: Record<BelgeKategorisiUI, BelgeKategorisiTan
     zorunlu: false,
     altTipler: ['bilanco', 'gelir_tablosu', 'nakit_akim', 'ozkaynak_degisim'],
     spikyTip: 'bilanco',
+  },
+  cari_hesap: {
+    kategori: 'cari_hesap',
+    ad: 'Cari Hesap Ekstresi',
+    kisaAd: 'Cari',
+    aciklama: 'Cari hesap mutabakat için.',
+    icon: 'ArrowRightLeft',
+    zorunlu: false,
+    altTipler: ['cari_hesap_ekstresi'],
+    spikyTip: 'cari_hesap_ekstresi',
   },
 };
 

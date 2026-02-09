@@ -32,7 +32,7 @@ def get_client_info(client_id: str) -> Optional[Dict]:
     try:
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT id, name, vkn, nace_code, sector
+            SELECT id, name, tax_id as vkn, nace_code, sector
             FROM clients
             WHERE id = ?
         """, (client_id,))
@@ -83,54 +83,108 @@ def get_tax_certificates(client_id: str) -> list:
         conn.close()
 
 
-def get_mizan_data(client_id: str, period: str = None) -> Dict[str, float]:
+def get_mizan_data(client_id: str, period: str = None, tenant_id: str = None) -> Dict[str, float]:
     """
-    Get trial balance data for client
+    Get trial balance data for client from database.
 
-    This is a placeholder that returns demo data.
-    In production, this would query the mizan table.
+    Returns mizan data grouped by 3-digit account codes.
+    Uses only true leaf accounts to avoid double counting.
     """
-    # For now, return demo data based on client_id
-    # In production, query actual mizan data
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
 
-    demo_data = {
-        "OZKAN_KIRTASIYE": {
-            "100": 1250000,    # Kasa - yuksek
-            "102": 850000,     # Banka
-            "120": 450000,     # Alicilar
-            "121": 50000,      # Alacak senetleri
-            "128": 35000,      # Supheli alacak
-            "129": -35000,     # Karsilik
-            "131": 3200000,    # Ortaklardan alacak - yuksek
-            "150": 280000,     # Stok
-            "151": 50000,      # Yarı mamul
-            "250": 500000,     # Binalar
-            "253": 200000,     # Tesis makina
-            "254": 150000,     # Tasitlar
-            "257": -400000,    # Birikmis amortisman
-            "320": 180000,     # Saticilar
-            "331": 50000,      # Ortaklara borclar
-            "500": 1000000,    # Sermaye
-            "501": 200000,     # Odenmis sermaye
-            "600": 5000000,    # Yurtici satislar
-            "620": 1800000,    # SMM
-            "621": 500000,     # Ticari mal maliyeti
-        },
-        "DEFAULT": {
-            "100": 50000,
-            "102": 300000,
-            "120": 200000,
-            "131": 100000,
-            "150": 150000,
-            "250": 300000,
-            "257": -150000,
-            "320": 100000,
-            "500": 500000,
-            "620": 800000,
-        }
-    }
+        # Normalize period format: "2024/Q4" -> "2024-Q4"
+        normalized_period = period.replace("/", "-") if period else None
 
-    return demo_data.get(client_id, demo_data["DEFAULT"])
+        # Önce tenant_id'yi bul (eğer verilmemişse)
+        if not tenant_id:
+            cursor.execute("""
+                SELECT DISTINCT tenant_id FROM mizan_entries WHERE client_id = ? LIMIT 1
+            """, (client_id,))
+            row = cursor.fetchone()
+            tenant_id = row['tenant_id'] if row else 'HKOZKAN'
+
+        # Query mizan entries
+        if normalized_period:
+            cursor.execute("""
+                SELECT hesap_kodu, borc_bakiye, alacak_bakiye
+                FROM mizan_entries
+                WHERE tenant_id = ? AND client_id = ? AND period_id = ?
+                ORDER BY hesap_kodu
+            """, (tenant_id, client_id, normalized_period))
+        else:
+            # Get latest period if not specified
+            cursor.execute("""
+                SELECT hesap_kodu, borc_bakiye, alacak_bakiye
+                FROM mizan_entries
+                WHERE tenant_id = ? AND client_id = ?
+                ORDER BY period_id DESC, hesap_kodu
+            """, (tenant_id, client_id,))
+
+        rows = cursor.fetchall()
+
+        if not rows:
+            # Return empty dict if no data
+            return {}
+
+        # Build accounts dict
+        accounts = {}
+        for row in rows:
+            kod = row['hesap_kodu']
+            accounts[kod] = {
+                'borc': row['borc_bakiye'] or 0,
+                'alacak': row['alacak_bakiye'] or 0
+            }
+
+        # Find true leaf accounts (no children)
+        code_set = set(accounts.keys())
+
+        def is_true_leaf(kod: str) -> bool:
+            for other in code_set:
+                if other != kod and other.startswith(kod + "."):
+                    return False
+                if other != kod and other.startswith(kod) and len(other) > len(kod):
+                    if "." not in kod and "." not in other:
+                        return False
+            return True
+
+        # Calculate net balances for 3-digit account groups
+        mizan_data: Dict[str, float] = {}
+
+        for kod, vals in accounts.items():
+            if not is_true_leaf(kod):
+                continue
+
+            borc = vals['borc']
+            alacak = vals['alacak']
+
+            # Get 3-digit prefix
+            kod_prefix = kod[:3] if len(kod) >= 3 else kod
+
+            # Initialize if not exists
+            if kod_prefix not in mizan_data:
+                mizan_data[kod_prefix] = 0
+
+            # Calculate net balance based on account type
+            # Assets (1xx, 2xx): Debit balance positive
+            # Liabilities (3xx, 4xx, 5xx): Credit balance positive
+            # Income (6xx): Credit balance positive
+            if kod_prefix[0] in ['1', '2']:
+                mizan_data[kod_prefix] += borc - alacak
+            elif kod_prefix[0] in ['3', '4', '5', '6']:
+                mizan_data[kod_prefix] += alacak - borc
+            else:
+                # For expense accounts (7xx), debit is positive
+                mizan_data[kod_prefix] += borc - alacak
+
+        return mizan_data
+
+    except Exception as e:
+        print(f"[VDK] Error getting mizan data: {e}")
+        return {}
+    finally:
+        conn.close()
 
 
 @router.post("/analyze")
@@ -177,6 +231,15 @@ async def analyze_client(
     # TODO: Get risky suppliers from cross-check module
     risky_suppliers = []
 
+    # EVDS sektör verileri (sector_average için)
+    _sector_avgs = {}
+    if nace_code:
+        try:
+            from services.tcmb_evds_service import get_sector_data_for_nace
+            _sector_avgs = get_sector_data_for_nace(nace_code) or {}
+        except Exception:
+            pass
+
     # Run simulation
     simulator = get_kurgan_simulator()
     result = simulator.simulate(
@@ -187,7 +250,8 @@ async def analyze_client(
         sector_group=sector_group,
         mizan_data=mizan_data,
         tax_certificates=tax_certs,
-        risky_suppliers=risky_suppliers
+        risky_suppliers=risky_suppliers,
+        sector_averages=_sector_avgs
     )
 
     return {
@@ -212,46 +276,14 @@ async def get_rules():
     }
 
 
-@router.get("/demo")
-async def run_demo():
-    """Run demo simulation with sample data"""
-
-    # Demo mizan data with some triggers
-    demo_mizan = {
-        "100": 1250000,    # Kasa - yuksek (triggers K-09)
-        "102": 850000,
-        "120": 450000,
-        "128": 35000,
-        "129": -35000,
-        "131": 3200000,    # Ortaklardan alacak - yuksek (triggers K-15)
-        "150": 280000,
-        "250": 500000,
-        "257": -400000,
-        "320": 180000,
-        "500": 1000000,
-        "620": 1800000,
-    }
-
-    # Demo tax certificates with decline (triggers TREND-MATRAH)
-    demo_certs = [
-        {"year": 2024, "kv_matrah": "850000"},
-        {"year": 2023, "kv_matrah": "1300000"},
-    ]
-
-    simulator = get_kurgan_simulator()
-    result = simulator.simulate(
-        client_id="DEMO_CLIENT",
-        client_name="Demo Mükellef A.Ş.",
-        period="2024/Q4",
-        nace_code="47.62",
-        sector_group="Perakende Ticaret",
-        mizan_data=demo_mizan,
-        tax_certificates=demo_certs,
-        risky_suppliers=[]
-    )
-
-    return {
-        "success": True,
-        "data": result.to_dict(),
-        "note": "Bu demo simulasyonudur. Gercek veri degil."
-    }
+# /demo ENDPOINT DEVRE DIŞI BIRAKILDI
+# Sebep: Mock/demo veri SMMM'leri yanıltabilir, Maliye cezası riski
+# Tarih: 2026-01-26
+#
+# @router.get("/demo")
+# async def run_demo():
+#     """DEVRE DIŞI - Demo simulation with sample data"""
+#     pass
+#
+# Eski kod güvenlik nedeniyle kaldırıldı.
+# VDK simülasyonu sadece gerçek müşteri verisiyle çalışmalıdır.

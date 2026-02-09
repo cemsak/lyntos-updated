@@ -155,11 +155,27 @@ export interface CrossCheckSummary {
   overall_status: string;
 }
 
+// TD-002: Açılış Bakiyesi Durumu
+export interface OpeningBalanceStatus {
+  has_data: boolean;
+  status: 'missing' | 'pending' | 'loaded' | 'verified' | 'error';
+  status_color: 'red' | 'yellow' | 'green';
+  status_text: string;
+  fiscal_year?: number;
+  hesap_sayisi: number;
+  toplam_borc: number;
+  toplam_alacak: number;
+  is_balanced: boolean;
+  source_type?: 'acilis_fisi' | 'acilis_mizani' | 'manual';
+  upload_date?: string;
+}
+
 export interface CrossCheckData {
   checks: CrossCheckItem[];
   summary: CrossCheckSummary;
   analysis: Analysis;
   trust_score: number;
+  opening_balance?: OpeningBalanceStatus; // TD-002
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

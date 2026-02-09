@@ -14,6 +14,7 @@ import type {
   MizanData,
   CrossCheckData,
   RegWatchData,
+  RegWatchEvent,
 } from '../types';
 import {
   createLoadingEnvelope,
@@ -37,9 +38,10 @@ function getAuthHeader(): Record<string, string> {
 }
 
 // Generic fetch with error handling
+// SMMM GÜVENİ: Transform null döndürürse empty envelope döndür
 async function fetchWithEnvelope<T>(
   url: string,
-  transform?: (data: unknown) => T
+  transform?: (data: unknown) => T | null
 ): Promise<PanelEnvelope<T>> {
   try {
     const response = await fetch(url, {
@@ -59,27 +61,39 @@ async function fetchWithEnvelope<T>(
     const json = await response.json();
     const data = transform ? transform(json) : json as T;
 
-    if (!data || (Array.isArray(data) && data.length === 0)) {
-      return createEmptyEnvelope<T>('Bu dönem için veri bulunmuyor');
+    // SMMM GÜVENİ: Transform null döndürdüyse veya veri boşsa
+    if (data === null || data === undefined || (Array.isArray(data) && data.length === 0)) {
+      // Empty data returned from transform
+      return createEmptyEnvelope<T>('Bu dönem için analiz verisi bulunamadı');
     }
 
     return createOkEnvelope(data, url);
   } catch (error) {
-    console.error(`Fetch error for ${url}:`, error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error(`Fetch error for ${url}:`, error);
+    }
+    // onClick callback will be provided by the component using refetch
     return createErrorEnvelope<T>(
-      'Veri yüklenirken hata oluştu',
-      { label: 'Tekrar Dene', onClick: () => window.location.reload() }
+      'Veri yüklenirken hata oluştu'
     );
   }
 }
 
 // Transform API response to KpiStripData
-function transformKpiData(kurganData: unknown): KpiStripData {
+// SMMM GÜVENİ: Gerçek veri yoksa null döndür, hardcoded değer KULLANMA
+function transformKpiData(kurganData: unknown): KpiStripData | null {
   const raw = kurganData as Record<string, unknown>;
   const data = (raw?.data as Record<string, unknown>) || raw;
   const kurgan = (data?.kurgan_risk as Record<string, unknown>) || data;
-  const score = (kurgan?.score as number) || 88;
-  const riskLevel = (kurgan?.risk_level as string) || 'Dusuk';
+
+  // Gerçek veri kontrolü - score yoksa null döndür
+  const score = kurgan?.score as number | undefined;
+  if (score === undefined || score === null) {
+    // No real data available
+    return null;
+  }
+
+  const riskLevel = (kurgan?.risk_level as string) || 'Bilinmiyor';
 
   const kpis: KpiData[] = [
     {
@@ -93,184 +107,254 @@ function transformKpiData(kurganData: unknown): KpiStripData {
         variant: score >= 80 ? 'success' : score >= 50 ? 'warning' : 'error',
       },
     },
-    {
-      id: 'cross-check',
-      label: 'Capraz Kontrol',
-      value: '4/6',
-      subLabel: 'Mutabakat',
-      status: 'warning',
-      badge: { text: '2 Uyari', variant: 'warning' },
-    },
-    {
-      id: 'data-quality',
-      label: 'Veri Kalitesi',
-      value: '%20',
-      subLabel: '2/11 Belge',
-      status: 'error',
-      badge: { text: 'Eksik', variant: 'error' },
-    },
-    {
-      id: 'gecici-vergi',
-      label: 'Gecici Vergi',
-      value: '8/12',
-      subLabel: 'Kontrol',
-      status: 'warning',
-      badge: { text: 'Devam', variant: 'neutral' },
-    },
-    {
-      id: 'kurumlar-vergisi',
-      label: 'Kurumlar Vergisi',
-      value: '14/20',
-      subLabel: 'Kontrol',
-      status: 'warning',
-      badge: { text: 'Devam', variant: 'neutral' },
-    },
-    {
-      id: 'kv-forecast',
-      label: 'KV Tahmin',
-      value: '₺50K',
-      subLabel: 'Tahmini',
-      status: 'info',
-      badge: { text: 'Tahmin', variant: 'info' },
-    },
-    {
-      id: 'enflasyon',
-      label: 'Enflasyon',
-      value: '3 Eksik',
-      subLabel: 'TUFE: 1305.67',
-      status: 'error',
-      badge: { text: 'Eksik', variant: 'error' },
-    },
-    {
-      id: 'regwatch',
-      label: 'Mevzuat Takibi',
-      value: '9',
-      subLabel: 'Degisiklik',
-      status: 'info',
-      badge: { text: 'Aktif', variant: 'success' },
-    },
+    // Diğer KPI'lar gerçek API verilerinden gelecek
+    // Şimdilik sadece VDK Risk göster
   ];
 
   return {
     kpis,
-    period: '2026-Q1',
+    period: (data?.period as string) || '',
     lastUpdated: new Date().toISOString(),
   };
 }
 
 // Transform quarterly-tax response to TaxAnalysisData
-function transformGeciciVergi(response: unknown): TaxAnalysisData {
+// Backend format: { data: { ok, Q1: { current_profit, matrah, calculated_tax, payable }, Q2, ... } }
+function transformGeciciVergi(response: unknown): TaxAnalysisData | null {
   const raw = response as Record<string, unknown>;
   const data = (raw?.data as Record<string, unknown>) || raw;
 
+  // Gerçek veri kontrolü
+  if (!data || data.has_data === false || data.data_source === 'no_data') {
+    // No real data available
+    return null;
+  }
+
+  // Backend'den gelen Q1 verisi
+  const q1 = data?.Q1 as Record<string, unknown> | null;
+  const q2 = data?.Q2 as Record<string, unknown> | null;
+
+  // Vergi hesaplaması
+  const q1Tax = (q1?.calculated_tax as number) || (q1?.payable as number) || 0;
+  const q2Tax = (q2?.calculated_tax as number) || (q2?.payable as number) || 0;
+  const totalTax = q1Tax + q2Tax;
+
+  // Kar/zarar
+  const q1Profit = (q1?.current_profit as number) || (q1?.matrah as number) || 0;
+
+  // Kontrol listesi oluştur (backend'den controls gelmiyorsa)
+  const controls: Array<{id: string; name: string; status: 'passed' | 'warning' | 'failed'; description?: string}> = [];
+
+  if (q1) {
+    controls.push({
+      id: 'q1-beyan',
+      name: 'Q1 Geçici Vergi Beyannamesi',
+      status: 'passed',
+      description: `Matrah: ${q1Profit.toLocaleString('tr-TR')} TL, Vergi: ${q1Tax.toLocaleString('tr-TR')} TL`
+    });
+  }
+
+  if (q1Profit < 0) {
+    controls.push({
+      id: 'q1-zarar',
+      name: 'Dönem Zararı',
+      status: 'warning',
+      description: `Q1 döneminde ${Math.abs(q1Profit).toLocaleString('tr-TR')} TL zarar var`
+    });
+  }
+
   return {
-    period: '2026-Q1',
-    totalControls: 12,
-    passedControls: 8,
-    warningControls: 3,
-    failedControls: 1,
-    estimatedTax: (data?.Q2 as Record<string, unknown>)?.payable as number || 2500,
-    controls: [
-      { id: 'gc-1', name: 'Donem Kari Hesaplama', status: 'passed' },
-      { id: 'gc-2', name: 'Yillik Tahmin', status: 'passed' },
-      { id: 'gc-3', name: 'Vergi Orani Kontrolu', status: 'passed' },
-      { id: 'gc-4', name: 'Onceki Donem Mahsubu', status: 'warning', description: 'Fark tespit edildi' },
-      { id: 'gc-5', name: 'Beyanname Kontrolu', status: 'passed' },
-    ],
+    period: (data?.period as string) || '',
+    totalControls: controls.length,
+    passedControls: controls.filter(c => c.status === 'passed').length,
+    warningControls: controls.filter(c => c.status === 'warning').length,
+    failedControls: controls.filter(c => c.status === 'failed').length,
+    estimatedTax: totalTax,
+    controls,
     summary: {
-      highRisk: 1,
-      mediumRisk: 3,
-      lowRisk: 8,
+      highRisk: 0,
+      mediumRisk: q1Profit < 0 ? 1 : 0,
+      lowRisk: 0,
     },
   };
 }
 
 // Transform corporate-tax response to TaxAnalysisData
-function transformKurumlarVergi(response: unknown): TaxAnalysisData {
+// Backend format: { data: { ticari_kar, mali_kar, matrah, hesaplanan_vergi, odenecek_vergi, ... } }
+function transformKurumlarVergi(response: unknown): TaxAnalysisData | null {
   const raw = response as Record<string, unknown>;
   const data = (raw?.data as Record<string, unknown>) || raw;
 
+  // Gerçek veri kontrolü
+  if (!data || data.has_data === false || data.data_source === 'no_data') {
+    // No real data available
+    return null;
+  }
+
+  // Backend'den gelen veriler
+  const ticariKar = data?.ticari_kar as Record<string, unknown> | null;
+  const maliKar = data?.mali_kar as Record<string, unknown> | null;
+  const matrah = (data?.matrah as number) || 0;
+  const hesaplananVergi = (data?.hesaplanan_vergi as number) || 0;
+  const odenecekVergi = (data?.odenecek_vergi as number) || 0;
+
+  // Kar/zarar değerleri
+  const donemKari = (ticariKar?.net_donem_kari as number) || (ticariKar?.donem_kari as number) || 0;
+  const maliKarDegeri = (maliKar?.mali_kar as number) || matrah;
+
+  // Kontrol listesi
+  const controls: Array<{id: string; name: string; status: 'passed' | 'warning' | 'failed'; description?: string}> = [];
+
+  // Ticari kar kontrolü
+  if (donemKari !== 0) {
+    controls.push({
+      id: 'ticari-kar',
+      name: 'Ticari Bilanço Kar/Zarar',
+      status: donemKari > 0 ? 'passed' : 'warning',
+      description: `${donemKari > 0 ? 'Kar' : 'Zarar'}: ${Math.abs(donemKari).toLocaleString('tr-TR')} TL`
+    });
+  }
+
+  // Kurumlar vergisi matrah
+  if (matrah > 0) {
+    controls.push({
+      id: 'kv-matrah',
+      name: 'Kurumlar Vergisi Matrahı',
+      status: 'passed',
+      description: `Matrah: ${matrah.toLocaleString('tr-TR')} TL, Vergi (%25): ${hesaplananVergi.toLocaleString('tr-TR')} TL`
+    });
+  }
+
   return {
-    period: '2025',
-    totalControls: 20,
-    passedControls: 14,
-    warningControls: 4,
-    failedControls: 2,
-    estimatedTax: (data?.hesaplanan_vergi as number) || 50000,
-    controls: [
-      { id: 'kv-1', name: 'Ticari Kar Hesaplama', status: 'passed' },
-      { id: 'kv-2', name: 'KKEG Kontrolu', status: 'passed' },
-      { id: 'kv-3', name: 'Istisna Kazanclar', status: 'warning', description: 'Dokumantasyon eksik' },
-      { id: 'kv-4', name: 'Gecmis Yil Zararlari', status: 'passed' },
-      { id: 'kv-5', name: 'Ar-Ge Indirimi', status: 'passed' },
-      { id: 'kv-6', name: 'Yatirim Indirimi', status: 'failed', description: 'Belge eksik' },
-    ],
+    period: (data?.period as string) || '',
+    totalControls: controls.length,
+    passedControls: controls.filter(c => c.status === 'passed').length,
+    warningControls: controls.filter(c => c.status === 'warning').length,
+    failedControls: controls.filter(c => c.status === 'failed').length,
+    estimatedTax: hesaplananVergi || odenecekVergi,
+    controls,
     summary: {
-      highRisk: 2,
-      mediumRisk: 4,
-      lowRisk: 14,
+      highRisk: 0,
+      mediumRisk: donemKari < 0 ? 1 : 0,
+      lowRisk: 0,
     },
   };
 }
 
 // Transform mizan-analysis response
-function transformMizan(response: unknown): MizanData {
+// Backend format: { data: { accounts: [...], summary: { total_accounts, ok, warn, error, total_borc, total_alacak } } }
+function transformMizan(response: unknown): MizanData | null {
   const raw = response as Record<string, unknown>;
   const data = (raw?.data as Record<string, unknown>) || raw;
-  const accounts = (data?.accounts as Record<string, Record<string, unknown>>) || {};
+
+  // Gerçek veri kontrolü
+  if (!data || data.has_data === false || data.data_source === 'no_data') {
+    // No real data available
+    return null;
+  }
+
+  // Backend accounts array döndürüyor: [{hesap_kodu, hesap_adi, borc, alacak, bakiye, bakiye_turu, status, anomaly}]
+  const accounts = (data?.accounts as Array<Record<string, unknown>>) || [];
+  const summary = (data?.summary as Record<string, unknown>) || {};
+
+  // Summary'den toplam değerleri al
+  const toplamBorc = (summary?.total_borc as number) || 0;
+  const toplamAlacak = (summary?.total_alacak as number) || 0;
+  const totalAccounts = (summary?.total_accounts as number) || accounts.length;
+  const okCount = (summary?.ok as number) || 0;
+  const warnCount = (summary?.warn as number) || 0;
+  const errorCount = (summary?.error as number) || 0;
+
+  // Kritik hesaplar (warn veya error status olanlar önce)
+  const sortedAccounts = [...accounts].sort((a, b) => {
+    const statusOrder: Record<string, number> = { 'ERROR': 0, 'WARN': 1, 'OK': 2 };
+    const aOrder = statusOrder[(a.status as string) || 'OK'] ?? 2;
+    const bOrder = statusOrder[(b.status as string) || 'OK'] ?? 2;
+    return aOrder - bOrder;
+  });
+
+  const kritikHesaplar = sortedAccounts.slice(0, 10).map((hesap) => ({
+    kod: (hesap?.hesap_kodu as string) || '',
+    ad: (hesap?.hesap_adi as string) || '',
+    borc: (hesap?.borc as number) || 0,
+    alacak: (hesap?.alacak as number) || 0,
+    bakiye: (hesap?.bakiye as number) || 0,
+    status: ((hesap?.status as string) === 'OK' ? 'normal' :
+             (hesap?.status as string) === 'WARN' ? 'warning' : 'critical') as 'normal' | 'warning' | 'critical',
+  }));
 
   return {
-    period: '2026-Q1',
-    toplamBorc: 15000000,
-    toplamAlacak: 15000000,
-    bakiyeDengesi: true,
-    kritikHesaplar: Object.entries(accounts).slice(0, 5).map(([kod, hesap]) => ({
-      kod,
-      ad: (hesap?.ad as string) || kod,
-      borc: 0,
-      alacak: 0,
-      bakiye: (hesap?.bakiye as number) || 0,
-      status: ((hesap?.status as string) === 'ok' ? 'normal' : 'warning') as 'normal' | 'warning' | 'critical',
-    })),
-    vdkSkoru: 88,
-    kontrolSayisi: 13,
-    gecenKontrol: 11,
+    period: (data?.period as string) || '',
+    toplamBorc,
+    toplamAlacak,
+    bakiyeDengesi: Math.abs(toplamBorc - toplamAlacak) < 0.01,
+    kritikHesaplar,
+    vdkSkoru: totalAccounts > 0 ? Math.round((okCount / totalAccounts) * 100) : 0,
+    kontrolSayisi: totalAccounts,
+    gecenKontrol: okCount,
   };
 }
 
 // Transform cross-check response
-function transformCrossCheck(response: unknown): CrossCheckData {
+// Backend format: { data: { checks: [{type, status, difference, reason, evidence, actions}], summary: {total_checks, errors, warnings, ok, overall_status} } }
+function transformCrossCheck(response: unknown): CrossCheckData | null {
   const raw = response as Record<string, unknown>;
   const data = (raw?.data as Record<string, unknown>) || raw;
+
+  // Gerçek veri kontrolü
+  if (!data || data.has_data === false || data.data_source === 'no_data') {
+    // No real data available
+    return null;
+  }
+
   const checks = (data?.checks as Array<Record<string, unknown>>) || [];
+  const summary = (data?.summary as Record<string, unknown>) || {};
+
+  // Summary'den değerleri al
+  const okCount = (summary?.ok as number) || 0;
+  const errorCount = (summary?.errors as number) || 0;
+  const warningCount = (summary?.warnings as number) || 0;
 
   return {
-    period: '2026-Q1',
-    checks: checks.map((c, i) => ({
-      id: `cc-${i}`,
-      source: (c?.type as string)?.split('_vs_')[0] || 'mizan',
-      target: (c?.type as string)?.split('_vs_')[1] || 'beyanname',
-      status: ((c?.status as string) === 'ok' ? 'matched' : (c?.status as string) === 'warning' ? 'mismatch' : 'pending') as 'matched' | 'mismatch' | 'pending',
-      difference: c?.difference as number,
-      details: c?.reason as string,
-    })),
-    matchedCount: checks.filter(c => c.status === 'ok').length,
-    mismatchCount: checks.filter(c => c.status === 'warning' || c.status === 'error').length,
+    period: (data?.period as string) || '',
+    checks: checks.map((c, i) => {
+      // type formatı: "mizan_vs_kdv", "banka_vs_mizan" gibi
+      const typeStr = (c?.type as string) || '';
+      const parts = typeStr.split('_vs_');
+      return {
+        id: `cc-${i}`,
+        source: parts[0] || typeStr,
+        target: parts[1] || '',
+        status: ((c?.status as string) === 'ok' ? 'matched' :
+                 (c?.status as string) === 'error' ? 'mismatch' : 'pending') as 'matched' | 'mismatch' | 'pending',
+        difference: (c?.difference as number) || 0,
+        details: (c?.reason as string) || '',
+      };
+    }),
+    matchedCount: okCount,
+    mismatchCount: errorCount + warningCount,
     pendingCount: 0,
   };
 }
 
 // Transform regwatch-status response
-function transformRegWatch(response: unknown): RegWatchData {
+// SMMM GÜVENİ: Gerçek veri yoksa null döndür
+function transformRegWatch(response: unknown): RegWatchData | null {
   const raw = response as Record<string, unknown>;
   const data = (raw?.data as Record<string, unknown>) || raw;
 
+  // Gerçek veri kontrolü
+  if (!data || Object.keys(data).length === 0) {
+    // Debug removed('[transformRegWatch] Gerçek veri yok, null döndürülüyor');
+    return null;
+  }
+
   return {
-    lastScan: new Date().toISOString(),
-    totalEvents: 9,
-    newEvents: (data?.last_7_days as Record<string, unknown>)?.changes === 'NA' ? 0 : 3,
-    pendingReview: 2,
-    events: [],
+    lastScan: (data?.last_scan as string) || new Date().toISOString(),
+    totalEvents: (data?.total_events as number) || 0,
+    newEvents: (data?.new_events as number) || 0,
+    pendingReview: (data?.pending_review as number) || 0,
+    events: (data?.events as RegWatchEvent[]) || [],
   };
 }
 
@@ -298,7 +382,6 @@ export function useDashboardData(clientId?: string | null, period?: string | nul
   const fetchAllData = useCallback(async () => {
     // Client/period zorunlu - default yok
     if (!clientId || !period) {
-      console.warn('[useDashboardData] Client veya period seçilmedi');
       setIsLoading(false);
       return;
     }

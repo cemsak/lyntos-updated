@@ -4,7 +4,6 @@ let sourceCache: Map<string, LegalBasisRef> = new Map();
 
 export function setSourceCache(sources: Array<{ id: string; baslik: string; url?: string; code?: string }>) {
   sourceCache = new Map(sources.map(s => [s.id, { id: s.id, title_tr: s.baslik, url: s.url, code: s.code }]));
-  console.log('[SourceCache] Populated with', sourceCache.size, 'entries');
 }
 
 export function resolveLegalBasisRefs(refs: string[] | undefined): LegalBasisRef[] {
@@ -15,11 +14,52 @@ export function resolveLegalBasisRefs(refs: string[] | undefined): LegalBasisRef
 export function normalizeExpertAnalysis(raw: unknown): ExpertAnalysis | undefined {
   if (!raw || typeof raw !== 'object') return undefined;
   const obj = raw as Record<string, unknown>;
+
+  // summary_tr: Backend'den gelen özet metin
+  const summary_tr = typeof obj.summary_tr === 'string' ? obj.summary_tr
+    : typeof obj.reason_tr === 'string' ? obj.reason_tr
+    : '';
+
+  // details_tr: Detaylı açıklama (trust faktörleri dahil)
+  const details_tr = typeof obj.details_tr === 'string' ? obj.details_tr : undefined;
+
+  // rule_refs: Uygulanan kurallar
+  const rule_refs = Array.isArray(obj.rule_refs) ? obj.rule_refs as string[] : undefined;
+
+  // trust_score: 0-1 arası güven skoru
+  const trust_score = typeof obj.trust_score === 'number' ? obj.trust_score : 1.0;
+
+  // trust_factors: Güven skorunu etkileyen faktörler (SMMM için önemli)
+  // YENİ: detay alanı da dahil - hangi hesaplarda sorun var gösteriyor
+  const trust_factors = Array.isArray(obj.trust_factors) ? obj.trust_factors as Array<{
+    faktor: string;
+    skor: number;
+    aciklama: string;
+    durum: 'ok' | 'warning' | 'error';
+    detay?: {
+      hata_hesaplar?: Array<{ kod: string; ad: string; neden: string; bakiye: number }>;
+      uyari_hesaplar?: Array<{ kod: string; ad: string; neden: string; bakiye: number }>;
+      formul?: string;
+      donen_varliklar?: number;
+      kvyk?: number;
+      stoklar?: number;
+      sonuc?: number;
+      kaynak?: string;
+      eksik_veri?: string;
+      kontrol?: string;
+    } | null;
+  }> : undefined;
+
+  // method: Kullanılan analiz yöntemi
+  const method = typeof obj.method === 'string' ? obj.method : undefined;
+
   return {
-    summary_tr: typeof obj.reason_tr === 'string' ? obj.reason_tr : typeof obj.summary_tr === 'string' ? obj.summary_tr : '',
-    details_tr: typeof obj.details_tr === 'string' ? obj.details_tr : undefined,
-    rule_refs: Array.isArray(obj.rule_refs) ? obj.rule_refs : undefined,
-    trust_score: typeof obj.trust_score === 'number' ? obj.trust_score : 1.0,
+    summary_tr,
+    details_tr,
+    rule_refs,
+    trust_score,
+    trust_factors,
+    method,
   };
 }
 
@@ -83,12 +123,24 @@ export function normalizeToEnvelope<T>(raw: unknown, extractData: (raw: unknown)
   }
   const obj = raw as Record<string, unknown>;
   const analysisRaw = obj.analysis as Record<string, unknown> | undefined;
-  const expert = normalizeExpertAnalysis(analysisRaw?.expert);
+  const expertRaw = analysisRaw?.expert as Record<string, unknown> | undefined;
+  const expert = normalizeExpertAnalysis(expertRaw);
   const ai = normalizeAiAnalysis(analysisRaw?.ai);
   const legalRefs = resolveLegalBasisRefs(Array.isArray(obj.legal_basis_refs) ? obj.legal_basis_refs as string[] : undefined);
-  const evidenceRefs: EvidenceRef[] = Array.isArray(obj.evidence_refs) ? (obj.evidence_refs as Array<Record<string, unknown>>).map(e => ({
-    id: String(e.id || ''), title_tr: String(e.title_tr || e.title || ''), kind: (e.kind as EvidenceRef['kind']) || 'document', ref: String(e.ref || e.path || ''), url: typeof e.url === 'string' ? e.url : undefined,
-  })) : [];
+
+  // evidence_refs: Hem üst düzey hem de analysis.expert.evidence_refs'ten al
+  const topLevelEvidence = Array.isArray(obj.evidence_refs) ? obj.evidence_refs : [];
+  const expertEvidence = Array.isArray(expertRaw?.evidence_refs) ? expertRaw.evidence_refs : [];
+  const combinedEvidence = [...topLevelEvidence, ...expertEvidence] as Array<Record<string, unknown>>;
+
+  const evidenceRefs: EvidenceRef[] = combinedEvidence.map(e => ({
+    id: String(e.id || ''),
+    title_tr: String(e.title_tr || e.title || ''),
+    kind: (e.kind as EvidenceRef['kind']) || 'document',
+    ref: String(e.ref || e.path || ''),
+    url: typeof e.url === 'string' ? e.url : undefined,
+  }));
+
   const data = extractData(raw);
   let status: PanelEnvelope<T>['status'] = 'ok';
   let reason_tr = typeof obj.reason_tr === 'string' ? obj.reason_tr : 'Veri basariyla yuklendi.';

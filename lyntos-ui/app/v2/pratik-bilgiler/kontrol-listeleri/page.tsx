@@ -1,7 +1,10 @@
 'use client';
 
-import { useState } from 'react';
-import { CheckSquare, ChevronRight, X, Download, Check } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { CheckSquare, ChevronRight, X, Download, Check, Loader2, Cloud, CloudOff } from 'lucide-react';
+import { useToast } from '../../_components/shared/Toast';
+import { API_ENDPOINTS } from '../../_lib/config/api';
+import { getAuthToken } from '../../_lib/auth';
 
 interface KontrolMaddesi {
   id: string;
@@ -121,18 +124,118 @@ const KONTROL_LISTELERI: KontrolListesi[] = [
   }
 ];
 
+// Varsayılan scope değerleri (scope yoksa)
+const DEFAULT_CLIENT_ID = 'default';
+const DEFAULT_PERIOD_ID = '2026';
+
 export default function KontrolListeleriPage() {
+  const { showToast } = useToast();
   const [selectedListe, setSelectedListe] = useState<KontrolListesi | null>(null);
   const [checkStates, setCheckStates] = useState<Record<string, Record<string, boolean>>>({});
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [isLoadingProgress, setIsLoadingProgress] = useState(true);
 
-  const handleToggleItem = (listeId: string, itemId: string) => {
+  // Backend'den tüm checklist progress'leri yükle
+  const loadAllProgress = useCallback(async () => {
+    setIsLoadingProgress(true);
+    try {
+      const token = getAuthToken();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const promises = KONTROL_LISTELERI.map(async (liste) => {
+        try {
+          const url = `${API_ENDPOINTS.checklists.progress(liste.id)}?client_id=${DEFAULT_CLIENT_ID}&period_id=${DEFAULT_PERIOD_ID}`;
+          const res = await fetch(url, { headers });
+          if (!res.ok) return { listeId: liste.id, items: {} };
+          const json = await res.json();
+          if (json.success && Array.isArray(json.data)) {
+            const itemStates: Record<string, boolean> = {};
+            for (const item of json.data) {
+              const itemId = String(item.item_index + 1);
+              itemStates[itemId] = item.checked === 1;
+            }
+            return { listeId: liste.id, items: itemStates };
+          }
+          return { listeId: liste.id, items: {} };
+        } catch {
+          return { listeId: liste.id, items: {} };
+        }
+      });
+
+      const results = await Promise.all(promises);
+      const newStates: Record<string, Record<string, boolean>> = {};
+      for (const r of results) {
+        if (Object.keys(r.items).length > 0) {
+          newStates[r.listeId] = r.items;
+        }
+      }
+      setCheckStates(newStates);
+    } catch {
+      // fail-soft: keep empty states
+    } finally {
+      setIsLoadingProgress(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadAllProgress();
+  }, [loadAllProgress]);
+
+  const handleToggleItem = async (listeId: string, itemId: string) => {
+    const currentChecked = checkStates[listeId]?.[itemId] || false;
+    const newChecked = !currentChecked;
+
+    // Optimistic update
     setCheckStates(prev => ({
       ...prev,
       [listeId]: {
         ...(prev[listeId] || {}),
-        [itemId]: !(prev[listeId]?.[itemId] || false)
+        [itemId]: newChecked
       }
     }));
+
+    // Backend'e kaydet
+    setSyncStatus('saving');
+    try {
+      const token = getAuthToken();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const res = await fetch(API_ENDPOINTS.checklists.toggle(listeId), {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({
+          client_id: DEFAULT_CLIENT_ID,
+          period_id: DEFAULT_PERIOD_ID,
+          item_index: parseInt(itemId) - 1,
+          checked: newChecked
+        })
+      });
+
+      if (res.ok) {
+        setSyncStatus('saved');
+        setTimeout(() => setSyncStatus('idle'), 2000);
+      } else {
+        setSyncStatus('error');
+        setCheckStates(prev => ({
+          ...prev,
+          [listeId]: {
+            ...(prev[listeId] || {}),
+            [itemId]: currentChecked
+          }
+        }));
+      }
+    } catch {
+      setSyncStatus('error');
+      setCheckStates(prev => ({
+        ...prev,
+        [listeId]: {
+          ...(prev[listeId] || {}),
+          [itemId]: currentChecked
+        }
+      }));
+    }
   };
 
   const getCheckedCount = (listeId: string, items: KontrolMaddesi[]) => {
@@ -141,7 +244,7 @@ export default function KontrolListeleriPage() {
   };
 
   const handleExportExcel = () => {
-    alert('Excel export özelliği yakında eklenecek');
+    showToast('info', 'Excel export özelliği yakında eklenecek');
   };
 
   return (
@@ -149,69 +252,93 @@ export default function KontrolListeleriPage() {
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Kontrol Listeleri</h1>
-          <p className="text-gray-500">Dönemsel işlemler için hazır kontrol listeleri</p>
+          <h1 className="text-2xl font-bold text-[#2E2E2E]">Kontrol Listeleri</h1>
+          <p className="text-[#969696]">Dönemsel işlemler için hazır kontrol listeleri</p>
         </div>
-        <button
-          onClick={handleExportExcel}
-          className="flex items-center gap-2 text-blue-600 hover:text-blue-700"
-        >
-          <Download className="w-4 h-4" />
-          Tümünü İndir
-        </button>
+        <div className="flex items-center gap-4">
+          {syncStatus === 'saving' && (
+            <span className="flex items-center gap-1 text-xs text-[#969696]">
+              <Loader2 className="w-3 h-3 animate-spin" /> Kaydediliyor...
+            </span>
+          )}
+          {syncStatus === 'saved' && (
+            <span className="flex items-center gap-1 text-xs text-[#00804D]">
+              <Cloud className="w-3 h-3" /> Kaydedildi
+            </span>
+          )}
+          {syncStatus === 'error' && (
+            <span className="flex items-center gap-1 text-xs text-[#BF192B]">
+              <CloudOff className="w-3 h-3" /> Kayıt hatası
+            </span>
+          )}
+          <button
+            onClick={handleExportExcel}
+            className="flex items-center gap-2 text-[#0049AA] hover:text-[#0049AA]"
+          >
+            <Download className="w-4 h-4" />
+            Tümünü İndir
+          </button>
+        </div>
       </div>
 
-      {/* Kart Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {KONTROL_LISTELERI.map(liste => {
-          const checkedCount = getCheckedCount(liste.id, liste.items);
-          const progress = (checkedCount / liste.items.length) * 100;
+      {isLoadingProgress ? (
+        <div className="flex justify-center py-12">
+          <Loader2 className="w-8 h-8 text-[#0049AA] animate-spin" />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {KONTROL_LISTELERI.map(liste => {
+            const checkedCount = getCheckedCount(liste.id, liste.items);
+            const progress = (checkedCount / liste.items.length) * 100;
 
-          return (
-            <button
-              key={liste.id}
-              onClick={() => setSelectedListe(liste)}
-              className="bg-white border border-gray-200 rounded-lg p-4 text-left hover:shadow-md hover:border-blue-300 transition-all"
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <CheckSquare className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-medium text-gray-900">{liste.name}</h3>
-                      <span className={`text-xs px-2 py-0.5 rounded ${
-                        liste.category === 'zorunlu'
-                          ? 'bg-red-100 text-red-700'
-                          : 'bg-gray-100 text-gray-600'
-                      }`}>
-                        {liste.category === 'zorunlu' ? 'Zorunlu' : 'İsteğe Bağlı'}
-                      </span>
+            return (
+              <button
+                key={liste.id}
+                onClick={() => setSelectedListe(liste)}
+                className="bg-white border border-[#E5E5E5] rounded-lg p-4 text-left hover:shadow-md hover:border-[#5ED6FF] transition-all"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-[#E6F9FF] rounded-lg flex items-center justify-center">
+                      <CheckSquare className="w-5 h-5 text-[#0049AA]" />
                     </div>
-                    <p className="text-sm text-gray-500">{liste.description}</p>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-medium text-[#2E2E2E]">{liste.name}</h3>
+                        <span className={`text-xs px-2 py-0.5 rounded ${
+                          liste.category === 'zorunlu'
+                            ? 'bg-[#FEF2F2] text-[#BF192B]'
+                            : 'bg-[#F5F6F8] text-[#5A5A5A]'
+                        }`}>
+                          {liste.category === 'zorunlu' ? 'Zorunlu' : 'İsteğe Bağlı'}
+                        </span>
+                      </div>
+                      <p className="text-sm text-[#969696]">{liste.description}</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-[#969696]" />
+                </div>
+
+                {/* Progress Bar */}
+                <div className="mt-4">
+                  <div className="flex justify-between text-xs text-[#969696] mb-1">
+                    <span>{checkedCount} / {liste.items.length} madde</span>
+                    <span>%{Math.round(progress)}</span>
+                  </div>
+                  <div className="h-2 bg-[#F5F6F8] rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${
+                        progress === 100 ? 'bg-[#00A651]' : 'bg-[#0049AA]'
+                      }`}
+                      style={{ width: `${progress}%` }}
+                    />
                   </div>
                 </div>
-                <ChevronRight className="w-5 h-5 text-gray-400" />
-              </div>
-
-              {/* Progress Bar */}
-              <div className="mt-4">
-                <div className="flex justify-between text-xs text-gray-500 mb-1">
-                  <span>{checkedCount} / {liste.items.length} madde</span>
-                  <span>%{Math.round(progress)}</span>
-                </div>
-                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-blue-600 rounded-full transition-all"
-                    style={{ width: `${progress}%` }}
-                  />
-                </div>
-              </div>
-            </button>
-          );
-        })}
-      </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Detay Modal */}
       {selectedListe && (
@@ -220,12 +347,12 @@ export default function KontrolListeleriPage() {
             {/* Modal Header */}
             <div className="flex justify-between items-center p-4 border-b">
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">{selectedListe.name}</h2>
-                <p className="text-sm text-gray-500">{selectedListe.description}</p>
+                <h2 className="text-lg font-semibold text-[#2E2E2E]">{selectedListe.name}</h2>
+                <p className="text-sm text-[#969696]">{selectedListe.description}</p>
               </div>
               <button
                 onClick={() => setSelectedListe(null)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-[#969696] hover:text-[#5A5A5A]"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -243,18 +370,18 @@ export default function KontrolListeleriPage() {
                       onClick={() => handleToggleItem(selectedListe.id, item.id)}
                       className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all text-left ${
                         isChecked
-                          ? 'bg-green-50 border-green-200'
-                          : 'bg-white border-gray-200 hover:border-blue-300'
+                          ? 'bg-[#ECFDF5] border-[#AAE8B8]'
+                          : 'bg-white border-[#E5E5E5] hover:border-[#5ED6FF]'
                       }`}
                     >
                       <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
                         isChecked
-                          ? 'bg-green-500 border-green-500'
-                          : 'border-gray-300'
+                          ? 'bg-[#00A651] border-[#00A651]'
+                          : 'border-[#B4B4B4]'
                       }`}>
                         {isChecked && <Check className="w-4 h-4 text-white" />}
                       </div>
-                      <span className={`flex-1 ${isChecked ? 'text-gray-500 line-through' : 'text-gray-700'}`}>
+                      <span className={`flex-1 ${isChecked ? 'text-[#969696] line-through' : 'text-[#5A5A5A]'}`}>
                         {index + 1}. {item.text}
                       </span>
                     </button>
@@ -264,14 +391,26 @@ export default function KontrolListeleriPage() {
             </div>
 
             {/* Modal Footer */}
-            <div className="p-4 border-t bg-gray-50 rounded-b-xl">
+            <div className="p-4 border-t bg-[#F5F6F8] rounded-b-xl">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-500">
-                  {getCheckedCount(selectedListe.id, selectedListe.items)} / {selectedListe.items.length} tamamlandı
-                </span>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-[#969696]">
+                    {getCheckedCount(selectedListe.id, selectedListe.items)} / {selectedListe.items.length} tamamlandı
+                  </span>
+                  {syncStatus === 'saving' && (
+                    <span className="flex items-center gap-1 text-xs text-[#969696]">
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    </span>
+                  )}
+                  {syncStatus === 'saved' && (
+                    <span className="flex items-center gap-1 text-xs text-[#00804D]">
+                      <Cloud className="w-3 h-3" /> Kaydedildi
+                    </span>
+                  )}
+                </div>
                 <button
                   onClick={() => setSelectedListe(null)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  className="px-4 py-2 bg-[#0049AA] text-white rounded-lg hover:bg-[#003D8F]"
                 >
                   Tamam
                 </button>

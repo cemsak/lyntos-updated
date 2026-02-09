@@ -5,8 +5,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+import { API_BASE_URL } from '../../_lib/config/api';
+import { formatDate as formatDateCentral } from '../../_lib/format';
 
 interface Notification {
   id: string;
@@ -29,11 +29,11 @@ interface NotificationStats {
 }
 
 const SEVERITY_STYLES: Record<string, { bg: string; border: string; icon: string }> = {
-  critical: { bg: 'bg-red-900/20', border: 'border-red-500', icon: '' },
-  high: { bg: 'bg-orange-900/20', border: 'border-orange-500', icon: '' },
+  critical: { bg: 'bg-[#980F30]/20', border: 'border-[#F0282D]', icon: '' },
+  high: { bg: 'bg-[#E67324]/20', border: 'border-[#FFB114]', icon: '' },
   medium: { bg: 'bg-yellow-900/20', border: 'border-yellow-500', icon: '' },
-  low: { bg: 'bg-green-900/20', border: 'border-green-500', icon: '' },
-  info: { bg: 'bg-blue-900/20', border: 'border-blue-500', icon: '' },
+  low: { bg: 'bg-[#005A46]/20', border: 'border-[#00A651]', icon: '' },
+  info: { bg: 'bg-[#00287F]/20', border: 'border-[#0078D0]', icon: '' },
 };
 
 export default function NotificationPanel() {
@@ -59,7 +59,7 @@ export default function NotificationPanel() {
       });
       if (filter) params.append('severity', filter);
 
-      const res = await fetch(`${API_BASE}/api/v1/notifications?${params}`);
+      const res = await fetch(`${API_BASE_URL}/api/v1/notifications?${params}`);
       const data = await res.json();
       setNotifications(data.notifications || []);
     } catch (err) {
@@ -71,7 +71,7 @@ export default function NotificationPanel() {
 
   const fetchStats = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/v1/notifications/stats?user_id=${userId}`);
+      const res = await fetch(`${API_BASE_URL}/api/v1/notifications/stats?user_id=${userId}`);
       const data = await res.json();
       setStats(data);
     } catch (err) {
@@ -81,7 +81,7 @@ export default function NotificationPanel() {
 
   const markAsRead = async (id: string) => {
     try {
-      await fetch(`${API_BASE}/api/v1/notifications/${id}/read?user_id=${userId}`, {
+      await fetch(`${API_BASE_URL}/api/v1/notifications/${id}/read?user_id=${userId}`, {
         method: 'POST'
       });
       fetchNotifications();
@@ -93,7 +93,7 @@ export default function NotificationPanel() {
 
   const markAllAsRead = async () => {
     try {
-      await fetch(`${API_BASE}/api/v1/notifications/read-all?user_id=${userId}`, {
+      await fetch(`${API_BASE_URL}/api/v1/notifications/read-all?user_id=${userId}`, {
         method: 'POST'
       });
       fetchNotifications();
@@ -105,7 +105,7 @@ export default function NotificationPanel() {
 
   const dismissNotification = async (id: string) => {
     try {
-      await fetch(`${API_BASE}/api/v1/notifications/${id}/dismiss`, {
+      await fetch(`${API_BASE_URL}/api/v1/notifications/${id}/dismiss`, {
         method: 'POST'
       });
       fetchNotifications();
@@ -126,30 +126,30 @@ export default function NotificationPanel() {
     if (diffMins < 60) return `${diffMins} dk once`;
     if (diffHours < 24) return `${diffHours} saat once`;
     if (diffDays < 7) return `${diffDays} gun once`;
-    return date.toLocaleDateString('tr-TR');
+    return formatDateCentral(dateStr);
   };
 
   if (loading) {
     return (
-      <div className="bg-slate-800/50 rounded-lg border border-slate-700 p-6">
+      <div className="bg-[#2E2E2E]/50 rounded-lg border border-[#5A5A5A] p-6">
         <div className="animate-pulse space-y-4">
-          <div className="h-6 bg-slate-700 rounded w-1/3"></div>
-          <div className="h-20 bg-slate-700 rounded"></div>
-          <div className="h-20 bg-slate-700 rounded"></div>
+          <div className="h-6 bg-[#5A5A5A] rounded w-1/3"></div>
+          <div className="h-20 bg-[#5A5A5A] rounded"></div>
+          <div className="h-20 bg-[#5A5A5A] rounded"></div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-slate-800/50 rounded-lg border border-slate-700">
+    <div className="bg-[#2E2E2E]/50 rounded-lg border border-[#5A5A5A]">
       {/* Header */}
-      <div className="p-4 border-b border-slate-700">
+      <div className="p-4 border-b border-[#5A5A5A]">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <h2 className="text-lg font-bold text-slate-100">Bildirimler</h2>
+            <h2 className="text-lg font-bold text-[#F5F6F8]">Bildirimler</h2>
             {stats && stats.unread > 0 && (
-              <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+              <span className="bg-[#F0282D] text-white text-xs font-bold px-2 py-1 rounded-full">
                 {stats.unread}
               </span>
             )}
@@ -159,7 +159,7 @@ export default function NotificationPanel() {
             <select
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
-              className="text-sm bg-slate-700 border border-slate-600 text-slate-200 rounded px-2 py-1"
+              className="text-sm bg-[#5A5A5A] border border-[#5A5A5A] text-[#E5E5E5] rounded px-2 py-1"
             >
               <option value="">Tum Onem</option>
               <option value="critical">Kritik</option>
@@ -171,7 +171,7 @@ export default function NotificationPanel() {
 
             <button
               onClick={() => setShowAll(!showAll)}
-              className="text-sm text-blue-400 hover:text-blue-300"
+              className="text-sm text-[#00B4EB] hover:text-[#5ED6FF]"
             >
               {showAll ? 'Okunmamislar' : 'Tumu'}
             </button>
@@ -179,7 +179,7 @@ export default function NotificationPanel() {
             {stats && stats.unread > 0 && (
               <button
                 onClick={markAllAsRead}
-                className="text-sm text-slate-400 hover:text-slate-300"
+                className="text-sm text-[#969696] hover:text-[#B4B4B4]"
               >
                 Tumunu Okundu Isaretle
               </button>
@@ -189,11 +189,11 @@ export default function NotificationPanel() {
 
         {/* Stats Bar */}
         {stats && (
-          <div className="mt-3 flex gap-4 text-sm text-slate-400">
+          <div className="mt-3 flex gap-4 text-sm text-[#969696]">
             <span>Toplam: {stats.total}</span>
             <span>Okunmamis: {stats.unread}</span>
             {stats.action_required > 0 && (
-              <span className="text-orange-400 font-medium">
+              <span className="text-[#FFCE19] font-medium">
                 Aksiyon Bekleyen: {stats.action_required}
               </span>
             )}
@@ -202,9 +202,9 @@ export default function NotificationPanel() {
       </div>
 
       {/* Notification List */}
-      <div className="divide-y divide-slate-700 max-h-[500px] overflow-y-auto">
+      <div className="divide-y divide-[#5A5A5A] max-h-[500px] overflow-y-auto">
         {notifications.length === 0 ? (
-          <div className="p-8 text-center text-slate-500">
+          <div className="p-8 text-center text-[#969696]">
             <div className="text-4xl mb-2">OK</div>
             <p>Yeni bildirim yok</p>
           </div>
@@ -215,35 +215,35 @@ export default function NotificationPanel() {
             return (
               <div
                 key={notif.id}
-                className={`p-4 ${style.bg} ${!notif.is_read ? 'border-l-4 ' + style.border : ''} hover:bg-slate-700/50 transition-colors`}
+                className={`p-4 ${style.bg} ${!notif.is_read ? 'border-l-4 ' + style.border : ''} hover:bg-[#5A5A5A]/50 transition-colors`}
               >
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <span>{style.icon}</span>
-                      <h3 className={`font-medium ${!notif.is_read ? 'text-slate-100' : 'text-slate-400'}`}>
+                      <h3 className={`font-medium ${!notif.is_read ? 'text-[#F5F6F8]' : 'text-[#969696]'}`}>
                         {notif.title}
                       </h3>
                       {notif.action_required === 1 && (
-                        <span className="bg-orange-900/50 text-orange-300 text-xs px-2 py-0.5 rounded border border-orange-700">
+                        <span className="bg-[#E67324]/50 text-[#FFE045] text-xs px-2 py-0.5 rounded border border-[#FA841E]">
                           Aksiyon Gerekli
                         </span>
                       )}
                     </div>
 
-                    <p className="text-sm text-slate-400 mt-1 line-clamp-2">
+                    <p className="text-sm text-[#969696] mt-1 line-clamp-2">
                       {notif.message}
                     </p>
 
                     <div className="flex items-center gap-4 mt-2">
-                      <span className="text-xs text-slate-500">
+                      <span className="text-xs text-[#969696]">
                         {formatDate(notif.created_at)}
                       </span>
 
                       {notif.action_url && (
                         <a
                           href={notif.action_url}
-                          className="text-xs text-blue-400 hover:text-blue-300"
+                          className="text-xs text-[#00B4EB] hover:text-[#5ED6FF]"
                         >
                           Detaylari Gor
                         </a>
@@ -255,7 +255,7 @@ export default function NotificationPanel() {
                     {!notif.is_read && (
                       <button
                         onClick={() => markAsRead(notif.id)}
-                        className="p-1 text-slate-500 hover:text-green-400"
+                        className="p-1 text-[#969696] hover:text-[#00CB50]"
                         title="Okundu isaretle"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -265,7 +265,7 @@ export default function NotificationPanel() {
                     )}
                     <button
                       onClick={() => dismissNotification(notif.id)}
-                      className="p-1 text-slate-500 hover:text-red-400"
+                      className="p-1 text-[#969696] hover:text-[#FF555F]"
                       title="Kaldir"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

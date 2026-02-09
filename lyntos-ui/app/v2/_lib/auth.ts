@@ -1,15 +1,10 @@
 /**
  * Central Authentication Helper
- * LYNTOS V2 - Merkezi auth token yönetimi
+ * LYNTOS V2 — JWT token yönetimi
  *
- * Dev bypass: Set NEXT_PUBLIC_DEV_AUTH_BYPASS=1 in .env.local
- * When enabled and no token exists, automatically uses DEV_HKOZKAN
- * Production: Token yoksa hata fırlatılır
+ * Token: localStorage + cookie (middleware için)
+ * Bearer prefix: getAuthToken() otomatik ekler
  */
-
-// Dev bypass check - explicit env var (NEXT_PUBLIC_ prefix required for client-side access)
-const DEV_AUTH_BYPASS = process.env.NEXT_PUBLIC_DEV_AUTH_BYPASS === '1';
-const DEV_TOKEN = 'DEV_HKOZKAN';
 
 export class AuthError extends Error {
   constructor(message: string = 'Oturum bulunamadı. Lütfen giriş yapın.') {
@@ -20,27 +15,30 @@ export class AuthError extends Error {
 
 /**
  * Get auth token from localStorage
- * If NEXT_PUBLIC_DEV_AUTH_BYPASS=1 and no token, falls back to DEV_HKOZKAN
+ * Returns token with Bearer prefix for API calls
  */
 export function getAuthToken(): string | null {
   if (typeof window === 'undefined') {
-    // SSR - use dev token if bypass enabled
-    return DEV_AUTH_BYPASS ? DEV_TOKEN : null;
+    return null;
   }
 
   const token = localStorage.getItem('lyntos_token');
+  if (!token) return null;
 
-  // Dev bypass fallback
-  if (!token && DEV_AUTH_BYPASS) {
-    return DEV_TOKEN;
-  }
-
-  return token;
+  // Bearer prefix ekle (yoksa)
+  return token.startsWith('Bearer ') ? token : `Bearer ${token}`;
 }
 
 /**
- * Require auth token - throws AuthError if not available
- * Use this for operations that MUST have authentication
+ * Get raw token without Bearer prefix
+ */
+export function getRawToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('lyntos_token');
+}
+
+/**
+ * Require auth token — throws AuthError if not available
  */
 export function requireAuthToken(): string {
   const token = getAuthToken();
@@ -54,21 +52,24 @@ export function requireAuthToken(): string {
  * Check if user is authenticated
  */
 export function isAuthenticated(): boolean {
-  return getAuthToken() !== null;
+  return getRawToken() !== null;
 }
 
 /**
- * Set auth token in localStorage
+ * Set auth token in localStorage + cookie (for middleware)
  */
 export function setAuthToken(token: string): void {
   if (typeof window === 'undefined') return;
   localStorage.setItem('lyntos_token', token);
+  // Middleware için cookie'ye de yaz (4 saat TTL)
+  document.cookie = `lyntos_token=${token}; path=/; max-age=${60 * 60 * 4}; SameSite=Lax`;
 }
 
 /**
- * Clear auth token from localStorage
+ * Clear auth token from localStorage + cookie
  */
 export function clearAuthToken(): void {
   if (typeof window === 'undefined') return;
   localStorage.removeItem('lyntos_token');
+  document.cookie = 'lyntos_token=; path=/; max-age=0';
 }

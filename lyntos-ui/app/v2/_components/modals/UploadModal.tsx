@@ -1,17 +1,29 @@
 'use client';
-import React, { useState, useRef } from 'react';
-import { X, Upload, CheckCircle, FileText } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { X } from 'lucide-react';
 import { BELGE_TANIMLARI } from '../donem-verileri/types';
-import type { BelgeTipi } from '../donem-verileri/types';
 import { useToast } from '../shared/Toast';
+import { useDashboardScope } from '../scope/useDashboardScope';
+import { API_BASE_URL, API_ENDPOINTS } from '../../_lib/config/api';
+import { PIPELINE_COMPLETE_EVENT } from '../donem-verileri/useDonemVerileriV2';
 
-interface UploadModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  belgeTipi: BelgeTipi | null;
-  onSuccess: (belgeTipi: BelgeTipi) => void;
-}
+import type { IngestResult, PipelineStatus, PipelinePhase, UploadModalProps } from './uploadModalTypes';
+import { PipelineProgress } from './PipelineProgress';
+import { IngestStatisticsView } from './IngestStatisticsView';
+import { UploadContent } from './UploadContent';
 
+/**
+ * UploadModal v2.2 - DEDUPE + PIPELINE PROGRESS
+ *
+ * Akış:
+ * 1. ZIP upload → /api/v2/ingest (senkron: dedupe + parse)
+ * 2. Pipeline arka planda başlar (cross-check + risk analizi)
+ * 3. Frontend 3sn arayla pipeline status poll eder
+ * 4. Tamamlandığında Toast + auto-refetch
+ *
+ * API: POST /api/v2/ingest
+ * API: GET /api/v2/ingest/pipeline-status/{session_id}
+ */
 export function UploadModal({
   isOpen,
   onClose,
@@ -22,48 +34,212 @@ export function UploadModal({
   const [uploaded, setUploaded] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [ingestResult, setIngestResult] = useState<IngestResult | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { showToast } = useToast();
+
+  // Pipeline progress state
+  const [pipelinePhase, setPipelinePhase] = useState<PipelinePhase>('uploading');
+  const [pipelineDetail, setPipelineDetail] = useState('');
+  const [pipelineCrossCheckCount, setPipelineCrossCheckCount] = useState(0);
+  const [pipelineAnalysisCount, setPipelineAnalysisCount] = useState(0);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const sessionIdRef = useRef<string | null>(null);
+
+  // Dashboard scope - client ve period bilgisi
+  const { scope } = useDashboardScope();
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+    };
+  }, []);
 
   if (!isOpen || !belgeTipi) return null;
 
   const belgeTanimi = BELGE_TANIMLARI[belgeTipi];
+
+  const stopPolling = () => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+  };
+
+  const startPipelinePolling = (sessionId: string) => {
+    sessionIdRef.current = sessionId;
+
+    const poll = async () => {
+      try {
+        const url = API_ENDPOINTS.ingest.pipelineStatus(sessionId);
+        const resp = await fetch(url);
+        if (!resp.ok) return;
+
+        const data: PipelineStatus = await resp.json();
+
+        const status = data.pipeline_status as PipelinePhase;
+        setPipelinePhase(status);
+        setPipelineDetail(data.pipeline_detail || '');
+        setPipelineCrossCheckCount(data.cross_check_count || 0);
+        setPipelineAnalysisCount(data.analysis_findings_count || 0);
+
+        if (status === 'completed' || status === 'error') {
+          stopPolling();
+
+          if (status === 'completed') {
+            const ccMsg = data.cross_check_count > 0
+              ? `${data.cross_check_count} çapraz kontrol`
+              : '';
+            const aMsg = data.analysis_findings_count > 0
+              ? `${data.analysis_findings_count} risk bulgusu`
+              : '';
+            const parts = [ccMsg, aMsg].filter(Boolean).join(', ');
+            if (parts) {
+              showToast('info', `Analiz tamamlandı: ${parts}`);
+            }
+            // Dönem verileri panelini otomatik güncelle
+            window.dispatchEvent(new Event(PIPELINE_COMPLETE_EVENT));
+          }
+        }
+      } catch {
+        // Polling hatası sessizce geç
+      }
+    };
+
+    // İlk poll hemen
+    poll();
+    // Sonra 3sn arayla
+    pollingRef.current = setInterval(poll, 3000);
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setSelectedFile(file);
       setValidationError(null);
+      setUploadError(null);
+      setIngestResult(null);
     }
   };
 
   const handleUpload = async () => {
-    // Validation: Check if file is selected
     if (!selectedFile) {
       setValidationError('Lütfen bir dosya seçin');
       return;
     }
 
     setValidationError(null);
+    setUploadError(null);
+    setIngestResult(null);
     setUploading(true);
+    setPipelinePhase('uploading');
+    setPipelineDetail('');
+    setPipelineCrossCheckCount(0);
+    setPipelineAnalysisCount(0);
 
-    // Simulate upload (in production, this would be actual API call)
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setUploading(false);
-    setUploaded(true);
+    try {
+      if (!scope.client_id) {
+        setValidationError('Lütfen önce bir mükellef seçin');
+        setUploading(false);
+        return;
+      }
+      if (!scope.period) {
+        setValidationError('Lütfen önce bir dönem seçin');
+        setUploading(false);
+        return;
+      }
+      const clientId = scope.client_id;
+      const period = scope.period;
 
-    setTimeout(() => {
-      onSuccess(belgeTipi);
-      showToast('success', `${belgeTanimi?.label_tr || belgeTipi} yüklendi`);
-      handleClose();
-    }, 1000);
+      // FormData oluştur
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      formData.append('client_id', clientId);
+      formData.append('period', period);
+      formData.append('smmm_id', scope.smmm_id || '');
+
+      setPipelinePhase('parsing');
+
+      // Backend'e gönder
+      const response = await fetch(API_ENDPOINTS.ingest.upload, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        // Dönem uyuşmazlığı hatası — detaylı mesaj göster
+        if (response.status === 400 && errorData.detail?.period_errors) {
+          const detail = errorData.detail;
+          const periodFiles = (detail.period_errors as Array<{filename: string; detected_period: string}>)
+            .map((pe: {filename: string; detected_period: string}) => `${pe.filename} → ${pe.detected_period}`)
+            .join(', ');
+          throw new Error(
+            `Dönem uyuşmazlığı: ${detail.message || ''} [${periodFiles}]`
+          );
+        }
+        const msg = typeof errorData.detail === 'string'
+          ? errorData.detail
+          : errorData.detail?.message || `Sunucu hatası: ${response.status}`;
+        throw new Error(msg);
+      }
+
+      const result: IngestResult = await response.json();
+
+      setIngestResult(result);
+      setUploading(false);
+      setUploaded(true);
+
+      // Parse tamamlandı, pipeline arka planda devam ediyor
+      setPipelinePhase('cross_checking');
+
+      // Success toast with dedupe info
+      const stats = result.statistics;
+      const newFiles = stats.new_files ?? stats.processable_files ?? 0;
+      const dupFiles = stats.duplicate_files ?? stats.duplicate_blobs ?? 0;
+      const parsedRows = stats.total_parsed_rows ?? 0;
+      const parts: string[] = [];
+      if (newFiles > 0) parts.push(`${newFiles} yeni dosya`);
+      if (dupFiles > 0) parts.push(`${dupFiles} duplicate`);
+      if (parsedRows > 0) parts.push(`${parsedRows.toLocaleString('tr-TR')} satır parse edildi`);
+      showToast('success', parts.join(', ') || 'Dosyalar işlendi');
+
+      // Pipeline polling başlat
+      if (result.session_id) {
+        startPipelinePolling(result.session_id);
+      }
+
+      // onSuccess'i hemen çağır (modal açık kalabilir, kullanıcı pipeline'ı izler)
+      setTimeout(() => {
+        onSuccess(belgeTipi);
+      }, 2000);
+
+    } catch (error) {
+      console.error('[UploadModal] Ingest error:', error);
+      setUploadError(error instanceof Error ? error.message : 'Bilinmeyen hata');
+      setUploading(false);
+      setPipelinePhase('error');
+    }
   };
 
   const handleClose = () => {
+    stopPolling();
     setUploaded(false);
     setUploading(false);
     setSelectedFile(null);
     setValidationError(null);
+    setUploadError(null);
+    setIngestResult(null);
+    setPipelinePhase('uploading');
+    setPipelineDetail('');
+    setPipelineCrossCheckCount(0);
+    setPipelineAnalysisCount(0);
+    sessionIdRef.current = null;
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -76,87 +252,67 @@ export function UploadModal({
       <div className="absolute inset-0 bg-black/50" onClick={handleClose} />
 
       {/* Modal */}
-      <div className="relative bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-6">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="upload-modal-title"
+        className="relative bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-6"
+        onKeyDown={(e) => e.key === 'Escape' && handleClose()}
+        tabIndex={-1}
+      >
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-slate-800">
+          <h3 id="upload-modal-title" className="text-lg font-semibold text-[#2E2E2E]">
             Belge Yükle: {belgeTanimi?.label_tr || belgeTipi}
           </h3>
-          <button onClick={handleClose} className="text-slate-400 hover:text-slate-600">
+          <button onClick={handleClose} className="text-[#969696] hover:text-[#5A5A5A]">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Description */}
         {belgeTanimi?.aciklama_tr && (
-          <p className="text-sm text-slate-500 mb-4">{belgeTanimi.aciklama_tr}</p>
+          <p className="text-sm text-[#969696] mb-4">{belgeTanimi.aciklama_tr}</p>
         )}
 
         {/* Hidden File Input */}
         <input
           ref={fileInputRef}
           type="file"
-          accept=".pdf,.xlsx,.xls,.xml,.zip"
+          accept=".pdf,.xlsx,.xls,.xml,.zip,.csv"
           onChange={handleFileSelect}
           className="hidden"
         />
 
         {/* Content */}
-        <div className="border-2 border-dashed border-slate-200 rounded-lg p-8 text-center">
-          {uploaded ? (
-            <div className="flex flex-col items-center">
-              <CheckCircle className="w-12 h-12 text-green-500 mb-2" />
-              <p className="text-green-600 font-medium">Yükleme başarılı!</p>
-            </div>
-          ) : uploading ? (
-            <div className="flex flex-col items-center">
-              <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-2" />
-              <p className="text-slate-600">Yükleniyor...</p>
-            </div>
-          ) : selectedFile ? (
-            <div className="flex flex-col items-center">
-              <FileText className="w-12 h-12 text-blue-500 mb-2" />
-              <p className="text-slate-700 font-medium mb-1">{selectedFile.name}</p>
-              <p className="text-slate-400 text-sm mb-4">
-                {(selectedFile.size / 1024).toFixed(1)} KB
-              </p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="px-3 py-1.5 text-sm border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors"
-                >
-                  Değiştir
-                </button>
-                <button
-                  onClick={handleUpload}
-                  className="px-4 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Yükle
-                </button>
-              </div>
-            </div>
-          ) : (
-            <>
-              <Upload className="w-12 h-12 text-slate-400 mx-auto mb-2" />
-              <p className="text-slate-600 mb-4">
-                Dosyayı sürükleyin veya seçin
-              </p>
-              {validationError && (
-                <p className="text-red-500 text-sm mb-3">{validationError}</p>
-              )}
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Dosya Seç
-              </button>
-            </>
-          )}
-        </div>
+        <UploadContent
+          uploaded={uploaded}
+          uploading={uploading}
+          selectedFile={selectedFile}
+          validationError={validationError}
+          uploadError={uploadError}
+          ingestResult={ingestResult}
+          pipelinePhase={pipelinePhase}
+          onFileSelect={() => fileInputRef.current?.click()}
+          onUpload={handleUpload}
+        />
+
+        {/* Pipeline Progress */}
+        <PipelineProgress
+          uploaded={uploaded}
+          uploading={uploading}
+          pipelinePhase={pipelinePhase}
+          pipelineCrossCheckCount={pipelineCrossCheckCount}
+          pipelineAnalysisCount={pipelineAnalysisCount}
+        />
+
+        {/* Dedupe Statistics */}
+        {uploaded && <IngestStatisticsView ingestResult={ingestResult} />}
 
         {/* Footer */}
-        <div className="mt-4 text-xs text-slate-500">
-          Desteklenen formatlar: PDF, XLSX, XML, ZIP
+        <div className="mt-4 text-xs text-[#969696] flex items-center justify-between">
+          <span>Desteklenen formatlar: PDF, XLSX, CSV, XML, ZIP</span>
+          <span className="text-[#0078D0]">v2.2 Pipeline</span>
         </div>
       </div>
     </div>

@@ -44,6 +44,13 @@ class TTSGScraper:
     BASE_URL = "https://www.ticaretsicil.gov.tr"
     SEARCH_URL = f"{BASE_URL}/sorgu_tsm.php"
 
+    # Alternatif kaynaklar (CAPTCHA bypass için değil, bilgi amaçlı)
+    ISMMMO_TSG_URL = "https://ismmmo.org.tr/Mevzuat/Yayinlanmis-Ticaret-Sicil-Gazeteleri--15686"
+    TOBB_INDEX_URL = "https://www.tobb.org.tr/BilgiErisimMudurlugu/Sayfalar/indeksveritabani.php"
+
+    # NOT: Tüm TSG sorgulamaları CAPTCHA gerektiriyor
+    # SMMM manuel veri girişi önerilir: /api/v2/smmm/tsg-ilan
+
     # Degisiklik tipleri ve anahtar kelimeler
     CHANGE_TYPE_KEYWORDS = {
         "establishment": ["kurulus", "tescil", "yeni kayit"],
@@ -184,16 +191,10 @@ class TTSGScraper:
         return results
 
     def _demo_daily_gazette(self, target_date: date) -> List[Dict]:
-        """Demo mode daily gazette"""
-        return [
-            {
-                "title": f"Ticaret Sicili Gazetesi - {target_date.isoformat()}",
-                "url": f"https://www.ticaretsicil.gov.tr/gazete/{target_date.isoformat()}",
-                "date": target_date.isoformat(),
-                "source": "ttsg_demo",
-                "scraped_at": datetime.utcnow().isoformat(),
-            }
-        ]
+        """Demo mode daily gazette - TEMIZLENDI (SIFIR TOLERANS)"""
+        # Demo mode devre disi - gercek veri sadece API'den alinmali
+        # HARDCODED/MOCK/DEMO YASAK - KUTSAL KITAP
+        return []
 
     def search_by_city(self, city: str, change_type: Optional[str] = None) -> List[Dict]:
         """Search TTSG by city (for pilot region)"""

@@ -102,12 +102,12 @@ export function FeedCard({
       className={`
         group relative
         bg-white rounded-lg border-l-4 ${severityConfig.borderColor}
-        border border-slate-200
+        border border-[#E5E5E5]
         p-4
         transition-all duration-200
-        hover:shadow-md hover:border-slate-300
+        hover:shadow-md hover:border-[#B4B4B4]
         cursor-pointer
-        ${selected ? 'ring-2 ring-blue-500 ring-offset-2' : ''}
+        ${selected ? 'ring-2 ring-[#0078D0] ring-offset-2' : ''}
         ${compact ? 'p-3' : 'p-4'}
       `}
       role="button"
@@ -132,7 +132,7 @@ export function FeedCard({
         {/* Time + Actions */}
         <div className="flex items-center gap-2">
           {timeAgo && (
-            <span className="text-[10px] text-slate-400 flex items-center gap-1">
+            <span className="text-[10px] text-[#969696] flex items-center gap-1">
               <Clock className="w-3 h-3" />
               {timeAgo}
             </span>
@@ -143,7 +143,7 @@ export function FeedCard({
             {item.snoozeable && (
               <button
                 onClick={handleSnooze}
-                className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-600"
+                className="p-1 rounded hover:bg-[#F5F6F8] text-[#969696] hover:text-[#5A5A5A]"
                 title="Ertele"
               >
                 <Clock className="w-3.5 h-3.5" />
@@ -151,7 +151,7 @@ export function FeedCard({
             )}
             <button
               onClick={handleDismiss}
-              className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-600"
+              className="p-1 rounded hover:bg-[#F5F6F8] text-[#969696] hover:text-[#5A5A5A]"
               title="Kapat"
             >
               <X className="w-3.5 h-3.5" />
@@ -161,12 +161,12 @@ export function FeedCard({
       </div>
 
       {/* Title */}
-      <h3 className={`font-semibold text-slate-900 ${compact ? 'text-sm' : 'text-base'} line-clamp-1`}>
+      <h3 className={`font-semibold text-[#2E2E2E] ${compact ? 'text-sm' : 'text-base'} line-clamp-1`}>
         {item.title}
       </h3>
 
       {/* Summary */}
-      <p className={`text-slate-600 mt-1 line-clamp-2 ${compact ? 'text-xs' : 'text-sm'}`}>
+      <p className={`text-[#5A5A5A] mt-1 line-clamp-2 ${compact ? 'text-xs' : 'text-sm'}`}>
         {item.summary}
       </p>
 
@@ -189,8 +189,8 @@ export function FeedCard({
               className={`
                 text-xs font-medium px-2.5 py-1 rounded transition-colors
                 ${idx === 0
-                  ? 'bg-blue-600 text-white hover:bg-blue-700'
-                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  ? 'bg-[#0049AA] text-white hover:bg-[#0049AA]'
+                  : 'bg-[#F5F6F8] text-[#5A5A5A] hover:bg-[#E5E5E5]'
                 }
               `}
             >
@@ -199,14 +199,14 @@ export function FeedCard({
           ))}
 
           {/* Expand indicator */}
-          <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-colors" />
+          <ChevronRight className="w-4 h-4 text-[#969696] group-hover:text-[#5A5A5A] transition-colors" />
         </div>
       </div>
 
       {/* Evidence count indicator */}
       {item.evidence_refs.length > 0 && (
         <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
-          <span className="text-[9px] text-slate-400">
+          <span className="text-[9px] text-[#969696]">
             {item.evidence_refs.length} kanıt
           </span>
         </div>

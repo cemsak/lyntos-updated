@@ -97,14 +97,6 @@ export async function syncDonemToBackend(payload: SyncPayload): Promise<SyncResp
   const apiBase = getApiBase();
   const url = `${apiBase}/api/v2/donem/sync`;
 
-  console.log('[DonemSync] Syncing to backend:', url);
-  console.log('[DonemSync] Payload:', {
-    tenantId: payload.tenantId,
-    clientId: payload.meta.clientId,
-    period: payload.meta.period,
-    fileCount: payload.fileSummaries.length
-  });
-
   try {
     const response = await fetch(url, {
       method: 'POST',
@@ -128,11 +120,6 @@ export async function syncDonemToBackend(payload: SyncPayload): Promise<SyncResp
     }
 
     const data: SyncResponse = await response.json();
-    console.log('[DonemSync] Response:', {
-      success: data.success,
-      synced: data.syncedCount,
-      errors: data.errorCount
-    });
 
     return data;
 
@@ -180,6 +167,77 @@ export async function getDonemSyncStatus(
   } catch (error) {
     console.warn('[DonemSync] Status check error:', error);
     return null;
+  }
+}
+
+// ============================================================================
+// DELETE / CLEAR FUNCTION
+// ============================================================================
+
+export interface ClearResponse {
+  success: boolean;
+  message: string;
+  deletedCount: number;
+  period: string;
+}
+
+/**
+ * Clear/delete dönem data from backend (soft delete)
+ *
+ * @param period - Period string like "2025-Q1"
+ * @param tenantId - Tenant ID
+ * @param clientId - Client ID
+ * @returns ClearResponse with deletion results
+ */
+export async function clearDonemFromBackend(
+  period: string,
+  tenantId: string = 'default',
+  clientId: string = 'current'
+): Promise<ClearResponse> {
+  const apiBase = getApiBase();
+  const params = new URLSearchParams({
+    tenant_id: tenantId,
+    client_id: clientId
+  });
+  const url = `${apiBase}/api/v2/donem/clear/${encodeURIComponent(period)}?${params}`;
+
+  try {
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[DonemSync] Clear failed:', response.status, errorText);
+      return {
+        success: false,
+        message: `HTTP ${response.status}: ${errorText.slice(0, 200)}`,
+        deletedCount: 0,
+        period,
+      };
+    }
+
+    const data = await response.json();
+
+    return {
+      success: true,
+      message: data.message || 'Veri başarıyla silindi',
+      deletedCount: data.deleted_count || 0,
+      period,
+    };
+
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[DonemSync] Clear network error:', errorMessage);
+    return {
+      success: false,
+      message: `Network error: ${errorMessage}`,
+      deletedCount: 0,
+      period,
+    };
   }
 }
 

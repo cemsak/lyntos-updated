@@ -42,20 +42,20 @@ export function CriteriaSection({
       {/* Section Header */}
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between py-3 border-b border-slate-200 hover:bg-slate-50 transition-colors rounded-t"
+        className="w-full flex items-center justify-between py-3 border-b border-[#E5E5E5] hover:bg-[#F5F6F8] transition-colors rounded-t"
       >
         <div className="flex items-center gap-3">
           <span className="text-xl">{icon}</span>
           <div className="text-left">
-            <h3 className="font-semibold text-slate-800">
+            <h3 className="font-semibold text-[#2E2E2E]">
               {title}
             </h3>
-            <p className="text-xs text-slate-500">{subtitle}</p>
+            <p className="text-xs text-[#969696]">{subtitle}</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
           {failCount > 0 && (
-            <span className="bg-red-100 text-red-800 text-xs px-2 py-0.5 rounded-full">
+            <span className="bg-[#FEF2F2] text-[#980F30] text-xs px-2 py-0.5 rounded-full">
               {failCount} risk
             </span>
           )}
@@ -64,11 +64,11 @@ export function CriteriaSection({
               {warningCount} uyari
             </span>
           )}
-          <span className="text-xs text-slate-400">{criteria.length} kriter</span>
+          <span className="text-xs text-[#969696]">{criteria.length} kriter</span>
           {expanded ? (
-            <ChevronDown className="w-5 h-5 text-slate-400" />
+            <ChevronDown className="w-5 h-5 text-[#969696]" />
           ) : (
-            <ChevronRight className="w-5 h-5 text-slate-400" />
+            <ChevronRight className="w-5 h-5 text-[#969696]" />
           )}
         </div>
       </button>

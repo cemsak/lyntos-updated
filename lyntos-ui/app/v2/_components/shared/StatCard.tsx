@@ -40,10 +40,10 @@ export const StatCard: React.FC<StatCardProps> = ({
 
   const trendColor =
     trend?.direction === 'up'
-      ? 'text-red-600'
+      ? 'text-[#BF192B]'
       : trend?.direction === 'down'
-        ? 'text-green-600'
-        : 'text-slate-500';
+        ? 'text-[#00804D]'
+        : 'text-[#969696]';
 
   const riskConfig = riskLevel ? RISK_LEVELS[riskLevel] : null;
 
@@ -53,7 +53,7 @@ export const StatCard: React.FC<StatCardProps> = ({
       className={cn(
         'bg-white rounded-xl border p-5 transition-all',
         onClick && 'cursor-pointer hover:shadow-lg hover:-translate-y-0.5',
-        riskConfig ? riskConfig.color.border : 'border-slate-200',
+        riskConfig ? riskConfig.color.border : 'border-[#E5E5E5]',
         className
       )}
     >
@@ -64,18 +64,18 @@ export const StatCard: React.FC<StatCardProps> = ({
             <div
               className={cn(
                 'w-8 h-8 rounded-lg flex items-center justify-center',
-                riskConfig ? riskConfig.color.bg : 'bg-slate-100'
+                riskConfig ? riskConfig.color.bg : 'bg-[#F5F6F8]'
               )}
             >
               <Icon
                 className={cn(
                   'w-4 h-4',
-                  riskConfig ? riskConfig.color.text : 'text-slate-600'
+                  riskConfig ? riskConfig.color.text : 'text-[#5A5A5A]'
                 )}
               />
             </div>
           )}
-          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+          <span className="text-xs font-medium text-[#969696] uppercase tracking-wide">
             {title}
           </span>
         </div>
@@ -86,14 +86,14 @@ export const StatCard: React.FC<StatCardProps> = ({
       <div
         className={cn(
           'text-3xl font-bold mb-1',
-          riskConfig ? riskConfig.color.text : 'text-slate-800'
+          riskConfig ? riskConfig.color.text : 'text-[#2E2E2E]'
         )}
       >
         {typeof value === 'number' ? value.toLocaleString('tr-TR') : value}
       </div>
 
       {/* Subtitle */}
-      {subtitle && <p className="text-sm text-slate-500">{subtitle}</p>}
+      {subtitle && <p className="text-sm text-[#969696]">{subtitle}</p>}
 
       {/* Trend */}
       {trend && (
@@ -108,7 +108,7 @@ export const StatCard: React.FC<StatCardProps> = ({
             {Math.abs(trend.value)}%
           </span>
           {trend.label && (
-            <span className="text-xs text-slate-400 ml-1">{trend.label}</span>
+            <span className="text-xs text-[#969696] ml-1">{trend.label}</span>
           )}
         </div>
       )}

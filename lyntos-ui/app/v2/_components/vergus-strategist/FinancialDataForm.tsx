@@ -59,15 +59,15 @@ export function FinancialDataForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Revenue Section */}
-      <div className="bg-white rounded-xl border border-[#e3e8ee] p-4">
-        <h3 className="text-[14px] font-semibold text-[#1a1f36] mb-4 flex items-center gap-2">
-          <Calculator className="w-4 h-4 text-[#635bff]" />
+      <div className="bg-white rounded-xl border border-[#E5E5E5] p-4">
+        <h3 className="text-[14px] font-semibold text-[#2E2E2E] mb-4 flex items-center gap-2">
+          <Calculator className="w-4 h-4 text-[#0049AA]" />
           Gelir Bilgileri
         </h3>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-[12px] text-[#697386] mb-1">
+            <label className="block text-[12px] text-[#5A5A5A] mb-1">
               Toplam Hasilat (TL)
             </label>
             <input
@@ -76,12 +76,12 @@ export function FinancialDataForm({
               onChange={(e) =>
                 handleChange('toplam_hasilat', Number(e.target.value))
               }
-              className="w-full px-3 py-2 text-[13px] bg-[#f6f9fc] border border-[#e3e8ee] rounded-lg text-[#1a1f36] focus:outline-none focus:ring-2 focus:ring-[#635bff]/20"
+              className="w-full px-3 py-2 text-[13px] bg-[#F5F6F8] border border-[#E5E5E5] rounded-lg text-[#2E2E2E] focus:outline-none focus:ring-2 focus:ring-[#0049AA]/20"
               placeholder="0"
             />
           </div>
           <div>
-            <label className="block text-[12px] text-[#697386] mb-1">
+            <label className="block text-[12px] text-[#5A5A5A] mb-1">
               Ihracat Hasilati (TL)
             </label>
             <input
@@ -90,12 +90,12 @@ export function FinancialDataForm({
               onChange={(e) =>
                 handleChange('ihracat_hasilat', Number(e.target.value))
               }
-              className="w-full px-3 py-2 text-[13px] bg-[#f6f9fc] border border-[#e3e8ee] rounded-lg text-[#1a1f36] focus:outline-none focus:ring-2 focus:ring-[#635bff]/20"
+              className="w-full px-3 py-2 text-[13px] bg-[#F5F6F8] border border-[#E5E5E5] rounded-lg text-[#2E2E2E] focus:outline-none focus:ring-2 focus:ring-[#0049AA]/20"
               placeholder="0"
             />
           </div>
           <div>
-            <label className="block text-[12px] text-[#697386] mb-1">
+            <label className="block text-[12px] text-[#5A5A5A] mb-1">
               KV Matrahi (TL)
             </label>
             <input
@@ -104,12 +104,12 @@ export function FinancialDataForm({
               onChange={(e) =>
                 handleChange('kv_matrahi', Number(e.target.value))
               }
-              className="w-full px-3 py-2 text-[13px] bg-[#f6f9fc] border border-[#e3e8ee] rounded-lg text-[#1a1f36] focus:outline-none focus:ring-2 focus:ring-[#635bff]/20"
+              className="w-full px-3 py-2 text-[13px] bg-[#F5F6F8] border border-[#E5E5E5] rounded-lg text-[#2E2E2E] focus:outline-none focus:ring-2 focus:ring-[#0049AA]/20"
               placeholder="0"
             />
           </div>
           <div>
-            <label className="block text-[12px] text-[#697386] mb-1">
+            <label className="block text-[12px] text-[#5A5A5A] mb-1">
               Hesaplanan KV (TL)
             </label>
             <input
@@ -118,7 +118,7 @@ export function FinancialDataForm({
               onChange={(e) =>
                 handleChange('hesaplanan_kv', Number(e.target.value))
               }
-              className="w-full px-3 py-2 text-[13px] bg-[#f6f9fc] border border-[#e3e8ee] rounded-lg text-[#1a1f36] focus:outline-none focus:ring-2 focus:ring-[#635bff]/20"
+              className="w-full px-3 py-2 text-[13px] bg-[#F5F6F8] border border-[#E5E5E5] rounded-lg text-[#2E2E2E] focus:outline-none focus:ring-2 focus:ring-[#0049AA]/20"
               placeholder="0"
             />
           </div>
@@ -126,15 +126,15 @@ export function FinancialDataForm({
       </div>
 
       {/* Personnel Section */}
-      <div className="bg-white rounded-xl border border-[#e3e8ee] p-4">
-        <h3 className="text-[14px] font-semibold text-[#1a1f36] mb-4 flex items-center gap-2">
-          <Users className="w-4 h-4 text-[#635bff]" />
+      <div className="bg-white rounded-xl border border-[#E5E5E5] p-4">
+        <h3 className="text-[14px] font-semibold text-[#2E2E2E] mb-4 flex items-center gap-2">
+          <Users className="w-4 h-4 text-[#0049AA]" />
           Personel Bilgileri
         </h3>
 
         <div className="grid grid-cols-3 gap-4">
           <div>
-            <label className="block text-[12px] text-[#697386] mb-1">
+            <label className="block text-[12px] text-[#5A5A5A] mb-1">
               Toplam Personel
             </label>
             <input
@@ -143,12 +143,12 @@ export function FinancialDataForm({
               onChange={(e) =>
                 handleChange('personel_sayisi', Number(e.target.value))
               }
-              className="w-full px-3 py-2 text-[13px] bg-[#f6f9fc] border border-[#e3e8ee] rounded-lg text-[#1a1f36] focus:outline-none focus:ring-2 focus:ring-[#635bff]/20"
+              className="w-full px-3 py-2 text-[13px] bg-[#F5F6F8] border border-[#E5E5E5] rounded-lg text-[#2E2E2E] focus:outline-none focus:ring-2 focus:ring-[#0049AA]/20"
               placeholder="0"
             />
           </div>
           <div>
-            <label className="block text-[12px] text-[#697386] mb-1">
+            <label className="block text-[12px] text-[#5A5A5A] mb-1">
               Ar-Ge Personeli
             </label>
             <input
@@ -157,12 +157,12 @@ export function FinancialDataForm({
               onChange={(e) =>
                 handleChange('arge_personel', Number(e.target.value))
               }
-              className="w-full px-3 py-2 text-[13px] bg-[#f6f9fc] border border-[#e3e8ee] rounded-lg text-[#1a1f36] focus:outline-none focus:ring-2 focus:ring-[#635bff]/20"
+              className="w-full px-3 py-2 text-[13px] bg-[#F5F6F8] border border-[#E5E5E5] rounded-lg text-[#2E2E2E] focus:outline-none focus:ring-2 focus:ring-[#0049AA]/20"
               placeholder="0"
             />
           </div>
           <div>
-            <label className="block text-[12px] text-[#697386] mb-1">
+            <label className="block text-[12px] text-[#5A5A5A] mb-1">
               Ort. Maas (TL)
             </label>
             <input
@@ -171,7 +171,7 @@ export function FinancialDataForm({
               onChange={(e) =>
                 handleChange('ortalama_maas', Number(e.target.value))
               }
-              className="w-full px-3 py-2 text-[13px] bg-[#f6f9fc] border border-[#e3e8ee] rounded-lg text-[#1a1f36] focus:outline-none focus:ring-2 focus:ring-[#635bff]/20"
+              className="w-full px-3 py-2 text-[13px] bg-[#F5F6F8] border border-[#E5E5E5] rounded-lg text-[#2E2E2E] focus:outline-none focus:ring-2 focus:ring-[#0049AA]/20"
               placeholder="22104"
             />
           </div>
@@ -179,9 +179,9 @@ export function FinancialDataForm({
       </div>
 
       {/* Activity Flags */}
-      <div className="bg-white rounded-xl border border-[#e3e8ee] p-4">
-        <h3 className="text-[14px] font-semibold text-[#1a1f36] mb-4 flex items-center gap-2">
-          <Building2 className="w-4 h-4 text-[#635bff]" />
+      <div className="bg-white rounded-xl border border-[#E5E5E5] p-4">
+        <h3 className="text-[14px] font-semibold text-[#2E2E2E] mb-4 flex items-center gap-2">
+          <Building2 className="w-4 h-4 text-[#0049AA]" />
           Faaliyet Ozellikleri
         </h3>
 
@@ -208,9 +208,9 @@ export function FinancialDataForm({
                     e.target.checked
                   )
                 }
-                className="w-4 h-4 rounded border-[#e3e8ee] text-[#635bff] focus:ring-[#635bff]/20"
+                className="w-4 h-4 rounded border-[#E5E5E5] text-[#0049AA] focus:ring-[#0049AA]/20"
               />
-              <span className="text-[12px] text-[#1a1f36]">
+              <span className="text-[12px] text-[#2E2E2E]">
                 {label}
               </span>
             </label>
@@ -219,15 +219,15 @@ export function FinancialDataForm({
       </div>
 
       {/* Additional Income */}
-      <div className="bg-white rounded-xl border border-[#e3e8ee] p-4">
-        <h3 className="text-[14px] font-semibold text-[#1a1f36] mb-4 flex items-center gap-2">
-          <Globe className="w-4 h-4 text-[#635bff]" />
+      <div className="bg-white rounded-xl border border-[#E5E5E5] p-4">
+        <h3 className="text-[14px] font-semibold text-[#2E2E2E] mb-4 flex items-center gap-2">
+          <Globe className="w-4 h-4 text-[#0049AA]" />
           Diger Gelirler
         </h3>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-[12px] text-[#697386] mb-1">
+            <label className="block text-[12px] text-[#5A5A5A] mb-1">
               Istirak Temettuleri (TL)
             </label>
             <input
@@ -236,12 +236,12 @@ export function FinancialDataForm({
               onChange={(e) =>
                 handleChange('istirak_temettu', Number(e.target.value))
               }
-              className="w-full px-3 py-2 text-[13px] bg-[#f6f9fc] border border-[#e3e8ee] rounded-lg text-[#1a1f36] focus:outline-none focus:ring-2 focus:ring-[#635bff]/20"
+              className="w-full px-3 py-2 text-[13px] bg-[#F5F6F8] border border-[#E5E5E5] rounded-lg text-[#2E2E2E] focus:outline-none focus:ring-2 focus:ring-[#0049AA]/20"
               placeholder="0"
             />
           </div>
           <div>
-            <label className="block text-[12px] text-[#697386] mb-1">
+            <label className="block text-[12px] text-[#5A5A5A] mb-1">
               Yurt Disi Hizmet (TL)
             </label>
             <input
@@ -250,7 +250,7 @@ export function FinancialDataForm({
               onChange={(e) =>
                 handleChange('yurt_disi_hizmet', Number(e.target.value))
               }
-              className="w-full px-3 py-2 text-[13px] bg-[#f6f9fc] border border-[#e3e8ee] rounded-lg text-[#1a1f36] focus:outline-none focus:ring-2 focus:ring-[#635bff]/20"
+              className="w-full px-3 py-2 text-[13px] bg-[#F5F6F8] border border-[#E5E5E5] rounded-lg text-[#2E2E2E] focus:outline-none focus:ring-2 focus:ring-[#0049AA]/20"
               placeholder="0"
             />
           </div>
@@ -261,7 +261,7 @@ export function FinancialDataForm({
       <button
         type="submit"
         disabled={isLoading}
-        className="w-full py-3 text-[14px] font-medium text-white bg-[#635bff] hover:bg-[#5851ea] rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+        className="w-full py-3 text-[14px] font-medium text-white bg-[#0049AA] hover:bg-[#00287F] rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
       >
         {isLoading ? (
           <>

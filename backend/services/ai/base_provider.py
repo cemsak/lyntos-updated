@@ -43,6 +43,9 @@ class TaskType(str, Enum):
     QUICK_ANSWER = "quick_answer"
     TRANSLATION = "translation"
 
+    # VDK Inspector - 5 uzman perspektifi
+    VDK_INSPECTOR = "vdk_inspector"
+
     # Default
     GENERAL = "general"
 

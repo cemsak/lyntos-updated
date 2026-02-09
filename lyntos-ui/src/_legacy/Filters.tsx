@@ -2,11 +2,15 @@
 import React from "react";
 import { useFilters } from "@/state/store";
 
+// UYARI: Bu dosya _legacy klasöründe - yeni geliştirmelerde kullanılmamalı
+// Mock/demo firma isimleri KALDIRILDI - SMMM'leri yanıltabilir
+
 const PERIODS = ["2024-Q4", "2025-Q1", "2025-Q2", "2025-Q3", "2025-Q4"];
 
 export default function Filters({ onApply }: { onApply: () => void }) {
   const { filters, set } = useFilters();
-  const COMPANIES = ["OZKANLAR", "HKOZKAN", "DEMO AŞ", "ACME LTD"];
+  // Sadece veritabanında kayıtlı gerçek tenant'lar - Mock firma YASAK
+  const COMPANIES = ["HKOZKAN"];
 
   return (
     <div className="rounded-2xl border bg-white shadow-sm p-4">

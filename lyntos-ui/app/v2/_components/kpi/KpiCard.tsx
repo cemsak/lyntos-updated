@@ -22,65 +22,70 @@ interface KpiCardProps {
 }
 
 // Determine card variant based on status and risk level
+// SAHTE VERİ YASAK - riskLevel yoksa yeşil (success) DEĞİL gri (neutral) göster
 function getCardVariant(status: string, riskLevel?: string): 'success' | 'warning' | 'danger' | 'info' | 'neutral' {
   if (status !== 'ok') return 'neutral';
   if (riskLevel) {
     const level = riskLevel.toLowerCase();
     if (level === 'dusuk' || level === 'low' || level === 'tamam' || level === 'ok') return 'success';
-    if (level === 'orta' || level === 'medium' || level === 'bekliyor') return 'warning';
+    if (level === 'orta' || level === 'medium' || level === 'bekliyor' || level === 'uyarı' || level === 'uyari') return 'warning';
     if (level === 'yuksek' || level === 'high' || level === 'eksik' || level === 'kritik') return 'danger';
     if (level === 'aktif' || level === 'active') return 'info';
   }
-  return 'success';
+  // SIFIR TÖLERANS: risk_level yoksa yeşil kart YANLIŞ!
+  // API'den açıkça durum gelmeden başarılı gibi gösterme
+  return 'neutral';
 }
 
-// Get gradient and border classes based on variant
+// Get gradient and border classes based on variant (Kartela Uyumlu)
 function getVariantStyles(variant: 'success' | 'warning' | 'danger' | 'info' | 'neutral') {
   const styles = {
     success: {
-      bg: 'bg-gradient-to-br from-emerald-50 to-green-100',
-      border: 'border-emerald-200',
-      title: 'text-emerald-700',
-      badge: 'bg-emerald-500 text-white',
-      link: 'text-emerald-600',
+      bg: 'bg-gradient-to-br from-[#ECFDF5] to-[#AAE8B8]',
+      border: 'border-[#6BDB83]',
+      title: 'text-[#00804D]',
+      badge: 'bg-[#00A651] text-white',
+      link: 'text-[#00804D]',
     },
     warning: {
-      bg: 'bg-gradient-to-br from-amber-50 to-orange-100',
-      border: 'border-amber-200',
-      title: 'text-amber-700',
-      badge: 'bg-amber-500 text-white',
-      link: 'text-amber-600',
+      bg: 'bg-gradient-to-br from-[#FFFBEB] to-[#FFE045]',
+      border: 'border-[#FFCE19]',
+      title: 'text-[#E67324]',
+      badge: 'bg-[#FFB114] text-[#2E2E2E]',
+      link: 'text-[#E67324]',
     },
     danger: {
-      bg: 'bg-gradient-to-br from-red-50 to-rose-100',
-      border: 'border-red-200',
-      title: 'text-red-700',
-      badge: 'bg-red-500 text-white',
-      link: 'text-red-600',
+      bg: 'bg-gradient-to-br from-[#FEF2F2] to-[#FFC7C9]',
+      border: 'border-[#FF9196]',
+      title: 'text-[#BF192B]',
+      badge: 'bg-[#F0282D] text-white',
+      link: 'text-[#BF192B]',
     },
     info: {
-      bg: 'bg-gradient-to-br from-blue-50 to-indigo-100',
-      border: 'border-blue-200',
-      title: 'text-blue-700',
-      badge: 'bg-blue-500 text-white',
-      link: 'text-blue-600',
+      bg: 'bg-gradient-to-br from-[#E6F9FF] to-[#ABEBFF]',
+      border: 'border-[#5ED6FF]',
+      title: 'text-[#0049AA]',
+      badge: 'bg-[#0078D0] text-white',
+      link: 'text-[#0049AA]',
     },
     neutral: {
-      bg: 'bg-gradient-to-br from-slate-50 to-slate-100',
-      border: 'border-slate-200',
-      title: 'text-slate-600',
-      badge: 'bg-slate-400 text-white',
-      link: 'text-slate-500',
+      bg: 'bg-gradient-to-br from-[#F5F6F8] to-[#E5E5E5]',
+      border: 'border-[#B4B4B4]',
+      title: 'text-[#5A5A5A]',
+      badge: 'bg-[#969696] text-white',
+      link: 'text-[#5A5A5A]',
     },
   };
   return styles[variant];
 }
 
 // Get badge text based on status and risk level
+// SAHTE VERİ YASAK - riskLevel yoksa "OK" DEĞİL "---" göster
 function getBadgeText(status: string, riskLevel?: string): string {
   if (status === 'loading') return 'Yükleniyor';
   if (status === 'error') return 'Hata';
   if (status === 'empty') return '---';
+  if (status === 'missing') return '---';
   if (riskLevel) {
     const level = riskLevel.toLowerCase();
     if (level === 'dusuk' || level === 'low') return 'Düşük';
@@ -92,9 +97,12 @@ function getBadgeText(status: string, riskLevel?: string): string {
     if (level === 'aktif' || level === 'active') return 'Aktif';
     if (level === 'pasif' || level === 'inactive') return 'Pasif';
     if (level === 'kritik') return 'Kritik';
+    if (level === 'uyarı' || level === 'uyari') return 'Uyarı';
     return riskLevel;
   }
-  return 'OK';
+  // SIFIR TÖLERANS: risk_level yoksa varsayılan "OK" YANLIŞ!
+  // API'den açıkça "ok/tamam" gelmeden "OK" gösterme
+  return '---';
 }
 
 export function KpiCard({ title, envelope, icon, onClick }: KpiCardProps) {
@@ -151,37 +159,49 @@ export function KpiCard({ title, envelope, icon, onClick }: KpiCardProps) {
           onMouseEnter={handleValueHover}
           onMouseLeave={() => setShowFullValue(false)}
         >
-          <div className="text-[clamp(1.25rem,4vw,1.875rem)] font-black text-slate-800 font-mono tabular-nums leading-tight truncate">
+          <div className="text-[clamp(1.25rem,4vw,1.875rem)] font-black text-[#2E2E2E] font-mono tabular-nums leading-tight truncate">
             {status === 'ok' && formattedValue ? (
               <>
                 {formattedValue.display}
                 {formattedValue.unit && (
-                  <span className="text-[clamp(0.75rem,2vw,1rem)] ml-1 font-semibold text-slate-600">
+                  <span className="text-[clamp(0.75rem,2vw,1rem)] ml-1 font-semibold text-[#5A5A5A]">
                     {formattedValue.unit}
                   </span>
                 )}
               </>
             ) : (
-              <span className="text-slate-400">—</span>
+              <span className="text-[#969696]">—</span>
             )}
           </div>
 
           {/* Full value tooltip */}
           {showFullValue && formattedValue && formattedValue.display !== formattedValue.full && (
-            <div className="absolute left-0 -bottom-8 z-50 bg-slate-800 text-white text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap">
+            <div className="absolute left-0 -bottom-8 z-50 bg-[#2E2E2E] text-white text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap">
               {formattedValue.full} {formattedValue.unit}
             </div>
           )}
         </div>
 
         {/* Label */}
-        <div className="text-[10px] sm:text-xs text-slate-500 mt-1 line-clamp-1">
+        <div className="text-[10px] sm:text-xs text-[#5A5A5A] mt-1 line-clamp-1">
           {status === 'ok' && data?.label ? data.label : reason_tr || 'Veri bekleniyor'}
         </div>
 
-        {/* Footer: Neden? Link */}
+        {/* Footer: Neden?/Detay Link */}
         <div className="mt-auto pt-2">
-          {(analysis.expert || analysis.ai || legal_basis_refs.length > 0) ? (
+          {onClick ? (
+            // onClick varsa "Detay" göster - özel modal açılacak (RiskSkoruDetay gibi)
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onClick();
+              }}
+              className={`text-[10px] sm:text-xs font-semibold ${styles.link} hover:underline`}
+            >
+              Detay →
+            </button>
+          ) : (analysis.expert || analysis.ai || legal_basis_refs.length > 0) ? (
+            // onClick yoksa ve analiz varsa "Neden?" göster - ExplainModal açılacak
             <button
               onClick={handleExplainClick}
               className={`text-[10px] sm:text-xs font-semibold ${styles.link} hover:underline`}
@@ -189,22 +209,24 @@ export function KpiCard({ title, envelope, icon, onClick }: KpiCardProps) {
               Neden? →
             </button>
           ) : (
-            <span className="text-[10px] text-slate-400">—</span>
+            <span className="text-[10px] text-[#969696]">—</span>
           )}
         </div>
       </div>
 
-      {/* Explain Modal */}
-      <ExplainModal
-        isOpen={showExplain}
-        onClose={() => setShowExplain(false)}
-        title={title}
-        analysis={analysis}
-        trust={trust}
-        legalBasisRefs={legal_basis_refs}
-        evidenceRefs={evidence_refs}
-        meta={envelope.meta}
-      />
+      {/* Explain Modal - sadece onClick olmayan kartlar için */}
+      {!onClick && (
+        <ExplainModal
+          isOpen={showExplain}
+          onClose={() => setShowExplain(false)}
+          title={title}
+          analysis={analysis}
+          trust={trust}
+          legalBasisRefs={legal_basis_refs}
+          evidenceRefs={evidence_refs}
+          meta={envelope.meta}
+        />
+      )}
     </>
   );
 }

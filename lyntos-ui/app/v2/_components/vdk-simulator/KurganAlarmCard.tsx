@@ -41,23 +41,23 @@ export function KurganAlarmCard({
   // Non-triggered alarm: show as passed check
   if (!alarm.triggered) {
     return (
-      <div className="p-4 rounded-lg border border-[#e3e8ee] bg-[#0caf60]/5">
+      <div className="p-4 rounded-lg border border-[#E5E5E5] bg-[#00A651]/5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <CheckCircle2 className="w-5 h-5 text-[#0caf60]" />
-            <span className="text-[13px] font-medium text-[#1a1f36]">
+            <CheckCircle2 className="w-5 h-5 text-[#00A651]" />
+            <span className="text-[13px] font-medium text-[#2E2E2E]">
               {alarm.rule_name}
             </span>
-            <span className="px-2 py-0.5 text-[10px] font-medium bg-[#0caf60]/10 text-[#0caf60] rounded">
+            <span className="px-2 py-0.5 text-[10px] font-medium bg-[#00A651]/10 text-[#00A651] rounded">
               {alarm.rule_id}
             </span>
           </div>
-          <span className="text-[12px] text-[#0caf60] font-medium">
+          <span className="text-[12px] text-[#00A651] font-medium">
             Normal
           </span>
         </div>
         {alarm.finding_summary && (
-          <p className="mt-2 text-[12px] text-[#697386] ml-8">
+          <p className="mt-2 text-[12px] text-[#5A5A5A] ml-8">
             {alarm.finding_summary}
           </p>
         )}
@@ -83,7 +83,7 @@ export function KurganAlarmCard({
           />
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[14px] font-semibold text-[#1a1f36]">
+              <span className="text-[14px] font-semibold text-[#2E2E2E]">
                 {alarm.rule_name}
               </span>
               <span
@@ -93,7 +93,7 @@ export function KurganAlarmCard({
                 {alarm.rule_id}
               </span>
             </div>
-            <p className="text-[12px] text-[#697386] mt-0.5">{category}</p>
+            <p className="text-[12px] text-[#5A5A5A] mt-0.5">{category}</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -107,9 +107,9 @@ export function KurganAlarmCard({
             {severity.label}
           </span>
           {isExpanded ? (
-            <ChevronUp className="w-5 h-5 text-[#697386]" />
+            <ChevronUp className="w-5 h-5 text-[#5A5A5A]" />
           ) : (
-            <ChevronDown className="w-5 h-5 text-[#697386]" />
+            <ChevronDown className="w-5 h-5 text-[#5A5A5A]" />
           )}
         </div>
       </button>
@@ -119,22 +119,29 @@ export function KurganAlarmCard({
         <div className="px-4 pb-4 space-y-4">
           {/* Finding Summary */}
           <div className="p-3 bg-white rounded-lg">
-            <p className="text-[13px] font-medium text-[#1a1f36] mb-2">
+            <p className="text-[13px] font-medium text-[#2E2E2E] mb-2">
               Tespit:
             </p>
-            <p className="text-[13px] text-[#697386]">
+            <p className="text-[13px] text-[#5A5A5A]">
               {alarm.finding_summary}
             </p>
+            {alarm.triggered && (
+              <p className="text-[12px] text-[#969696] mt-1">
+                Sektor ortalamasi: {alarm.sector_average != null
+                  ? typeof alarm.sector_average === 'number' ? alarm.sector_average.toFixed(2) : String(alarm.sector_average)
+                  : <span className="italic">Veri yok</span>}
+              </p>
+            )}
             {alarm.details && Object.keys(alarm.details).length > 0 && (
               <div className="mt-3 grid grid-cols-2 gap-2 text-[12px]">
                 {Object.entries(alarm.details)
                   .slice(0, 6)
                   .map(([key, value]) => (
                     <div key={key} className="flex justify-between gap-2">
-                      <span className="text-[#697386] truncate">
+                      <span className="text-[#5A5A5A] truncate">
                         {formatDetailKey(key)}:
                       </span>
-                      <span className="font-medium text-[#1a1f36]">
+                      <span className="font-medium text-[#2E2E2E]">
                         {formatDetailValue(value)}
                       </span>
                     </div>
@@ -151,7 +158,7 @@ export function KurganAlarmCard({
                   className="w-4 h-4"
                   style={{ color: severity.color }}
                 />
-                <p className="text-[13px] font-medium text-[#1a1f36]">
+                <p className="text-[13px] font-medium text-[#2E2E2E]">
                   Mufettis Sorulari:
                 </p>
               </div>
@@ -159,7 +166,7 @@ export function KurganAlarmCard({
                 {alarm.inspector_questions.map((question, i) => (
                   <li
                     key={i}
-                    className="text-[12px] text-[#697386] flex items-start gap-2"
+                    className="text-[12px] text-[#5A5A5A] flex items-start gap-2"
                   >
                     <span
                       className="mt-1 flex-shrink-0"
@@ -182,7 +189,7 @@ export function KurganAlarmCard({
                   className="w-4 h-4"
                   style={{ color: severity.color }}
                 />
-                <p className="text-[13px] font-medium text-[#1a1f36]">
+                <p className="text-[13px] font-medium text-[#2E2E2E]">
                   Hazirlanacak Belgeler:
                 </p>
               </div>
@@ -202,8 +209,8 @@ export function KurganAlarmCard({
           {alarm.legal_references.length > 0 && (
             <div className="p-3 bg-white rounded-lg">
               <div className="flex items-center gap-2 mb-2">
-                <Scale className="w-4 h-4 text-[#697386]" />
-                <p className="text-[13px] font-medium text-[#1a1f36]">
+                <Scale className="w-4 h-4 text-[#5A5A5A]" />
+                <p className="text-[13px] font-medium text-[#2E2E2E]">
                   Yasal Dayanak:
                 </p>
               </div>
@@ -211,7 +218,7 @@ export function KurganAlarmCard({
                 {alarm.legal_references.map((ref, i) => (
                   <span
                     key={i}
-                    className="px-2 py-1 text-[11px] bg-[#f6f9fc] text-[#697386] rounded"
+                    className="px-2 py-1 text-[11px] bg-[#F5F6F8] text-[#5A5A5A] rounded"
                   >
                     {ref}
                   </span>
@@ -242,7 +249,7 @@ function DocumentItem({
           className="w-4 h-4 flex items-center justify-center text-[10px] font-bold rounded flex-shrink-0"
           style={{
             backgroundColor: document.uploaded
-              ? '#0caf60'
+              ? '#00A651'
               : `${priority.color}20`,
             color: document.uploaded ? 'white' : priority.color,
           }}
@@ -253,13 +260,13 @@ function DocumentItem({
           <span
             className={`block truncate ${
               document.uploaded
-                ? 'text-[#697386] line-through'
-                : 'text-[#1a1f36]'
+                ? 'text-[#5A5A5A] line-through'
+                : 'text-[#2E2E2E]'
             }`}
           >
             {document.name}
           </span>
-          <span className="text-[10px] text-[#697386] truncate block">
+          <span className="text-[10px] text-[#5A5A5A] truncate block">
             {document.description}
           </span>
         </div>
@@ -267,13 +274,13 @@ function DocumentItem({
       {!document.uploaded ? (
         <button
           onClick={onUpload}
-          className="ml-2 px-2 py-1 text-[10px] font-medium text-[#635bff] hover:bg-[#635bff]/10 rounded flex items-center gap-1 flex-shrink-0"
+          className="ml-2 px-2 py-1 text-[10px] font-medium text-[#0049AA] hover:bg-[#0049AA]/10 rounded flex items-center gap-1 flex-shrink-0"
         >
           <Upload className="w-3 h-3" />
           Yukle
         </button>
       ) : (
-        <span className="ml-2 text-[10px] text-[#0caf60] flex-shrink-0">
+        <span className="ml-2 text-[10px] text-[#00A651] flex-shrink-0">
           Yuklendi
         </span>
       )}

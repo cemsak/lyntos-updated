@@ -15,6 +15,7 @@ import {
   CriteriaSection,
   RecommendationsPanel,
 } from './vdk';
+import { useScopeComplete } from '../scope/useDashboardScope';
 
 // SMMM Context Info for VDK Panel
 const VDK_SMMM_INFO = {
@@ -164,17 +165,17 @@ function SmmmInfoModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
     >
       <div className="bg-white rounded-xl shadow-xl max-w-lg w-full overflow-hidden">
         {/* Header */}
-        <div className="p-4 flex items-center justify-between bg-purple-50 border-b border-purple-200">
+        <div className="p-4 flex items-center justify-between bg-[#E6F9FF] border-b border-[#ABEBFF]">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-purple-100">
-              <BookOpen className="w-6 h-6 text-purple-600" />
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-[#E6F9FF]">
+              <BookOpen className="w-6 h-6 text-[#0049AA]" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-purple-800">{VDK_SMMM_INFO.title}</h2>
-              <p className="text-sm text-slate-600">{VDK_SMMM_INFO.description}</p>
+              <h2 className="text-lg font-bold text-[#00287F]">{VDK_SMMM_INFO.title}</h2>
+              <p className="text-sm text-[#5A5A5A]">{VDK_SMMM_INFO.description}</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
+          <button onClick={onClose} className="text-[#969696] hover:text-[#5A5A5A]">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -183,11 +184,11 @@ function SmmmInfoModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
         <div className="p-4 space-y-4 max-h-[60vh] overflow-y-auto">
           {/* Context */}
           <div>
-            <h3 className="text-sm font-semibold text-slate-700 mb-2">SMMM Icin Onemli Bilgiler</h3>
+            <h3 className="text-sm font-semibold text-[#5A5A5A] mb-2">SMMM Icin Onemli Bilgiler</h3>
             <ul className="space-y-2">
               {VDK_SMMM_INFO.context.map((item, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-slate-600">
-                  <CheckCircle2 className="w-4 h-4 text-purple-500 flex-shrink-0 mt-0.5" />
+                <li key={i} className="flex items-start gap-2 text-sm text-[#5A5A5A]">
+                  <CheckCircle2 className="w-4 h-4 text-[#0078D0] flex-shrink-0 mt-0.5" />
                   <span>{item}</span>
                 </li>
               ))}
@@ -196,14 +197,14 @@ function SmmmInfoModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
 
           {/* Risk Levels */}
           <div>
-            <h3 className="text-sm font-semibold text-slate-700 mb-2">Risk Seviyeleri</h3>
+            <h3 className="text-sm font-semibold text-[#5A5A5A] mb-2">Risk Seviyeleri</h3>
             <div className="space-y-2">
               {Object.entries(VDK_SMMM_INFO.riskLevels).map(([level, desc]) => (
                 <div key={level} className={`p-2 rounded text-sm ${
-                  level === 'LOW' ? 'bg-green-50 text-green-700' :
-                  level === 'MEDIUM' ? 'bg-amber-50 text-amber-700' :
-                  level === 'HIGH' ? 'bg-orange-50 text-orange-700' :
-                  'bg-red-50 text-red-700'
+                  level === 'LOW' ? 'bg-[#ECFDF5] text-[#00804D]' :
+                  level === 'MEDIUM' ? 'bg-[#FFFBEB] text-[#FA841E]' :
+                  level === 'HIGH' ? 'bg-[#FFFBEB] text-[#FA841E]' :
+                  'bg-[#FEF2F2] text-[#BF192B]'
                 }`}>
                   <strong>{level}:</strong> {desc}
                 </div>
@@ -212,14 +213,14 @@ function SmmmInfoModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
           </div>
 
           {/* Actions */}
-          <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
-            <h3 className="text-sm font-semibold text-purple-800 mb-2 flex items-center gap-2">
+          <div className="bg-[#E6F9FF] border border-[#ABEBFF] rounded-lg p-3">
+            <h3 className="text-sm font-semibold text-[#00287F] mb-2 flex items-center gap-2">
               <AlertTriangle className="w-4 h-4" />
               SMMM Olarak Ne Yapmalisiniz?
             </h3>
             <ul className="space-y-1">
               {VDK_SMMM_INFO.actions.map((action, i) => (
-                <li key={i} className="text-sm text-slate-700 pl-4 border-l-2 border-purple-300">
+                <li key={i} className="text-sm text-[#5A5A5A] pl-4 border-l-2 border-[#5ED6FF]">
                   {action}
                 </li>
               ))}
@@ -228,10 +229,10 @@ function SmmmInfoModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-slate-200 flex justify-end">
+        <div className="p-4 border-t border-[#E5E5E5] flex justify-end">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+            className="px-4 py-2 bg-[#0049AA] text-white rounded-lg hover:bg-[#0049AA] transition-colors"
           >
             Anladim
           </button>
@@ -243,10 +244,30 @@ function SmmmInfoModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
 
 // Main Component
 export function VdkExpertPanel() {
+  // SMMM GÜVENİ: Scope kontrolü
+  const scopeComplete = useScopeComplete();
+
   const [showSmmmInfo, setShowSmmmInfo] = useState(false);
   const [showExplain, setShowExplain] = useState(false);
-  const envelope = useFailSoftFetch<VdkResult>(ENDPOINTS.KURGAN_RISK, normalizeVdk);
+
+  // SMMM GÜVENİ: Scope yoksa veri çekme
+  const envelope = useFailSoftFetch<VdkResult>(
+    scopeComplete ? ENDPOINTS.KURGAN_RISK : null,
+    normalizeVdk
+  );
   const { status, reason_tr, data, analysis, trust, legal_basis_refs, evidence_refs, meta } = envelope;
+
+  // SMMM GÜVENİ: Scope yoksa uyarı göster
+  if (!scopeComplete) {
+    return (
+      <Card title="VDK Risk Analizi" subtitle="13 Kriter Değerlendirmesi">
+        <div className="py-8 text-center">
+          <span className="text-4xl mb-4 block">🎯</span>
+          <p className="text-sm text-[#969696]">Dönem seçildikten sonra VDK risk analizi görünecektir.</p>
+        </div>
+      </Card>
+    );
+  }
 
   const { kurgan, ram } = useMemo(
     () => groupCriteria(data?.criteria || []),
@@ -274,7 +295,7 @@ export function VdkExpertPanel() {
           VDK Risk Analizi
           <button
             onClick={() => setShowSmmmInfo(true)}
-            className="text-slate-400 hover:text-purple-600 transition-colors"
+            className="text-[#969696] hover:text-[#0049AA] transition-colors"
             title="SMMM Rehberi"
           >
             <HelpCircle className="w-4 h-4" />
@@ -285,11 +306,11 @@ export function VdkExpertPanel() {
       headerAction={
         data && (
           <div className="flex items-center gap-2">
-            <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded">
+            <span className="bg-[#ECFDF5] text-[#00804D] text-xs px-2 py-0.5 rounded">
               {passCount} gecti
             </span>
             {failCount > 0 && (
-              <span className="bg-red-100 text-red-700 text-xs px-2 py-0.5 rounded">
+              <span className="bg-[#FEF2F2] text-[#BF192B] text-xs px-2 py-0.5 rounded">
                 {failCount} basarisiz
               </span>
             )}
@@ -310,7 +331,7 @@ export function VdkExpertPanel() {
 
             {/* Summary Text */}
             {data.summary_tr && (
-              <p className="text-sm text-slate-600 mb-6 italic">
+              <p className="text-sm text-[#5A5A5A] mb-6 italic">
                 {data.summary_tr}
               </p>
             )}
@@ -341,12 +362,12 @@ export function VdkExpertPanel() {
             <RecommendationsPanel recommendations={recommendations} />
 
             {/* Footer with Neden? button */}
-            <div className="flex items-center justify-between pt-4 mt-4 border-t border-slate-100">
+            <div className="flex items-center justify-between pt-4 mt-4 border-t border-[#E5E5E5]">
               <TrustBadge trust={trust} />
               {(analysis.expert || analysis.ai || legal_basis_refs.length > 0) && (
                 <button
                   onClick={() => setShowExplain(true)}
-                  className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                  className="text-xs text-[#0049AA] hover:text-[#00287F] font-medium"
                 >
                   Neden? →
                 </button>

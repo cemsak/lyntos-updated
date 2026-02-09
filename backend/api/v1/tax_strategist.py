@@ -1,13 +1,15 @@
 """
 VERGUS Tax Strategist API
-Sprint 9.0 - LYNTOS V2
+IS-2 - LYNTOS V2
 
 Endpoints:
 POST /api/v1/vergus/analyze - Analyze client for tax optimization opportunities
-GET /api/v1/vergus/strategies - Get all available strategies
-GET /api/v1/vergus/strategies/{strategy_id} - Get specific strategy details
-GET /api/v1/vergus/tax-rates - Get current tax rates
-GET /api/v1/vergus/asgari-kv - Get minimum corporate tax info
+GET  /api/v1/vergus/analyze - Mizan bazli otomatik analiz (GET versiyonu)
+GET  /api/v1/vergus/strategies - Get all available strategies
+GET  /api/v1/vergus/strategies/{strategy_id} - Get specific strategy details
+GET  /api/v1/vergus/tax-rates - Get current tax rates
+GET  /api/v1/vergus/asgari-kv - Get minimum corporate tax info
+GET  /api/v1/vergus/quick-check/{client_id} - Quick check (top 3)
 """
 
 from fastapi import APIRouter, HTTPException, Query, Header
@@ -48,8 +50,9 @@ class FinancialDataInput(BaseModel):
 class AnalyzeRequest(BaseModel):
     """Request model for tax analysis"""
     client_id: str
-    period: str = "2024"
+    period: str = "2025-Q1"
     financial_data: Optional[FinancialDataInput] = None
+    nace_code: Optional[str] = None
 
 
 def get_db_connection():
@@ -65,7 +68,7 @@ def get_client_info(client_id: str) -> Optional[Dict]:
     try:
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT id, name, vkn, nace_code, sector
+            SELECT id, name, tax_id, nace_code, sector
             FROM clients
             WHERE id = ?
         """, (client_id,))
@@ -77,81 +80,42 @@ def get_client_info(client_id: str) -> Optional[Dict]:
         conn.close()
 
 
-def get_client_financial_data(client_id: str, period: str) -> Dict[str, Any]:
-    """Get client financial data from various sources"""
-    conn = get_db_connection()
-    try:
-        cursor = conn.cursor()
-        financial_data = {}
-
-        # Get from mizan if available
-        cursor.execute("""
-            SELECT
-                SUM(CASE WHEN hesap_kodu LIKE '6%' THEN alacak - borc ELSE 0 END) as hasilat,
-                SUM(CASE WHEN hesap_kodu = '100' THEN borc - alacak ELSE 0 END) as kasa
-            FROM mizan_entries
-            WHERE client_id = ? AND period = ?
-        """, (client_id, period))
-        mizan_row = cursor.fetchone()
-        if mizan_row:
-            financial_data["toplam_hasilat"] = mizan_row["hasilat"] or 0
-
-        # Get from tax certificates
-        year = period.split("-")[0] if "-" in period else period
-        cursor.execute("""
-            SELECT kv_matrah, kv_paid, nace_code
-            FROM tax_certificates
-            WHERE client_id = ? AND year = ?
-        """, (client_id, year))
-        cert_row = cursor.fetchone()
-        if cert_row:
-            financial_data["kv_matrahi"] = cert_row["kv_matrah"] or 0
-            financial_data["hesaplanan_kv"] = (cert_row["kv_matrah"] or 0) * 0.25
-
-        # Get client info for sector
-        cursor.execute("""
-            SELECT nace_code, sector
-            FROM clients
-            WHERE id = ?
-        """, (client_id,))
-        client_row = cursor.fetchone()
-        if client_row:
-            financial_data["sektor"] = client_row["nace_code"] or ""
-
-        return financial_data
-    finally:
-        conn.close()
-
-
 @router.post("/analyze")
 async def analyze_tax_opportunities(
     request: AnalyzeRequest,
     authorization: str = Header(None)
 ):
     """
-    Analyze client financial data and identify tax optimization opportunities
-
-    Returns:
-        Tax analysis result with opportunities and potential savings
+    Analyze client financial data and identify tax optimization opportunities.
+    Mizan'dan otomatik mali profil cikarimi + NACE bazli strateji filtreleme.
     """
     # Get client info
     client_info = get_client_info(request.client_id)
     if not client_info:
         raise HTTPException(status_code=404, detail="Musteri bulunamadi")
 
-    # Get or build financial data
+    strategist = get_tax_strategist()
+
+    # NACE kodu: request > client DB
+    nace_code = request.nace_code or client_info.get("nace_code", "")
+
+    # Mali veri kaynagi: manuel gonderilmisse onu kullan, yoksa mizan'dan cikar
     if request.financial_data:
         financial_data = request.financial_data.dict()
+        financial_data["veri_kaynagi"] = "manuel"
     else:
-        financial_data = get_client_financial_data(request.client_id, request.period)
+        # Mizan bazli otomatik cikarim
+        financial_data = strategist.auto_extract_financial_data(
+            request.client_id, request.period
+        )
 
-    # Run analysis
-    strategist = get_tax_strategist()
+    # Run analysis with NACE code
     result = strategist.analyze(
         client_id=request.client_id,
         client_name=client_info.get("name", request.client_id),
         period=request.period,
-        financial_data=financial_data
+        financial_data=financial_data,
+        nace_code=nace_code
     )
 
     # Convert dataclass to dict for JSON serialization
@@ -178,6 +142,67 @@ async def analyze_tax_opportunities(
         "client_id": result.client_id,
         "client_name": result.client_name,
         "period": result.period,
+        "nace_code": nace_code,
+        "profile": result.profile,
+        "opportunities": opportunities,
+        "total_potential_saving": result.total_potential_saving,
+        "summary": result.summary
+    }
+
+
+@router.get("/analyze")
+async def analyze_tax_opportunities_get(
+    client_id: str = Query(..., description="Client ID"),
+    period: str = Query("2025-Q1", description="Period (e.g. 2025-Q1)"),
+    nace_code: Optional[str] = Query(None, description="NACE kodu (opsiyonel)"),
+    authorization: str = Header(None)
+):
+    """
+    GET versiyonu: Mizan'dan otomatik mali profil cikarimi ile vergi analizi.
+    Manuel veri gondermeye gerek yok - mizan verisi otomatik kullanilir.
+    """
+    client_info = get_client_info(client_id)
+    if not client_info:
+        raise HTTPException(status_code=404, detail="Musteri bulunamadi")
+
+    strategist = get_tax_strategist()
+    nace = nace_code or client_info.get("nace_code", "")
+
+    # Mizan'dan otomatik cikarim
+    financial_data = strategist.auto_extract_financial_data(client_id, period)
+
+    result = strategist.analyze(
+        client_id=client_id,
+        client_name=client_info.get("name", client_id),
+        period=period,
+        financial_data=financial_data,
+        nace_code=nace
+    )
+
+    opportunities = []
+    for opp in result.opportunities:
+        opportunities.append({
+            "strategy_id": opp.strategy_id,
+            "strategy_name": opp.strategy_name,
+            "category": opp.category,
+            "priority": opp.priority,
+            "difficulty": opp.difficulty,
+            "legal_basis": opp.legal_basis,
+            "description": opp.description,
+            "potential_saving": opp.potential_saving,
+            "calculation_details": opp.calculation_details,
+            "conditions": opp.conditions,
+            "actions": opp.actions,
+            "risk_level": opp.risk_level,
+            "warnings": opp.warnings,
+            "status_2025": opp.status_2025
+        })
+
+    return {
+        "client_id": result.client_id,
+        "client_name": result.client_name,
+        "period": result.period,
+        "nace_code": nace,
         "profile": result.profile,
         "opportunities": opportunities,
         "total_potential_saving": result.total_potential_saving,
@@ -272,29 +297,31 @@ async def get_strategy_categories(authorization: str = Header(None)):
 @router.get("/quick-check/{client_id}")
 async def quick_tax_check(
     client_id: str,
-    period: str = Query("2024", description="Tax period"),
+    period: str = Query("2025-Q1", description="Tax period"),
     authorization: str = Header(None)
 ):
     """
-    Quick tax optimization check for a client
-
-    Returns top 3 opportunities without detailed calculations
+    Quick tax optimization check for a client.
+    Returns top 3 opportunities. Mizan'dan otomatik cikarim.
     """
     client_info = get_client_info(client_id)
     if not client_info:
         raise HTTPException(status_code=404, detail="Musteri bulunamadi")
 
-    financial_data = get_client_financial_data(client_id, period)
-
     strategist = get_tax_strategist()
+    nace_code = client_info.get("nace_code", "")
+
+    # Mizan'dan otomatik cikarim
+    financial_data = strategist.auto_extract_financial_data(client_id, period)
+
     result = strategist.analyze(
         client_id=client_id,
         client_name=client_info.get("name", client_id),
         period=period,
-        financial_data=financial_data
+        financial_data=financial_data,
+        nace_code=nace_code
     )
 
-    # Return only top 3 opportunities
     top_opportunities = []
     for opp in result.opportunities[:3]:
         top_opportunities.append({
@@ -309,9 +336,13 @@ async def quick_tax_check(
         "client_id": client_id,
         "client_name": client_info.get("name", client_id),
         "period": period,
+        "nace_code": nace_code,
         "quick_summary": {
             "toplam_firsat": len(result.opportunities),
             "toplam_potansiyel_tasarruf": result.total_potential_saving,
+            "kv_orani": result.summary.get("kv_orani", 0.25),
+            "asgari_kv_kontrolu": result.summary.get("asgari_kv_kontrolu", {}),
+            "veri_kaynagi": result.summary.get("veri_kaynagi", "bilinmiyor"),
             "top_opportunities": top_opportunities
         }
     }

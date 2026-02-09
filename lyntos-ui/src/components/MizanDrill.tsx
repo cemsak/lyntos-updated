@@ -4,7 +4,7 @@ export default function MizanDrill({ rows }: { rows: any[] }) {
     <div className="rounded-2xl border bg-white p-5 shadow-sm dark:bg-slate-900 dark:border-slate-700">
       <div className="mb-2 text-sm font-semibold">Mizan Drill-Down</div>
       <div className="text-xs text-slate-600 dark:text-slate-300">
-        Hesap detayları yakında (demo). İlk 5 fark listelendi.
+        Hesap detayları. İlk 5 fark listelendi.
       </div>
       <ul className="mt-2 list-disc pl-5 text-xs">
         {(rows || []).slice(0, 5).map((r: any, i: number) => (

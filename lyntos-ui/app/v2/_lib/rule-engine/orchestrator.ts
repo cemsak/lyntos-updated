@@ -88,17 +88,12 @@ export class RuleEngineOrchestrator {
     const startTime = Date.now();
     const executionId = context.executionId || `exec-${Date.now()}`;
 
-    console.log(`🚀 [RuleEngine] Starting: ${executionId}`);
-    console.log(`📊 [RuleEngine] Total rules: ${this.registry.count}`);
-
     const phases: PhaseResult[] = [];
     let overallStatus: 'COMPLETED' | 'FAILED' | 'PARTIAL' = 'COMPLETED';
 
     const phaseOrder = [RulePhase.INTAKE, RulePhase.COMPUTE, RulePhase.ANALYZE, RulePhase.CROSSCHECK];
 
     for (const phase of phaseOrder) {
-      console.log(`\n═══ PHASE ${phase} ═══`);
-
       const phaseResult = await this.executePhase(phase, context);
       phases.push(phaseResult);
 
@@ -106,7 +101,6 @@ export class RuleEngineOrchestrator {
       context.phaseResults.set(phase, phaseResult);
 
       if (phase === RulePhase.INTAKE && !phaseResult.canProceed && this.config.stopOnPhase0Failure) {
-        console.error(`❌ Phase 0 failed, stopping`);
         overallStatus = 'FAILED';
         break;
       }
@@ -137,8 +131,6 @@ export class RuleEngineOrchestrator {
   private async executePhase(phase: RulePhase, context: RuleContext): Promise<PhaseResult> {
     const startTime = Date.now();
     const rules = this.registry.getByPhase(phase).filter(r => r.enabled);
-
-    console.log(`📋 [Phase ${phase}] ${rules.length} rules`);
 
     const ruleResults: RuleResult[] = [];
     const blockingErrors: string[] = [];
@@ -174,11 +166,8 @@ export class RuleEngineOrchestrator {
 
   private async executeRule(rule: IRule, context: RuleContext): Promise<RuleResult> {
     const startTime = Date.now();
-    console.log(`  ▶ [${rule.id}] ${rule.name}...`);
-
     try {
       if (!rule.canExecute(context)) {
-        console.log(`  ⏭ [${rule.id}] Skipped`);
         return this.createRuleResult(rule, RuleStatus.SKIPPED, startTime);
       }
 
@@ -190,15 +179,12 @@ export class RuleEngineOrchestrator {
       ]);
 
       if (output) {
-        console.log(`  ⚠ [${rule.id}] TRIGGERED (${output.severity})`);
         return this.createRuleResult(rule, RuleStatus.TRIGGERED, startTime, output);
       }
 
-      console.log(`  ✓ [${rule.id}] Passed`);
       return this.createRuleResult(rule, RuleStatus.PASSED, startTime);
 
     } catch (error) {
-      console.error(`  ✗ [${rule.id}] FAILED`);
       return this.createRuleResult(rule, RuleStatus.FAILED, startTime, undefined, error);
     }
   }

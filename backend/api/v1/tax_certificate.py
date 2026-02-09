@@ -22,9 +22,10 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from database.db import get_connection
 from middleware.auth import verify_token, check_client_access
-from utils.tax_certificate_parser import TaxCertificateParser, extract_text_from_pdf
+from utils.tax_certificate_parser import TaxCertificateParser, extract_text_from_pdf, extract_vkn_from_barcode_region, validate_vkn
 from utils.audit import log_action
 from schemas.response_envelope import wrap_response
+from services.tax_certificate_analyzer import analyze_tax_certificate
 
 router = APIRouter(prefix="/tax-certificate", tags=["tax-certificate"])
 logger = logging.getLogger(__name__)
@@ -60,6 +61,173 @@ def get_nace_info(code: str):
                 'risk_weight': sector_info.get('risk_weight')
             }
     return None
+
+
+@router.post("/parse")
+async def parse_tax_certificate(
+    request: Request,
+    file: UploadFile = File(...),
+    user: dict = Depends(verify_token)
+):
+    """
+    Parse tax certificate PDF without requiring client_id
+    Used for adding new taxpayers from Vergi Levhası PDF
+
+    Sprint 7: New taxpayer creation from PDF
+    """
+    tenant_id = user["id"]
+
+    # Validate file type
+    filename_lower = file.filename.lower() if file.filename else ""
+    if not filename_lower.endswith('.pdf'):
+        raise HTTPException(400, "Sadece PDF dosyaları desteklenir")
+
+    # Read file content
+    content = await file.read()
+
+    if len(content) == 0:
+        raise HTTPException(400, "Boş dosya yüklenemez")
+
+    if len(content) > 10 * 1024 * 1024:  # 10MB limit
+        raise HTTPException(400, "Dosya boyutu 10MB'dan büyük olamaz")
+
+    try:
+        # Extract text from PDF
+        text = extract_text_from_pdf(content)
+        ocr_used = False
+        ocr_vkn = None
+
+        # Parse text
+        parsed_data = None
+        if text and len(text.strip()) >= 50:
+            parsed_data = TaxCertificateParser.parse_text(text)
+
+        # === OCR FALLBACK ===
+        # GİB Vergi Levhası PDF'lerinde VKN barkod olarak gömülü olabiliyor
+        # Text extraction VKN bulamazsa OCR'a başvur
+        if not parsed_data or not parsed_data.vkn or len(parsed_data.vkn) < 10:
+            logger.info("VKN not found in text, trying OCR on barcode region...")
+            ocr_vkn = extract_vkn_from_barcode_region(content)
+            if ocr_vkn:
+                logger.info(f"VKN extracted via OCR: {ocr_vkn}")
+                ocr_used = True
+                if parsed_data:
+                    # Mevcut parsed data'ya OCR VKN'yi ekle
+                    parsed_data.vkn = ocr_vkn
+                else:
+                    # Yeni TaxCertificateData oluştur
+                    from utils.tax_certificate_parser import TaxCertificateData
+                    parsed_data = TaxCertificateData(
+                        vkn=ocr_vkn,
+                        company_name='',  # Manuel girilmesi gerekecek
+                        raw_text=text[:5000] if text else None
+                    )
+
+        # Hala VKN bulunamadıysa hata döndür
+        if not parsed_data or not parsed_data.vkn:
+            return wrap_response(
+                endpoint_name="tax_certificate_parse",
+                smmm_id=tenant_id,
+                client_id=None,
+                period=None,
+                data={
+                    "success": False,
+                    "message": "PDF'den VKN çıkarılamadı. Dosya taranmış görüntü olabilir veya format desteklenmiyor."
+                }
+            )
+
+        validation = TaxCertificateParser.validate(parsed_data)
+
+    except Exception as e:
+        logger.error(f"PDF parse error: {e}")
+        return wrap_response(
+            endpoint_name="tax_certificate_parse",
+            smmm_id=tenant_id,
+            client_id=None,
+            period=None,
+            data={
+                "success": False,
+                "message": f"PDF okunamadı: {str(e)}"
+            }
+        )
+
+    # Get NACE info if available
+    nace_info = None
+    if parsed_data.nace_code:
+        nace_info = get_nace_info(parsed_data.nace_code)
+
+    # VKN checksum doğrulaması
+    vkn_valid = validate_vkn(parsed_data.vkn) if parsed_data.vkn else False
+
+    # Yıllık verileri serialize et
+    yearly_data_serialized = None
+    if parsed_data.yearly_data:
+        yearly_data_serialized = [
+            {
+                'year': yd['year'],
+                'matrah': str(yd['matrah']) if yd.get('matrah') else None,
+                'tax': str(yd['tax']) if yd.get('tax') else None
+            }
+            for yd in parsed_data.yearly_data
+        ]
+
+    # === RİSK ANALİZİ ===
+    # Vergi levhası verilerini analiz et
+    risk_analysis = None
+    try:
+        analysis_data = {
+            'vkn': parsed_data.vkn,
+            'company_name': parsed_data.company_name,
+            'nace_code': parsed_data.nace_code,
+            'nace_description': parsed_data.nace_description,
+            'tax_office': parsed_data.tax_office,
+            'tax_type': parsed_data.tax_type,
+            'start_date': parsed_data.start_date,
+            'address': parsed_data.address,
+            'city': parsed_data.city,
+            'district': parsed_data.district,
+            'yearly_data': parsed_data.yearly_data
+        }
+        risk_analysis = analyze_tax_certificate(analysis_data)
+        logger.info(f"Risk analysis completed: score={risk_analysis.get('overall_risk_score')}, level={risk_analysis.get('risk_level')}")
+    except Exception as e:
+        logger.error(f"Risk analysis error: {e}")
+        risk_analysis = {
+            'error': str(e),
+            'overall_risk_score': None,
+            'risk_level': 'unknown'
+        }
+
+    return wrap_response(
+        endpoint_name="tax_certificate_parse",
+        smmm_id=tenant_id,
+        client_id=None,
+        period=None,
+        data={
+            "success": True,
+            "validation": validation,
+            "ocr_used": ocr_used,  # True ise VKN barkoddan OCR ile çıkarıldı
+            "vkn_checksum_valid": vkn_valid,  # VKN Mod10 checksum doğrulaması
+            "parsed_data": {
+                "vkn": parsed_data.vkn,
+                "company_name": parsed_data.company_name,
+                "nace_code": parsed_data.nace_code,
+                "nace_description": parsed_data.nace_description,
+                "tax_office": parsed_data.tax_office,
+                "tax_type": parsed_data.tax_type,  # Vergi türü
+                "start_date": parsed_data.start_date,  # İşe başlama tarihi
+                "address": parsed_data.address,
+                "city": parsed_data.city,
+                "district": parsed_data.district,
+                "yearly_data": yearly_data_serialized,  # Yıllık matrah/vergi
+                "kv_matrah": str(parsed_data.kv_matrah) if parsed_data.kv_matrah else None,
+                "kv_paid": str(parsed_data.kv_paid) if parsed_data.kv_paid else None,
+                "year": parsed_data.year
+            },
+            "nace_info": nace_info,
+            "risk_analysis": risk_analysis  # Risk analiz sonuçları
+        }
+    )
 
 
 @router.post("/upload")

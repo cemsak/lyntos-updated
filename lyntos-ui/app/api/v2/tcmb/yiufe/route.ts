@@ -49,8 +49,6 @@ export async function GET(request: NextRequest) {
     // TCMB API cagrisi
     const url = `${TCMB_API_URL}/series=${SERIES_CODE}&startDate=${formatDate(startDate)}&endDate=${formatDate(endDate)}&type=json&frequency=5`;
 
-    console.log('[TCMB API] Fetching:', url);
-
     const response = await fetch(url, {
       headers: {
         'key': apiKey  // Nisan 2024 guncellemesi: header'da gonder

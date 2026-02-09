@@ -116,21 +116,13 @@ class RegWatchService:
             "errors": []
         }
 
-        # Mock document (TODO: Replace with real fetch)
+        # GERÇEK VERİ - Mock kaldırıldı (KUTSAL KİTAP)
+        # RegWatch dokümanları gerçek kaynaklardan çekilmeli
+        # HARDCODED/MOCK/DEMO YASAK
         if not dry_run:
-            mock_doc = {
-                "doc_id": f"{source_name}_mock_001",
-                "source_name": source.name,
-                "doc_type": "teblig",
-                "title_tr": f"Mock document from {source.name}",
-                "publication_date": "2026-01-01",
-                "content_hash": self.calculate_hash("mock content"),
-                "version": 1,
-                "url": source.url,
-                "fetched_at": result["fetched_at"],
-                "category": ["VUK"]
-            }
-            result["documents"].append(mock_doc)
+            # Gerçek doküman çekme işlemi burada yapılmalı
+            # Şu an için boş - kaynak erişimi sağlandığında doldurulacak
+            pass
 
         return result
 

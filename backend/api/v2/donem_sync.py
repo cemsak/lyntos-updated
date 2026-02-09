@@ -68,35 +68,26 @@ def get_period_dates(period_code: str) -> tuple:
 
 def ensure_client_exists(cursor, client_id: str, client_name: str, tenant_id: str) -> bool:
     """
-    Ensure client exists in database, create if not.
+    Ensure client exists in database.
 
-    Returns True if client exists or was created, False on error.
+    ⚠️ PENDING VKN ile yeni client OLUŞTURMAZ.
+    Mevcut client varsa True döner.
+    Yoksa False döner — kullanıcı önce vergi levhası ile client oluşturmalı.
+
+    Returns True if client exists, False otherwise.
     """
     cursor.execute("SELECT id FROM clients WHERE id = ?", (client_id,))
     if cursor.fetchone():
         return True
 
-    # Create client with placeholder data
-    now = datetime.utcnow().isoformat()
-    placeholder_tax_id = f"PENDING-{client_id[:20]}"
-
-    try:
-        cursor.execute("""
-            INSERT INTO clients (
-                id, smmm_id, name, tax_id, created_at
-            ) VALUES (?, ?, ?, ?, ?)
-        """, (
-            client_id,
-            tenant_id,
-            client_name or client_id.replace("_", " ").title(),
-            placeholder_tax_id,
-            now
-        ))
-        logger.info(f"Auto-created client: {client_id}")
-        return True
-    except Exception as e:
-        logger.error(f"Failed to create client {client_id}: {e}")
-        return False
+    # PENDING VKN oluşturma KALDIRILDI.
+    # Client mevcut değilse, kullanıcı önce vergi levhası ile client oluşturmalı.
+    logger.warning(
+        f"[DonemSync] Client bulunamadı: {client_id}. "
+        f"Lütfen önce vergi levhası yükleyerek client oluşturun. "
+        f"PENDING VKN ile otomatik oluşturma kaldırıldı."
+    )
+    return False
 
 
 def ensure_period_exists(cursor, client_id: str, period_code: str) -> bool:
@@ -106,7 +97,9 @@ def ensure_period_exists(cursor, client_id: str, period_code: str) -> bool:
     Returns True if period exists or was created, False on error.
     """
     period_code_upper = period_code.upper()
-    period_id = f"{client_id}_{period_code_upper}"
+    # Format standardizasyonu: 2025-Q1 -> 2025_Q1 (alt çizgi kullan)
+    period_normalized = period_code_upper.replace('-', '_')
+    period_id = f"{client_id}_{period_normalized}"
 
     cursor.execute("SELECT id FROM periods WHERE id = ?", (period_id,))
     if cursor.fetchone():
@@ -167,13 +160,13 @@ DOC_TYPE_MAP = {
     'GECICI_VERGI_TAHAKKUK_PDF': 'TAHAKKUK',
     'POSET_TAHAKKUK_PDF': 'TAHAKKUK',
 
-    # EDEFTER_BERAT (e-ledger)
-    'E_DEFTER_YEVMIYE_XML': 'EDEFTER_BERAT',
-    'E_DEFTER_KEBIR_XML': 'EDEFTER_BERAT',
-    'E_DEFTER_BERAT_XML': 'EDEFTER_BERAT',
-    'E_DEFTER_RAPOR_XML': 'EDEFTER_BERAT',
-    'YEVMIYE_EXCEL': 'EDEFTER_BERAT',
-    'KEBIR_EXCEL': 'EDEFTER_BERAT',
+    # EDEFTER - Yevmiye ve Kebir ayrı takip edilir
+    'E_DEFTER_YEVMIYE_XML': 'EDEFTER_YEVMIYE',
+    'E_DEFTER_BERAT_XML': 'EDEFTER_YEVMIYE',  # Genel berat = yevmiye varsayalım
+    'E_DEFTER_RAPOR_XML': 'EDEFTER_YEVMIYE',
+    'YEVMIYE_EXCEL': 'EDEFTER_YEVMIYE',
+    'E_DEFTER_KEBIR_XML': 'EDEFTER_KEBIR',
+    'KEBIR_EXCEL': 'EDEFTER_KEBIR',
 
     # EFATURA_ARSIV (e-invoice/e-archive)
     'E_FATURA_XML': 'EFATURA_ARSIV',

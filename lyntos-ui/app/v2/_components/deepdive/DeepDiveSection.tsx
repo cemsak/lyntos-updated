@@ -8,7 +8,7 @@ import { InflationPanel } from './InflationPanel';
 export function DeepDiveSection() {
   return (
     <section>
-      <h2 className="text-sm font-semibold text-slate-700 mb-3">Deep Dive Analizler</h2>
+      <h2 className="text-sm font-semibold text-[#5A5A5A] mb-3">Deep Dive Analizler</h2>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Row 1: VDK Expert + Cross-Check */}
         <VdkExpertPanel />

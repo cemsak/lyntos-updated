@@ -2,12 +2,16 @@
 /**
  * LYNTOS V2 - Dönem Verileri Hook
  * donemStore'dan gerçek veri okur - SIFIR MOCK DATA
+ *
+ * KRİTİK: Seçili dönem (scope.period) ile donemStore.meta.period eşleşmeli!
+ * Farklı dönemde veri yüklüyse, o dönemin verisi gösterilmemeli.
  */
 
 import { useMemo, useCallback, useState, useEffect } from 'react';
 import type { BelgeTipi, BelgeDurumData, DonemVerileriResult } from './types';
 import { BELGE_TANIMLARI } from './types';
 import { useDonemStore } from '../../_lib/stores/donemStore';
+import { useDashboardScope } from '../scope/useDashboardScope';
 import type { DetectedFileType } from '../../_lib/parsers/types';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -76,6 +80,11 @@ export function useDonemVerileri(): UseDonemVerileriReturn {
   // fileSummaries: persisted to localStorage (survives refresh)
   const detectedFiles = useDonemStore(s => s.detectedFiles);
   const fileSummaries = useDonemStore(s => s.fileSummaries);
+  const storedMeta = useDonemStore(s => s.meta);
+  const clearDonemData = useDonemStore(s => s.clearDonemData);
+
+  // SEÇİLİ DÖNEM - Dashboard'daki scope
+  const { scope } = useDashboardScope();
 
   // Hydration state - Zustand persist hydration tamamlandı mı?
   // isLoaded "veri var mı" demek, hydration "store hazır mı" demek
@@ -86,6 +95,23 @@ export function useDonemVerileri(): UseDonemVerileriReturn {
     setIsHydrated(true);
   }, []);
 
+  // KRİTİK: Dönem değiştiğinde store'daki veri uyumsuzsa temizle!
+  // Bu sayede Q1 yüklenip Q2 seçildiğinde eski veri gösterilmez
+  useEffect(() => {
+    if (!isHydrated || !scope.period) return;
+
+    // Store'da veri var ama seçili dönemle uyuşmuyorsa
+    if (storedMeta?.period && storedMeta.period !== scope.period) {
+      console.warn('[useDonemVerileri] Dönem uyumsuzluğu tespit edildi!', {
+        storedPeriod: storedMeta.period,
+        selectedPeriod: scope.period,
+        action: 'Store temizleniyor - bu dönem için veri yok'
+      });
+      // Store'u temizle - bu dönem için veri yüklenmemiş
+      clearDonemData();
+    }
+  }, [isHydrated, scope.period, storedMeta?.period, clearDonemData]);
+
   // Manuel olarak işaretlenen tipler (upload modal'dan)
   const [manuallyMarked, setManuallyMarked] = useState<Set<BelgeTipi>>(new Set());
 
@@ -94,8 +120,14 @@ export function useDonemVerileri(): UseDonemVerileriReturn {
     // Yüklenen belge tiplerini tespit et
     const yukluTipler = new Set<BelgeTipi>();
 
+    // DÖNEM KONTROLÜ: Store'daki veri seçili dönemle eşleşmiyorsa boş döndür
+    const periodMatches = storedMeta?.period === scope.period;
+
     // Use detectedFiles if available (same session), otherwise fall back to fileSummaries (after refresh)
-    const files = detectedFiles.length > 0 ? detectedFiles : fileSummaries;
+    // Sadece dönem eşleşiyorsa verileri kullan!
+    const files = periodMatches
+      ? (detectedFiles.length > 0 ? detectedFiles : fileSummaries)
+      : [];
 
     // Store'daki dosyalardan tipleri çıkar
     if (files && files.length > 0) {
@@ -162,7 +194,7 @@ export function useDonemVerileri(): UseDonemVerileriReturn {
       varSayisi,
       bekleyenSayisi,
     };
-  }, [detectedFiles, fileSummaries, manuallyMarked]);
+  }, [detectedFiles, fileSummaries, manuallyMarked, storedMeta?.period, scope.period]);
 
   // Upload modal'dan çağrılan fonksiyon
   const markAsUploaded = useCallback((tip: BelgeTipi) => {

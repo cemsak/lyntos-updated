@@ -32,3 +32,11 @@ export * from './panels';
 
 // Hooks
 export * from './hooks';
+
+// ============================================
+// DASHBOARD V3 - Pencere 13 Components
+// ============================================
+export { KpiStrip, useDashboardKpis } from './KpiStrip';
+export { QuickActions } from './QuickActions';
+export { NotificationCenter, NotificationBell } from './NotificationCenter';
+export { KontrolModal } from './KontrolModal';

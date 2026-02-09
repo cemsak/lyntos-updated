@@ -20,7 +20,7 @@ export const MevzuatTag: React.FC<MevzuatTagProps> = ({
       onClick={onClick}
       className={cn(
         'inline-flex items-center gap-1 px-2 py-1 rounded',
-        'bg-slate-100 hover:bg-slate-200 text-slate-700',
+        'bg-[#F5F6F8] hover:bg-[#E5E5E5] text-[#5A5A5A]',
         'text-xs font-medium transition-colors',
         onClick && 'cursor-pointer',
         className

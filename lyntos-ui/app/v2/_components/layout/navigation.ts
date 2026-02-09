@@ -1,38 +1,35 @@
 /**
  * LYNTOS Navigation Configuration
  * Sprint 7.3 - Stripe Dashboard Shell
- * Updated: Sprint 1.1 - Anayasa Compliance
+ * Updated: Faz 2 - Menü Revizyonu (12 → 8 kategori)
  */
 import {
   LayoutDashboard,
   Upload,
   Users,
-  AlertTriangle,
   FileText,
   BarChart3,
+  PieChart,
   Settings,
   HelpCircle,
   Sparkles,
   Building2,
   MessageCircle,
   Calculator,
-  Percent,
-  Scale,
-  Shield,
-  Clock,
-  AlertCircle,
-  Calendar,
   BookOpen,
   ClipboardCheck,
   CalendarClock,
   Landmark,
   TrendingUp,
   ShieldAlert,
-  GitBranch,
   CheckSquare,
   FileCheck,
   FolderArchive,
   Radar,
+  BookText,
+  CreditCard,
+  ArrowLeftRight,
+  FileSpreadsheet,
   type LucideIcon
 } from 'lucide-react';
 
@@ -44,6 +41,7 @@ export interface NavItem {
   badge?: number;
   badgeColor?: 'danger' | 'warning' | 'info';
   children?: NavItem[];
+  dynamicLabel?: boolean;
 }
 
 export interface NavSection {
@@ -54,7 +52,7 @@ export interface NavSection {
 
 export const NAVIGATION: NavSection[] = [
   // ═══════════════════════════════════════════════════════════
-  // KOKPİT - Ana giriş noktası (label yok, tek item)
+  // KOKPİT - Ana giriş noktası
   // ═══════════════════════════════════════════════════════════
   {
     id: 'kokpit',
@@ -65,15 +63,23 @@ export const NAVIGATION: NavSection[] = [
         href: '/v2',
         icon: LayoutDashboard,
       },
+      {
+        id: 'donem-ozet',
+        label: 'Beyanname Özet & Risk Kontrolü',
+        href: '/v2/donem-ozet',
+        icon: PieChart,
+        dynamicLabel: true,
+      },
     ],
   },
 
   // ═══════════════════════════════════════════════════════════
-  // VERİ - Veri yükleme ve mükellef yönetimi
+  // VERİ & DEFTERLER - Veri yükleme + Yevmiye/Kebir/Banka
+  // (Birleştirildi: Veri + Defterler)
   // ═══════════════════════════════════════════════════════════
   {
-    id: 'data',
-    label: 'Veri',
+    id: 'veri-defterler',
+    label: 'Veri & Defterler',
     items: [
       {
         id: 'upload',
@@ -87,23 +93,52 @@ export const NAVIGATION: NavSection[] = [
         href: '/v2/clients',
         icon: Users,
       },
+      {
+        id: 'yevmiye',
+        label: 'Yevmiye Defteri',
+        href: '/v2/yevmiye',
+        icon: BookText,
+      },
+      {
+        id: 'kebir',
+        label: 'Defteri Kebir',
+        href: '/v2/kebir',
+        icon: FileSpreadsheet,
+      },
+      {
+        id: 'banka',
+        label: 'Banka Hareketleri',
+        href: '/v2/banka',
+        icon: CreditCard,
+      },
+      {
+        id: 'banka-mutabakat',
+        label: 'Banka Mutabakat',
+        href: '/v2/banka/mutabakat',
+        icon: FileCheck,
+      },
+      {
+        id: 'cross-check',
+        label: 'Yevmiye-Kebir Kontrol',
+        href: '/v2/cross-check',
+        icon: ArrowLeftRight,
+      },
+      {
+        id: 'edefter-rapor',
+        label: 'E-Defter Raporları',
+        href: '/v2/edefter/rapor',
+        icon: FileText,
+      },
     ],
   },
 
   // ═══════════════════════════════════════════════════════════
-  // RİSK YÖNETİMİ - VDK odaklı risk analizi
+  // RİSK & ANALİZ - VDK odaklı risk analizi
   // ═══════════════════════════════════════════════════════════
   {
-    id: 'risk',
-    label: 'Risk Yönetimi',
+    id: 'risk-analiz',
+    label: 'Risk & Analiz',
     items: [
-      {
-        id: 'risk-queue',
-        label: 'Bekleyen İşlemler',
-        href: '/v2/risk',
-        icon: AlertTriangle,
-        // Badge is dynamically set based on actual pending risk items
-      },
       {
         id: 'vdk-risk',
         label: 'VDK Risk Analizi',
@@ -112,19 +147,23 @@ export const NAVIGATION: NavSection[] = [
       },
       {
         id: 'risk-rules',
-        label: 'Risk Kuralları',
+        label: 'Kural Kütüphanesi',
         href: '/v2/risk/rules',
-        icon: GitBranch,
+        icon: BookOpen,
       },
+      // Mutabakat Matrisi menüden kaldırıldı - kontroller zaten:
+      // /v2/cross-check, /v2/banka/mutabakat, /v2/mutabakat/cari sayfalarında mevcut
     ],
   },
 
   // ═══════════════════════════════════════════════════════════
-  // VERGİ İŞLEMLERİ - Tüm vergi hesaplama ve beyan işlemleri
+  // VERGİ & BEYANNAME - Vergi hesaplama ve beyanname hazırlık
+  // (Birleştirildi: Vergi İşlemleri + Beyanname Hazırlık)
+  // (Duplikasyonlar kaldırıldı: Geçici Vergi, Kurumlar Vergisi)
   // ═══════════════════════════════════════════════════════════
   {
-    id: 'tax',
-    label: 'Vergi İşlemleri',
+    id: 'vergi-beyanname',
+    label: 'Vergi & Analiz',
     items: [
       {
         id: 'vergus',
@@ -151,30 +190,14 @@ export const NAVIGATION: NavSection[] = [
         icon: Landmark,
       },
       {
-        id: 'declarations',
-        label: 'Beyannameler',
-        href: '/v2/declarations',
-        icon: FileText,
-      },
-      {
         id: 'mutabakat',
-        label: 'Mutabakat',
+        label: 'Cari Mutabakat',
         href: '/v2/mutabakat',
         icon: FileCheck,
       },
-    ],
-  },
-
-  // ═══════════════════════════════════════════════════════════
-  // ENFLASYON - Enflasyon muhasebesi
-  // ═══════════════════════════════════════════════════════════
-  {
-    id: 'enflasyon',
-    label: 'Enflasyon',
-    items: [
       {
-        id: 'enflasyon-muhasebesi',
-        label: 'Enflasyon Muhasebesi',
+        id: 'yeniden-degerleme',
+        label: 'Yeniden Değerleme',
         href: '/v2/enflasyon',
         icon: TrendingUp,
       },
@@ -182,11 +205,12 @@ export const NAVIGATION: NavSection[] = [
   },
 
   // ═══════════════════════════════════════════════════════════
-  // MEVZUAT - Mevzuat takibi ve değişiklik radarı
+  // MEVZUAT & KURUMSAL - Mevzuat takibi + TTK uyum
+  // (Birleştirildi: Mevzuat + Kurumsal İşlemler)
   // ═══════════════════════════════════════════════════════════
   {
-    id: 'regwatch',
-    label: 'Mevzuat',
+    id: 'mevzuat-kurumsal',
+    label: 'Mevzuat & Kurumsal',
     items: [
       {
         id: 'regwatch-main',
@@ -194,16 +218,6 @@ export const NAVIGATION: NavSection[] = [
         href: '/v2/regwatch',
         icon: Radar,
       },
-    ],
-  },
-
-  // ═══════════════════════════════════════════════════════════
-  // ŞİRKETLER HUKUKU - TTK uyum ve şirket işlemleri
-  // ═══════════════════════════════════════════════════════════
-  {
-    id: 'corporate',
-    label: 'Şirketler Hukuku',
-    items: [
       {
         id: 'corporate-law',
         label: 'Şirket İşlemleri',
@@ -211,15 +225,9 @@ export const NAVIGATION: NavSection[] = [
         icon: Building2,
       },
       {
-        id: 'registry',
-        label: 'Ticaret Sicili',
-        href: '/v2/registry',
-        icon: Building2,
-      },
-      {
-        id: 'corporate-chat',
-        label: 'Chat Asistanı',
-        href: '/v2/corporate/chat',
+        id: 'lyntos-asistan',
+        label: 'LYNTOS Asistan',
+        href: '/v2/asistan',
         icon: MessageCircle,
       },
     ],
@@ -227,7 +235,6 @@ export const NAVIGATION: NavSection[] = [
 
   // ═══════════════════════════════════════════════════════════
   // PRATİK BİLGİLER - Referans bilgiler ve hesaplamalar
-  // (Anayasa: Tüm Bilgiler, Hesaplamalar, Kontrol Listeleri)
   // ═══════════════════════════════════════════════════════════
   {
     id: 'pratik-bilgiler',

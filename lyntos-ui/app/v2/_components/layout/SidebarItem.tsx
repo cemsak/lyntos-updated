@@ -5,10 +5,11 @@
  * Sprint 7.3 - Stripe Dashboard Shell
  * Single navigation item with Stripe styling
  */
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { NavItem } from './navigation';
+import { useLayoutContext } from './useLayoutContext';
 
 interface SidebarItemProps {
   item: NavItem;
@@ -17,18 +18,28 @@ interface SidebarItemProps {
 }
 
 const BADGE_COLORS = {
-  danger: 'bg-[#cd3d64]',
-  warning: 'bg-[#f5a623]',
-  info: 'bg-[#635bff]',
+  danger: 'bg-[#980F30]',     // LYNTOS Risk Critical (Karteladan)
+  warning: 'bg-[#FFB114]',    // LYNTOS Risk Medium (Karteladan)
+  info: 'bg-[#0049AA]',       // LYNTOS Primary Blue
 };
 
 export function SidebarItem({ item, collapsed = false, onClick }: SidebarItemProps) {
   const pathname = usePathname();
+  const { selectedPeriod } = useLayoutContext();
+
   // Support hash anchors: /v2#section should be active when pathname is /v2
   const baseHref = item.href.split('#')[0];
   const hashPart = item.href.includes('#') ? item.href.split('#')[1] : null;
   const isActive = pathname === baseHref || (baseHref !== '' && pathname.startsWith(baseHref + '/'));
   const Icon = item.icon;
+
+  // Dinamik dönem etiketi: "2025 Q1 Beyanname Özet & Risk Kontrolü"
+  const displayLabel = useMemo(() => {
+    if (item.dynamicLabel && selectedPeriod?.label) {
+      return `${selectedPeriod.label} ${item.label}`;
+    }
+    return item.label;
+  }, [item.dynamicLabel, item.label, selectedPeriod?.label]);
 
   // Handle smooth scroll for same-page hash navigation
   const handleClick = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
@@ -54,18 +65,18 @@ export function SidebarItem({ item, collapsed = false, onClick }: SidebarItemPro
       className={`
         flex items-center gap-3 px-3 py-2 rounded-md text-[14px] font-medium transition-colors
         ${isActive
-          ? 'bg-[#635bff] text-white'
-          : 'text-[#1a1f36] hover:bg-[#e3e8ee]'
+          ? 'bg-[#0049AA] text-white'
+          : 'text-[#2E2E2E] hover:bg-[#E5E5E5]'
         }
         ${collapsed ? 'justify-center' : ''}
       `}
-      title={collapsed ? item.label : undefined}
+      title={collapsed ? displayLabel : undefined}
     >
       <Icon className="w-5 h-5 flex-shrink-0" />
 
       {!collapsed && (
         <>
-          <span className="flex-1">{item.label}</span>
+          <span className="flex-1">{displayLabel}</span>
 
           {item.badge !== undefined && item.badge > 0 && (
             <span className={`

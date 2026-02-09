@@ -97,7 +97,7 @@ export function InflationPanel({ data, error, onExplain }: InflationPanelProps) 
             </svg>
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-purple-900">Enflasyon Duzeltmesi (TMS 29)</h3>
+            <h3 className="text-sm font-semibold text-[#0049AA]">Enflasyon Duzeltmesi (TMS 29)</h3>
             <p className="text-xs text-purple-600">Donem: {data.donem || '—'}</p>
           </div>
         </div>
@@ -128,11 +128,11 @@ export function InflationPanel({ data, error, onExplain }: InflationPanelProps) 
         <div className="grid grid-cols-4 gap-4">
           <div className="text-center p-3 bg-purple-50 rounded">
             <p className="text-xs text-purple-600 mb-1">TUFE Katsayisi</p>
-            <p className="text-lg font-mono font-bold text-purple-900">{formatNumber(tufe?.katsayi)}</p>
+            <p className="text-lg font-mono font-bold text-[#0049AA]">{formatNumber(tufe?.katsayi)}</p>
           </div>
           <div className="text-center p-3 bg-purple-50 rounded">
             <p className="text-xs text-purple-600 mb-1">Artis Orani</p>
-            <p className="text-lg font-mono font-bold text-purple-900">{formatPercent(tufe?.artis_orani)}</p>
+            <p className="text-lg font-mono font-bold text-[#0049AA]">{formatPercent(tufe?.artis_orani)}</p>
           </div>
           <div className="text-center p-3 bg-gray-50 rounded">
             <p className="text-xs text-gray-600 mb-1">Baslangic</p>

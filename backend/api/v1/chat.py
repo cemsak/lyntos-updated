@@ -1,6 +1,6 @@
 """
-VERGUS Chat API Routes
-Sprint S3
+LYNTOS Chat API Routes
+Sprint S3 + Faz 2 - Birlesik Asistan
 """
 from fastapi import APIRouter, HTTPException, Query
 from typing import Optional
@@ -10,6 +10,7 @@ import json
 from database.db import get_connection
 from services.corporate_chat_agent import corporate_chat_agent
 from services.regwatch_chat_agent import regwatch_chat_agent
+from services.lyntos_assistant_agent import lyntos_assistant_agent
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -22,6 +23,7 @@ class ChatRequest(BaseModel):
     message: str
     session_id: Optional[str] = None
     user_id: str = "default"
+    client_id: Optional[str] = None
 
 
 class TTK376Request(BaseModel):
@@ -34,9 +36,29 @@ class TTK376Request(BaseModel):
 # CHAT ENDPOINTS
 # ============================================
 
+@router.post("/assistant")
+async def chat_assistant(request: ChatRequest):
+    """LYNTOS Birlesik Asistan - Vergi + Mevzuat + Sirketler Hukuku"""
+    if not lyntos_assistant_agent:
+        raise HTTPException(
+            status_code=503,
+            detail="LYNTOS Asistan kullanilamiyor. API anahtarini kontrol edin."
+        )
+    try:
+        result = lyntos_assistant_agent.chat(
+            message=request.message,
+            session_id=request.session_id,
+            user_id=request.user_id,
+            client_id=request.client_id,
+        )
+        return result
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+
+
 @router.post("/corporate")
 async def chat_corporate(request: ChatRequest):
-    """Sirketler Hukuku chat"""
+    """Sirketler Hukuku chat (eski - geriye uyumluluk)"""
     result = corporate_chat_agent.chat(
         message=request.message,
         session_id=request.session_id,
@@ -47,7 +69,13 @@ async def chat_corporate(request: ChatRequest):
 
 @router.post("/corporate/ttk376")
 async def analyze_ttk376_chat(request: TTK376Request):
-    """TTK 376 analizi (chat entegreli)"""
+    """TTK 376 analizi"""
+    if lyntos_assistant_agent:
+        return lyntos_assistant_agent.analyze_ttk376(
+            capital=request.capital,
+            legal_reserves=request.legal_reserves,
+            equity=request.equity
+        )
     return corporate_chat_agent.analyze_ttk376(
         capital=request.capital,
         legal_reserves=request.legal_reserves,
@@ -57,7 +85,7 @@ async def analyze_ttk376_chat(request: TTK376Request):
 
 @router.post("/regwatch")
 async def chat_regwatch(request: ChatRequest):
-    """Mevzuat Takibi chat"""
+    """Mevzuat Takibi chat (eski - geriye uyumluluk)"""
     result = regwatch_chat_agent.chat(
         message=request.message,
         session_id=request.session_id,

@@ -35,22 +35,22 @@ export function BasePanel({
   noPadding = false,
 }: BasePanelProps) {
   const badgeClass = badge ? {
-    success: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-    warning: 'bg-amber-100 text-amber-700 border-amber-200',
-    error: 'bg-red-100 text-red-700 border-red-200',
-    info: 'bg-blue-100 text-blue-700 border-blue-200',
-    neutral: 'bg-slate-100 text-slate-600 border-slate-200',
+    success: 'bg-[#ECFDF5] text-[#00804D] border-[#AAE8B8]',
+    warning: 'bg-[#FFFBEB] text-[#FA841E] border-[#FFF08C]',
+    error: 'bg-[#FEF2F2] text-[#BF192B] border-[#FFC7C9]',
+    info: 'bg-[#E6F9FF] text-[#0049AA] border-[#ABEBFF]',
+    neutral: 'bg-[#F5F6F8] text-[#5A5A5A] border-[#E5E5E5]',
   }[badge.variant] : '';
 
   return (
-    <div className={`bg-white border border-slate-200 rounded-lg shadow-sm ${className}`}>
+    <div className={`bg-white border border-[#E5E5E5] rounded-lg shadow-sm ${className}`}>
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-[#E5E5E5]">
         <div className="flex items-center gap-3">
           <div>
-            <h3 className="text-base font-semibold text-slate-800">{title}</h3>
+            <h3 className="text-base font-semibold text-[#2E2E2E]">{title}</h3>
             {subtitle && (
-              <p className="text-sm text-slate-500 mt-0.5">{subtitle}</p>
+              <p className="text-sm text-[#969696] mt-0.5">{subtitle}</p>
             )}
           </div>
           {badge && (
@@ -65,7 +65,7 @@ export function BasePanel({
           {showInfo && onInfoClick && (
             <button
               onClick={onInfoClick}
-              className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+              className="p-1.5 text-[#969696] hover:text-[#5A5A5A] hover:bg-[#F5F6F8] rounded-lg transition-colors"
               title="Bilgi"
             >
               <Info className="w-4 h-4" />

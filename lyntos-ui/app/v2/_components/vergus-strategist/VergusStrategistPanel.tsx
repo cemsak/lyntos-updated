@@ -22,19 +22,22 @@ import {
 import { OpportunityCard } from './OpportunityCard';
 import { FinancialDataForm } from './FinancialDataForm';
 import { useVergusAnalysis } from './useVergusAnalysis';
-import type { FinancialDataInput, Category } from './types';
+import type { FinancialDataInput, Category, TaxAnalysisResult } from './types';
 import { CATEGORY_CONFIG } from './types';
+import { formatCurrency as formatCurrencyCentral } from '../../_lib/format';
 
 interface VergusStrategistPanelProps {
   clientId: string;
   clientName: string;
   period: string;
+  onAnalysisComplete?: (result: TaxAnalysisResult) => void;
 }
 
 export function VergusStrategistPanel({
   clientId,
   clientName,
   period,
+  onAnalysisComplete,
 }: VergusStrategistPanelProps) {
   const [showForm, setShowForm] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -46,19 +49,16 @@ export function VergusStrategistPanel({
 
   const handleAnalysis = useCallback(
     async (financialData?: Partial<FinancialDataInput>) => {
-      await runAnalysis(financialData);
+      const result = await runAnalysis(financialData);
       setShowForm(false);
+      if (result && onAnalysisComplete) {
+        onAnalysisComplete(result);
+      }
     },
-    [runAnalysis]
+    [runAnalysis, onAnalysisComplete]
   );
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('tr-TR', {
-      style: 'currency',
-      currency: 'TRY',
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
+  const formatCurrency = (value: number) => formatCurrencyCentral(value, { decimals: 0 });
 
   const filteredOpportunities = analysis?.opportunities.filter((opp) =>
     selectedCategory ? opp.category === selectedCategory : true
@@ -66,10 +66,10 @@ export function VergusStrategistPanel({
 
   if (isLoading && !analysis) {
     return (
-      <div className="bg-white rounded-xl border border-[#e3e8ee] p-8">
+      <div className="bg-white rounded-xl border border-[#E5E5E5] p-8">
         <div className="flex flex-col items-center justify-center gap-4">
-          <div className="w-12 h-12 border-4 border-[#635bff] border-t-transparent rounded-full animate-spin" />
-          <p className="text-[14px] text-[#697386]">
+          <div className="w-12 h-12 border-4 border-[#0049AA] border-t-transparent rounded-full animate-spin" />
+          <p className="text-[14px] text-[#5A5A5A]">
             Vergi optimizasyon analizi yapiliyor...
           </p>
         </div>
@@ -79,14 +79,14 @@ export function VergusStrategistPanel({
 
   if (error) {
     return (
-      <div className="bg-white rounded-xl border border-[#cd3d64] p-6">
-        <div className="flex items-center gap-3 text-[#cd3d64]">
+      <div className="bg-white rounded-xl border border-[#F0282D] p-6">
+        <div className="flex items-center gap-3 text-[#F0282D]">
           <AlertCircle className="w-5 h-5" />
           <p className="text-[14px]">{error}</p>
         </div>
         <button
           onClick={() => runAnalysis()}
-          className="mt-4 px-4 py-2 text-[13px] font-medium text-white bg-[#635bff] rounded-lg hover:bg-[#5851ea] transition-colors"
+          className="mt-4 px-4 py-2 text-[13px] font-medium text-white bg-[#0049AA] rounded-lg hover:bg-[#00287F] transition-colors"
         >
           Tekrar Dene
         </button>
@@ -97,7 +97,7 @@ export function VergusStrategistPanel({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-gradient-to-r from-[#635bff] to-[#9061f9] rounded-xl p-6 text-white">
+      <div className="bg-gradient-to-r from-[#0049AA] to-[#0049AA] rounded-xl p-6 text-white">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
@@ -154,16 +154,16 @@ export function VergusStrategistPanel({
 
       {/* Financial Data Form */}
       {showForm && (
-        <div className="bg-white rounded-xl border border-[#e3e8ee] p-6">
+        <div className="bg-white rounded-xl border border-[#E5E5E5] p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-[15px] font-semibold text-[#1a1f36] flex items-center gap-2">
-              <FileText className="w-5 h-5 text-[#635bff]" />
+            <h3 className="text-[15px] font-semibold text-[#2E2E2E] flex items-center gap-2">
+              <FileText className="w-5 h-5 text-[#0049AA]" />
               Mali Veri Girisi
             </h3>
             {analysis && (
               <button
                 onClick={() => setShowForm(false)}
-                className="text-[12px] text-[#697386] hover:text-[#1a1f36]"
+                className="text-[12px] text-[#5A5A5A] hover:text-[#2E2E2E]"
               >
                 Kapat
               </button>
@@ -178,14 +178,14 @@ export function VergusStrategistPanel({
         <>
           {/* Recommendation Banner */}
           {analysis.summary.tavsiye && (
-            <div className="bg-[#0caf60]/10 border border-[#0caf60]/30 rounded-xl p-4">
+            <div className="bg-[#00A651]/10 border border-[#00A651]/30 rounded-xl p-4">
               <div className="flex items-start gap-3">
-                <Target className="w-5 h-5 text-[#0caf60] mt-0.5" />
+                <Target className="w-5 h-5 text-[#00A651] mt-0.5" />
                 <div>
-                  <h4 className="text-[13px] font-medium text-[#0caf60]">
+                  <h4 className="text-[13px] font-medium text-[#00A651]">
                     Oncelikli Tavsiye
                   </h4>
-                  <p className="text-[12px] text-[#0caf60]/80 mt-1">
+                  <p className="text-[12px] text-[#00A651]/80 mt-1">
                     {analysis.summary.tavsiye}
                   </p>
                 </div>
@@ -199,8 +199,8 @@ export function VergusStrategistPanel({
               onClick={() => setSelectedCategory(null)}
               className={`px-3 py-1.5 text-[12px] font-medium rounded-lg whitespace-nowrap transition-colors ${
                 !selectedCategory
-                  ? 'bg-[#635bff] text-white'
-                  : 'bg-[#f6f9fc] text-[#697386] hover:text-[#1a1f36]'
+                  ? 'bg-[#0049AA] text-white'
+                  : 'bg-[#F5F6F8] text-[#5A5A5A] hover:text-[#2E2E2E]'
               }`}
             >
               Tumu ({analysis.opportunities.length})
@@ -216,8 +216,8 @@ export function VergusStrategistPanel({
                     onClick={() => setSelectedCategory(category)}
                     className={`flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium rounded-lg whitespace-nowrap transition-colors ${
                       selectedCategory === category
-                        ? 'bg-[#635bff] text-white'
-                        : 'bg-[#f6f9fc] text-[#697386] hover:text-[#1a1f36]'
+                        ? 'bg-[#0049AA] text-white'
+                        : 'bg-[#F5F6F8] text-[#5A5A5A] hover:text-[#2E2E2E]'
                     }`}
                   >
                     <span>{config.icon}</span>
@@ -240,50 +240,50 @@ export function VergusStrategistPanel({
           </div>
 
           {/* Client Profile Summary */}
-          <div className="bg-white rounded-xl border border-[#e3e8ee] p-4">
-            <h3 className="text-[14px] font-semibold text-[#1a1f36] mb-3 flex items-center gap-2">
-              <Zap className="w-4 h-4 text-[#635bff]" />
+          <div className="bg-white rounded-xl border border-[#E5E5E5] p-4">
+            <h3 className="text-[14px] font-semibold text-[#2E2E2E] mb-3 flex items-center gap-2">
+              <Zap className="w-4 h-4 text-[#0049AA]" />
               Musteri Profili
             </h3>
             <div className="grid grid-cols-3 gap-4 text-[12px]">
               <div>
-                <span className="text-[#697386]">Faaliyet Turu:</span>{' '}
-                <span className="text-[#1a1f36] font-medium">
+                <span className="text-[#5A5A5A]">Faaliyet Turu:</span>{' '}
+                <span className="text-[#2E2E2E] font-medium">
                   {analysis.profile.faaliyet_turu}
                 </span>
               </div>
               <div>
-                <span className="text-[#697386]">Ihracat Orani:</span>{' '}
-                <span className="text-[#1a1f36] font-medium">
+                <span className="text-[#5A5A5A]">Ihracat Orani:</span>{' '}
+                <span className="text-[#2E2E2E] font-medium">
                   %{analysis.profile.ihracat_orani.toFixed(1)}
                 </span>
               </div>
               <div>
-                <span className="text-[#697386]">Personel:</span>{' '}
-                <span className="text-[#1a1f36] font-medium">
+                <span className="text-[#5A5A5A]">Personel:</span>{' '}
+                <span className="text-[#2E2E2E] font-medium">
                   {analysis.profile.personel_sayisi} kisi
                 </span>
               </div>
               <div>
-                <span className="text-[#697386]">Ar-Ge Uygunluk:</span>{' '}
+                <span className="text-[#5A5A5A]">Ar-Ge Uygunluk:</span>{' '}
                 <span
-                  className={`font-medium ${analysis.profile.arge_var ? 'text-[#0caf60]' : 'text-[#697386]'}`}
+                  className={`font-medium ${analysis.profile.arge_var ? 'text-[#00A651]' : 'text-[#5A5A5A]'}`}
                 >
                   {analysis.profile.arge_var ? 'Evet' : 'Hayir'}
                 </span>
               </div>
               <div>
-                <span className="text-[#697386]">Teknokent:</span>{' '}
+                <span className="text-[#5A5A5A]">Teknokent:</span>{' '}
                 <span
-                  className={`font-medium ${analysis.profile.teknokent ? 'text-[#0caf60]' : 'text-[#697386]'}`}
+                  className={`font-medium ${analysis.profile.teknokent ? 'text-[#00A651]' : 'text-[#5A5A5A]'}`}
                 >
                   {analysis.profile.teknokent ? 'Evet' : 'Hayir'}
                 </span>
               </div>
               <div>
-                <span className="text-[#697386]">Uretim:</span>{' '}
+                <span className="text-[#5A5A5A]">Uretim:</span>{' '}
                 <span
-                  className={`font-medium ${analysis.profile.uretim_var ? 'text-[#0caf60]' : 'text-[#697386]'}`}
+                  className={`font-medium ${analysis.profile.uretim_var ? 'text-[#00A651]' : 'text-[#5A5A5A]'}`}
                 >
                   {analysis.profile.uretim_var ? 'Evet' : 'Hayir'}
                 </span>
@@ -292,7 +292,7 @@ export function VergusStrategistPanel({
           </div>
 
           {/* Legal Disclaimer */}
-          <div className="text-[11px] text-[#697386] text-center p-4">
+          <div className="text-[11px] text-[#5A5A5A] text-center p-4">
             Bu analiz bilgilendirme amaclidir ve profesyonel danismanlik yerine
             gecmez. Mevzuat surekli degismektedir, guncel durumu teyit edin.
             Tum islemler belgelendirilmeli ve tesvik edilmelidir.

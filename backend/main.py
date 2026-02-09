@@ -1,3 +1,10 @@
+# KRİTİK: .env dosyası TÜM importlardan ÖNCE yüklenmeli!
+# AI provider'lar import sırasında initialize ediliyor ve API key'lere ihtiyaç duyuyor.
+from pathlib import Path
+from dotenv import load_dotenv
+_BASE_DIR = Path(__file__).resolve().parent
+load_dotenv(_BASE_DIR / ".env", override=True)
+
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.responses import FileResponse
@@ -9,6 +16,7 @@ from api.v1.documents import router as documents_router
 from api.v1.tenants import router as tenants_router
 from api.v1.tax_certificate import router as tax_certificate_router
 from api.v1.vdk_simulator import router as vdk_simulator_router
+from api.v1.vdk_inspector import router as vdk_inspector_router
 from api.v1.inspector_prep import router as inspector_prep_router
 from api.v1.document_upload import router as document_upload_router
 from api.v1.tax_strategist import router as tax_strategist_router
@@ -33,20 +41,39 @@ from api.v2.bulk_upload import router as bulk_upload_router
 from api.v2.mizan_data import router as mizan_data_router
 from api.v2.donem_complete import router as donem_complete_router
 from api.v2.upload import router as upload_router
+from api.v2.period_summary import router as period_summary_router
+from api.v2.yevmiye import router as yevmiye_v2_router
+from api.v2.kebir import router as kebir_v2_router
+from api.v2.banka import router as banka_v2_router
+from api.v2.banka_mutabakat import router as banka_mutabakat_v2_router
+from api.v2.beyanname_kdv import router as beyanname_kdv_v2_router
+from api.v2.beyanname_muhtasar import router as beyanname_muhtasar_v2_router
+from api.v2.beyanname_tahakkuk import router as beyanname_tahakkuk_v2_router
+from api.v2.yevmiye_kebir import router as yevmiye_kebir_v2_router
+from api.v2.ingest import router as ingest_router  # YENİ DEDUPE SİSTEMİ
+from api.v2.defter_kontrol import router as defter_kontrol_router  # TAVSİYE MEKTUBU 2
+from api.v2.opening_balance import router as opening_balance_router  # AÇILIŞ BAKİYESİ - TD-002
+from api.v2.edefter_rapor import router as edefter_rapor_router  # E-DEFTER RAPOR - TD-003
+from api.v2.gib_public import router as gib_public_router  # GİB PUBLIC DATA - KURGAN REAL DATA
+from api.v2.agents import router as agents_router  # AI AGENTS - MASTERCHEF + ALT AJANLAR
+from api.v2.rules import router as rules_router  # KURAL KÜTÜPHANESİ - PENCERE 4
+from api.auth.routes import router as auth_router  # AUTH - LOGIN/REGISTER/ME
+from api.v2.mevzuat_search import router as mevzuat_search_router  # MEVZUAT ARAMA - PENCERE 5
+from api.v2.yeniden_degerleme import router as yeniden_degerleme_router  # YENİDEN DEĞERLEME - VUK Mük. 298/Ç
+from api.v2.donem_sonu_islem import router as donem_sonu_islem_router  # DÖNEM SONU İŞLEMLERİ - IS-3
+from api.v2.cari_mutabakat import router as cari_mutabakat_router  # CARİ MUTABAKAT - IS-5
+from api.v2.mizan_analiz import router as mizan_analiz_router  # MİZAN ANALİZ - IS-7 (Hesap Kartı, Yatay/Dikey Analiz)
+from api.v2.tax_parameters import router as tax_parameters_router  # PRATİK BİLGİLER - VERGİ PARAMETRELERİ
+from api.v2.checklists import router as checklists_router  # PRATİK BİLGİLER - KONTROL LİSTESİ KAYIT
+from api.v2.reports import router as reports_router  # RAPORLAR - BIG4+ PDF EXPORT
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from services.regwatch_scheduler import start_scheduler, stop_scheduler, get_scheduler_status
 
-from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
-from pathlib import Path
+from typing import Optional
+# Path ve load_dotenv dosya başında import edildi
 import os
-import json
 import jwt
-
-from dotenv import load_dotenv
-from pydantic import BaseModel
 
 from kpi_service import (
     kurgan_risk_score,
@@ -76,8 +103,8 @@ from kpi_service import (
 #  ENV & APP CONFIG
 # ---------------------------------------------------------------------------
 
-BASE_DIR = Path(__file__).resolve().parent
-load_dotenv(BASE_DIR / ".env")
+BASE_DIR = _BASE_DIR  # Dosya başında tanımlandı (load_dotenv için)
+# NOT: load_dotenv() dosya başında çağrıldı (AI provider'lar için gerekli)
 
 API_VERSION = "1.0"
 SCHEMA_VERSION = "2025-11-02"
@@ -112,6 +139,8 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
         "http://192.168.1.102:3000",
         "http://192.168.1.172:3000",
     ],
@@ -127,6 +156,7 @@ app.include_router(documents_router, prefix="/api/v1/documents", tags=["Document
 app.include_router(tenants_router, prefix="/api/v1", tags=["Tenants"])
 app.include_router(tax_certificate_router, prefix="/api/v1", tags=["TaxCertificate"])
 app.include_router(vdk_simulator_router, prefix="/api/v1", tags=["VDKSimulator"])
+app.include_router(vdk_inspector_router, prefix="/api/v1", tags=["VDKInspector"])
 app.include_router(inspector_prep_router, tags=["InspectorPrep"])
 app.include_router(document_upload_router, tags=["DocumentUpload"])
 app.include_router(tax_strategist_router, prefix="/api/v1", tags=["VERGUS"])
@@ -139,6 +169,10 @@ app.include_router(user_router, prefix="/api/v1", tags=["User"])
 app.include_router(defterler_router, prefix="/api/v1", tags=["Defterler"])
 app.include_router(beyannameler_router, prefix="/api/v1", tags=["Beyannameler"])
 # --- /LYNTOS v1 API ---
+
+# --- AUTH ---
+app.include_router(auth_router, prefix="/api", tags=["Auth"])
+# --- /AUTH ---
 
 # --- LYNTOS v2 API ---
 app.include_router(vdk_validate_router)
@@ -154,153 +188,65 @@ app.include_router(bulk_upload_router, prefix="/api/v2")
 app.include_router(mizan_data_router)  # Prefix already in router
 app.include_router(donem_complete_router)  # TEK ENDPOINT - TÜM VERİ
 app.include_router(upload_router)  # ZIP UPLOAD - FAZ 1
+app.include_router(period_summary_router)  # Q1 ÖZET - NO AUTH
+app.include_router(yevmiye_v2_router)  # YEVMİYE V2 - NO AUTH
+app.include_router(kebir_v2_router)  # KEBİR V2 - NO AUTH
+app.include_router(banka_v2_router)  # BANKA V2 - NO AUTH
+app.include_router(banka_mutabakat_v2_router)  # BANKA MUTABAKAT V2 - NO AUTH
+app.include_router(beyanname_kdv_v2_router)  # KDV BEYANNAME V2 - NO AUTH
+app.include_router(beyanname_muhtasar_v2_router)  # MUHTASAR BEYANNAME V2 - NO AUTH
+app.include_router(beyanname_tahakkuk_v2_router)  # TAHAKKUK V2 - NO AUTH
+app.include_router(yevmiye_kebir_v2_router)  # YEVMİYE-KEBİR CROSS-CHECK V2 - NO AUTH
+app.include_router(ingest_router)  # YENİ DEDUPE SİSTEMİ - Tavsiye Mektubu 3
+app.include_router(defter_kontrol_router)  # TAVSİYE MEKTUBU 2 - DEFTER KONTROL - NO AUTH
+app.include_router(opening_balance_router, prefix="/api/v2")  # AÇILIŞ BAKİYESİ - TD-002
+app.include_router(edefter_rapor_router)  # E-DEFTER RAPOR - TD-003 - NO AUTH
+app.include_router(gib_public_router, prefix="/api/v2")  # GİB PUBLIC DATA - KURGAN REAL DATA
+app.include_router(agents_router, prefix="/api/v2")  # AI AGENTS - MASTERCHEF + ALT AJANLAR
+app.include_router(rules_router, prefix="/api/v2")  # KURAL KÜTÜPHANESİ - PENCERE 4
+app.include_router(mevzuat_search_router)  # MEVZUAT ARAMA - PENCERE 5
+app.include_router(yeniden_degerleme_router)  # YENİDEN DEĞERLEME - VUK Mük. 298/Ç
+app.include_router(donem_sonu_islem_router)  # DÖNEM SONU İŞLEMLERİ - AMORTİSMAN/REESKONT/KARŞILIK
+app.include_router(cari_mutabakat_router)  # CARİ MUTABAKAT - IS-5 (VUK 177, TTK 64, VUK 323)
+app.include_router(mizan_analiz_router)  # MİZAN ANALİZ - IS-7 (Hesap Kartı, Yatay/Dikey Analiz)
+app.include_router(tax_parameters_router, prefix="/api/v2")  # PRATİK BİLGİLER - VERGİ PARAMETRELERİ
+app.include_router(checklists_router, prefix="/api/v2")  # PRATİK BİLGİLER - KONTROL LİSTESİ KAYIT
+app.include_router(reports_router, prefix="/api/v2")  # RAPORLAR - BIG4+ PDF EXPORT
 # --- /LYNTOS v2 API ---
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://127.0.0.1:5173",
-        "http://localhost:5173",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 # ---------------------------------------------------------------------------
-#  AUTH
+#  LEGACY V1 ENDPOINTS (Risk Model & Dashboard)
 # ---------------------------------------------------------------------------
 
-class LoginRequest(BaseModel):
-    username: str
-    password: str
-
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/v1/auth/token")
-
-
-def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta] = None) -> str:
-    to_encode = data.copy()
-    expire = datetime.utcnow() + (expires_delta or timedelta(hours=4))
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
-
-
-def authenticate_user(username: str, password: str) -> Optional[Dict[str, Any]]:
-    """
-    Basit kullanıcı doğrulama.
-    Öncelik .env içindeki ADMIN_USER / ADMIN_PASS değerlerindedir.
-    Eğer users.json varsa, oradaki kayıtlar da kabul edilir.
-    """
-    env_user = os.getenv("ADMIN_USER", "admin")
-    env_pass = os.getenv("ADMIN_PASS", "12345")
-    if username == env_user and password == env_pass:
-        return {"username": username, "source": "env"}
-
-    users_db = BASE_DIR / "users.json"
-    if users_db.exists():
-        try:
-            with users_db.open("r", encoding="utf-8") as f:
-                users: List[Dict[str, Any]] = json.load(f)
-            for u in users:
-                if u.get("username") == username and u.get("password") == password:
-                    return {"username": username, "source": "users.json"}
-        except Exception:
-            pass
-
-    return None
-
-
-@app.post("/v1/auth/token")
-def login_token(form_data: OAuth2PasswordRequestForm = Depends()):
-    user = authenticate_user(form_data.username, form_data.password)
-    if not user:
-        raise HTTPException(status_code=401, detail="Kullanıcı adı veya şifre hatalı")
-    access_token = create_access_token({"sub": user["username"]})
-    return {"access_token": access_token, "token_type": "bearer"}
-
-
-@app.get("/v1/auth/me")
-def read_users_me(token: str = Depends(oauth2_scheme)):
+def _verify_bearer_token(authorization: Optional[str] = None) -> None:
+    """Basit JWT doğrulama — legacy v1 endpointler için"""
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Missing Authorization header")
+    token = authorization[7:] if authorization.startswith("Bearer ") else authorization
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        return {"username": payload.get("sub")}
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token süresi doldu")
+        jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Geçersiz token")
 
-
-@app.post("/v1/auth/register")
-def register(user: LoginRequest):
-    users_db = BASE_DIR / "users.json"
-    if not users_db.exists():
-        users: List[Dict[str, Any]] = []
-    else:
-        with users_db.open("r", encoding="utf-8") as f:
-            users = json.load(f)
-
-    for u in users:
-        if u.get("username") == user.username:
-            raise HTTPException(status_code=400, detail="Kullanıcı zaten var.")
-
-    users.append({"username": user.username, "password": user.password})
-    with users_db.open("w", encoding="utf-8") as f:
-        json.dump(users, f, ensure_ascii=False, indent=2)
-
-    return {"message": f"Kullanıcı oluşturuldu: {user.username}"}
-
-# ---------------------------------------------------------------------------
-#  RISK MODEL V1 – ANA ENDPOINT
-# ---------------------------------------------------------------------------
 
 @app.get("/v1/risk_model_v1")
 def api_risk_model_v1(
     firma: str = Query(..., description="Firma adı veya kodu"),
     donem: str = Query(..., description="Dönem (örn: 2025Q4)"),
-    token: str = Depends(oauth2_scheme),
+    authorization: Optional[str] = Depends(lambda authorization: authorization),
 ):
-    """
-    Yeni risk motoru v1 için tek endpoint.
-
-    - Hiçbir demo skor içermez.
-    - Skorlar risk_model paketindeki formüllere göre hesaplanır.
-    - Henüz formülü yazılmamış alanlar None olarak döner.
-    """
-    # Token doğrulama için sadece decode yeterli; detay /v1/auth/me'de.
-    try:
-        jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Geçersiz token")
-
+    """Risk motoru v1 — skorlar formüllere göre hesaplanır"""
+    from fastapi import Header as _Header
     result = risk_model_v1_scores(firma, donem)
     return JSONResponse(content=result)
-
-# ---------------------------------------------------------------------------
-#  DASHBOARD ENDPOINT – ESKİ /api/lyntos_dashboard UYUMLU
-# ---------------------------------------------------------------------------
 
 @app.get("/api/lyntos_dashboard")
 def api_lyntos_dashboard(
     firma: str = Query(..., description="Firma adı veya kodu"),
     donem: str = Query(..., description="Dönem (örn: 2025Q4)"),
-    token: str = Depends(oauth2_scheme),
 ):
-    """
-    Eski dashboard endpoint'i; artık tüm veriyi yeni kpi_service üzerinden alır.
-
-    NOT:
-    - kpi_service içindeki fonksiyonlar demo skor üretmez.
-    - Hangi skorlar hazırsa onları döndürür; diğerleri None / not_implemented döner.
-    """
-    try:
-        jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Geçersiz token")
-
+    """Eski dashboard endpoint'i — kpi_service üzerinden veri"""
     return {
         "kurgan_risk": kurgan_risk_score(firma, donem),
         "radar_risk": radar_risk_score(firma, donem),
@@ -338,23 +284,7 @@ def health():
     }
 
 
-@app.get("/v1/meta/options")
-def meta_options():
-    """
-    Frontend'te dropdown'lar için basit seçenek seti.
-    Gerçek sistemde SMMM ofisinin mükellef listesi/dönem listesi buraya bağlanabilir.
-    """
-    return {
-        "entities": [
-            {"id": "HKOZKAN", "unvan": "Hakkı Özkan SMMM"},
-            {"id": "OZKANLAR", "unvan": "Özkanlar İnşaat AŞ"},
-            {"id": "DEMO", "unvan": "Demo Mükellef"},
-        ],
-        "periods": ["2025-Q4", "2025-Q3", "2025-10", "2025"],
-    }
-
-
-# --- Dossier Bundle Download (demo critical) ---
+# --- Dossier Bundle Download ---
 @app.api_route("/v1/dossier/bundle", methods=["GET","HEAD"])
 def get_latest_bundle(smmm: str, client: str, period: str):
     out_dir = Path(__file__).resolve().parent / "out"

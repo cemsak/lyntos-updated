@@ -1,4 +1,4 @@
-export type PanelStatus = 'loading' | 'ok' | 'empty' | 'missing' | 'auth' | 'error';
+export type PanelStatus = 'loading' | 'ok' | 'empty' | 'missing' | 'scope' | 'auth' | 'error';
 
 export interface LegalBasisRef {
   id: string;
@@ -17,11 +17,44 @@ export interface EvidenceRef {
   row_ref?: string;
 }
 
+export interface TrustFactorHesapDetay {
+  kod: string;
+  ad: string;
+  neden: string;
+  bakiye: number;
+}
+
+export interface TrustFactorDetay {
+  hata_hesaplar?: TrustFactorHesapDetay[];
+  uyari_hesaplar?: TrustFactorHesapDetay[];
+  formul?: string;
+  donen_varliklar?: number;
+  kvyk?: number;
+  stoklar?: number;
+  sonuc?: number;
+  kaynak?: string;
+  eksik_veri?: string;
+  kontrol?: string;
+}
+
+export interface TrustFactor {
+  faktor: string;
+  skor: number;
+  aciklama: string;
+  durum: 'ok' | 'warning' | 'error';
+  // YENİ: SMMM için detaylı bilgi
+  detay?: TrustFactorDetay | null;
+}
+
 export interface ExpertAnalysis {
   summary_tr: string;
   details_tr?: string;
   rule_refs?: string[];
   trust_score: number;
+  // YENİ: SMMM için güven skorunu açıklayan faktörler
+  trust_factors?: TrustFactor[];
+  // YENİ: Kullanılan analiz yöntemi
+  method?: string;
 }
 
 export interface AiAnalysis {
@@ -40,6 +73,8 @@ export interface PanelMeta {
   stale?: boolean;
   permissions?: string[];
   build_version?: string;
+  // Endpoint'e özel ek veriler (criteria_scores, vb.)
+  extra?: Record<string, unknown>;
 }
 
 export interface PanelEnvelope<T = unknown> {
@@ -85,6 +120,18 @@ export function createMissingEnvelope<T>(reason: string): PanelEnvelope<T> {
   return {
     status: 'missing',
     reason_tr: reason,
+    legal_basis_refs: [],
+    evidence_refs: [],
+    analysis: {},
+    trust: 'low',
+    meta: { rulepack_version: '', inputs_hash: '', as_of: new Date().toISOString() },
+  };
+}
+
+export function createScopeEnvelope<T>(reason?: string): PanelEnvelope<T> {
+  return {
+    status: 'scope',
+    reason_tr: reason || 'Mükellef ve dönem seçin.',
     legal_basis_refs: [],
     evidence_refs: [],
     analysis: {},

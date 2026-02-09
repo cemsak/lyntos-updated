@@ -1,0 +1,161 @@
+/**
+ * Reports Sabit Tanımları
+ */
+
+import {
+  BarChart3,
+  Shield,
+  TrendingUp,
+  RefreshCw,
+  FileSpreadsheet,
+  Building2,
+} from 'lucide-react';
+import type { RaporTipi } from '../_types';
+
+// Rapor Tipleri
+export const RAPOR_TIPLERI: RaporTipi[] = [
+  {
+    id: 'mizan-analiz',
+    name: 'Mizan Analiz Raporu',
+    description: 'Dönem sonu mizan özeti ve anomali tespitleri',
+    detailedInfo: 'Hesap bazlı denge kontrolü, trend analizi ve olağandışı hareket tespiti',
+    icon: BarChart3,
+    color: 'blue',
+    available: true,
+    requiresData: true,
+    category: 'analiz',
+    outputFormats: ['PDF', 'Excel'],
+    viewPath: '/v2/quarterly',
+  },
+  {
+    id: 'vdk-risk',
+    name: 'VDK Risk Raporu',
+    description: '13 kriter bazında risk değerlendirmesi',
+    detailedInfo: 'VDK inceleme kriterleri, KURGAN senaryoları ve K-Kodu analizi',
+    icon: Shield,
+    color: 'purple',
+    available: true,
+    requiresData: true,
+    category: 'risk',
+    outputFormats: ['PDF', 'Excel'],
+    viewPath: '/v2/vdk',
+  },
+  {
+    id: 'finansal-oran',
+    name: 'Finansal Oran Analizi',
+    description: 'Likidite, karlılık ve verimlilik oranları',
+    detailedInfo: 'Cari oran, asit-test, ROE, ROA ve sektör karşılaştırması',
+    icon: TrendingUp,
+    color: 'green',
+    available: true,
+    requiresData: true,
+    category: 'analiz',
+    outputFormats: ['PDF', 'Excel'],
+    viewPath: '/v2/cross-check',
+  },
+  {
+    id: 'yeniden-degerleme',
+    name: 'Yeniden Değerleme Raporu',
+    description: 'VUK Mük. Md. 298/Ç yeniden değerleme hesaplamaları',
+    detailedInfo: 'Amortismana tabi iktisadi kıymetlerin yeniden değerlemesi, değer artış fonu ve vergi etkisi',
+    icon: RefreshCw,
+    color: 'orange',
+    available: true,
+    requiresData: true,
+    category: 'vergi',
+    outputFormats: ['PDF', 'Excel'],
+    viewPath: '/v2/enflasyon',
+  },
+  {
+    id: 'kurumlar-vergi',
+    name: 'Kurumlar Vergisi Raporu',
+    description: 'Yıllık kurumlar vergisi hesaplaması',
+    detailedInfo: 'Ticari kar/mali kar geçişi, KKEG analizi, istisna ve indirimler',
+    icon: Building2,
+    color: 'emerald',
+    available: true,
+    requiresData: true,
+    category: 'vergi',
+    outputFormats: ['PDF', 'Excel'],
+    viewPath: '/v2/vergi/kurumlar',
+  },
+  {
+    id: 'kanit-paketi',
+    name: 'Kanıt Paketi',
+    description: 'Big 4 kalite denetim dosyası',
+    detailedInfo: 'Tüm hesaplamaların kanıt zinciri, tarihli imza ve referanslar',
+    icon: FileSpreadsheet,
+    color: 'blue',
+    available: true,
+    requiresData: true,
+    category: 'denetim',
+    outputFormats: ['PDF', 'Excel'],
+    viewPath: '/v2/reports/evidence',
+  },
+];
+
+// Renk Konfigürasyonu
+export const colorConfig = {
+  blue: {
+    bg: 'bg-gradient-to-br from-[#E6F9FF] to-[#E6F9FF]',
+    border: 'border-[#ABEBFF]',
+    icon: 'bg-[#0078D0] text-white',
+    iconLight: 'text-[#0049AA]',
+    text: 'text-[#0049AA]',
+    button: 'bg-[#0049AA] hover:bg-[#0049AA] text-white',
+    badge: 'bg-[#E6F9FF] text-[#0049AA]',
+  },
+  purple: {
+    bg: 'bg-gradient-to-br from-[#E6F9FF] to-[#E6F9FF]',
+    border: 'border-[#ABEBFF]',
+    icon: 'bg-[#0078D0] text-white',
+    iconLight: 'text-[#0049AA]',
+    text: 'text-[#0049AA]',
+    button: 'bg-[#0049AA] hover:bg-[#0049AA] text-white',
+    badge: 'bg-[#E6F9FF] text-[#0049AA]',
+  },
+  green: {
+    bg: 'bg-gradient-to-br from-[#ECFDF5] to-[#ECFDF5]',
+    border: 'border-[#AAE8B8]',
+    icon: 'bg-[#00A651] text-white',
+    iconLight: 'text-[#00804D]',
+    text: 'text-[#00804D]',
+    button: 'bg-[#00804D] hover:bg-[#00804D] text-white',
+    badge: 'bg-[#ECFDF5] text-[#00804D]',
+  },
+  orange: {
+    bg: 'bg-gradient-to-br from-[#FFFBEB] to-[#FFFBEB]',
+    border: 'border-[#FFF08C]',
+    icon: 'bg-[#FFB114] text-white',
+    iconLight: 'text-[#FA841E]',
+    text: 'text-[#FA841E]',
+    button: 'bg-[#FA841E] hover:bg-[#FA841E] text-white',
+    badge: 'bg-[#FFFBEB] text-[#FA841E]',
+  },
+  emerald: {
+    bg: 'bg-gradient-to-br from-[#ECFDF5] to-[#ECFDF5]',
+    border: 'border-[#AAE8B8]',
+    icon: 'bg-[#00A651] text-white',
+    iconLight: 'text-[#00804D]',
+    text: 'text-[#00804D]',
+    button: 'bg-[#00804D] hover:bg-[#00804D] text-white',
+    badge: 'bg-[#ECFDF5] text-[#00804D]',
+  },
+  red: {
+    bg: 'bg-gradient-to-br from-[#FEF2F2] to-[#FEF2F2]',
+    border: 'border-[#FFC7C9]',
+    icon: 'bg-[#F0282D] text-white',
+    iconLight: 'text-[#BF192B]',
+    text: 'text-[#BF192B]',
+    button: 'bg-[#BF192B] hover:bg-[#BF192B] text-white',
+    badge: 'bg-[#FEF2F2] text-[#BF192B]',
+  },
+};
+
+// Kategori Etiketleri
+export const categoryLabels = {
+  analiz: { label: 'Analiz', color: 'blue' },
+  vergi: { label: 'Vergi', color: 'emerald' },
+  risk: { label: 'Risk', color: 'purple' },
+  denetim: { label: 'Denetim', color: 'orange' },
+};

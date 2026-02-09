@@ -64,12 +64,12 @@ export function QuarterlyUpload({ onFileSelect, isProcessing, isComplete }: Quar
 
   if (isComplete) {
     return (
-      <div className="border-2 border-green-500 border-dashed rounded-xl p-8 text-center bg-green-50">
-        <CheckCircle2 className="w-16 h-16 mx-auto text-green-500 mb-4" />
-        <h3 className="text-xl font-semibold text-green-700 mb-2">
+      <div className="border-2 border-[#00A651] border-dashed rounded-xl p-8 text-center bg-[#ECFDF5]">
+        <CheckCircle2 className="w-16 h-16 mx-auto text-[#00A651] mb-4" />
+        <h3 className="text-xl font-semibold text-[#00804D] mb-2">
           Analiz Tamamlandi
         </h3>
-        <p className="text-green-600">
+        <p className="text-[#00804D]">
           Sonuclari asagida gorebilirsiniz.
         </p>
       </div>
@@ -78,15 +78,15 @@ export function QuarterlyUpload({ onFileSelect, isProcessing, isComplete }: Quar
 
   if (isProcessing) {
     return (
-      <div className="border-2 border-blue-500 border-dashed rounded-xl p-8 text-center bg-blue-50">
+      <div className="border-2 border-[#0078D0] border-dashed rounded-xl p-8 text-center bg-[#E6F9FF]">
         <div className="w-16 h-16 mx-auto mb-4 relative">
-          <div className="absolute inset-0 border-4 border-blue-200 rounded-full" />
-          <div className="absolute inset-0 border-4 border-blue-500 rounded-full border-t-transparent animate-spin" />
+          <div className="absolute inset-0 border-4 border-[#ABEBFF] rounded-full" />
+          <div className="absolute inset-0 border-4 border-[#0078D0] rounded-full border-t-transparent animate-spin" />
         </div>
-        <h3 className="text-xl font-semibold text-blue-700 mb-2">
+        <h3 className="text-xl font-semibold text-[#0049AA] mb-2">
           Analiz Yapiliyor...
         </h3>
-        <p className="text-blue-600">
+        <p className="text-[#0049AA]">
           Lutfen bekleyiniz.
         </p>
       </div>
@@ -101,10 +101,10 @@ export function QuarterlyUpload({ onFileSelect, isProcessing, isComplete }: Quar
       className={`
         border-2 border-dashed rounded-xl p-8 text-center transition-all cursor-pointer
         ${isDragging
-          ? 'border-blue-500 bg-blue-50 scale-[1.02]'
-          : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
+          ? 'border-[#0078D0] bg-[#E6F9FF] scale-[1.02]'
+          : 'border-[#B4B4B4] hover:border-[#00B4EB] hover:bg-[#F5F6F8]'
         }
-        ${error ? 'border-red-400 bg-red-50' : ''}
+        ${error ? 'border-[#FF555F] bg-[#FEF2F2]' : ''}
       `}
     >
       <input
@@ -117,27 +117,27 @@ export function QuarterlyUpload({ onFileSelect, isProcessing, isComplete }: Quar
 
       <label htmlFor="zip-upload" className="cursor-pointer block">
         {error ? (
-          <AlertCircle className="w-16 h-16 mx-auto text-red-500 mb-4" />
+          <AlertCircle className="w-16 h-16 mx-auto text-[#F0282D] mb-4" />
         ) : isDragging ? (
-          <Upload className="w-16 h-16 mx-auto text-blue-500 mb-4 animate-bounce" />
+          <Upload className="w-16 h-16 mx-auto text-[#0078D0] mb-4 animate-bounce" />
         ) : (
-          <FileArchive className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+          <FileArchive className="w-16 h-16 mx-auto text-[#969696] mb-4" />
         )}
 
-        <h3 className={`text-xl font-semibold mb-2 ${error ? 'text-red-700' : 'text-gray-700'}`}>
+        <h3 className={`text-xl font-semibold mb-2 ${error ? 'text-[#BF192B]' : 'text-[#5A5A5A]'}`}>
           {error ? 'Hata' : isDragging ? 'Birakin!' : 'Donem ZIP Dosyasini Yukleyin'}
         </h3>
 
-        <p className={`mb-4 ${error ? 'text-red-600' : 'text-gray-500'}`}>
+        <p className={`mb-4 ${error ? 'text-[#BF192B]' : 'text-[#969696]'}`}>
           {error || 'Q1.zip, Q2.zip, Q3.zip veya Q4.zip dosyasini buraya surukleyin'}
         </p>
 
-        <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+        <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#0049AA] text-white rounded-lg hover:bg-[#0049AA] transition-colors">
           <Upload className="w-4 h-4" />
           <span>Dosya Sec</span>
         </div>
 
-        <p className="mt-4 text-xs text-gray-400">
+        <p className="mt-4 text-xs text-[#969696]">
           Desteklenen: Mizan, Yevmiye, Kebir, e-Defter, KDV/Muhtasar/Gecici Vergi Beyannameleri, Banka Ekstreleri
         </p>
       </label>

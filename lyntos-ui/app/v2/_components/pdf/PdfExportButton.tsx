@@ -147,20 +147,20 @@ export function PdfExportButton() {
         disabled={isDisabled}
         className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-colors ${
           status === 'ready'
-            ? 'bg-green-600 text-white'
+            ? 'bg-[#00804D] text-white'
             : status === 'error'
-            ? 'bg-red-600 text-white hover:bg-red-700'
+            ? 'bg-[#BF192B] text-white hover:bg-[#BF192B]'
             : isDisabled
-            ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
-            : 'bg-blue-600 text-white hover:bg-blue-700'
+            ? 'bg-[#B4B4B4] text-[#969696] cursor-not-allowed'
+            : 'bg-[#0049AA] text-white hover:bg-[#0049AA]'
         }`}
       >
         {getButtonContent()}
       </button>
 
       {error && status === 'error' && (
-        <div className="absolute top-full right-0 mt-2 p-3 bg-red-50 border border-red-200 rounded-lg shadow-lg z-10 w-64">
-          <p className="text-xs text-red-700">{error}</p>
+        <div className="absolute top-full right-0 mt-2 p-3 bg-[#FEF2F2] border border-[#FFC7C9] rounded-lg shadow-lg z-10 w-64">
+          <p className="text-xs text-[#BF192B]">{error}</p>
         </div>
       )}
     </div>

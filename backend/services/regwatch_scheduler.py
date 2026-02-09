@@ -1,8 +1,14 @@
 """
-RegWatch Scheduler - Sprint R1
-Periodic scraping scheduler using APScheduler
+RegWatch Scheduler - Canlı Mod
+Periodic scraping, RSS parsing, mevzuat bridge scheduler.
 
-Schedules automatic scraping of regulatory sources at configured intervals.
+Jobs:
+- 15dk: Web scraping (GIB, RG, TURMOB, SGK)
+- 30dk: RSS parsing (TURMOB feeds)
+- Günlük 06:00: Kapsamlı scrape (7 gün)
+- Günlük 07:00: Mevzuat bridge sync (events → mevzuat_refs)
+- Saatlik: Parametre değişiklik tespiti
+- 4 saatlik: Kaynak tazelik kontrolü
 """
 
 import logging
@@ -24,6 +30,8 @@ except ImportError:
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from services.regwatch_scraper import run_all_scrapers, detect_parameter_changes
+from services.regwatch_rss_parser import parse_all_rss_feeds
+from services.mevzuat_bridge import sync_events_to_mevzuat
 from database.db import get_connection
 
 logger = logging.getLogger(__name__)
@@ -78,6 +86,24 @@ class RegWatchScheduler:
                 CronTrigger(hour=6, minute=0),
                 id='regwatch_daily_scrape',
                 name='RegWatch Daily Comprehensive Scrape',
+                replace_existing=True
+            )
+
+            # Add RSS parsing - every 30 minutes
+            self.scheduler.add_job(
+                self._rss_parse_job,
+                IntervalTrigger(minutes=30),
+                id='regwatch_rss_parse',
+                name='RegWatch RSS Feed Parse',
+                replace_existing=True
+            )
+
+            # Add mevzuat bridge sync - daily at 7 AM
+            self.scheduler.add_job(
+                self._mevzuat_bridge_job,
+                CronTrigger(hour=7, minute=0),
+                id='mevzuat_bridge_sync',
+                name='Mevzuat Bridge Daily Sync',
                 replace_existing=True
             )
 
@@ -142,6 +168,30 @@ class RegWatchScheduler:
             logger.info(f"Daily scrape complete: {result['total_events']} events")
         except Exception as e:
             logger.error(f"Daily scrape failed: {e}")
+
+    def _rss_parse_job(self):
+        """Run RSS feed parsing (30-minute interval)"""
+        logger.info("Running scheduled RSS parse")
+        try:
+            result = parse_all_rss_feeds()
+            logger.info(
+                f"RSS parse complete: {result.get('total_events', 0)} events, "
+                f"{result.get('total_saved', 0)} new"
+            )
+        except Exception as e:
+            logger.error(f"Scheduled RSS parse failed: {e}")
+
+    def _mevzuat_bridge_job(self):
+        """Run mevzuat bridge sync (daily at 7 AM)"""
+        logger.info("Running mevzuat bridge sync")
+        try:
+            result = sync_events_to_mevzuat()
+            logger.info(
+                f"Mevzuat bridge complete: {result.get('synced', 0)} synced, "
+                f"{result.get('skipped_duplicate', 0)} duplicates"
+            )
+        except Exception as e:
+            logger.error(f"Mevzuat bridge sync failed: {e}")
 
     def _detect_changes_job(self):
         """Run parameter change detection"""
@@ -209,6 +259,10 @@ class RegWatchScheduler:
             self._scrape_job()
         elif job_type == 'daily':
             self._daily_scrape_job()
+        elif job_type == 'rss':
+            self._rss_parse_job()
+        elif job_type == 'bridge':
+            self._mevzuat_bridge_job()
         elif job_type == 'detect':
             self._detect_changes_job()
         elif job_type == 'freshness':

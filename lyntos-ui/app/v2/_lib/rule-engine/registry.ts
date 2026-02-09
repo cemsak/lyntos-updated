@@ -21,26 +21,19 @@ let initialized = false;
 export function initializeRuleEngine(): void {
   if (initialized) return;
 
-  console.log('🔧 [RuleEngine] Initializing...');
-
   // Phase 0 kurallarını kaydet
   ruleRegistry.registerAll(PHASE_0_RULES);
-  console.log(`📋 [Phase 0] ${PHASE_0_RULES.length} rules registered`);
 
   // Phase 1 kurallarını kaydet
   ruleRegistry.registerAll(PHASE_1_RULES);
-  console.log(`📋 [Phase 1] ${PHASE_1_RULES.length} rules registered`);
 
   // Phase 2 kurallarını kaydet
   ruleRegistry.registerAll(PHASE_2_RULES);
-  console.log(`📋 [Phase 2] ${PHASE_2_RULES.length} rules registered`);
 
   // Phase 3 kurallarını kaydet
   ruleRegistry.registerAll(PHASE_3_RULES);
-  console.log(`📋 [Phase 3] ${PHASE_3_RULES.length} rules registered`);
 
   initialized = true;
-  console.log(`✅ [RuleEngine] Initialized with ${ruleRegistry.count} rules`);
 }
 
 // ═══════════════════════════════════════════════════════════════════

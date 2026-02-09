@@ -47,10 +47,10 @@ export function AksiyonKarti({
 
   // Kart arka plan rengi - oncelik bazlı AÇIK renkler
   const kartBg = aksiyon.oncelik === 'acil' 
-    ? 'bg-red-50 border-red-200' 
+    ? 'bg-[#FEF2F2] border-[#FFC7C9]' 
     : aksiyon.oncelik === 'normal'
-    ? 'bg-white border-slate-200'
-    : 'bg-blue-50 border-blue-200';
+    ? 'bg-white border-[#E5E5E5]'
+    : 'bg-[#E6F9FF] border-[#ABEBFF]';
 
   return (
     <div
@@ -74,7 +74,7 @@ export function AksiyonKarti({
       </div>
 
       {/* Meta Bilgiler */}
-      <div className={`flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-500 ${compact ? 'mb-2' : 'mb-3'}`}>
+      <div className={`flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[#969696] ${compact ? 'mb-2' : 'mb-3'}`}>
         {/* Mukellef */}
         {aksiyon.mukellef && (
           <div className="flex items-center gap-1">
@@ -85,7 +85,7 @@ export function AksiyonKarti({
 
         {/* Kalan Sure */}
         {aksiyon.kalanGun !== undefined && (
-          <div className={`flex items-center gap-1 ${aksiyon.kalanGun <= 3 ? 'text-red-600 font-medium' : ''}`}>
+          <div className={`flex items-center gap-1 ${aksiyon.kalanGun <= 3 ? 'text-[#BF192B] font-medium' : ''}`}>
             <span>⏰</span>
             <span>{formatKalanGun(aksiyon.kalanGun)}</span>
             {aksiyon.sonTarih && (
@@ -104,7 +104,7 @@ export function AksiyonKarti({
 
         {/* Tekrar Sayisi (Kaizen metrigi) */}
         {aksiyon.tekrarSayisi && aksiyon.tekrarSayisi > 1 && (
-          <div className="flex items-center gap-1 text-amber-600">
+          <div className="flex items-center gap-1 text-[#FA841E]">
             <span>📈</span>
             <span>{aksiyon.tekrarSayisi}. kez</span>
           </div>
@@ -113,15 +113,15 @@ export function AksiyonKarti({
 
       {/* Aciklama */}
       {!compact && aksiyon.aciklama && (
-        <p className="text-sm text-slate-600 mb-3">
+        <p className="text-sm text-[#5A5A5A] mb-3">
           💡 {aksiyon.aciklama}
         </p>
       )}
 
       {/* Detay (varsa) */}
       {!compact && aksiyon.detay && (
-        <p className="text-sm text-slate-600 mb-3 flex items-start gap-1">
-          <span className="text-amber-500 flex-shrink-0">⚠️</span>
+        <p className="text-sm text-[#5A5A5A] mb-3 flex items-start gap-1">
+          <span className="text-[#FFB114] flex-shrink-0">⚠️</span>
           {aksiyon.detay}
         </p>
       )}
@@ -133,7 +133,7 @@ export function AksiyonKarti({
           {aksiyon.kaynak === 'vdk_risk' && onProblemCozmeClick && (
             <button
               onClick={() => onProblemCozmeClick(aksiyon)}
-              className="px-3 py-1.5 text-xs border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors"
+              className="px-3 py-1.5 text-xs border border-[#B4B4B4] rounded-lg hover:bg-[#F5F6F8] transition-colors"
             >
               5 Why Baslat
             </button>
@@ -144,9 +144,9 @@ export function AksiyonKarti({
         <button
           onClick={handleAksiyonClick}
           className={`px-4 py-1.5 text-sm font-medium text-white rounded-lg transition-colors flex items-center gap-1 ${
-            aksiyon.oncelik === 'acil' ? 'bg-red-600 hover:bg-red-700' :
-            aksiyon.oncelik === 'normal' ? 'bg-slate-600 hover:bg-slate-700' :
-            'bg-blue-600 hover:bg-blue-700'
+            aksiyon.oncelik === 'acil' ? 'bg-[#BF192B] hover:bg-[#BF192B]' :
+            aksiyon.oncelik === 'normal' ? 'bg-[#5A5A5A] hover:bg-[#5A5A5A]' :
+            'bg-[#0049AA] hover:bg-[#0049AA]'
           }`}
         >
           {aksiyon.aksiyonLabel}

@@ -2,10 +2,8 @@
 
 /**
  * LYNTOS Layout Data Hook
- * Sprint MOCK-006 - Mock data removed, uses only API data
- *
  * Fetches user, clients, and periods from backend
- * Uses centralized auth for DEV_HKOZKAN fallback in development
+ * Uses centralized auth with Bearer JWT token
  */
 import { useState, useEffect, useCallback } from 'react';
 import type { User, Client, Period } from './types';
@@ -20,12 +18,12 @@ interface UseLayoutDataResult {
   periods: Period[];
   loading: boolean;
   error: string | null;
-  refreshClients: () => Promise<void>;
+  refreshClients: () => Promise<Client[]>;
   refreshPeriods: (clientId: string) => Promise<void>;
 }
 
 async function fetchWithAuth<T>(endpoint: string): Promise<T | null> {
-  // Uses centralized getAuthToken which has DEV_HKOZKAN fallback
+  // getAuthToken() returns Bearer-prefixed JWT token
   const token = getAuthToken();
   if (!token) {
     console.warn('[Auth] Token bulunamadi');
@@ -64,6 +62,7 @@ export function useLayoutData(): UseLayoutDataResult {
           if (userData) {
             setUser(userData);
             setError(null);
+            setLoading(false); // User geldiğinde loading'i hemen kapat
           } else {
             // Token yok - gecici mod, hata gosterme
             setUser(null);
@@ -75,6 +74,7 @@ export function useLayoutData(): UseLayoutDataResult {
         if (mounted) {
           setUser(null);
           setError('Kullanici bilgileri yuklenemedi');
+          setLoading(false); // Hata durumunda da loading'i kapat
         }
       }
     }
@@ -86,20 +86,21 @@ export function useLayoutData(): UseLayoutDataResult {
     };
   }, []);
 
-  // Fetch clients when user is available
-  const refreshClients = useCallback(async () => {
-    if (!user) return;
+  // Fetch clients when user is available — returns updated list
+  const refreshClients = useCallback(async (): Promise<Client[]> => {
+    if (!user) return [];
 
     try {
       const clientsData = await fetchWithAuth<Client[]>('/api/v1/user/me/clients');
-      if (clientsData) {
-        setClients(clientsData);
-        setError(null);
-      }
+      const updatedClients = clientsData || [];
+      setClients(updatedClients);
+      setError(null);
+      return updatedClients;
     } catch (err) {
       console.error('[useLayoutData] Clients fetch failed:', err);
       setClients([]);
       setError('Mukellef listesi yuklenemedi');
+      return [];
     }
   }, [user]);
 

@@ -27,24 +27,24 @@ export function BelgeKarti({ belge, onUploadClick, compact = false }: BelgeKarti
       case 'VAR':
         return {
           icon: <Check className="w-3.5 h-3.5" />,
-          bgClass: 'bg-emerald-50/50',
-          borderClass: 'border-emerald-200',
-          iconClass: 'text-emerald-600',
+          bgClass: 'bg-[#ECFDF5]/50',
+          borderClass: 'border-[#AAE8B8]',
+          iconClass: 'text-[#00804D]',
         };
       case 'BEKLIYOR':
         return {
           icon: <Clock className="w-3.5 h-3.5" />,
-          bgClass: 'bg-amber-50/50',
-          borderClass: 'border-amber-200',
-          iconClass: 'text-amber-600',
+          bgClass: 'bg-[#FFFBEB]/50',
+          borderClass: 'border-[#FFF08C]',
+          iconClass: 'text-[#FA841E]',
         };
       case 'EKSIK':
       default:
         return {
           icon: <AlertTriangle className="w-3.5 h-3.5" />,
-          bgClass: 'bg-red-50/50',
-          borderClass: 'border-red-200',
-          iconClass: 'text-red-600',
+          bgClass: 'bg-[#FEF2F2]/50',
+          borderClass: 'border-[#FFC7C9]',
+          iconClass: 'text-[#BF192B]',
         };
     }
   };
@@ -63,11 +63,11 @@ export function BelgeKarti({ belge, onUploadClick, compact = false }: BelgeKarti
         onClick={handleClick}
       >
         <span className={status.iconClass}>{status.icon}</span>
-        <span className="flex-1 text-slate-900 truncate text-xs">
+        <span className="flex-1 text-[#2E2E2E] truncate text-xs">
           {tanim.kisaAd}
         </span>
         {belge.dosyaAdi && (
-          <span className="text-xs text-slate-400 truncate max-w-[100px]">
+          <span className="text-xs text-[#969696] truncate max-w-[100px]">
             {belge.dosyaAdi}
           </span>
         )}
@@ -86,25 +86,25 @@ export function BelgeKarti({ belge, onUploadClick, compact = false }: BelgeKarti
       onClick={handleClick}
     >
       {/* Icon */}
-      <div className={`p-1.5 rounded ${belge.durum === 'VAR' ? 'bg-emerald-50' : 'bg-red-50'}`}>
+      <div className={`p-1.5 rounded ${belge.durum === 'VAR' ? 'bg-[#ECFDF5]' : 'bg-[#FEF2F2]'}`}>
         <span className={status.iconClass}>{status.icon}</span>
       </div>
 
       {/* Info */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="font-medium text-slate-900 text-sm">
+          <span className="font-medium text-[#2E2E2E] text-sm">
             {tanim.ad}
           </span>
-          {tanim.zorunlu && <span className="text-red-600 text-xs">*</span>}
+          {tanim.zorunlu && <span className="text-[#BF192B] text-xs">*</span>}
         </div>
         {belge.yuklemeTarihi && (
-          <p className="text-xs text-slate-400 truncate">
+          <p className="text-xs text-[#969696] truncate">
             {belge.yuklemeTarihi} - {belge.dosyaAdi}
           </p>
         )}
         {belge.durum === 'EKSIK' && (
-          <p className="text-xs text-red-600">Tıkla ve yükle</p>
+          <p className="text-xs text-[#BF192B]">Tıkla ve yükle</p>
         )}
       </div>
 

@@ -65,7 +65,9 @@ GV_CHECKS = [
 CROSSCHECK_RULES = [
     {"id": "P0-001", "name": "Mizan Denkliği Kontrolü", "check": "balance_check", "severity": "CRITICAL", "legal": "VUK Md. 175"},
     {"id": "P0-002", "name": "Bilanço Denkliği Kontrolü", "check": "aktif_pasif_check", "severity": "CRITICAL", "legal": "VUK Md. 175"},
+    {"id": "P1-001", "name": "Amortisman Kontrolü", "check": "amortisman_check", "hesap": "25x,257,770", "severity": "HIGH", "legal": "VUK Md. 313-321"},
     {"id": "P1-006", "name": "Binek Oto Amortisman Limiti (2025)", "check": "binek_oto_limit", "hesap": "254", "severity": "HIGH", "legal": "GVK Md. 40, KVK Md. 11"},
+    {"id": "P2-VDK-K12", "name": "Finansman Gider Kısıtlaması", "check": "fgk_check", "hesap": "656,660,661,780", "severity": "HIGH", "legal": "KVK Md. 11/1-i"},
     {"id": "P3-002", "name": "Dönem Sonu Kapatma Kontrolü", "check": "donem_sonu_kapatma", "hesap": "690", "severity": "MEDIUM", "legal": "VUK"},
     {"id": "P3-004", "name": "Stopaj/SGK Tahakkuk Kontrolü", "check": "stopaj_sgk_check", "hesap": "360,361,770", "severity": "HIGH", "legal": "GVK Md. 94, 5510 SK"},
     {"id": "R-KDV-001", "name": "Mizan-KDV Beyanname Mutabakatı", "check": "mizan_kdv_crosscheck", "hesap": "191,391", "severity": "HIGH", "legal": "KDVK Md. 29"},
@@ -151,13 +153,30 @@ def get_mizan_data(client_id: str, period_id: str) -> Dict[str, Any]:
     return data
 
 def get_account_balance(mizan: Dict, prefix: str) -> float:
-    """Get net balance for accounts starting with prefix."""
+    """
+    Get net balance for accounts starting with prefix.
+
+    MUHASEBE KURALI (Tek Düzen Hesap Planı):
+    - AKTİF hesaplar (1xx, 2xx): Borç bakiyeli → borc - alacak (pozitif)
+    - PASİF hesaplar (3xx, 4xx, 5xx): Alacak bakiyeli → alacak - borc (pozitif)
+    - GELİR hesapları (6xx): Alacak bakiyeli → alacak - borc (pozitif)
+    - GİDER hesapları (7xx): Borç bakiyeli → borc - alacak (pozitif)
+    - 191 İndirilecek KDV: Borç bakiyeli (Aktif)
+    - 391 Hesaplanan KDV: Alacak bakiyeli (Pasif)
+    """
     total = 0
     for kod, entry in mizan['by_code'].items():
         if kod.startswith(prefix):
             borc = entry.get('borc_bakiye') or 0
             alacak = entry.get('alacak_bakiye') or 0
-            total += borc - alacak
+
+            # Hesap türüne göre bakiye hesapla
+            first_digit = kod[0] if kod else '0'
+            if first_digit in ['3', '4', '5', '6']:  # Pasif + Gelir hesapları
+                total += alacak - borc  # Alacak bakiyeli
+            else:  # Aktif + Gider hesapları (1, 2, 7, 8, 9)
+                total += borc - alacak  # Borç bakiyeli
+
     return total
 
 def get_account_total(mizan: Dict, prefix: str, field: str = 'borc_bakiye') -> float:
@@ -572,6 +591,86 @@ def analyze_crosscheck_rules(mizan: Dict, period_id: str) -> List[Dict]:
         'threshold': 0,
         'status': 'CHECK'
     })
+
+    # ============================================================
+    # P1-001: Amortisman Ayrılmamış (Frontend'den taşındı)
+    # ============================================================
+    mdv_toplam = 0
+    for kod, entry in mizan['by_code'].items():
+        if kod.startswith('25') and not kod.startswith('257'):  # MDV hesapları (amortisman hariç)
+            borc = entry.get('borc_bakiye') or 0
+            alacak = entry.get('alacak_bakiye') or 0
+            mdv_toplam += max(0, borc - alacak)
+
+    donem_amortisman = abs(get_account_balance(mizan, '770'))  # Dönem amortismanı (770 - Genel Yönetim Giderleri içinde)
+    birikimis_amortisman = abs(get_account_balance(mizan, '257'))  # Birikmiş amortisman
+
+    if mdv_toplam > 5000 and donem_amortisman == 0 and birikimis_amortisman == 0:
+        tahmini_amortisman = mdv_toplam * 0.20  # Ortalama %20 varsayımı
+        findings.append({
+            'rule_code': 'P1-001',
+            'severity': 'HIGH',
+            'title': 'Amortisman Ayrılmamış',
+            'message': f'MDV toplamı {mdv_toplam:,.2f} TL için dönem amortismanı ayrılmamış. Tahmini amortisman: {tahmini_amortisman:,.2f} TL. VUK Md. 313-321.',
+            'value': mdv_toplam,
+            'threshold': 5000,
+            'status': 'FAIL'
+        })
+    elif mdv_toplam > 5000:
+        findings.append({
+            'rule_code': 'P1-001',
+            'severity': 'INFO',
+            'title': 'Amortisman Kontrolü',
+            'message': f'MDV: {mdv_toplam:,.2f} TL, Birikmiş Amortisman: {birikimis_amortisman:,.2f} TL - Kontrol edilmeli.',
+            'value': mdv_toplam,
+            'threshold': 5000,
+            'status': 'CHECK'
+        })
+
+    # ============================================================
+    # P2-VDK-K12: Finansman Gider Kısıtlaması (Frontend'den taşındı)
+    # ============================================================
+    # Yabancı Kaynak = 3xx + 4xx (Kısa + Uzun vadeli yabancı kaynaklar)
+    yabanci_kaynak = 0
+    for kod, entry in mizan['by_code'].items():
+        if kod[0] in ['3', '4']:
+            alacak = entry.get('alacak_bakiye') or 0
+            borc = entry.get('borc_bakiye') or 0
+            yabanci_kaynak += alacak - borc
+
+    # Öz Sermaye = 5xx
+    oz_sermaye = mizan['totals']['equity']
+
+    # Finansman Giderleri = 656, 660, 661, 780
+    finansman_giderleri = 0
+    for kod, entry in mizan['by_code'].items():
+        if kod.startswith('656') or kod.startswith('660') or kod.startswith('661') or kod.startswith('780'):
+            borc = entry.get('borc_bakiye') or 0
+            alacak = entry.get('alacak_bakiye') or 0
+            finansman_giderleri += borc - alacak
+
+    if yabanci_kaynak > oz_sermaye and oz_sermaye > 0 and finansman_giderleri > 10000:
+        kkeg = finansman_giderleri * 0.10  # %10 KKEG
+        vergi_etkisi = kkeg * 0.25  # %25 kurumlar vergisi etkisi
+        findings.append({
+            'rule_code': 'P2-VDK-K12',
+            'severity': 'HIGH',
+            'title': 'Finansman Gider Kısıtlaması (FGK)',
+            'message': f'Yabancı kaynak ({yabanci_kaynak:,.2f} TL) > Öz sermaye ({oz_sermaye:,.2f} TL). Finansman giderleri: {finansman_giderleri:,.2f} TL. KKEG: {kkeg:,.2f} TL, Vergi etkisi: {vergi_etkisi:,.2f} TL. KVK Md. 11/1-i.',
+            'value': finansman_giderleri,
+            'threshold': 10000,
+            'status': 'WARNING'
+        })
+    elif finansman_giderleri > 10000:
+        findings.append({
+            'rule_code': 'P2-VDK-K12',
+            'severity': 'INFO',
+            'title': 'Finansman Gider Kontrolü',
+            'message': f'Finansman giderleri: {finansman_giderleri:,.2f} TL. Yabancı kaynak/Öz sermaye oranı FGK sınırında değil.',
+            'value': finansman_giderleri,
+            'threshold': 10000,
+            'status': 'PASS'
+        })
 
     return findings
 

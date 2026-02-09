@@ -4,9 +4,11 @@ Manages feed items for LYNTOS cockpit - NOW USES DATABASE
 LYNTOS Anayasa: Evidence-gated, Explainability Contract
 
 V2 Refactor: Persistent storage in feed_items table
+V2.1: Auto-generate feed from mizan analysis if database empty
 """
 from typing import List, Optional, Dict, Any
 from datetime import datetime
+from pathlib import Path
 import uuid
 import json
 import logging
@@ -18,6 +20,9 @@ from schemas.feed import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Data directory for Luca exports
+DATA_DIR = Path(__file__).parent.parent.parent / "data"
 
 
 class FeedService:
@@ -151,6 +156,256 @@ class FeedService:
             """, (client_id, period_id))
             return cursor.fetchone()[0]
 
+    # ═══════════════════════════════════════════════════════════════════════════
+    # AUTO-GENERATE FEED FROM MIZAN DATA
+    # Disk verilerinden (mizan.csv) otomatik feed item'ları üret
+    # ═══════════════════════════════════════════════════════════════════════════
+
+    def _get_client_folder_name(self, client_id: str) -> Optional[str]:
+        """Get disk folder name for client (from clients.folder_name column)"""
+        try:
+            with get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT folder_name FROM clients WHERE id = ?", (client_id,))
+                row = cursor.fetchone()
+                if row and row["folder_name"]:
+                    return row["folder_name"]
+        except Exception as e:
+            logger.warning(f"folder_name alınamadı: {e}")
+        return None
+
+    def _generate_feed_from_mizan(
+        self,
+        smmm_id: str,
+        client_id: str,
+        period: str
+    ) -> List[FeedItem]:
+        """
+        Generate feed items from mizan data on disk
+        Used when database has no items - provides real-time analysis
+        """
+        feed_items = []
+
+        # Get disk folder name from database (maps client_id -> folder_name)
+        folder_name = self._get_client_folder_name(client_id)
+        disk_client_id = folder_name if folder_name else client_id
+
+        # Find mizan file
+        luca_dir = DATA_DIR / "luca" / smmm_id / disk_client_id
+
+        if not luca_dir.exists():
+            # Fallback: try client_id directly
+            luca_dir = DATA_DIR / "luca" / smmm_id / client_id
+            if not luca_dir.exists():
+                logger.info(f"[FeedService] No data dir for {smmm_id}/{disk_client_id} or {client_id}")
+                return feed_items
+
+        # Find period folder (handles variations like "2025-Q1__SMOKETEST...")
+        period_dir = None
+        for folder in luca_dir.iterdir():
+            if folder.is_dir() and folder.name.startswith(period):
+                period_dir = folder
+                break
+
+        if not period_dir:
+            logger.info(f"[FeedService] No period folder for {period}")
+            return feed_items
+
+        mizan_path = period_dir / "mizan.csv"
+        if not mizan_path.exists():
+            logger.info(f"[FeedService] No mizan.csv in {period_dir}")
+            return feed_items
+
+        logger.info(f"[FeedService] Generating feed from {mizan_path}")
+
+        # Parse mizan and analyze
+        try:
+            import csv
+            with open(mizan_path, 'r', encoding='utf-8-sig') as f:
+                # Detect delimiter (could be comma or semicolon)
+                first_line = f.readline()
+                f.seek(0)
+                delimiter = ';' if ';' in first_line else ','
+                reader = csv.DictReader(f, delimiter=delimiter)
+                rows = list(reader)
+
+            if not rows:
+                return feed_items
+
+            # Calculate totals for VDK analysis
+            def get_float(row, *keys):
+                for key in keys:
+                    if key in row:
+                        try:
+                            val = str(row[key]).replace('.', '').replace(',', '.').strip()
+                            return float(val) if val else 0.0
+                        except:
+                            pass
+                return 0.0
+
+            # Mizan hesap analizleri
+            kasa_bakiye = 0.0
+            alicilar = 0.0
+            stoklar = 0.0
+            ortaklardan_alacak = 0.0
+            toplam_aktif = 0.0
+            ozsermaye = 0.0
+            satislar = 0.0
+
+            for row in rows:
+                kod = str(row.get('HESAP KODU', row.get('hesap_kodu', ''))).strip()
+                borc = get_float(row, 'BORÇ BAKİYESİ', 'BAKİYE BORÇ', 'borc', 'bakiye_borc')
+                alacak = get_float(row, 'ALACAK BAKİYESİ', 'BAKİYE ALACAK', 'alacak', 'bakiye_alacak')
+                bakiye = borc - alacak
+
+                if kod.startswith('100'):
+                    kasa_bakiye += bakiye
+                elif kod.startswith('120'):
+                    alicilar += bakiye
+                elif kod.startswith('15'):
+                    stoklar += bakiye
+                elif kod.startswith('131'):
+                    ortaklardan_alacak += bakiye
+                elif kod.startswith('1') or kod.startswith('2'):
+                    toplam_aktif += abs(bakiye)
+                elif kod.startswith('5'):
+                    ozsermaye += abs(alacak - borc)
+                elif kod.startswith('600'):
+                    satislar += abs(alacak - borc)
+
+            item_id = 1
+
+            # ═══ VDK K-09: Kasa/Aktif Oranı ═══
+            if toplam_aktif > 0:
+                kasa_orani = (abs(kasa_bakiye) / toplam_aktif) * 100
+                if kasa_orani > 15:  # Kritik eşik
+                    feed_items.append(FeedItem(
+                        id=f"VDK-K09-{item_id}",
+                        title=f"Kasa/Aktif Oranı Kritik: %{kasa_orani:.1f}",
+                        summary=f"Kasa bakiyesi ({kasa_bakiye:,.0f} TL) aktif toplamının %{kasa_orani:.1f}'i. VDK K-09 kriteri aşıldı.",
+                        why="VUK 227 - Yüksek kasa bakiyesi kayıt dışı gelir şüphesi oluşturur",
+                        severity=FeedSeverity.CRITICAL,
+                        category=FeedCategory.VDK,
+                        score=90,
+                        scope=FeedScope(smmm_id=smmm_id, client_id=client_id, period=period),
+                        impact=FeedImpact(amount_try=kasa_bakiye, pct=kasa_orani, points=90),
+                        evidence_refs=[EvidenceRef(
+                            ref_id=f"EVID-KASA-{item_id}",
+                            source_type="mizan",
+                            description=f"100 Kasa hesabı bakiyesi: {kasa_bakiye:,.0f} TL",
+                            status=EvidenceStatus.AVAILABLE,
+                            file_path=str(mizan_path),
+                            account_code="100",
+                            document_date=None,
+                            metadata={"kasa_orani": kasa_orani}
+                        )],
+                        actions=[FeedAction(
+                            action_id=f"ACT-K09-{item_id}",
+                            description="Kasa sayım tutanağı düzenleyin, fazla bakiyeyi bankaya aktarın",
+                            responsible="SMMM",
+                            deadline=None,
+                            status=ActionStatus.PENDING,
+                            priority=1,
+                            related_evidence=[f"EVID-KASA-{item_id}"]
+                        )]
+                    ))
+                    item_id += 1
+                elif kasa_orani > 5:  # Uyarı eşiği
+                    feed_items.append(FeedItem(
+                        id=f"VDK-K09-{item_id}",
+                        title=f"Kasa/Aktif Oranı Yüksek: %{kasa_orani:.1f}",
+                        summary=f"Kasa bakiyesi takip edilmeli. VDK K-09 uyarı eşiğine yakın.",
+                        why="VUK 227 - Kasa bakiyesi aktif oranına göre yüksek",
+                        severity=FeedSeverity.HIGH,
+                        category=FeedCategory.VDK,
+                        score=70,
+                        scope=FeedScope(smmm_id=smmm_id, client_id=client_id, period=period),
+                        impact=FeedImpact(amount_try=kasa_bakiye, pct=kasa_orani, points=70),
+                        evidence_refs=[],
+                        actions=[]
+                    ))
+                    item_id += 1
+
+            # ═══ Negatif Kasa ═══
+            if kasa_bakiye < 0:
+                feed_items.append(FeedItem(
+                    id=f"VDK-NEG-KASA-{item_id}",
+                    title=f"Negatif Kasa Bakiyesi: {kasa_bakiye:,.0f} TL",
+                    summary="Kasa hesabı negatif bakiye veremez. Kayıt hatası veya belgesiz ödeme olabilir.",
+                    why="VUK 227 - Kasa hesabı hiçbir zaman negatif olamaz",
+                    severity=FeedSeverity.CRITICAL,
+                    category=FeedCategory.VDK,
+                    score=95,
+                    scope=FeedScope(smmm_id=smmm_id, client_id=client_id, period=period),
+                    impact=FeedImpact(amount_try=abs(kasa_bakiye), pct=None, points=95),
+                    evidence_refs=[],
+                    actions=[]
+                ))
+                item_id += 1
+
+            # ═══ Ortaklardan Alacak (TF-01) ═══
+            if ozsermaye > 0 and ortaklardan_alacak > 0:
+                ortak_orani = (ortaklardan_alacak / ozsermaye) * 100
+                if ortak_orani > 25:
+                    feed_items.append(FeedItem(
+                        id=f"VDK-TF01-{item_id}",
+                        title=f"Ortaklardan Alacak/Sermaye: %{ortak_orani:.1f}",
+                        summary=f"Ortaklardan alacak ({ortaklardan_alacak:,.0f} TL) örtülü kazanç dağıtımı riski taşıyor.",
+                        why="KVK 13 (Transfer Fiyatlandırması), TTK 358 (Borçlanma Yasağı)",
+                        severity=FeedSeverity.CRITICAL if ortak_orani > 50 else FeedSeverity.HIGH,
+                        category=FeedCategory.VDK,
+                        score=85 if ortak_orani > 50 else 70,
+                        scope=FeedScope(smmm_id=smmm_id, client_id=client_id, period=period),
+                        impact=FeedImpact(amount_try=ortaklardan_alacak, pct=ortak_orani, points=85),
+                        evidence_refs=[],
+                        actions=[]
+                    ))
+                    item_id += 1
+
+            # ═══ Mizan Denge Kontrolü ═══
+            toplam_borc = sum(get_float(r, 'BORÇ BAKİYESİ', 'BAKİYE BORÇ', 'borc') for r in rows)
+            toplam_alacak = sum(get_float(r, 'ALACAK BAKİYESİ', 'BAKİYE ALACAK', 'alacak') for r in rows)
+            fark = abs(toplam_borc - toplam_alacak)
+
+            if fark > 1:  # 1 TL'den fazla fark
+                feed_items.append(FeedItem(
+                    id=f"MIZAN-DENGE-{item_id}",
+                    title=f"Mizan Dengesi Bozuk: {fark:,.0f} TL fark",
+                    summary=f"Toplam borç ({toplam_borc:,.0f}) ve alacak ({toplam_alacak:,.0f}) eşit değil.",
+                    why="Tek Düzen Hesap Planı - Mizan dengeli olmalı",
+                    severity=FeedSeverity.CRITICAL,
+                    category=FeedCategory.BEYAN,
+                    score=95,
+                    scope=FeedScope(smmm_id=smmm_id, client_id=client_id, period=period),
+                    impact=FeedImpact(amount_try=fark, pct=None, points=95),
+                    evidence_refs=[],
+                    actions=[]
+                ))
+                item_id += 1
+
+            # ═══ Dönem bilgi kartı ═══
+            hesap_sayisi = len([r for r in rows if r.get('HESAP KODU', r.get('hesap_kodu', ''))])
+            feed_items.append(FeedItem(
+                id=f"INFO-MIZAN-{item_id}",
+                title=f"Mizan Yüklendi: {hesap_sayisi} hesap",
+                summary=f"{period} dönemi için mizan verisi analiz edildi.",
+                why="Dönem verisi hazır",
+                severity=FeedSeverity.INFO,
+                category=FeedCategory.BELGE,
+                score=10,
+                scope=FeedScope(smmm_id=smmm_id, client_id=client_id, period=period),
+                impact=FeedImpact(amount_try=0, pct=None, points=10),
+                evidence_refs=[],
+                actions=[]
+            ))
+
+            logger.info(f"[FeedService] Generated {len(feed_items)} feed items from mizan")
+
+        except Exception as e:
+            logger.error(f"[FeedService] Error parsing mizan: {e}")
+
+        return feed_items
+
     # Legacy compatibility methods for existing code
 
     def get_feed_items(
@@ -162,10 +417,14 @@ class FeedService:
         category_filter: Optional[List[FeedCategory]] = None
     ) -> List[FeedItem]:
         """
-        Legacy method - returns FeedItem objects for backward compatibility
-        Reads from database and converts to FeedItem schema
+        Returns FeedItem objects - first from DB, then auto-generate from mizan if empty
         """
         items = self.get_feed(client_id, period, tenant_id=smmm_id)
+
+        # If no items in DB, try to generate from mizan data
+        if not items:
+            logger.info(f"[FeedService] No DB items, generating from mizan for {smmm_id}/{client_id}/{period}")
+            return self._generate_feed_from_mizan(smmm_id, client_id, period)
 
         # Convert DB rows to FeedItem objects
         feed_items = []

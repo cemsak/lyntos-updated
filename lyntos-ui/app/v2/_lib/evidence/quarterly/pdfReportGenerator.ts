@@ -6,6 +6,7 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { EngineCheckReport } from '../../parsers/crosscheck/types';
+import { formatNumber as formatNumberBase, formatDate as formatDateBase } from '../../format';
 
 // Extend jsPDF type for autoTable
 declare module 'jspdf' {
@@ -26,11 +27,11 @@ const COLORS = {
 function formatNumber(num: number | string | null): string {
   if (num === null) return '-';
   if (typeof num === 'string') return num;
-  return num.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return formatNumberBase(num, 2);
 }
 
 function formatDate(date: Date): string {
-  return date.toLocaleDateString('tr-TR', {
+  return formatDateBase(date, {
     year: 'numeric',
     month: 'long',
     day: 'numeric',

@@ -25,17 +25,17 @@ export function RecommendationsPanel({ recommendations }: RecommendationsPanelPr
   );
 
   return (
-    <div className="mt-6 bg-blue-50 rounded-lg p-4">
-      <h3 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
+    <div className="mt-6 bg-[#E6F9FF] rounded-lg p-4">
+      <h3 className="font-semibold text-[#00287F] mb-3 flex items-center gap-2">
         <span>Oneriler ({recommendations.length})</span>
       </h3>
       <ol className="space-y-2">
         {sorted.map((rec, i) => (
           <li key={i} className="flex items-start gap-2 text-sm">
-            <span className="bg-blue-200 text-blue-800 rounded-full w-5 h-5 flex items-center justify-center text-xs font-medium flex-shrink-0">
+            <span className="bg-[#ABEBFF] text-[#00287F] rounded-full w-5 h-5 flex items-center justify-center text-xs font-medium flex-shrink-0">
               {i + 1}
             </span>
-            <span className="text-blue-900">
+            <span className="text-[#00287F]">
               <span className="font-medium">[{rec.code}]</span> {rec.text}
             </span>
           </li>

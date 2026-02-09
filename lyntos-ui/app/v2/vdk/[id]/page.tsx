@@ -51,29 +51,28 @@ export default function VdkDetayPage() {
 
   const riskVariant = kriter.risk === 'Yüksek' ? 'error' : kriter.risk === 'Orta' ? 'warning' : 'default';
 
-  const handleFiveWhyComplete = (analysis: { kriterId: string; problem: string; whys: string[]; kokNeden: string; onerilenAksiyonlar: string[] }) => {
-    console.log('5 Why Analysis completed:', analysis);
+  const handleFiveWhyComplete = (_analysis: { kriterId: string; problem: string; whys: string[]; kokNeden: string; onerilenAksiyonlar: string[] }) => {
     // TODO: Save to backend/state
     setFiveWhyOpen(false);
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6">
+    <div className="min-h-screen bg-[#F5F6F8] p-6">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="flex items-center gap-4 mb-6">
           <button
             onClick={() => router.back()}
-            className="flex items-center gap-2 px-3 py-2 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+            className="flex items-center gap-2 px-3 py-2 text-sm text-[#5A5A5A] hover:text-[#2E2E2E] hover:bg-[#F5F6F8] rounded-lg transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             Geri
           </button>
           <div className="flex items-center gap-3">
-            <span className="px-2 py-1 bg-red-100 text-red-700 text-xs font-mono rounded">
+            <span className="px-2 py-1 bg-[#FEF2F2] text-[#BF192B] text-xs font-mono rounded">
               {kriterId}
             </span>
-            <h1 className="text-2xl font-bold text-slate-800">{kriter.baslik}</h1>
+            <h1 className="text-2xl font-bold text-[#2E2E2E]">{kriter.baslik}</h1>
             <Badge variant={riskVariant}>{kriter.risk} Risk</Badge>
           </div>
         </div>
@@ -83,10 +82,10 @@ export default function VdkDetayPage() {
           {/* Risk Aciklamasi */}
           <Card>
             <div className="flex items-start gap-3">
-              <AlertTriangle className="w-6 h-6 text-amber-500 flex-shrink-0 mt-1" />
+              <AlertTriangle className="w-6 h-6 text-[#FFB114] flex-shrink-0 mt-1" />
               <div>
-                <h3 className="font-semibold text-slate-800 mb-2">Risk Aciklamasi</h3>
-                <p className="text-slate-600">{kriter.aciklama}</p>
+                <h3 className="font-semibold text-[#2E2E2E] mb-2">Risk Aciklamasi</h3>
+                <p className="text-[#5A5A5A]">{kriter.aciklama}</p>
               </div>
             </div>
           </Card>
@@ -94,23 +93,23 @@ export default function VdkDetayPage() {
           {/* Oneri */}
           <Card>
             <div className="flex items-start gap-3">
-              <Lightbulb className="w-6 h-6 text-blue-500 flex-shrink-0 mt-1" />
+              <Lightbulb className="w-6 h-6 text-[#0078D0] flex-shrink-0 mt-1" />
               <div>
-                <h3 className="font-semibold text-slate-800 mb-2">Onerilen Aksiyon</h3>
-                <p className="text-slate-600">{kriter.oneri}</p>
+                <h3 className="font-semibold text-[#2E2E2E] mb-2">Onerilen Aksiyon</h3>
+                <p className="text-[#5A5A5A]">{kriter.oneri}</p>
               </div>
             </div>
           </Card>
 
           {/* 5 Why Butonu */}
           <Card>
-            <h3 className="font-semibold text-slate-800 mb-4">Kok Neden Analizi</h3>
-            <p className="text-slate-500 mb-4">
+            <h3 className="font-semibold text-[#2E2E2E] mb-4">Kok Neden Analizi</h3>
+            <p className="text-[#969696] mb-4">
               5 Why metoduyla bu riskin kok nedenini analiz edin.
             </p>
             <button
               onClick={() => setFiveWhyOpen(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="px-4 py-2 bg-[#0049AA] text-white rounded-lg hover:bg-[#0049AA] transition-colors"
             >
               5 Why Analizi Baslat
             </button>
@@ -130,7 +129,7 @@ export default function VdkDetayPage() {
           <div className="flex justify-end">
             <button
               onClick={() => router.back()}
-              className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+              className="px-4 py-2 border border-[#B4B4B4] rounded-lg hover:bg-[#F5F6F8] transition-colors"
             >
               Dashboard'a Don
             </button>

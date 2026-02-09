@@ -108,9 +108,7 @@ export function useEvidenceBundle(): UseEvidenceBundleReturn {
       };
 
       // Rule Engine çalıştır
-      console.log('[useEvidenceBundle] Rule Engine çalıştırılıyor...');
       const engineResult = await ruleEngine.execute(context);
-      console.log('[useEvidenceBundle] Rule Engine tamamlandı:', engineResult.summary);
 
       // Bundle oluştur
       const bundleOptions: BundleGeneratorOptions = {
@@ -125,7 +123,6 @@ export function useEvidenceBundle(): UseEvidenceBundleReturn {
       const generatedBundle = generateEvidenceBundle(engineResult, bundleOptions);
       setBundle(generatedBundle);
 
-      console.log('[useEvidenceBundle] Bundle oluşturuldu:', generatedBundle.id);
       return generatedBundle;
 
     } catch (err) {
@@ -147,7 +144,6 @@ export function useEvidenceBundle(): UseEvidenceBundleReturn {
     try {
       const content = generatePDFContent(bundle);
       setPdfContent(content);
-      console.log('[useEvidenceBundle] PDF içeriği oluşturuldu:', content.totalPages, 'sayfa');
       return content;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'PDF oluşturma hatası';

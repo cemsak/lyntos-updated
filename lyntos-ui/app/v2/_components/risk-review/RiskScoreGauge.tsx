@@ -11,10 +11,10 @@ interface RiskScoreGaugeProps {
 
 // Stripe-style risk colors
 const RISK_COLORS: Record<RiskLevel, string> = {
-  kritik: '#cd3d64',
-  yuksek: '#e56f4a',
-  orta: '#f5a623',
-  dusuk: '#0caf60',
+  kritik: '#F0282D',
+  yuksek: '#FA841E',
+  orta: '#FFB114',
+  dusuk: '#00A651',
 };
 
 const RISK_LABELS: Record<RiskLevel, string> = {
@@ -53,7 +53,7 @@ export function RiskScoreGauge({ score, riskLevel, size = 'md' }: RiskScoreGauge
           cy={center}
           r={radius}
           fill="none"
-          stroke="#e3e8ee"
+          stroke="#E5E5E5"
           strokeWidth={config.stroke}
         />
         {/* Progress circle */}
@@ -76,7 +76,7 @@ export function RiskScoreGauge({ score, riskLevel, size = 'md' }: RiskScoreGauge
         className="absolute inset-0 flex flex-col items-center justify-center"
       >
         <span
-          className="font-semibold text-[#1a1f36]"
+          className="font-semibold text-[#2E2E2E]"
           style={{ fontSize: config.fontSize }}
         >
           {score}

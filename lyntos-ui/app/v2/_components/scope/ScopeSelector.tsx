@@ -107,7 +107,7 @@ function Dropdown<T>({
   return (
     <div ref={containerRef} className="relative">
       {/* Label */}
-      <label className="block text-xs font-medium text-slate-400 mb-1">
+      <label className="block text-xs font-medium text-[#969696] mb-1">
         {label}
       </label>
 
@@ -124,45 +124,45 @@ function Dropdown<T>({
         className={`
           w-full flex items-center gap-2 px-3 py-2 rounded-lg border transition-all duration-200
           ${disabled || loading
-            ? 'bg-slate-100 border-slate-200 cursor-not-allowed opacity-50'
+            ? 'bg-[#F5F6F8] border-[#E5E5E5] cursor-not-allowed opacity-50'
             : isOpen
-              ? 'bg-slate-50 border-blue-500 ring-2 ring-blue-500/20'
+              ? 'bg-[#F5F6F8] border-[#0078D0] ring-2 ring-[#0078D0]/20'
               : error
-                ? 'bg-slate-50 border-red-300 hover:border-red-400'
-                : 'bg-slate-50 border-slate-200 hover:border-slate-200-light'
+                ? 'bg-[#F5F6F8] border-[#FF9196] hover:border-[#FF555F]'
+                : 'bg-[#F5F6F8] border-[#E5E5E5] hover:border-[#E5E5E5]-light'
           }
         `}
       >
-        <span className="text-slate-400">
-          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : error ? <AlertCircle className="w-4 h-4 text-red-500" /> : icon}
+        <span className="text-[#969696]">
+          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : error ? <AlertCircle className="w-4 h-4 text-[#F0282D]" /> : icon}
         </span>
-        <span className={`flex-1 text-left text-sm truncate ${selectedOption ? 'text-slate-900' : error ? 'text-red-500' : 'text-slate-400'}`}>
+        <span className={`flex-1 text-left text-sm truncate ${selectedOption ? 'text-[#2E2E2E]' : error ? 'text-[#F0282D]' : 'text-[#969696]'}`}>
           {loading ? 'Yükleniyor...' : error ? 'Yüklenemedi' : (selectedOption ? getOptionLabel(selectedOption) : placeholder)}
         </span>
-        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-4 h-4 text-[#969696] transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {/* Dropdown Panel */}
       {isOpen && (
-        <div className="absolute z-50 w-full mt-1 bg-slate-50-card border border-slate-200 rounded-lg shadow-xl animate-slide-down">
+        <div className="absolute z-50 w-full mt-1 bg-[#F5F6F8]-card border border-[#E5E5E5] rounded-lg shadow-xl animate-slide-down">
           {/* Search Input */}
-          <div className="p-2 border-b border-slate-200">
+          <div className="p-2 border-b border-[#E5E5E5]">
             <input
               ref={inputRef}
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Ara..."
-              className="w-full px-3 py-1.5 text-sm bg-slate-50 border border-slate-200 rounded-md
-                         text-slate-900 placeholder-slate-400
-                         focus:outline-none focus:border-blue-500"
+              className="w-full px-3 py-1.5 text-sm bg-[#F5F6F8] border border-[#E5E5E5] rounded-md
+                         text-[#2E2E2E] placeholder-[#969696]
+                         focus:outline-none focus:border-[#0078D0]"
             />
           </div>
 
           {/* Options List */}
           <div className="max-h-48 overflow-y-auto">
             {filteredOptions.length === 0 ? (
-              <div className="px-3 py-4 text-sm text-slate-400 text-center">
+              <div className="px-3 py-4 text-sm text-[#969696] text-center">
                 {emptyMessage}
               </div>
             ) : (
@@ -181,20 +181,20 @@ function Dropdown<T>({
                     className={`
                       w-full flex items-center gap-3 px-3 py-2 text-left transition-colors
                       ${isSelected
-                        ? 'bg-blue-500/10 text-blue-500'
-                        : 'hover:bg-slate-100 text-slate-900'
+                        ? 'bg-[#0078D0]/10 text-[#0078D0]'
+                        : 'hover:bg-[#F5F6F8] text-[#2E2E2E]'
                       }
                     `}
                   >
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium truncate">{getOptionLabel(opt)}</div>
                       {getOptionSublabel && (
-                        <div className="text-xs text-slate-400 truncate">
+                        <div className="text-xs text-[#969696] truncate">
                           {getOptionSublabel(opt)}
                         </div>
                       )}
                     </div>
-                    {isSelected && <Check className="w-4 h-4 text-blue-500 flex-shrink-0" />}
+                    {isSelected && <Check className="w-4 h-4 text-[#0078D0] flex-shrink-0" />}
                   </button>
                 );
               })
@@ -226,8 +226,11 @@ export function ScopeSelector() {
     smmmId: user?.id || '',
   }));
 
+  // KRITIK: Backend feed API'si period_code formatını bekliyor ("2025-Q2")
+  // periods.id = "OZKAN_KIRTASIYE_2025-Q2" formatında, bu yanlış
+  // Scope için period_code (label) kullanılmalı
   const donemList: DonemData[] = periods.map(p => ({
-    id: p.id,
+    id: p.code || p.label,  // Backend'in beklediği format: "2025-Q2"
     label: p.description || p.label,
     tip: 'ceyreklik' as const,
   }));
@@ -238,6 +241,22 @@ export function ScopeSelector() {
       setScope({ smmm_id: smmmList[0].id });
     }
   }, [smmmList, scope.smmm_id, setScope]);
+
+  // Auto-select first mukellef if only one option and not already selected
+  useEffect(() => {
+    if (scope.smmm_id && mukellefList.length === 1 && !scope.client_id) {
+      handleMukellefChange(mukellefList[0].id);
+    }
+  }, [scope.smmm_id, mukellefList, scope.client_id]);
+
+  // SMMM GÜVENİ: Auto-select KALDILDI
+  // Dönem otomatik seçilmemeli - kullanıcı bilinçli olarak seçmeli
+  // Bu sayede yanlış dönem verisi gösterme riski ortadan kalkar
+  // useEffect(() => {
+  //   if (scope.client_id && donemList.length > 0 && !scope.period) {
+  //     setScope({ period: donemList[0].id });
+  //   }
+  // }, [scope.client_id, donemList, scope.period, setScope]);
 
   // Handle SMMM change - reset dependent fields
   const handleSmmmChange = (smmmId: string) => {
@@ -313,7 +332,9 @@ export function ScopeSelector() {
           options={donemList}
           getOptionId={d => d.id}
           getOptionLabel={d => d.label}
-          onChange={period => setScope({ period })}
+          onChange={period => {
+            setScope({ period });
+          }}
           placeholder="Dönem Seçin"
           loading={donemLoading}
           error={error && periods.length === 0 && scope.client_id ? error : null}

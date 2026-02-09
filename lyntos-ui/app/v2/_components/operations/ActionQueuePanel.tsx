@@ -82,26 +82,26 @@ export function ActionQueuePanel() {
         {data && data.tasks.length === 0 ? (
           <div className="text-center py-6">
             <span className="text-3xl">🎉</span>
-            <p className="text-sm text-green-600 mt-2">Bekleyen gorev yok!</p>
+            <p className="text-sm text-[#00804D] mt-2">Bekleyen gorev yok!</p>
           </div>
         ) : (
           <div className="space-y-2 max-h-64 overflow-y-auto">
             {data?.tasks.map((task, idx) => (
               <div
                 key={task.id}
-                className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-100"
+                className="flex items-center gap-3 p-3 bg-[#F5F6F8] rounded-lg border border-[#E5E5E5]"
               >
-                <span className="flex-shrink-0 w-6 h-6 flex items-center justify-center bg-slate-200 rounded-full text-xs font-medium text-slate-600">
+                <span className="flex-shrink-0 w-6 h-6 flex items-center justify-center bg-[#E5E5E5] rounded-full text-xs font-medium text-[#5A5A5A]">
                   {idx + 1}
                 </span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-slate-900 truncate">{task.title}</p>
+                  <p className="text-sm font-medium text-[#2E2E2E] truncate">{task.title}</p>
                   <div className="flex items-center gap-2 mt-0.5">
                     {task.estimated_time && (
-                      <span className="text-xs text-slate-500">{task.estimated_time}</span>
+                      <span className="text-xs text-[#969696]">{task.estimated_time}</span>
                     )}
                     {task.deadline && (
-                      <span className="text-xs text-slate-500">{task.deadline}</span>
+                      <span className="text-xs text-[#969696]">{task.deadline}</span>
                     )}
                   </div>
                 </div>

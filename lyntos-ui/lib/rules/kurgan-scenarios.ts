@@ -265,98 +265,126 @@ export const KURGAN_SCENARIOS: Record<string, KurganSenaryo> = {
 
   'KRG-12': {
     id: 'KRG-12',
-    ad: 'Indirilecek KDV Anomalisi',
-    aciklama: 'Indirilecek KDV tutarinin olagandisi yuksek olmasi.',
+    ad: 'Sahte Belge Suphesi',
+    aciklama:
+      'Alinan veya duzenlenen belgelerin sahte veya muhteviyati itibariyle yaniltici belge (SMİYB) olmasi suphesi.',
     tetikleyiciler: [
-      'Indirilecek KDV > Hesaplanan KDV x 1.5 (surekli)',
-      'Devreden KDV surekli artiyor, satislar sabit',
-      'Yatirim donemi degilken yuksek indirilecek KDV',
+      'Kod-4 mukelleften alim yapilmis',
+      'VTR (Vergi Teknibi Raporu) duzenlenen firmadan fatura alinmis',
+      'Fatura tutarlari ile Ba-Bs bildirimi uyumsuz',
+      'Riskli sektorlerden (hurdaci, nakliye, komisyoncu) orantisiz alim',
+      'Fatura icerigi ile isletme faaliyeti uyumsuz',
+      'Ayni tarihte birden fazla il\'den fatura alinmis',
     ],
-    riskPuani: 70,
-    aksiyon: 'BILGI_ISTEME',
-    suresi: '15 gun',
-    mevzuat: ['KDVK 29', 'KDVK 36'],
-    ornekler: ['Sirket 2 yildir devreden KDV beyan ediyor, hic odeme yapmamis'],
+    riskPuani: 95,
+    aksiyon: 'INCELEME',
+    suresi: 'Derhal',
+    mevzuat: ['VUK 359 (Kacakcilik Suclari)', 'VUK 341-344', 'CMK ilgili maddeler'],
+    ornekler: [
+      'SMİYB duzenledigi tespit edilen firmadan 2 milyon TL fatura alinmis',
+      'Hurdaci firmassindan yuksek tutarli \"danismanlik\" faturasi alinmis',
+    ],
+    kritikUyari: 'Bu senaryo VUK 359 kapsaminda kacakcilik sucu olusturabilir. Hapis cezasi riski vardir!',
   },
 
   // ═══════════════════════════════════════════════════════════════════
-  // DONEM SONU ISLEMLERI
+  // TRANSFER FİYATLANDIRMASI VE İLİŞKİLİ KİŞİ İŞLEMLERİ
   // ═══════════════════════════════════════════════════════════════════
 
   'KRG-13': {
     id: 'KRG-13',
-    ad: 'Donem Sonu Anormal Hareketler',
+    ad: 'Transfer Fiyatlandirmasi Riski',
     aciklama:
-      'Aralik ayinda olagandisi yuksek alis/satis veya gider kaydi.',
+      'Iliskili kisi islemlerinin (ortaklar, yoneticiler, bagbi ortakliklar) ciroya oraninin yuksek olmasi. Ortulu kazanc dagitimi ve ortulu sermaye riski.',
     tetikleyiciler: [
-      'Aralik alislari > Yil ortalamasi x 3',
-      "Son hafta faturalari > Yil toplaminin %20'si",
-      'Donem sonu ani gider artisi',
-      '31 Aralik tarihli toplu faturalar',
-    ],
-    riskPuani: 75,
-    aksiyon: 'BILGI_ISTEME',
-    suresi: '15 gun',
-    mevzuat: ['VUK 219', 'VUK 359', 'KVK 6'],
-    ornekler: [
-      "Yillik ortalama 200 bin TL/ay alis, Aralik'ta 2 milyon TL alis",
-    ],
-  },
-
-  'KRG-14': {
-    id: 'KRG-14',
-    ad: 'Komisyon/Hizmet Faturasi Riski',
-    aciklama:
-      'Yil sonlarinda komisyon, danismanlik veya hizmet adi altinda duzenlenen faturalar.',
-    tetikleyiciler: [
-      'Aralik ayinda yuksek tutarli komisyon faturasi',
-      'Sozlesme olmadan hizmet faturasi',
-      'Iliskili firmaya hizmet faturasi (donem sonu)',
-      'Hizmet icerigi belirsiz faturalar',
+      'Iliskili kisi islemleri / Ciro > %25',
+      '131 Ortaklardan Alacaklar hesabi yuksek bakiye',
+      '331/431 Ortaklara Borclar hesabi yuksek bakiye',
+      'Ortaklara borc uzerinden faiz tahakkuku yapilmamis',
+      'Emsal bedelin altinda/ustunde islem yapilmis',
+      'Ortulu sermaye orani (borc/ozkaynak) > 3',
     ],
     riskPuani: 80,
     aksiyon: 'IZAHA_DAVET',
     suresi: '30 gun',
-    mevzuat: ['VUK 227', 'VUK 359', 'KVK 13'],
+    mevzuat: ['KVK 12 (Ortulu Sermaye)', 'KVK 13 (Transfer Fiyatlandirmasi)', '1 Seri No.lu TF Tebligi', 'VUK 3/B'],
     ornekler: [
-      "31 Aralik'ta 500 bin TL \"danismanlik hizmeti\" faturasi, sozlesme yok",
+      'Sirketin ortaga 7 milyon TL borcu var, cironun %77.6\'si',
+      'Ortaklardan alacak hesabina faiz tahakkuku yapilmamis, TCMB avans faizi uzerinden faiz geliri hesaplanmali',
+      'Bagbi ortakliktan emsal fiyatin altinda mal alimi yapilmis',
+    ],
+    hesapKodlari: ['131', '231', '331', '431', '132', '232', '133', '233'],
+    esik: 0.25, // %25 ciro orani
+  },
+
+  'KRG-14': {
+    id: 'KRG-14',
+    ad: 'Surekli Zarar Beyani',
+    aciklama:
+      'Ard arda donemler boyunca zarar beyan edilmesi. Isletmenin surekli zarar etmesine ragmen faaliyete devam etmesi ekonomik olarak sorgulanabilir.',
+    tetikleyiciler: [
+      '3 yil ust uste zarar beyani',
+      'Zarar beyanina ragmen yatirim yapilmasi',
+      'Zarar beyanina ragmen ortak cari hesabina borc verilmesi',
+      'Negatif ozkaynak (teknik iflas durumu)',
+      'Zarar beyanina ragmen personel artisi',
+    ],
+    riskPuani: 70,
+    aksiyon: 'BILGI_ISTEME',
+    suresi: '15 gun',
+    mevzuat: ['VUK 134', 'KVK 6', 'TTK 376 (Sermaye Kaybi)'],
+    ornekler: [
+      'Sirket 5 yildir zarar beyan ediyor ancak faaliyet surdurulmeye devam ediyor',
+      'Her yil zarar beyan edilirken ortaga 500.000 TL borc verilmis',
     ],
   },
 
   // ═══════════════════════════════════════════════════════════════════
-  // E-DEFTER VE E-BELGE
+  // VERGİ YÜKÜ VE ORTAK/YÖNETİCİ RİSKİ
   // ═══════════════════════════════════════════════════════════════════
 
   'KRG-15': {
     id: 'KRG-15',
-    ad: 'E-Defter Berat Gecikmesi',
-    aciklama: 'E-defter beratinin yasal suresinde yuklenmemesi.',
+    ad: 'Dusuk Vergi Yuku',
+    aciklama:
+      'Odenen verginin (Kurumlar/Gelir Vergisi) ciroya oraninin sektor ortalamasinin cok altinda olmasi.',
     tetikleyiciler: [
-      'Berat yukleme suresi asilmis',
-      'Duzeltme berati cok sik yuklenmis',
-      'Berat tutarlari ile beyanname uyumsuz',
+      'Efektif vergi yuku < Sektor ortalamasi x 0.50',
+      'Vergi yuku < %1 (enflasyonist donemde)',
+      'Gecikmis vergi odemelerinin yukseklugu',
+      'Surekli matrahi azaltici islemler',
+      'Yuksek KKEG (Kanunen Kabul Edilmeyen Gider) orani',
     ],
-    riskPuani: 60,
-    aksiyon: 'TAKIP',
-    suresi: null,
-    mevzuat: ['VUK 175', '1 Sira No.lu Elektronik Defter Genel Tebligi'],
-    ornekler: ['Son 6 ayin beratlari 3 ay gecikmeli yuklenmis'],
+    riskPuani: 75,
+    aksiyon: 'BILGI_ISTEME',
+    suresi: '15 gun',
+    mevzuat: ['VUK 134', 'KVK 6', 'GVK 40-41'],
+    ornekler: [
+      'Sektor ortalamasi %4 vergi yuku, sirket %0.5 vergi odemis',
+      'KKEG orani surekli artmakta, vergi matrahi dusuk',
+    ],
   },
 
   'KRG-16': {
     id: 'KRG-16',
-    ad: 'E-Fatura Iptal/Duzeltme Yogunlugu',
-    aciklama: 'E-fatura iptal veya duzeltme oraninin yuksek olmasi.',
+    ad: 'Ortak/Yonetici Risk Gecmisi',
+    aciklama:
+      'Sirket ortak veya yoneticilerinin gecmiste vergi cezasi, haciz veya sahte belge ile iliskili olmasi.',
     tetikleyiciler: [
-      'Iptal edilen fatura orani > %10',
-      'Ayni musteriye cok sayida iptal/yeniden duzenleme',
-      'Donem sonu iptal yogunlugu',
+      'Ortabin baska sirketinde VTR (Vergi Teknibi Raporu) duzenlenmis',
+      'Yoneticinin sahte belge davasi gecmisi var',
+      'Ortabin vergi borcu nedeniyle haciz serhli tashmazi var',
+      'Ortabin baska sirketi kod-3 veya kod-4 mukellef',
+      'Aile bireylerinin isimli sirkette sahte belge tespiti',
     ],
-    riskPuani: 65,
-    aksiyon: 'TAKIP',
-    suresi: null,
-    mevzuat: ['VUK 227', 'e-Fatura Uygulamasi'],
-    ornekler: ["Yilda 1000 fatura duzenlenmis, 150'si iptal edilmis"],
+    riskPuani: 80,
+    aksiyon: 'IZAHA_DAVET',
+    suresi: '30 gun',
+    mevzuat: ['VUK 359', 'VUK 3/B', 'KURGAN Rehberi'],
+    ornekler: [
+      'Sirket ortabin baska bir sirketinde sahte fatura duzenleme tespiti yapilmis',
+      'Yonetici Amca\'nin sirketinde KDV iade dolandiriciligi nedeniyle inceleme acilmis',
+    ],
   },
 };
 

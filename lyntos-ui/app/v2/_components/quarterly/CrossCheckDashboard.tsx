@@ -52,27 +52,27 @@ export function CrossCheckDashboard({ report, duration, onReset, parsedData, sta
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+      <div className="bg-white rounded-xl border border-[#E5E5E5] p-6 shadow-sm">
         <div className="flex items-start justify-between mb-6">
           <div>
-            <h2 className="text-2xl font-bold text-gray-800">Capraz Kontrol Sonuclari</h2>
+            <h2 className="text-2xl font-bold text-[#2E2E2E]">Capraz Kontrol Sonuclari</h2>
             {report.unvan && (
-              <p className="text-gray-500 mt-1">{report.unvan}</p>
+              <p className="text-[#969696] mt-1">{report.unvan}</p>
             )}
             {report.vkn && (
-              <p className="text-sm text-gray-400">VKN: {report.vkn}</p>
+              <p className="text-sm text-[#969696]">VKN: {report.vkn}</p>
             )}
           </div>
           <div className="flex items-center gap-3">
             {duration && (
-              <div className="flex items-center gap-1 text-sm text-gray-500">
+              <div className="flex items-center gap-1 text-sm text-[#969696]">
                 <Clock className="w-4 h-4" />
                 <span>{(duration / 1000).toFixed(1)}s</span>
               </div>
             )}
             <button
               onClick={onReset}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-[#F5F6F8] text-[#5A5A5A] rounded-lg hover:bg-[#E5E5E5] transition-colors"
             >
               <RefreshCw className="w-4 h-4" />
               <span>Yeni Analiz</span>
@@ -92,23 +92,23 @@ export function CrossCheckDashboard({ report, duration, onReset, parsedData, sta
 
         {/* Summary cards */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <div className="bg-gray-50 rounded-lg p-4 text-center">
-            <p className="text-3xl font-bold text-gray-800">{summary.totalChecks}</p>
-            <p className="text-sm text-gray-500">Toplam Kontrol</p>
+          <div className="bg-[#F5F6F8] rounded-lg p-4 text-center">
+            <p className="text-3xl font-bold text-[#2E2E2E]">{summary.totalChecks}</p>
+            <p className="text-sm text-[#969696]">Toplam Kontrol</p>
           </div>
-          <div className="bg-green-50 rounded-lg p-4 text-center">
+          <div className="bg-[#ECFDF5] rounded-lg p-4 text-center">
             <div className="flex items-center justify-center gap-2">
-              <CheckCircle2 className="w-6 h-6 text-green-500" />
-              <p className="text-3xl font-bold text-green-600">{summary.passed}</p>
+              <CheckCircle2 className="w-6 h-6 text-[#00A651]" />
+              <p className="text-3xl font-bold text-[#00804D]">{summary.passed}</p>
             </div>
-            <p className="text-sm text-green-600">Basarili</p>
+            <p className="text-sm text-[#00804D]">Basarili</p>
           </div>
-          <div className="bg-red-50 rounded-lg p-4 text-center">
+          <div className="bg-[#FEF2F2] rounded-lg p-4 text-center">
             <div className="flex items-center justify-center gap-2">
-              <XCircle className="w-6 h-6 text-red-500" />
-              <p className="text-3xl font-bold text-red-600">{summary.failed}</p>
+              <XCircle className="w-6 h-6 text-[#F0282D]" />
+              <p className="text-3xl font-bold text-[#BF192B]">{summary.failed}</p>
             </div>
-            <p className="text-sm text-red-600">Basarisiz</p>
+            <p className="text-sm text-[#BF192B]">Basarisiz</p>
           </div>
           <div className="bg-yellow-50 rounded-lg p-4 text-center">
             <div className="flex items-center justify-center gap-2">
@@ -117,24 +117,24 @@ export function CrossCheckDashboard({ report, duration, onReset, parsedData, sta
             </div>
             <p className="text-sm text-yellow-600">Kismi</p>
           </div>
-          <div className="bg-gray-50 rounded-lg p-4 text-center">
+          <div className="bg-[#F5F6F8] rounded-lg p-4 text-center">
             <div className="flex items-center justify-center gap-2">
-              <MinusCircle className="w-6 h-6 text-gray-400" />
-              <p className="text-3xl font-bold text-gray-500">{summary.skipped}</p>
+              <MinusCircle className="w-6 h-6 text-[#969696]" />
+              <p className="text-3xl font-bold text-[#969696]">{summary.skipped}</p>
             </div>
-            <p className="text-sm text-gray-500">Atlandi</p>
+            <p className="text-sm text-[#969696]">Atlandi</p>
           </div>
         </div>
 
         {/* Critical issues alert */}
         {summary.criticalIssues > 0 && (
-          <div className="mt-4 bg-red-100 border border-red-200 rounded-lg p-4 flex items-center gap-3">
-            <XCircle className="w-6 h-6 text-red-600" />
+          <div className="mt-4 bg-[#FEF2F2] border border-[#FFC7C9] rounded-lg p-4 flex items-center gap-3">
+            <XCircle className="w-6 h-6 text-[#BF192B]" />
             <div>
-              <p className="font-semibold text-red-700">
+              <p className="font-semibold text-[#BF192B]">
                 {summary.criticalIssues} Kritik Uyumsuzluk Tespit Edildi
               </p>
-              <p className="text-sm text-red-600">
+              <p className="text-sm text-[#BF192B]">
                 Bu uyumsuzluklar VDK denetiminde sorun olusturabilir.
               </p>
             </div>
@@ -143,11 +143,11 @@ export function CrossCheckDashboard({ report, duration, onReset, parsedData, sta
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+      <div className="bg-white rounded-xl border border-[#E5E5E5] p-4 shadow-sm">
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-gray-400" />
-            <span className="text-sm font-medium text-gray-600">Filtrele:</span>
+            <Filter className="w-4 h-4 text-[#969696]" />
+            <span className="text-sm font-medium text-[#5A5A5A]">Filtrele:</span>
           </div>
 
           {/* Status filter */}
@@ -158,8 +158,8 @@ export function CrossCheckDashboard({ report, duration, onReset, parsedData, sta
                 onClick={() => setStatusFilter(status)}
                 className={`px-3 py-1 text-sm rounded-full transition-colors ${
                   statusFilter === status
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    ? 'bg-[#0049AA] text-white'
+                    : 'bg-[#F5F6F8] text-[#5A5A5A] hover:bg-[#E5E5E5]'
                 }`}
               >
                 {status === 'all' ? 'Tumu' :
@@ -170,7 +170,7 @@ export function CrossCheckDashboard({ report, duration, onReset, parsedData, sta
             ))}
           </div>
 
-          <div className="h-6 w-px bg-gray-200" />
+          <div className="h-6 w-px bg-[#E5E5E5]" />
 
           {/* Category filter */}
           <div className="flex gap-1 flex-wrap">
@@ -180,8 +180,8 @@ export function CrossCheckDashboard({ report, duration, onReset, parsedData, sta
                 onClick={() => setCategoryFilter(cat)}
                 className={`px-3 py-1 text-sm rounded-full transition-colors ${
                   categoryFilter === cat
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    ? 'bg-[#0049AA] text-white'
+                    : 'bg-[#F5F6F8] text-[#5A5A5A] hover:bg-[#E5E5E5]'
                 }`}
               >
                 {cat === 'all' ? 'Tum Kategoriler' : categoryLabels[cat]}
@@ -194,8 +194,8 @@ export function CrossCheckDashboard({ report, duration, onReset, parsedData, sta
       {/* Results list */}
       <div className="space-y-3">
         {filteredResults.length === 0 ? (
-          <div className="bg-gray-50 rounded-xl p-8 text-center">
-            <p className="text-gray-500">Bu filtreye uygun sonuc bulunamadi.</p>
+          <div className="bg-[#F5F6F8] rounded-xl p-8 text-center">
+            <p className="text-[#969696]">Bu filtreye uygun sonuc bulunamadi.</p>
           </div>
         ) : (
           filteredResults.map((result, index) => (
@@ -205,27 +205,27 @@ export function CrossCheckDashboard({ report, duration, onReset, parsedData, sta
       </div>
 
       {/* Category breakdown */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">Kategori Bazli Ozet</h3>
+      <div className="bg-white rounded-xl border border-[#E5E5E5] p-6 shadow-sm">
+        <h3 className="text-lg font-semibold text-[#2E2E2E] mb-4">Kategori Bazli Ozet</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {Object.entries(summary.categories).map(([cat, stats]) => {
             if (stats.total === 0) return null;
             const passRate = stats.total > 0 ? (stats.passed / stats.total) * 100 : 0;
 
             return (
-              <div key={cat} className="border border-gray-100 rounded-lg p-4">
-                <h4 className="font-medium text-gray-700 mb-2">{categoryLabels[cat] || cat}</h4>
+              <div key={cat} className="border border-[#E5E5E5] rounded-lg p-4">
+                <h4 className="font-medium text-[#5A5A5A] mb-2">{categoryLabels[cat] || cat}</h4>
                 <div className="flex justify-between text-sm mb-2">
-                  <span className="text-green-600">{stats.passed} basarili</span>
-                  <span className="text-red-600">{stats.failed} basarisiz</span>
+                  <span className="text-[#00804D]">{stats.passed} basarili</span>
+                  <span className="text-[#BF192B]">{stats.failed} basarisiz</span>
                 </div>
-                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div className="h-2 bg-[#F5F6F8] rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-green-500 transition-all"
+                    className="h-full bg-[#00A651] transition-all"
                     style={{ width: `${passRate}%` }}
                   />
                 </div>
-                <p className="text-xs text-gray-400 mt-1">{passRate.toFixed(0)}% basarili</p>
+                <p className="text-xs text-[#969696] mt-1">{passRate.toFixed(0)}% basarili</p>
               </div>
             );
           })}

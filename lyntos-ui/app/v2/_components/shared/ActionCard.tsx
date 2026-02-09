@@ -33,10 +33,10 @@ export const ActionCard: React.FC<ActionCardProps> = ({
   return (
     <div className={cn(
       'bg-white rounded-lg border p-4 hover:shadow-md transition-all',
-      riskLevel === 'KRITIK' ? 'border-red-200 border-l-4 border-l-red-500' :
-      riskLevel === 'YUKSEK' ? 'border-orange-200 border-l-4 border-l-orange-500' :
-      riskLevel === 'ORTA' ? 'border-amber-200 border-l-4 border-l-amber-500' :
-      'border-slate-200',
+      riskLevel === 'KRITIK' ? 'border-[#FFC7C9] border-l-4 border-l-[#F0282D]' :
+      riskLevel === 'YUKSEK' ? 'border-[#FFF08C] border-l-4 border-l-[#FFB114]' :
+      riskLevel === 'ORTA' ? 'border-[#FFF08C] border-l-4 border-l-[#FFB114]' :
+      'border-[#E5E5E5]',
       className
     )}>
       <div className="flex items-start justify-between gap-4">
@@ -44,18 +44,18 @@ export const ActionCard: React.FC<ActionCardProps> = ({
           {/* Header */}
           <div className="flex items-center gap-2 mb-1">
             <RiskBadge level={riskLevel} size="sm" />
-            <span className="text-xs font-mono text-slate-500">{source}</span>
+            <span className="text-xs font-mono text-[#969696]">{source}</span>
           </div>
 
           {/* Title */}
-          <h4 className="font-semibold text-slate-800 mb-1 truncate">{title}</h4>
+          <h4 className="font-semibold text-[#2E2E2E] mb-1 truncate">{title}</h4>
 
           {/* Description */}
-          <p className="text-sm text-slate-600 line-clamp-2">{description}</p>
+          <p className="text-sm text-[#5A5A5A] line-clamp-2">{description}</p>
 
           {/* Deadline */}
           {deadline && (
-            <div className="flex items-center gap-1 mt-2 text-xs text-slate-500">
+            <div className="flex items-center gap-1 mt-2 text-xs text-[#969696]">
               <Clock className="w-3 h-3" />
               <span>{deadline}</span>
             </div>
@@ -68,7 +68,7 @@ export const ActionCard: React.FC<ActionCardProps> = ({
             variant="ghost"
             size="sm"
             onClick={onDetail || onAction}
-            className="text-slate-600 hover:text-slate-800"
+            className="text-[#5A5A5A] hover:text-[#2E2E2E]"
           >
             {actionLabel}
             <ArrowRight className="w-4 h-4 ml-1" />

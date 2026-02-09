@@ -1,7 +1,7 @@
 /**
  * Authenticated Fetch Utilities
- * Development mode: DEV_HKOZKAN fallback aktif (auth.ts'den gelir)
- * Production mode: Token yoksa hata fırlatılır
+ * getAuthToken() Bearer-prefixed JWT token döner
+ * Token yoksa AuthError fırlatılır
  */
 
 import { getAuthToken, AuthError } from './auth';
@@ -16,7 +16,7 @@ export async function authFetch(url: string, options: AuthFetchOptions = {}): Pr
   const timeoutId = setTimeout(() => controller.abort(), timeout);
 
   try {
-    // getAuthToken() returns DEV_HKOZKAN in development mode if no token
+    // getAuthToken() returns Bearer-prefixed JWT token
     const token = getAuthToken();
     if (!token) {
       clearTimeout(timeoutId);

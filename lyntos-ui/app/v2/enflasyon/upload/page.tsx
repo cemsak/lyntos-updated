@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
@@ -12,6 +12,9 @@ import {
   FileSpreadsheet,
   Calculator
 } from 'lucide-react';
+import { getAuthToken } from '../../_lib/auth';
+import { API_ENDPOINTS } from '../../_lib/config/api';
+import { useToast } from '../../_components/shared/Toast';
 
 interface UploadedFile {
   id: string;
@@ -55,8 +58,10 @@ const REQUIRED_DOCUMENTS = [
 
 export default function EnflasyonUploadPage() {
   const router = useRouter();
+  const { showToast } = useToast();
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, UploadedFile>>({});
   const [dragOver, setDragOver] = useState<string | null>(null);
+  const abortControllers = useRef<Record<string, AbortController>>({});
 
   const handleFileSelect = useCallback((documentId: string, files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -75,13 +80,44 @@ export default function EnflasyonUploadPage() {
       },
     }));
 
-    // Simulate upload progress
-    let progress = 0;
-    const interval = setInterval(() => {
-      progress += Math.random() * 30;
-      if (progress >= 100) {
-        progress = 100;
-        clearInterval(interval);
+    const token = getAuthToken();
+    if (!token) {
+      setUploadedFiles(prev => ({
+        ...prev,
+        [documentId]: {
+          ...prev[documentId],
+          status: 'error',
+          errorMessage: 'Oturum bulunamadı. Lütfen giriş yapın.',
+        },
+      }));
+      showToast('error', 'Oturum bulunamadı. Lütfen giriş yapın.');
+      return;
+    }
+
+    const controller = new AbortController();
+    abortControllers.current[documentId] = controller;
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('doc_type', documentId);
+
+    // Real API upload
+    fetch(API_ENDPOINTS.upload, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          const errorText = await response.text().catch(() => '');
+          throw new Error(errorText || `HTTP ${response.status}`);
+        }
+        return response.json();
+      })
+      .then(() => {
         setUploadedFiles(prev => ({
           ...prev,
           [documentId]: {
@@ -90,17 +126,49 @@ export default function EnflasyonUploadPage() {
             progress: 100,
           },
         }));
-      } else {
+        showToast('success', `${file.name} başarıyla yüklendi`);
+      })
+      .catch((error: Error) => {
+        if (error.name === 'AbortError') return;
         setUploadedFiles(prev => ({
           ...prev,
           [documentId]: {
             ...prev[documentId],
-            progress: Math.min(progress, 99),
+            status: 'error',
+            progress: 0,
+            errorMessage: error.message || 'Yükleme başarısız',
           },
         }));
+        showToast('error', `Yükleme başarısız: ${error.message}`);
+      })
+      .finally(() => {
+        delete abortControllers.current[documentId];
+      });
+
+    // Progress estimation (since fetch doesn't support progress natively)
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress += Math.random() * 15 + 5;
+      if (progress >= 90) {
+        clearInterval(interval);
+        return;
       }
-    }, 200);
-  }, []);
+      setUploadedFiles(prev => {
+        const current = prev[documentId];
+        if (!current || current.status !== 'uploading') {
+          clearInterval(interval);
+          return prev;
+        }
+        return {
+          ...prev,
+          [documentId]: {
+            ...current,
+            progress: Math.min(progress, 90),
+          },
+        };
+      });
+    }, 300);
+  }, [showToast]);
 
   const handleDrop = useCallback((documentId: string, e: React.DragEvent) => {
     e.preventDefault();
@@ -109,6 +177,12 @@ export default function EnflasyonUploadPage() {
   }, [handleFileSelect]);
 
   const removeFile = useCallback((documentId: string) => {
+    // Abort in-progress upload if any
+    const controller = abortControllers.current[documentId];
+    if (controller) {
+      controller.abort();
+      delete abortControllers.current[documentId];
+    }
     setUploadedFiles(prev => {
       const newFiles = { ...prev };
       delete newFiles[documentId];
@@ -132,23 +206,23 @@ export default function EnflasyonUploadPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-[#F5F6F8]">
       {/* Header */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
+      <header className="bg-white border-b border-[#E5E5E5] sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-6 py-4">
           <div className="flex items-center gap-4">
             <button
               onClick={() => router.back()}
-              className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+              className="p-2 hover:bg-[#F5F6F8] rounded-lg transition-colors"
             >
-              <ArrowLeft className="w-5 h-5 text-slate-600" />
+              <ArrowLeft className="w-5 h-5 text-[#5A5A5A]" />
             </button>
             <div>
-              <h1 className="text-xl font-bold text-slate-900">
-                Enflasyon Muhasebesi Belge Yükleme
+              <h1 className="text-xl font-bold text-[#2E2E2E]">
+                Yeniden Değerleme Belge Yükleme
               </h1>
-              <p className="text-sm text-slate-500">
-                TMS 29 / VUK Mükerrer 298 Uyumu
+              <p className="text-sm text-[#969696]">
+                VUK Mükerrer 298/Ç Sürekli Yeniden Değerleme
               </p>
             </div>
           </div>
@@ -158,15 +232,15 @@ export default function EnflasyonUploadPage() {
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-6 py-8">
         {/* Info Banner */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+        <div className="bg-[#E6F9FF] border border-[#ABEBFF] rounded-lg p-4 mb-6">
           <div className="flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+            <AlertTriangle className="w-5 h-5 text-[#0049AA] flex-shrink-0 mt-0.5" />
             <div>
-              <h3 className="font-medium text-blue-800">Enflasyon Düzeltmesi Gereklilikleri</h3>
-              <p className="text-sm text-blue-700 mt-1">
-                2025 yili sonu itibariyla enflasyon muhasebesi uygulamasi zorunludur.
-                Sistem, yüklenen belgeleri analiz ederek TMS 29 ve VUK Mükerrer 298
-                kapsamında düzeltme önerileri sunacaktır.
+              <h3 className="font-medium text-[#00287F]">Yeniden Değerleme Belge Gereklilikleri</h3>
+              <p className="text-sm text-[#0049AA] mt-1">
+                VUK Mük. 298/Ç kapsamında sürekli yeniden değerleme uygulaması için
+                gerekli belgeleri yükleyin. Sistem, amortismana tabi iktisadi kıymetlerin
+                Yİ-ÜFE bazlı yeniden değerleme hesaplamalarını otomatik yapacaktır.
               </p>
             </div>
           </div>
@@ -183,8 +257,8 @@ export default function EnflasyonUploadPage() {
                 key={doc.id}
                 className={`bg-white border rounded-lg overflow-hidden transition-all ${
                   dragOver === doc.id
-                    ? 'border-blue-500 ring-2 ring-blue-200'
-                    : 'border-slate-200'
+                    ? 'border-[#0078D0] ring-2 ring-[#ABEBFF]'
+                    : 'border-[#E5E5E5]'
                 }`}
                 onDragOver={(e) => {
                   e.preventDefault();
@@ -197,54 +271,54 @@ export default function EnflasyonUploadPage() {
                   <div className="flex items-start gap-4">
                     <div className={`p-3 rounded-lg ${
                       uploaded?.status === 'success'
-                        ? 'bg-green-100'
-                        : 'bg-slate-100'
+                        ? 'bg-[#ECFDF5]'
+                        : 'bg-[#F5F6F8]'
                     }`}>
                       {uploaded?.status === 'success' ? (
-                        <CheckCircle2 className="w-6 h-6 text-green-600" />
+                        <CheckCircle2 className="w-6 h-6 text-[#00804D]" />
                       ) : (
-                        <Icon className="w-6 h-6 text-slate-600" />
+                        <Icon className="w-6 h-6 text-[#5A5A5A]" />
                       )}
                     </div>
 
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <h3 className="font-medium text-slate-900">{doc.title}</h3>
+                        <h3 className="font-medium text-[#2E2E2E]">{doc.title}</h3>
                         {doc.required ? (
-                          <span className="px-1.5 py-0.5 text-xs bg-red-100 text-red-700 rounded">
+                          <span className="px-1.5 py-0.5 text-xs bg-[#FEF2F2] text-[#BF192B] rounded">
                             Zorunlu
                           </span>
                         ) : (
-                          <span className="px-1.5 py-0.5 text-xs bg-slate-100 text-slate-600 rounded">
+                          <span className="px-1.5 py-0.5 text-xs bg-[#F5F6F8] text-[#5A5A5A] rounded">
                             Opsiyonel
                           </span>
                         )}
                       </div>
-                      <p className="text-sm text-slate-500 mt-1">{doc.description}</p>
+                      <p className="text-sm text-[#969696] mt-1">{doc.description}</p>
 
                       {uploaded ? (
                         <div className="mt-3">
                           <div className="flex items-center justify-between text-sm">
-                            <span className="text-slate-700">{uploaded.name}</span>
+                            <span className="text-[#5A5A5A]">{uploaded.name}</span>
                             <div className="flex items-center gap-2">
-                              <span className="text-slate-500">
+                              <span className="text-[#969696]">
                                 {formatFileSize(uploaded.size)}
                               </span>
                               {uploaded.status === 'success' && (
                                 <button
                                   onClick={() => removeFile(doc.id)}
-                                  className="p-1 hover:bg-slate-100 rounded"
+                                  className="p-1 hover:bg-[#F5F6F8] rounded"
                                 >
-                                  <X className="w-4 h-4 text-slate-400" />
+                                  <X className="w-4 h-4 text-[#969696]" />
                                 </button>
                               )}
                             </div>
                           </div>
                           {uploaded.status === 'uploading' && (
                             <div className="mt-2">
-                              <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                              <div className="h-1.5 bg-[#E5E5E5] rounded-full overflow-hidden">
                                 <div
-                                  className="h-full bg-blue-600 rounded-full transition-all duration-300"
+                                  className="h-full bg-[#0049AA] rounded-full transition-all duration-300"
                                   style={{ width: `${uploaded.progress}%` }}
                                 />
                               </div>
@@ -253,9 +327,9 @@ export default function EnflasyonUploadPage() {
                         </div>
                       ) : (
                         <div className="mt-3">
-                          <label className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors">
-                            <Upload className="w-5 h-5 text-slate-400" />
-                            <span className="text-sm text-slate-600">
+                          <label className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-[#B4B4B4] rounded-lg cursor-pointer hover:border-[#00B4EB] hover:bg-[#E6F9FF] transition-colors">
+                            <Upload className="w-5 h-5 text-[#969696]" />
+                            <span className="text-sm text-[#5A5A5A]">
                               Dosya seçin veya sürükleyip bırakın
                             </span>
                             <input
@@ -279,13 +353,13 @@ export default function EnflasyonUploadPage() {
         <div className="mt-8 flex items-center justify-between">
           <button
             onClick={() => router.back()}
-            className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800"
+            className="px-4 py-2 text-sm text-[#5A5A5A] hover:text-[#2E2E2E]"
           >
             Geri Dön
           </button>
 
           <div className="flex items-center gap-3">
-            <span className="text-sm text-slate-500">
+            <span className="text-sm text-[#969696]">
               {Object.values(uploadedFiles).filter(f => f.status === 'success').length} / {REQUIRED_DOCUMENTS.filter(d => d.required).length} zorunlu belge yüklendi
             </span>
             <button
@@ -293,8 +367,8 @@ export default function EnflasyonUploadPage() {
               disabled={!requiredUploaded}
               className={`px-6 py-2 text-sm font-medium rounded-lg transition-colors ${
                 requiredUploaded
-                  ? 'bg-blue-600 text-white hover:bg-blue-700'
-                  : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                  ? 'bg-[#0049AA] text-white hover:bg-[#0049AA]'
+                  : 'bg-[#E5E5E5] text-[#969696] cursor-not-allowed'
               }`}
             >
               Analizi Başlat

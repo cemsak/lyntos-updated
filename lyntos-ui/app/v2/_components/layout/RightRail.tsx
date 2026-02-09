@@ -6,16 +6,17 @@
  *
  * Dönem Özeti Paneli - Dönem durumu ve hızlı aksiyonlar
  * Backend API entegrasyonu ile gerçek veri gösterir
+ *
+ * ÖNEMLİ: Bu bileşen useDonemVerileriV2 ile entegre edildi
+ * Sol panel (DonemVerileriPanel) ile aynı veri kaynağını kullanır
  */
 
-import React from 'react';
-import Link from 'next/link';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   AlertTriangle,
   FileX,
   Lightbulb,
   FileCheck,
-  ChevronRight,
   BarChart3,
   ShieldAlert,
   FolderArchive,
@@ -23,176 +24,140 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { useDashboardScope, useScopeComplete } from '../scope/useDashboardScope';
-import { useRightRailData } from '../../_hooks/useRightRailData';
+import { useDonemVerileriV2 } from '../donem-verileri/useDonemVerileriV2';
+import { BELGE_TANIMLARI, type BelgeTipi } from '../donem-verileri/types';
+import { RailCard } from './RailCard';
+import { QuickLink } from './QuickLink';
+import { EksikBelgelerPopover } from './EksikBelgelerPopover';
+import { KanitPaketiPopover } from './KanitPaketiPopover';
 
 interface RightRailProps {
-  // Feed'den gelen veriler
-  kritikSayisi?: number;
-  yuksekSayisi?: number;
-  eksikBelgeSayisi?: number;
-  // Dinamik öneriler
-  oneriler?: string[];
-  // Kanıt paketi durumu
-  kanitPaketiDurumu?: 'hazir' | 'eksik' | 'bekliyor';
-  kanitPaketiYuzde?: number;
-  // Tamamlanan belgeler
-  tamamlananBelgeler?: string[];
+  onUploadClick?: (tip: BelgeTipi) => void;
 }
 
-interface RailCardProps {
-  title: string;
-  icon: React.ReactNode;
-  value: string | number;
-  status?: 'danger' | 'warning' | 'success' | 'neutral';
-  href?: string;
-  children?: React.ReactNode;
-}
+// Zorunlu belge listesi - UploadPreviewCards ile aynı
+const ZORUNLU_BELGELER: Array<{ tip: BelgeTipi; labelOverride?: string }> = [
+  { tip: 'mizan_ayrintili' },
+  { tip: 'e_defter_yevmiye' },
+  { tip: 'e_defter_kebir' },
+  { tip: 'beyan_kdv', labelOverride: 'Dönem Beyannameleri' },
+  { tip: 'banka_ekstresi' },
+];
 
-function RailCard({ title, icon, value, status = 'neutral', href, children }: RailCardProps) {
-  const statusColors = {
-    danger: 'border-l-red-500 bg-red-50/50',
-    warning: 'border-l-amber-500 bg-amber-50/50',
-    success: 'border-l-emerald-500 bg-emerald-50/50',
-    neutral: 'border-l-slate-300 bg-slate-50/50',
-  };
-
-  const valueColors = {
-    danger: 'text-red-600',
-    warning: 'text-amber-600',
-    success: 'text-emerald-600',
-    neutral: 'text-slate-500',
-  };
-
-  const content = (
-    <div className={`border-l-4 rounded-r-lg p-3 ${statusColors[status]} ${href ? 'hover:shadow-md transition-shadow cursor-pointer' : ''}`}>
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-slate-500">{icon}</span>
-          <span className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">{title}</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <span className={`text-lg font-bold tabular-nums ${valueColors[status]}`}>{value}</span>
-          {href && <ChevronRight className="w-4 h-4 text-slate-400" />}
-        </div>
-      </div>
-      {children && <div className="mt-2">{children}</div>}
-    </div>
-  );
-
-  if (href) {
-    return <Link href={href}>{content}</Link>;
-  }
-  return content;
-}
-
-// Hızlı işlem linki
-interface QuickLinkProps {
-  href: string;
-  icon: React.ReactNode;
-  children: React.ReactNode;
-}
-
-function QuickLink({ href, icon, children }: QuickLinkProps) {
-  return (
-    <Link
-      href={href}
-      className="flex items-center justify-between p-2 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
-    >
-      <span className="flex items-center gap-2">
-        {icon}
-        {children}
-      </span>
-      <ChevronRight className="w-3.5 h-3.5" />
-    </Link>
-  );
-}
-
-export function RightRail({
-  kritikSayisi: propKritikSayisi,
-  yuksekSayisi: propYuksekSayisi,
-  eksikBelgeSayisi: propEksikBelgeSayisi,
-  oneriler: propOneriler,
-  kanitPaketiDurumu: propKanitPaketiDurumu,
-  kanitPaketiYuzde: propKanitPaketiYuzde,
-  tamamlananBelgeler: propTamamlananBelgeler,
-}: RightRailProps) {
+export function RightRail({ onUploadClick }: RightRailProps) {
   // Get scope from context
   const { scope } = useDashboardScope();
   const scopeComplete = useScopeComplete();
 
-  // Fetch real data from backend APIs
-  const {
-    data: apiData,
-    isLoading,
-    refetch,
-  } = useRightRailData(
-    scopeComplete ? scope.period : null,
-    scope.smmm_id || 'default',
-    scope.client_id || 'default'
-  );
+  // Dönem verileri - sol panel ile aynı kaynak
+  const { data: donemData, isLoading, refetch } = useDonemVerileriV2();
 
-  // Use API data with fallback to props (for backward compatibility)
-  const kritikSayisi = apiData.criticalCount > 0 ? apiData.criticalCount : (propKritikSayisi ?? 0);
-  const yuksekSayisi = apiData.highCount > 0 ? apiData.highCount : (propYuksekSayisi ?? 0);
-  const eksikBelgeSayisi = apiData.missingDocCount > 0 ? apiData.missingDocCount : (propEksikBelgeSayisi ?? 0);
+  // Eksik belgeler popover state
+  const [showEksikPopover, setShowEksikPopover] = useState(false);
+  const eksikPopoverRef = useRef<HTMLDivElement>(null);
 
-  // Toplam acil iş sayısı
-  const acilToplam = kritikSayisi + yuksekSayisi;
+  // Kanıt paketi popover state
+  const [showKanitPopover, setShowKanitPopover] = useState(false);
+  const kanitPopoverRef = useRef<HTMLDivElement>(null);
 
-  // Kanıt paketi status - prefer API data
-  const getKanitStatus = () => {
-    // Use API evidence bundle status if available
-    if (apiData.evidenceBundleStatus !== 'not_started') {
-      switch (apiData.evidenceBundleStatus) {
-        case 'ready': return { label: 'Hazır', status: 'success' as const };
-        case 'in_progress': return { label: `%${apiData.evidenceBundlePercent}`, status: 'warning' as const };
-        case 'error': return { label: 'Hata', status: 'danger' as const };
-        default: return { label: 'Bekliyor', status: 'neutral' as const };
+  // Click outside to close popovers
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (eksikPopoverRef.current && !eksikPopoverRef.current.contains(event.target as Node)) {
+        setShowEksikPopover(false);
+      }
+      if (kanitPopoverRef.current && !kanitPopoverRef.current.contains(event.target as Node)) {
+        setShowKanitPopover(false);
       }
     }
-    // Fallback to props
-    const kanitPaketiDurumu = propKanitPaketiDurumu ?? 'bekliyor';
-    const kanitPaketiYuzde = propKanitPaketiYuzde ?? 0;
-    switch (kanitPaketiDurumu) {
-      case 'hazir': return { label: 'Hazır', status: 'success' as const };
-      case 'eksik': return { label: `%${kanitPaketiYuzde}`, status: 'warning' as const };
-      default: return { label: 'Bekliyor', status: 'neutral' as const };
+    if (showEksikPopover || showKanitPopover) {
+      document.addEventListener('mousedown', handleClickOutside);
     }
-  };
-  const kanitStatus = getKanitStatus();
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showEksikPopover, showKanitPopover]);
 
-  // Öneriler - prefer API data
-  const oneriler = apiData.topRecommendations.length > 0
-    ? apiData.topRecommendations
-    : (propOneriler ?? []);
+  // Belge durumlarını hesapla
+  const belgeDurumMap = useMemo(() => {
+    const map = new Map<BelgeTipi, 'VAR' | 'EKSIK' | 'BEKLIYOR'>();
+    for (const belge of donemData.belgeler) {
+      map.set(belge.tip, belge.durum);
+    }
+    return map;
+  }, [donemData.belgeler]);
 
-  const displayOneriler = oneriler.length > 0 ? oneriler : [
-    'Kritik riskleri inceleyin',
-    'Eksik belgeleri tamamlayin',
-    'KDV mutabakati yapin',
-  ];
+  // Zorunlu eksik belgeler listesi
+  const eksikZorunluBelgeler = useMemo(() => {
+    return ZORUNLU_BELGELER
+      .filter(({ tip }) => belgeDurumMap.get(tip) !== 'VAR')
+      .map(({ tip, labelOverride }) => ({
+        tip,
+        ad: labelOverride || BELGE_TANIMLARI[tip]?.ad || tip,
+      }));
+  }, [belgeDurumMap]);
 
-  // Tamamlanan belgeler - prefer API data
-  const tamamlananBelgeler = apiData.completedDocuments.length > 0
-    ? apiData.completedDocuments
-    : (propTamamlananBelgeler ?? []);
+  // Tamamlanan zorunlu belgeler
+  const tamamlananZorunluBelgeler = useMemo(() => {
+    return ZORUNLU_BELGELER
+      .filter(({ tip }) => belgeDurumMap.get(tip) === 'VAR')
+      .map(({ tip, labelOverride }) => ({
+        tip,
+        ad: labelOverride || BELGE_TANIMLARI[tip]?.kisaAd || BELGE_TANIMLARI[tip]?.ad || tip,
+      }));
+  }, [belgeDurumMap]);
 
-  const belgeler = tamamlananBelgeler.length > 0
-    ? tamamlananBelgeler
-    : ['Mizan', 'KDV', 'GV'];
+  // Kanıt paketi yüzdesi
+  const kanitPaketiYuzde = useMemo(() => {
+    const tamamlanan = ZORUNLU_BELGELER.filter(({ tip }) => belgeDurumMap.get(tip) === 'VAR').length;
+    return Math.round((tamamlanan / ZORUNLU_BELGELER.length) * 100);
+  }, [belgeDurumMap]);
+
+  // Kanıt paketi durumu
+  const kanitPaketiStatus = useMemo(() => {
+    if (kanitPaketiYuzde === 100) return { label: 'Hazır', status: 'success' as const };
+    if (kanitPaketiYuzde > 0) return { label: `%${kanitPaketiYuzde}`, status: 'warning' as const };
+    return { label: 'Bekliyor', status: 'neutral' as const };
+  }, [kanitPaketiYuzde]);
+
+  // Öneriler - dinamik olarak oluştur
+  const oneriler = useMemo(() => {
+    const list: string[] = [];
+
+    if (eksikZorunluBelgeler.length > 0) {
+      list.push('Eksik belgeleri tamamlayın');
+    }
+
+    if (donemData.tamamlanmaYuzdesi < 80) {
+      list.push('Veri kalitesini iyileştirin');
+    }
+
+    if (kanitPaketiYuzde < 100 && kanitPaketiYuzde > 0) {
+      list.push('Kanıt paketini tamamlayın');
+    }
+
+    if (list.length === 0) {
+      list.push('Tüm zorunlu belgeler tamam');
+    }
+
+    return list;
+  }, [eksikZorunluBelgeler.length, donemData.tamamlanmaYuzdesi, kanitPaketiYuzde]);
+
+  // Kritik ve yüksek öncelikli sayılar (şimdilik 0 - risk feed'den gelecek)
+  const kritikSayisi = 0;
+  const yuksekSayisi = 0;
+  const acilToplam = kritikSayisi + yuksekSayisi;
 
   return (
     <div className="sticky top-4 space-y-3">
       {/* Header - Kompakt */}
-      <div className="bg-gradient-to-r from-slate-800 to-slate-700 text-white rounded-lg p-3">
+      <div className="bg-gradient-to-r from-[#2E2E2E] to-[#5A5A5A] text-white rounded-lg p-3">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-sm font-bold">Dönem Durumu</h3>
-            <p className="text-[10px] text-slate-300 mt-0.5 flex items-center gap-1">
+            <p className="text-[10px] text-[#B4B4B4] mt-0.5 flex items-center gap-1">
               {isLoading ? (
                 <>
                   <RefreshCw className="w-3 h-3 animate-spin" />
-                  Yukleniyor...
+                  Yükleniyor...
                 </>
               ) : (
                 <>Kontrol Paneli</>
@@ -201,10 +166,10 @@ export function RightRail({
           </div>
           <div className="flex items-center gap-2">
             {isLoading && (
-              <RefreshCw className="w-4 h-4 animate-spin text-slate-400" />
+              <RefreshCw className="w-4 h-4 animate-spin text-[#969696]" />
             )}
             {acilToplam > 0 && (
-              <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full animate-pulse">
+              <span className="bg-[#F0282D] text-white text-xs font-bold px-2 py-1 rounded-full animate-pulse">
                 {acilToplam} Acil
               </span>
             )}
@@ -221,7 +186,7 @@ export function RightRail({
         href={kritikSayisi > 0 ? '/v2/risk' : undefined}
       >
         {kritikSayisi > 0 && (
-          <p className="text-[10px] text-slate-500">
+          <p className="text-[10px] text-[#969696]">
             VDK incelemesinde risk oluşturabilir
           </p>
         )}
@@ -236,39 +201,54 @@ export function RightRail({
           status="warning"
           href="/v2/risk"
         >
-          <p className="text-[10px] text-slate-500">
+          <p className="text-[10px] text-[#969696]">
             Bu hafta tamamlanmalı
           </p>
         </RailCard>
       )}
 
-      {/* Eksik Belgeler */}
-      <RailCard
-        title="Eksik Belgeler"
-        icon={<FileX className="w-4 h-4" />}
-        value={eksikBelgeSayisi}
-        status={eksikBelgeSayisi > 0 ? 'warning' : 'success'}
-        href={eksikBelgeSayisi > 0 ? '/v2/upload' : undefined}
-      >
-        {eksikBelgeSayisi > 0 && (
-          <p className="text-[10px] text-slate-500">
-            Analiz tamamlanamıyor
-          </p>
+      {/* Eksik Belgeler - Tıklanabilir Popover */}
+      <div className="relative" ref={eksikPopoverRef}>
+        <RailCard
+          title="Eksik Belgeler"
+          icon={<FileX className="w-4 h-4" />}
+          value={eksikZorunluBelgeler.length}
+          status={eksikZorunluBelgeler.length > 0 ? 'warning' : 'success'}
+          onClick={() => eksikZorunluBelgeler.length > 0 && setShowEksikPopover(!showEksikPopover)}
+        >
+          {eksikZorunluBelgeler.length > 0 ? (
+            <p className="text-[10px] text-[#969696]">
+              {eksikZorunluBelgeler.length} zorunlu belge eksik - tıklayın
+            </p>
+          ) : (
+            <p className="text-[10px] text-[#00804D]">
+              Tüm zorunlu belgeler yüklendi
+            </p>
+          )}
+        </RailCard>
+
+        {/* Eksik belgeler popover */}
+        {showEksikPopover && (
+          <EksikBelgelerPopover
+            belgeler={eksikZorunluBelgeler}
+            onClose={() => setShowEksikPopover(false)}
+            onUploadClick={onUploadClick}
+          />
         )}
-      </RailCard>
+      </div>
 
       {/* Önerilen Aksiyonlar - Kompakt */}
-      <div className="border border-slate-200 rounded-lg p-3 bg-white">
+      <div className="border border-[#E5E5E5] rounded-lg p-3 bg-white">
         <div className="flex items-center gap-2 mb-2">
-          <Lightbulb className="w-4 h-4 text-amber-500" />
-          <span className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">
+          <Lightbulb className="w-4 h-4 text-[#FFB114]" />
+          <span className="text-[11px] font-semibold text-[#5A5A5A] uppercase tracking-wide">
             Öneriler
           </span>
         </div>
         <ul className="space-y-1.5">
-          {displayOneriler.slice(0, 3).map((oneri, idx) => (
-            <li key={idx} className="flex items-start gap-2 text-[11px] text-slate-600">
-              <span className="w-4 h-4 rounded-full bg-slate-100 flex items-center justify-center text-[9px] text-slate-500 flex-shrink-0 mt-0.5">
+          {oneriler.slice(0, 3).map((oneri, idx) => (
+            <li key={idx} className="flex items-start gap-2 text-[11px] text-[#5A5A5A]">
+              <span className="w-4 h-4 rounded-full bg-[#F5F6F8] flex items-center justify-center text-[9px] text-[#969696] flex-shrink-0 mt-0.5">
                 {idx + 1}
               </span>
               <span className="line-clamp-2">{oneri}</span>
@@ -277,34 +257,47 @@ export function RightRail({
         </ul>
       </div>
 
-      {/* Kanıt Paketi Durumu */}
-      <RailCard
-        title="Kanıt Paketi"
-        icon={<FileCheck className="w-4 h-4" />}
-        value={kanitStatus.label}
-        status={kanitStatus.status}
-        href="/v2/reports/evidence"
-      >
-        <div className="flex flex-wrap gap-1 mt-1">
-          {belgeler.map((belge, idx) => (
-            <span
-              key={idx}
-              className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700"
-            >
-              {belge}
-            </span>
-          ))}
-          {kanitStatus.status !== 'success' && (
-            <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-400">
-              +{6 - belgeler.length} eksik
-            </span>
-          )}
-        </div>
-      </RailCard>
+      {/* Kanıt Paketi Durumu - Tıklanabilir Popover */}
+      <div className="relative" ref={kanitPopoverRef}>
+        <RailCard
+          title="Kanıt Paketi"
+          icon={<FileCheck className="w-4 h-4" />}
+          value={kanitPaketiStatus.label}
+          status={kanitPaketiStatus.status}
+          onClick={() => setShowKanitPopover(!showKanitPopover)}
+        >
+          <div className="flex flex-wrap gap-1 mt-1">
+            {tamamlananZorunluBelgeler.map((belge) => (
+              <span
+                key={belge.tip}
+                className="text-[9px] px-1.5 py-0.5 rounded bg-[#ECFDF5] text-[#00804D]"
+              >
+                {belge.ad}
+              </span>
+            ))}
+            {eksikZorunluBelgeler.length > 0 && (
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#FEF2F2] text-[#BF192B]">
+                {eksikZorunluBelgeler.length} eksik
+              </span>
+            )}
+          </div>
+        </RailCard>
+
+        {/* Kanıt paketi popover */}
+        {showKanitPopover && (
+          <KanitPaketiPopover
+            zorunluBelgeler={ZORUNLU_BELGELER}
+            belgeDurumMap={belgeDurumMap}
+            kanitPaketiYuzde={kanitPaketiYuzde}
+            onClose={() => setShowKanitPopover(false)}
+            onUploadClick={onUploadClick}
+          />
+        )}
+      </div>
 
       {/* Hızlı İşlemler - Gerçek Link'ler */}
-      <div className="border border-slate-200 rounded-lg p-3 bg-gradient-to-br from-blue-50/50 to-indigo-50/50">
-        <h4 className="text-[11px] font-semibold text-slate-700 uppercase tracking-wide mb-2">
+      <div className="border border-[#E5E5E5] rounded-lg p-3 bg-gradient-to-br from-[#E6F9FF]/50 to-[#E6F9FF]/50">
+        <h4 className="text-[11px] font-semibold text-[#5A5A5A] uppercase tracking-wide mb-2">
           Hızlı İşlemler
         </h4>
         <div className="space-y-1">

@@ -11,10 +11,10 @@ interface UploadValidationBadgeProps {
 }
 
 const RISK_LEVEL_CONFIG = {
-  LOW: { bg: 'bg-green-100', text: 'text-green-800', border: 'border-green-300', label: 'DUSUK RISK', icon: 'P' },
+  LOW: { bg: 'bg-[#ECFDF5]', text: 'text-[#005A46]', border: 'border-[#6BDB83]', label: 'DUSUK RISK', icon: 'P' },
   MEDIUM: { bg: 'bg-yellow-100', text: 'text-yellow-800', border: 'border-yellow-300', label: 'ORTA RISK', icon: '!' },
-  HIGH: { bg: 'bg-orange-100', text: 'text-orange-800', border: 'border-orange-300', label: 'YUKSEK RISK', icon: '!!' },
-  CRITICAL: { bg: 'bg-red-100', text: 'text-red-800', border: 'border-red-300', label: 'KRITIK RISK', icon: 'X' },
+  HIGH: { bg: 'bg-[#FFFBEB]', text: 'text-[#E67324]', border: 'border-[#FFE045]', label: 'YUKSEK RISK', icon: '!!' },
+  CRITICAL: { bg: 'bg-[#FEF2F2]', text: 'text-[#980F30]', border: 'border-[#FF9196]', label: 'KRITIK RISK', icon: 'X' },
 };
 
 export function UploadValidationBadge({
@@ -25,18 +25,18 @@ export function UploadValidationBadge({
 }: UploadValidationBadgeProps) {
   if (loading) {
     return (
-      <div className="flex items-center gap-2 px-3 py-2 bg-slate-100 rounded-lg animate-pulse">
-        <div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
-        <span className="text-sm text-slate-600">VDK analizi yapiliyor...</span>
+      <div className="flex items-center gap-2 px-3 py-2 bg-[#F5F6F8] rounded-lg animate-pulse">
+        <div className="w-4 h-4 border-2 border-[#969696] border-t-transparent rounded-full animate-spin" />
+        <span className="text-sm text-[#5A5A5A]">VDK analizi yapiliyor...</span>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
-        <span className="text-red-500 font-bold">X</span>
-        <span className="text-sm text-red-700">Hata: {error}</span>
+      <div className="flex items-center gap-2 px-3 py-2 bg-[#FEF2F2] border border-[#FFC7C9] rounded-lg">
+        <span className="text-[#F0282D] font-bold">X</span>
+        <span className="text-sm text-[#BF192B]">Hata: {error}</span>
       </div>
     );
   }
@@ -62,20 +62,20 @@ export function UploadValidationBadge({
           <span className={`font-semibold text-sm ${config.text}`}>
             {config.label}
           </span>
-          <div className="text-xs text-slate-600">
+          <div className="text-xs text-[#5A5A5A]">
             Skor: {assessment.total_score}/{assessment.max_score}
           </div>
         </div>
       </div>
 
       {/* Divider */}
-      <div className="h-8 w-px bg-slate-300" />
+      <div className="h-8 w-px bg-[#B4B4B4]" />
 
       {/* Status Counts */}
       <div className="flex items-center gap-3 text-xs">
         {failCount > 0 && (
-          <span className="flex items-center gap-1 text-red-700">
-            <span className="w-2 h-2 rounded-full bg-red-500" />
+          <span className="flex items-center gap-1 text-[#BF192B]">
+            <span className="w-2 h-2 rounded-full bg-[#F0282D]" />
             {failCount} risk
           </span>
         )}
@@ -91,7 +91,7 @@ export function UploadValidationBadge({
       {onViewDetails && (
         <button
           onClick={onViewDetails}
-          className="ml-auto text-xs text-blue-600 hover:text-blue-800 hover:underline"
+          className="ml-auto text-xs text-[#0049AA] hover:text-[#00287F] hover:underline"
         >
           Detaylari Gor
         </button>

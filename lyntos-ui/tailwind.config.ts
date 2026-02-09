@@ -11,64 +11,129 @@ export default {
     extend: {
       colors: {
         // ═══════════════════════════════════════════════════════════════
-        // LYNTOS BRAND COLORS
+        // LYNTOS BRAND COLORS - Kartela Uyumlu Renk Paleti
         // ═══════════════════════════════════════════════════════════════
         lyntos: {
-          // Backgrounds
-          bg: {
-            primary: '#09090b',    // zinc-950 - main background
-            secondary: '#18181b',  // zinc-900 - elevated surfaces
-            card: '#27272a',       // zinc-800 - cards
-            elevated: '#3f3f46',   // zinc-700 - hover states
-            input: '#18181b',      // zinc-900 - input fields
+          // ★ LYNTOS BLUE SCALE - ANA RENK PALETİ (Karteladan)
+          blue: {
+            900: '#00287F',   // En koyu - Header gradient start
+            700: '#0049AA',   // ★ PRIMARY - Butonlar, aktif state
+            500: '#0078D0',   // Secondary - Links, accents
+            400: '#00B4EB',   // Tertiary - Hover, highlights
+            200: '#5ED6FF',   // Light - Hover backgrounds
+            50:  '#ABEBFF',   // Lightest - Panel backgrounds
+            25:  '#E6F9FF',   // Ultra light - Subtle backgrounds
+            DEFAULT: '#0049AA',
           },
-          // Accent (amber)
-          accent: {
-            DEFAULT: '#f59e0b',    // amber-500
-            light: '#fbbf24',      // amber-400
-            dark: '#d97706',       // amber-600
-            muted: '#78350f',      // amber-900
+          // ★ TURUNCU SCALE - Warning/Orta Risk (Karteladan)
+          orange: {
+            900: '#E67324',   // Dark orange
+            700: '#FA841E',   // Orange
+            500: '#FFB114',   // ★ PRIMARY WARNING - Orta Risk
+            400: '#FFCE19',   // Yellow-orange
+            200: '#FFE045',   // Yellow
+            50:  '#FFF08C',   // Light yellow
+            25:  '#FFFBEB',   // Ultra light warning bg
+            DEFAULT: '#FFB114',
           },
-          // Risk (red)
+          // ★ YEŞİL SCALE - Success/Düşük Risk (Karteladan)
+          green: {
+            900: '#005A46',   // Dark green
+            700: '#00804D',   // Forest green
+            500: '#00A651',   // ★ PRIMARY SUCCESS - Düşük Risk
+            400: '#00CB50',   // Bright green
+            200: '#6BDB83',   // Light green
+            50:  '#AAE8B8',   // Lightest green
+            25:  '#ECFDF5',   // Ultra light success bg
+            DEFAULT: '#00A651',
+          },
+          // ★ KIRMIZI SCALE - Error/Yüksek-Kritik Risk (Karteladan)
+          red: {
+            900: '#980F30',   // ★ KRITIK RISK - Darkest red
+            700: '#BF192B',   // Deep red
+            500: '#F0282D',   // ★ YÜKSEK RISK - Primary error
+            400: '#FF555F',   // Medium red
+            200: '#FF9196',   // Light red
+            50:  '#FFC7C9',   // Lightest red
+            25:  '#FEF2F2',   // Ultra light error bg
+            DEFAULT: '#F0282D',
+          },
+          // ★ NÖTR SCALE - Griler (Karteladan)
+          neutral: {
+            900: '#000000',   // Black (nadir kullanım)
+            800: '#2E2E2E',   // ★ PRIMARY TEXT
+            600: '#5A5A5A',   // ★ SECONDARY TEXT
+            400: '#969696',   // Muted text, placeholders
+            300: '#B4B4B4',   // Disabled states
+            100: '#E5E5E5',   // ★ BORDERS
+            50:  '#F5F6F8',   // ★ PAGE BACKGROUND
+            25:  '#FAFBFC',   // Card backgrounds
+            bg: '#F5F6F8',
+            card: '#FFFFFF',
+            border: '#E5E5E5',
+            'text-dark': '#2E2E2E',
+            'text-light': '#5A5A5A',
+          },
+          // ★ RISK RENKLERI - Semantic (Karteladan)
           risk: {
-            bg: '#7f1d1d',         // red-900
-            DEFAULT: '#dc2626',    // red-600
-            light: '#fca5a5',      // red-300
-            muted: '#991b1b',      // red-800
+            critical: '#980F30',     // Kritik - Koyu kırmızı
+            high: '#F0282D',         // Yüksek - Kırmızı
+            medium: '#FFB114',       // Orta - Turuncu/Amber
+            low: '#00A651',          // Düşük - Yeşil
+            'critical-bg': '#FEF2F2',
+            'high-bg': '#FFC7C9',
+            'medium-bg': '#FFFBEB',
+            'low-bg': '#ECFDF5',
+            DEFAULT: '#F0282D',
           },
-          // Success (green)
+          // Backgrounds (light mode)
+          bg: {
+            primary: '#F5F6F8',      // Main background
+            secondary: '#FFFFFF',    // Elevated surfaces
+            card: '#FFFFFF',         // Cards
+            elevated: '#F8FAFC',     // Hover states
+            input: '#FFFFFF',        // Input fields
+          },
+          // Accent - LYNTOS Blue
+          accent: {
+            DEFAULT: '#0049AA',      // Primary Blue
+            light: '#0078D0',        // Secondary Blue
+            dark: '#00287F',         // Dark Blue
+            muted: '#E6F9FF',        // Ultra Light Blue
+          },
+          // Success (Fluent Green)
           success: {
-            bg: '#14532d',         // green-900
-            DEFAULT: '#16a34a',    // green-600
-            light: '#86efac',      // green-300
-            muted: '#166534',      // green-800
+            bg: '#ECFDF5',
+            DEFAULT: '#107C10',
+            light: '#34D399',
+            muted: '#D1FAE5',
           },
-          // Warning (amber)
+          // Warning (Fluent Amber)
           warning: {
-            bg: '#78350f',         // amber-900
-            DEFAULT: '#f59e0b',    // amber-500
-            light: '#fcd34d',      // amber-300
-            muted: '#92400e',      // amber-800
+            bg: '#FFFBEB',
+            DEFAULT: '#FFB900',
+            light: '#FCD34D',
+            muted: '#FEF3C7',
           },
-          // Info (blue)
+          // Info (LYNTOS Blue)
           info: {
-            bg: '#1e3a8a',         // blue-900
-            DEFAULT: '#3b82f6',    // blue-500
-            light: '#93c5fd',      // blue-300
-            muted: '#1e40af',      // blue-800
+            bg: '#E6F9FF',
+            DEFAULT: '#0078D0',
+            light: '#5ED6FF',
+            muted: '#ABEBFF',
           },
           // Borders
           border: {
-            DEFAULT: '#3f3f46',    // zinc-700
-            light: '#52525b',      // zinc-600
-            dark: '#27272a',       // zinc-800
+            DEFAULT: '#E1E1E1',
+            light: '#F1F5F9',
+            dark: '#CBD5E1',
           },
           // Text
           text: {
-            primary: '#fafafa',    // zinc-50
-            secondary: '#a1a1aa',  // zinc-400
-            muted: '#71717a',      // zinc-500
-            inverted: '#09090b',   // zinc-950
+            primary: '#1E1E1E',
+            secondary: '#737373',
+            muted: '#9CA3AF',
+            inverted: '#FFFFFF',
           },
           // CSS Variable-based colors (for light/dark switching)
           surface: {
@@ -100,6 +165,7 @@ export default {
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'fade-in': 'fadeIn 0.2s ease-out',
         'slide-down': 'slideDown 0.2s ease-out',
+        'slide-in-right': 'slideInRight 0.3s ease-out',
       },
       keyframes: {
         fadeIn: {
@@ -109,6 +175,10 @@ export default {
         slideDown: {
           '0%': { opacity: '0', transform: 'translateY(-4px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        slideInRight: {
+          '0%': { opacity: '0', transform: 'translateX(100%)' },
+          '100%': { opacity: '1', transform: 'translateX(0)' },
         },
       },
     },

@@ -21,7 +21,7 @@ def _make_radar_inputs_from_data(data: Dict[str, Any]) -> Dict[str, Optional[boo
     borc = _safe_num(mizan.get("borc_toplam"))
     alacak = _safe_num(mizan.get("alacak_toplam"))
 
-    # basit sinyaller (demo kuralları, uydurma yapmadan)
+    # basit sinyaller (gerçek veri analizi - sahte veri YASAK)
     kasa_nakit_anormal = None  # gerçek tespit için kasa/banka alt kırılımlar gerekir
     babs_uyumsuzluk = None     # BA/BS datası yoksa None bırak
     stok_yuksek = None

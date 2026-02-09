@@ -1,37 +1,55 @@
 'use client';
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * LYNTOS KOKPİT - AWARD-WINNING DASHBOARD UI
+ * ═══════════════════════════════════════════════════════════════════════════════
+ *
+ * iF Design + Red Dot + Webby + D&AD Ödül Kalitesinde UI/UX
+ * Glassmorphism + Micro-interactions + Premium Animations
+ *
+ * SMMM/YMM için tam teşekküllü mali analiz ve risk yönetimi platformu
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
+
 import React, { useState, Suspense, useEffect, useRef, useMemo } from 'react';
-import { ListTodo, FolderOpen, BarChart3, Radio, Layers, Calculator, AlertCircle } from 'lucide-react';
+import {
+  FolderOpen,
+  Layers,
+  CheckCircle2,
+  RefreshCw,
+} from 'lucide-react';
+import { ScopeGuide } from './_components/shared/ScopeGuide';
+import { ConnectionError } from './_components/shared/ConnectionError';
 import { useDashboardScope, useScopeComplete } from './_components/scope/useDashboardScope';
-import { Card } from './_components/shared/Card';
-import { Badge } from './_components/shared/Badge';
-import { DashboardSection, scrollToSection } from './_components/layout';
-import { RightRail } from './_components/layout/RightRail';
+// scrollToSection kaldırıldı - regwatch-section silindi
+import { DonemDurumuKanitPaketiPanel } from './_components/layout/DonemDurumuKanitPaketiPanel';
 
 // P0: Bugünkü İşlerim
-import { AksiyonKuyruguPanel, useAksiyonlar } from './_components/operations';
+import { useAksiyonlar } from './_components/operations';
 import type { AksiyonItem } from './_components/operations';
 
 // P0: Dönem Verileri
-import { DonemVerileriPanel, useDonemVerileri } from './_components/donem-verileri';
+import { DonemVerileriPanel, useDonemVerileriV2 } from './_components/donem-verileri';
 import type { BelgeTipi } from './_components/donem-verileri/types';
+
+// Risk Score Hook
+import { useDonemVdkRisks } from './_hooks/useDonemData';
+
+// Store - dönem değişikliği kontrolü için
+import { useDonemStore } from './_lib/stores/donemStore';
 
 // Upload Modal
 import { UploadModal } from './_components/modals';
 
-// P1: Risk Özeti (KPI Strip)
-import { KpiStrip } from './_components/kpi/KpiStrip';
+// SmmmRiskOzetiPanel, SirketUyumDurumuPanel kaldırıldı (Madde 7, 8)
 
-// P2: Mevzuat Takibi
-import { RegWatchPanel } from './_components/operations/RegWatchPanel';
-
-// Detaylı İnceleme (Uzman Modu) - V3: Individual panels for 3-column layout
-import { MizanOmurgaPanel } from './_components/deepdive/MizanOmurgaPanel';
-import { CrossCheckPanel } from './_components/deepdive/CrossCheckPanel';
-import { InflationPanel } from './_components/deepdive/InflationPanel';
+// Detaylı İnceleme (Uzman Modu)
 import { DeepDiveSection } from './_components/deepdive/DeepDiveSection';
 
-// P1: Vergi Analizi
-import { GeciciVergiPanel, KurumlarVergisiPanel } from './_components/vergi-analiz';
+// Detaylı Paneller - Kokpit için (Madde 6)
+import { MizanOmurgaPanel } from './_components/deepdive/MizanOmurgaPanel';
+import { CrossCheckPanel } from './_components/deepdive/CrossCheckPanel';
 
 // 5 Why Wizard
 import { FiveWhyWizard } from './_components/vdk/FiveWhyWizard';
@@ -39,9 +57,17 @@ import { FiveWhyWizard } from './_components/vdk/FiveWhyWizard';
 // Evidence Bundle
 import { EvidenceBundlePanel } from './_components/evidence';
 
-// Intelligence Feed
+// Summary panelleri kaldırıldı - Detaylı paneller kullanılıyor (Madde 6)
+
+// Dashboard V3 Components - Pencere 13 (KpiStrip ve QuickActions kaldırıldı)
+import { NotificationCenter, KontrolModal } from './_components/dashboard';
+
+// Kokpit Premium Panelleri - KpiStrip yerine
+import { KokpitSektorPanel, KokpitKontrolPanel } from './_components/kokpit';
+import { useVdkFullAnalysis } from './_hooks/useVdkFullAnalysis';
+
+// Feed - ContextRail hala kullanılıyor (modal için)
 import {
-  IntelligenceFeed,
   useUrlSync,
   useResetFeedSelection,
   ContextRail,
@@ -51,55 +77,58 @@ import {
 
 // Backend Feed Hook (Sprint 4 - Real API data)
 import { useBackendFeed } from './_hooks/useBackendFeed';
+// Link kaldırıldı - Tax kartları silindi
 
-// ═══════════════════════════════════════════════════════════════════
-// MAIN DASHBOARD CONTENT (wrapped in Suspense for useSearchParams)
-// ═══════════════════════════════════════════════════════════════════
+// =============================================================================
+// FAZA 1 TEMİZLİK: AnimatedStatCard, QuickActionCard, FeedItemCard KALDIRILDI
+// Sebep: Hero'daki bilgilerle tekrar + Sol menü tekrarı + SMMM workflow'una uygun değil
+// =============================================================================
+
+// =============================================================================
+// MAIN DASHBOARD CONTENT
+// =============================================================================
 
 function V2DashboardContent() {
-  // === ALL HOOKS AT TOP (React Hook Rules) ===
+  // === ALL HOOKS AT TOP ===
   const { scope } = useDashboardScope();
   const scopeComplete = useScopeComplete();
-  const { data: donemData, markAsUploaded } = useDonemVerileri();
-  const { aksiyonlar, loading: aksiyonlarLoading } = useAksiyonlar();
+  const { data: donemData, refetch: refetchDonemData } = useDonemVerileriV2();
+  const { aksiyonlar } = useAksiyonlar();
 
-  // URL sync for feed selection (Sprint 3.2)
+  // Risk score from backend
+  const { riskScore: backendRiskScore } = useDonemVdkRisks();
+
+  // Dönem store - dönem değişikliği kontrolü için
+  const storedMeta = useDonemStore(s => s.meta);
+
   useUrlSync();
-
-  // Reset feed selection when scope changes (Sprint 3.2.1)
   const resetFeedSelection = useResetFeedSelection();
   const prevScopeRef = useRef<string | null>(null);
 
+  // Dönem değiştiğinde store'u resetle
   useEffect(() => {
     const currentScopeKey = `${scope.client_id}:${scope.period}`;
-
-    // Skip on initial mount
     if (prevScopeRef.current === null) {
       prevScopeRef.current = currentScopeKey;
       return;
     }
-
-    // Reset feed selection when scope changes
     if (prevScopeRef.current !== currentScopeKey) {
       resetFeedSelection();
+
       prevScopeRef.current = currentScopeKey;
     }
-  }, [scope.client_id, scope.period, resetFeedSelection]);
+  }, [scope.client_id, scope.period, resetFeedSelection, storedMeta?.period]);
 
-  // ═══════════════════════════════════════════════════════════════════
-  // FEED FROM BACKEND API (Sprint 4 - Real data from /api/v2/feed)
-  // ═══════════════════════════════════════════════════════════════════
-
-  // Get resolved/snoozed IDs from store
+  // Feed data
   const resolvedIds = useFeedStore((s) => s.resolvedIds);
   const snoozedIds = useFeedStore((s) => s.snoozedIds);
 
-  // Fetch feed from backend API - REAL DATA
   const {
     items: backendFeedItems,
     loading: feedLoading,
     error: feedError,
     stats: backendFeedStats,
+    refetch: refetchFeed,
   } = useBackendFeed({
     smmm_id: scope.smmm_id || '',
     client_id: scope.client_id || '',
@@ -107,38 +136,38 @@ function V2DashboardContent() {
     enabled: scopeComplete,
   });
 
-  // Filter out resolved/snoozed items
   const feedItems = useMemo(() => {
     return filterByStatus(backendFeedItems, resolvedIds, snoozedIds);
   }, [backendFeedItems, resolvedIds, snoozedIds]);
 
-  // Get feed statistics for RightRail (from backend stats)
-  const feedStats = useMemo(() => {
-    const criticalCount = backendFeedStats.critical;
-    const highCount = backendFeedStats.high;
-    const missingDocCount = feedItems.filter(i => i.category === 'Belge').length;
-    const topRecommendations = feedItems.slice(0, 3).map(i => i.title);
+  const feedStats = useMemo(() => ({
+    criticalCount: backendFeedStats.critical,
+    highCount: backendFeedStats.high,
+    missingDocCount: feedItems.filter(i => i.category === 'Belge').length,
+    topRecommendations: feedItems.slice(0, 3).map(i => i.title),
+  }), [backendFeedStats, feedItems]);
 
-    return {
-      criticalCount,
-      highCount,
-      missingDocCount,
-      topRecommendations,
-    };
-  }, [backendFeedStats, feedItems]);
-
-  // === ALL USESTATE HOOKS ===
+  // === STATE ===
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [uploadBelgeTipi, setUploadBelgeTipi] = useState<BelgeTipi | null>(null);
+  const [uploadToast, setUploadToast] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
   const [fiveWhyOpen, setFiveWhyOpen] = useState(false);
   const [selectedAksiyon, setSelectedAksiyon] = useState<AksiyonItem | null>(null);
   const [kontrolModalOpen, setKontrolModalOpen] = useState(false);
   const [selectedKontrol, setSelectedKontrol] = useState<{ id: string; baslik: string } | null>(null);
-  const [selectedFeedItem, setSelectedFeedItem] = useState<string | null>(null);
   const [evidenceModalOpen, setEvidenceModalOpen] = useState(false);
+  const [notificationOpen, setNotificationOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
-  // Derived values
-  const kritikAksiyonlar = aksiyonlar.filter(a => a.oncelik === 'acil').length;
+  // VDK Full Analysis - Sektör, TCMB, Risk verileri
+  const {
+    data: vdkData,
+    isLoading: vdkLoading,
+  } = useVdkFullAnalysis(scope.client_id || null, scope.period || null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Handlers
   const handleUploadClick = (belgeTipi: BelgeTipi) => {
@@ -147,289 +176,142 @@ function V2DashboardContent() {
   };
 
   const handleUploadSuccess = (belgeTipi: BelgeTipi) => {
-    markAsUploaded(belgeTipi);
+    // Upload sonrası backend'den güncel veriyi çek
+    refetchDonemData();
+    // Toast göster
+    setUploadToast({ show: true, message: `${belgeTipi} başarıyla yüklendi!` });
+    setTimeout(() => setUploadToast({ show: false, message: '' }), 4000);
   };
 
-  const handleProblemCozmeClick = (aksiyon: AksiyonItem) => {
-    setSelectedAksiyon(aksiyon);
-    setFiveWhyOpen(true);
-  };
-
-  const handleFiveWhyComplete = (analysis: { kriterId: string; problem: string; whys: string[]; kokNeden: string; onerilenAksiyonlar: string[] }) => {
-    console.log('5 Why Analysis completed:', analysis);
-    // TODO: Save to backend/state
+  // FiveWhy handlers - şu an kullanılmıyor ama modal için gerekli olabilir
+  const handleFiveWhyComplete = () => {
     setFiveWhyOpen(false);
     setSelectedAksiyon(null);
   };
 
-  const handleRegWatchClick = () => {
-    scrollToSection('regwatch-section');
-  };
+  if (!mounted) return null;
 
-  const handleFeedSelect = (item: { id: string }) => {
-    setSelectedFeedItem(item.id);
-    // TODO: Open context rail with item details
-    console.log('Feed item selected:', item.id);
-  };
-
-  const handleFeedAction = (item: { id: string }, action: string) => {
-    console.log('Feed action:', item.id, action);
-    // TODO: Handle specific actions
-  };
-
-  const handleKontrolBaslat = (kontrolId: string) => {
-    const isGeciciVergi = kontrolId.startsWith('GV-');
-    const kontrolBaslik = isGeciciVergi
-      ? `Geçici Vergi Kontrolü: ${kontrolId}`
-      : `Kurumlar Vergisi Kontrolü: ${kontrolId}`;
-    setSelectedKontrol({ id: kontrolId, baslik: kontrolBaslik });
-    setKontrolModalOpen(true);
-  };
-
-  // Scope bekleniyor
+  // === SCOPE LOADING STATE ===
   if (!scopeComplete) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Card className="max-w-md">
-          <div className="text-center py-8">
-            <div className="text-4xl mb-4">📊</div>
-            <h2 className="text-lg font-semibold text-slate-900 mb-2">Dashboard v2</h2>
-            <p className="text-sm text-slate-600 mb-4">
-              Lütfen yukarıdaki seçicilerden SMMM, Mükellef ve Dönem seçin.
-            </p>
-            <Badge variant="info">Kapsam Bekleniyor</Badge>
-          </div>
-        </Card>
+      <div className="space-y-6">
+        <ScopeGuide variant="hero" description="Lütfen üstteki menülerden mükellef ve dönem seçin." />
       </div>
     );
   }
 
-  // Feed loading state
+  // === FEED LOADING STATE ===
   if (feedLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Card className="max-w-md">
-          <div className="text-center py-8">
-            <div className="text-4xl mb-4 animate-spin">⏳</div>
-            <h2 className="text-lg font-semibold text-slate-900 mb-2">Veriler Yükleniyor</h2>
-            <p className="text-sm text-slate-600">
-              {scope.client_id} - {scope.period} verileri backend API'den alınıyor...
-            </p>
+      <div className="space-y-6">
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#F5F6F8] to-[#F5F6F8] p-8 text-center py-16">
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-[#0049AA] to-[#0078D0] flex items-center justify-center shadow-xl mb-6 animate-pulse">
+            <RefreshCw className="w-8 h-8 text-white animate-spin" />
           </div>
-        </Card>
+          <h2 className="text-xl font-bold text-[#2E2E2E] mb-2">Veriler Yükleniyor</h2>
+          <p className="text-[#969696]">{scope.client_id} - {scope.period} verileri analiz ediliyor...</p>
+        </div>
       </div>
     );
   }
 
-  // Feed error state (NO MOCK FALLBACK)
+  // === FEED ERROR STATE ===
   if (feedError) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Card className="max-w-md">
-          <div className="text-center py-8">
-            <div className="text-4xl mb-4">❌</div>
-            <h2 className="text-lg font-semibold text-red-600 mb-2">Veri Yüklenirken Hata</h2>
-            <p className="text-sm text-slate-600 mb-4">{feedError}</p>
-            <p className="text-xs text-slate-400">Backend çalışıyor mu? http://localhost:8000</p>
-          </div>
-        </Card>
+      <div className="space-y-6">
+        <ConnectionError variant="banner" context="Dashboard verileri" onRetry={refetchFeed} />
       </div>
     );
   }
 
+  // === MAIN DASHBOARD ===
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_400px]">
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* MAIN CONTENT - COL-SPAN-8 */}
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      <div className="min-w-0 space-y-6">
-        {/* CONTEXT BAR */}
-        <Card>
-          <div className="flex flex-wrap items-center gap-4">
-            <Badge variant="success">Dönem Kapsamı Hazır</Badge>
-            <span className="text-sm text-slate-600">
-              {scope.smmm_id} / {scope.client_id} / {scope.period}
-            </span>
-            {scope.advanced && <Badge variant="warning">Uzman Modu</Badge>}
-          </div>
-        </Card>
+    <div className="space-y-6 pb-8">
+      {/* ═══════════════════════════════════════════════════════════════════════
+          SEKTÖR + TCMB GÖSTERGELER PANELİ
+          VDK Risk sayfasından taşındı - Premium UI
+          ═══════════════════════════════════════════════════════════════════════ */}
+      <KokpitSektorPanel
+        sektorBilgisi={vdkData?.sektor_bilgisi}
+        tcmbVerileri={vdkData?.tcmb_verileri}
+        isLoading={vdkLoading}
+      />
 
-        {/* ═══════════════════════════════════════════════════════════════════ */}
-        {/* BÖLÜM 1: AKILLI AKIŞ (Intelligence Feed) - Anayasa Compliance */}
-        {/* ═══════════════════════════════════════════════════════════════════ */}
-        <DashboardSection
-          id="feed-section"
-          title="Akıllı Akış"
-          icon={<AlertCircle className="w-6 h-6 text-blue-600" />}
-          variant="default"
-          badge={
-            (feedStats.criticalCount + feedStats.highCount) > 0 && (
-              <span className="bg-red-100 text-red-700 text-sm font-semibold px-4 py-1.5 rounded-full">
-                {feedStats.criticalCount + feedStats.highCount} Acil
-              </span>
-            )
-          }
-        >
-          <IntelligenceFeed
-            items={feedItems}
-            onSelectItem={handleFeedSelect}
-            onAction={handleFeedAction}
-            selectedItemId={selectedFeedItem || undefined}
-            maxVisible={5}
-            showFilters={true}
-          />
-        </DashboardSection>
+      {/* ═══════════════════════════════════════════════════════════════════════
+          ANA KONTROL PANELİ
+          Risk Skoru + İnceleme Riski + Bugün Yapılacaklar
+          ═══════════════════════════════════════════════════════════════════════ */}
+      <KokpitKontrolPanel
+        score={vdkData?.kurgan_risk?.score || 0}
+        riskLevel={vdkData?.kurgan_risk?.risk_level || 'Hesaplanıyor'}
+        riskSummary={vdkData?.risk_summary}
+        urgentActions={vdkData?.urgent_actions}
+        isLoading={vdkLoading}
+        noData={vdkData?.status === 'no_data'}
+      />
 
-        {/* Eski Aksiyon Kuyruğu (advanced mode'da göster) */}
-        {scope.advanced && (
-          <DashboardSection
-            id="aksiyonlar-section"
-            title="Detaylı İş Listesi"
-            icon={<AlertCircle className="w-6 h-6 text-slate-500" />}
-            variant="default"
-            collapsible={true}
-            defaultCollapsed={true}
-          >
-            <AksiyonKuyruguPanel
-              aksiyonlar={aksiyonlar}
-              onProblemCozmeClick={handleProblemCozmeClick}
-            />
-          </DashboardSection>
-        )}
-
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* BÖLÜM 2: DÖNEM VERİLERİ (P0) - KOMPAKT GRID */}
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      <DashboardSection
-        id="donem-verileri-section"
-        title="Dönem Verileri"
-        icon={<FolderOpen className="w-5 h-5 text-green-600" />}
-      >
-        <DonemVerileriPanel onUploadClick={handleUploadClick} />
-      </DashboardSection>
-
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* BÖLÜM 3: RİSK ÖZETİ - KPI Strip (P1) */}
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      <DashboardSection
-        id="risk-ozeti-section"
-        title="Risk Özeti"
-        icon={<BarChart3 className="w-5 h-5 text-blue-600" />}
-      >
-        <KpiStrip onRegWatchClick={handleRegWatchClick} />
-      </DashboardSection>
-
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* BÖLÜM 4: VERGİ ANALİZİ (P1) - White Card Style */}
-      {/* ═══════════════════════════════════════════════════════════════════ */}
+      {/* ═══════════════════════════════════════════════════════════════════════
+          MAIN CONTENT - SMMM/YMM "Koruyucu Melek" Layout
+          ═══════════════════════════════════════════════════════════════════════ */}
       <div className="space-y-6">
-        {/* Geçici Vergi - White Card */}
-        <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
-                <span className="text-xl">📊</span>
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-slate-800">Geçici Vergi Analizi</h2>
-                <p className="text-slate-500 text-sm">{scope.period} - 12 Kritik Kontrol</p>
+          {/* Dönem Verileri */}
+          <div className="bg-white rounded-2xl border border-[#E5E5E5] shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-[#E5E5E5] bg-gradient-to-r from-[#F5F6F8] to-white">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#00A651] to-[#00A651] flex items-center justify-center">
+                  <FolderOpen className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-[#2E2E2E]">Dönem Verileri</h3>
+                  <p className="text-sm text-[#969696]">Yüklenen belgeler ve durumları</p>
+                </div>
               </div>
             </div>
+            <div className="p-4">
+              <DonemVerileriPanel onUploadClick={handleUploadClick} />
+            </div>
           </div>
-          <GeciciVergiPanel donem={scope.period} onKontrolClick={handleKontrolBaslat} />
-        </div>
 
-        {/* Kurumlar Vergisi */}
-        <KurumlarVergisiPanel yil={2025} onKontrolClick={handleKontrolBaslat} />
+          {/* ═══════════════════════════════════════════════════════════════════════
+              DETAYLI ANALİZ PANELLERİ (Madde 6)
+              3'lü özet grid kaldırıldı - Detaylı paneller geri getirildi
+              SMMM/YMM için aksiyonabilir, kapsamlı görünümler
+              ═══════════════════════════════════════════════════════════════════════ */}
+          <MizanOmurgaPanel />
+          <CrossCheckPanel />
+
+          {/* SmmmRiskOzetiPanel kaldırıldı - KpiStrip ile tekrar + YasalSureler bug (Madde 7) */}
+
+          {/* SirketUyumDurumuPanel kokpitten kaldırıldı - /v2/corporate'a taşındı (Madde 8) */}
+
+          {/* Uzman Modu - Deep Dive */}
+          {scope.advanced && (
+            <div className="bg-white rounded-2xl border border-[#E5E5E5] shadow-sm overflow-hidden">
+              <div className="px-6 py-4 border-b border-[#E5E5E5] bg-gradient-to-r from-[#FFFBEB] to-white">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FFB114] to-[#FFB114] flex items-center justify-center">
+                    <Layers className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-[#2E2E2E]">Detaylı İnceleme (Uzman Modu)</h3>
+                    <p className="text-sm text-[#969696]">İleri düzey analiz araçları</p>
+                  </div>
+                </div>
+              </div>
+              <div className="p-4">
+                <DeepDiveSection />
+              </div>
+            </div>
+          )}
+
+          {/* Dönem Durumu ve Kanıt Paketi - Birleşik Panel */}
+          <DonemDurumuKanitPaketiPanel
+            onUploadClick={handleUploadClick}
+            onEvidenceClick={() => setEvidenceModalOpen(true)}
+          />
       </div>
 
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* BÖLÜM 5: V3 3-COLUMN BOTTOM LAYOUT - KOMPAKT */}
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      <div className="flex flex-col gap-6" id="bottom-section">
-        {/* Column 1: Detaylı İnceleme */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-slate-50">
-            <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-              <span>🔍</span> Detaylı İnceleme
-            </h2>
-          </div>
-          <div className="p-4 space-y-3">
-            <MizanOmurgaPanel />
-            <CrossCheckPanel />
-          </div>
-        </div>
-
-        {/* Column 2: Enflasyon Muhasebesi */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-slate-50">
-            <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-              <span>📈</span> Enflasyon Muhasebesi
-            </h2>
-          </div>
-          <div className="p-4">
-            <InflationPanel />
-          </div>
-        </div>
-
-        {/* Column 3: Mevzuat Takibi */}
-        <div id="regwatch-section" className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-slate-50">
-            <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-              <span>📡</span> Mevzuat Takibi
-            </h2>
-          </div>
-          <div className="p-4">
-            <RegWatchPanel />
-          </div>
-        </div>
-      </div>
-
-        {/* ═══════════════════════════════════════════════════════════════════ */}
-        {/* BÖLÜM 6: DETAYLI İNCELEME - Uzman Modu (Full panels when advanced mode) */}
-        {/* ═══════════════════════════════════════════════════════════════════ */}
-        {scope.advanced && (
-          <DashboardSection
-            id="deep-dive-section"
-            title="Tüm Detaylı İncelemeler"
-            icon={<Layers className="w-5 h-5 text-slate-600" />}
-            collapsible={true}
-            defaultCollapsed={false}
-          >
-            <DeepDiveSection />
-          </DashboardSection>
-        )}
-
-        {/* ═══════════════════════════════════════════════════════════════════ */}
-        {/* KANIT PAKETİ BUTONU */}
-        {/* ═══════════════════════════════════════════════════════════════════ */}
-        <div className="mt-6 flex justify-end">
-          <button
-            onClick={() => setEvidenceModalOpen(true)}
-            className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-medium hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
-          >
-            <span>📋</span>
-            Kanıt Paketi Oluştur
-          </button>
-        </div>
-      </div>
-
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* RIGHT RAIL - COL-SPAN-4 (Sticky Sidebar) */}
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      <div className="hidden lg:block">
-        <RightRail
-          kritikSayisi={feedStats.criticalCount}
-          yuksekSayisi={feedStats.highCount}
-          eksikBelgeSayisi={feedStats.missingDocCount}
-          oneriler={feedStats.topRecommendations}
-          kanitPaketiDurumu={donemData.tamamlanmaYuzdesi >= 80 ? 'hazir' : donemData.tamamlanmaYuzdesi >= 50 ? 'eksik' : 'bekliyor'}
-          kanitPaketiYuzde={donemData.tamamlanmaYuzdesi}
-          tamamlananBelgeler={['Mizan', 'KDV Beyanı']}
-        />
-      </div>
-
-      {/* Upload Modal */}
+      {/* === MODALS === */}
       <UploadModal
         isOpen={uploadModalOpen}
         onClose={() => setUploadModalOpen(false)}
@@ -437,7 +319,6 @@ function V2DashboardContent() {
         onSuccess={handleUploadSuccess}
       />
 
-      {/* 5 Why Wizard */}
       {selectedAksiyon && (
         <FiveWhyWizard
           isOpen={fiveWhyOpen}
@@ -452,49 +333,19 @@ function V2DashboardContent() {
         />
       )}
 
-      {/* Vergi Kontrol Modal */}
-      {kontrolModalOpen && selectedKontrol && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-xl p-6 max-w-lg w-full mx-4 shadow-2xl">
-            <h2 className="text-xl font-bold text-slate-800 mb-2">{selectedKontrol.baslik}</h2>
-            <p className="text-slate-600 mb-6">
-              Bu kontrol için gerekli veriler analiz edilecek. Devam etmek istiyor musunuz?
-            </p>
-            <div className="bg-slate-50 rounded-lg p-4 mb-6">
-              <p className="text-sm text-slate-600">
-                <strong>Kontrol ID:</strong> {selectedKontrol.id}
-              </p>
-              <p className="text-sm text-slate-600 mt-1">
-                <strong>Mükellef:</strong> {scope.client_id}
-              </p>
-              <p className="text-sm text-slate-600 mt-1">
-                <strong>Dönem:</strong> {scope.period}
-              </p>
-            </div>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setKontrolModalOpen(false)}
-                className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
-              >
-                İptal
-              </button>
-              <button
-                onClick={() => {
-                  console.log('Kontrol başlatılıyor:', selectedKontrol.id);
-                  // TODO: Start actual kontrol logic
-                  setKontrolModalOpen(false);
-                  setSelectedKontrol(null);
-                }}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Kontrolü Başlat
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Kontrol Modal - Extracted to separate component */}
+      <KontrolModal
+        isOpen={kontrolModalOpen && !!selectedKontrol}
+        onClose={() => {
+          setKontrolModalOpen(false);
+          setSelectedKontrol(null);
+        }}
+        kontrolId={selectedKontrol?.id || ''}
+        kontrolBaslik={selectedKontrol?.baslik || ''}
+        clientId={scope.client_id}
+        period={scope.period}
+      />
 
-      {/* Evidence Bundle Modal */}
       {evidenceModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-2xl max-h-[90vh] overflow-auto">
@@ -503,12 +354,25 @@ function V2DashboardContent() {
         </div>
       )}
 
-      {/* Context Rail - Detail Panel (Sprint 3.3 + 4.0) */}
+      {/* Notification Center - Pencere 13.3 */}
+      <NotificationCenter
+        isOpen={notificationOpen}
+        onClose={() => setNotificationOpen(false)}
+      />
+
+      {/* Upload Success Toast */}
+      {uploadToast.show && (
+        <div className="fixed bottom-6 right-6 z-50 animate-slide-up">
+          <div className="bg-gradient-to-r from-[#00A651] to-[#00A651] text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3">
+            <CheckCircle2 className="w-6 h-6" />
+            <span className="font-medium">{uploadToast.message}</span>
+          </div>
+        </div>
+      )}
+
       <ContextRail
         items={feedItems}
         onAction={(item, actionId) => {
-          console.log('Context Rail action:', actionId, item.id);
-          // Handle navigate actions
           if (item.actions) {
             const action = item.actions.find(a => a.id === actionId);
             if (action?.kind === 'navigate' && action.href) {
@@ -521,23 +385,27 @@ function V2DashboardContent() {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// DASHBOARD SKELETON (Loading state)
-// ═══════════════════════════════════════════════════════════════════
+// =============================================================================
+// SKELETON
+// =============================================================================
 
 function DashboardSkeleton() {
   return (
     <div className="animate-pulse space-y-6">
-      <div className="h-12 bg-slate-200 rounded-lg" />
-      <div className="h-64 bg-slate-200 rounded-lg" />
-      <div className="h-32 bg-slate-200 rounded-lg" />
+      <div className="h-48 bg-[#E5E5E5] rounded-3xl" />
+      <div className="grid grid-cols-4 gap-4">
+        {[1, 2, 3, 4].map(i => (
+          <div key={i} className="h-32 bg-[#E5E5E5] rounded-2xl" />
+        ))}
+      </div>
+      <div className="h-64 bg-[#E5E5E5] rounded-2xl" />
     </div>
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// MAIN EXPORT (Suspense wrapper for useSearchParams)
-// ═══════════════════════════════════════════════════════════════════
+// =============================================================================
+// MAIN EXPORT
+// =============================================================================
 
 export default function V2DashboardPage() {
   return (

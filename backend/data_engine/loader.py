@@ -73,12 +73,26 @@ def load_all_for_client_period(
         period,
     )
 
-    mizan = parse_mizan_for_client(
+    # Mizan parser artık validation ile Dict döndürüyor
+    mizan_result = parse_mizan_for_client(
         base_dir,
         smmm_id,
         client_id,
         period,
     )
+    # Eski kodla uyumluluk için rows listesini çıkar, validation bilgisini meta olarak ekle
+    if isinstance(mizan_result, dict):
+        mizan = mizan_result.get("rows", [])
+        # Her row'a validation warning'lerini ekle
+        if mizan_result.get("validation", {}).get("warnings"):
+            for row in mizan:
+                if "warnings" not in row:
+                    row["warnings"] = []
+                # Sadece ilk row'a ekle (özet olarak)
+                if mizan and row == mizan[0]:
+                    row["_validation"] = mizan_result.get("validation")
+    else:
+        mizan = mizan_result
 
     banka = parse_banka_for_client(
         base_dir,

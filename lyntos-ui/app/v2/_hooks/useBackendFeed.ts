@@ -9,8 +9,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getAuthToken } from '../_lib/auth';
 import type { FeedItem, FeedScope, FeedImpact, EvidenceRef, FeedAction, EvidenceKind } from '../_components/feed/types';
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+import { API_BASE_URL } from '../_lib/config/api';
 
 // Backend response types
 interface BackendEvidenceRef {
@@ -179,16 +178,13 @@ export function useBackendFeed({
 
   const fetchFeed = useCallback(async () => {
     if (!enabled || !smmm_id || !client_id || !period) {
-      console.log('[useBackendFeed] Skipping fetch - missing params or disabled');
       return;
     }
 
     setLoading(true);
     setError(null);
 
-    const url = `${API_BASE}/api/v2/feed/${encodeURIComponent(period)}?smmm_id=${encodeURIComponent(smmm_id)}&client_id=${encodeURIComponent(client_id)}`;
-
-    console.log('[useBackendFeed] Fetching:', url);
+    const url = `${API_BASE_URL}/api/v2/feed/${encodeURIComponent(period)}?smmm_id=${encodeURIComponent(smmm_id)}&client_id=${encodeURIComponent(client_id)}`;
 
     try {
       const token = getAuthToken();
@@ -213,12 +209,6 @@ export function useBackendFeed({
       }
 
       const data: BackendFeedResponse = await response.json();
-
-      console.log('[useBackendFeed] Success:', {
-        period,
-        itemCount: data.data?.length || 0,
-        warnings: data.warnings,
-      });
 
       // Map backend response to frontend FeedItem format
       const mappedItems: FeedItem[] = (data.data || []).map(mapFeedItem);

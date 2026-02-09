@@ -13,6 +13,10 @@ import os
 import sys
 import logging
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Load .env file BEFORE reading env vars
+load_dotenv(Path(__file__).parent.parent / ".env")
 
 # Add parent to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -26,6 +30,7 @@ ALGORITHM = "HS256"
 
 # Dev auth bypass - only enabled when LYNTOS_DEV_AUTH_BYPASS=1
 DEV_AUTH_BYPASS = os.getenv("LYNTOS_DEV_AUTH_BYPASS", "0") == "1"
+logger.info(f"[AUTH] Dev auth bypass: {DEV_AUTH_BYPASS}")
 DEV_TOKEN = "DEV_HKOZKAN"
 
 
