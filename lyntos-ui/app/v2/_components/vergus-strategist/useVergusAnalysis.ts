@@ -8,7 +8,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { getAuthToken } from '../../_lib/auth';
+import { api } from '../../_lib/api/client';
 import type { TaxAnalysisResult, FinancialDataInput } from './types';
 
 interface UseVergusAnalysisOptions {
@@ -30,27 +30,18 @@ export function useVergusAnalysis({
       setError(null);
 
       try {
-        const response = await fetch('/api/v1/vergus/analyze', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: getAuthToken() || '',
-          },
-          body: JSON.stringify({
-            client_id: clientId,
-            period,
-            financial_data: financialData || null,
-          }),
+        const res = await api.post<TaxAnalysisResult>('/api/v1/vergus/analyze', {
+          client_id: clientId,
+          period,
+          financial_data: financialData || null,
         });
 
-        if (!response.ok) {
-          const err = await response.json();
-          throw new Error(err.detail || 'Analiz basarisiz');
+        if (!res.ok || !res.data) {
+          throw new Error(res.error || 'Analiz basarisiz');
         }
 
-        const data: TaxAnalysisResult = await response.json();
-        setAnalysis(data);
-        return data;
+        setAnalysis(res.data);
+        return res.data;
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Bir hata olustu';
         setError(message);
@@ -67,21 +58,16 @@ export function useVergusAnalysis({
     setError(null);
 
     try {
-      const response = await fetch(
-        `/api/v1/vergus/quick-check/${clientId}?period=${period}`,
-        {
-          headers: {
-            Authorization: getAuthToken() || '',
-          },
-        }
+      const res = await api.get<unknown>(
+        `/api/v1/vergus/quick-check/${clientId}`,
+        { params: { period } }
       );
 
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.detail || 'Kontrol basarisiz');
+      if (!res.ok || !res.data) {
+        throw new Error(res.error || 'Kontrol basarisiz');
       }
 
-      return await response.json();
+      return res.data;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Bir hata olustu';
       setError(message);

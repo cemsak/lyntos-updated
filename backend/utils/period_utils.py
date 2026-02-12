@@ -13,6 +13,8 @@ from dataclasses import dataclass
 from datetime import date
 from typing import List, Optional
 
+from fastapi import Query
+
 
 # Quarter sınırları
 QUARTER_BOUNDS = {
@@ -29,6 +31,40 @@ class PeriodValidation:
     status: str  # 'ok', 'mismatch', 'unknown'
     detected_period: Optional[str] = None
     detail: Optional[str] = None
+
+
+def normalize_period_db(period: str) -> str:
+    """
+    Her formattan DB storage formatina donustur: 2025_Q1 (alt cizgi, buyuk harf).
+
+    Desteklenen: '2025-Q1', '2025_Q1', '2025-q1', '2025Q1'
+    Cikti: '2025_Q1'
+    """
+    if not period:
+        raise ValueError("Period bos olamaz")
+    p = period.strip().upper().replace('-', '_')
+    if re.match(r'^\d{4}Q[1-4]$', p):
+        p = f"{p[:4]}_{p[4:]}"
+    if not re.match(r'^\d{4}_Q[1-4]$', p):
+        raise ValueError(f"Gecersiz donem formati: '{period}'. Beklenen: YYYY-QN (orn: 2025-Q1)")
+    return p
+
+
+# ── FastAPI Dependencies ──────────────────────────────────────────────────────
+
+def get_period_db(period_id: str = Query(..., description="Donem ID (orn: 2025-Q1)")) -> str:
+    """FastAPI Depends: query param 'period_id' -> DB format (2025_Q1)."""
+    return normalize_period_db(period_id)
+
+
+def get_period_db_from_period(period: str = Query(..., description="Donem (orn: 2025-Q1)")) -> str:
+    """FastAPI Depends: query param 'period' -> DB format (2025_Q1)."""
+    return normalize_period_db(period)
+
+
+def get_period_db_optional(period_id: str = Query(None, description="Donem ID (opsiyonel)")) -> Optional[str]:
+    """FastAPI Depends: optional query param 'period_id' -> DB format."""
+    return normalize_period_db(period_id) if period_id else None
 
 
 def normalize_period(period: str) -> str:

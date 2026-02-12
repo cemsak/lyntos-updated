@@ -16,7 +16,7 @@ import {
   Users,
   Bell
 } from 'lucide-react';
-import { getAuthToken } from '../../_lib/auth';
+import { api } from '../../_lib/api/client';
 import { API_ENDPOINTS } from '../../_lib/config/api';
 import { useDashboardScope } from '../../_components/scope/ScopeProvider';
 
@@ -106,28 +106,17 @@ export default function RegWatchDetailPage() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const token = getAuthToken();
-        if (!token) {
-          console.error('[RegWatch] No auth token found');
-          setItem(null);
-          setLoading(false);
-          return;
-        }
+        // Fetch from API using centralized client
+        const result = await api.get<unknown>(
+          API_ENDPOINTS.regwatch.changes,
+          { params: { id: regId } }
+        );
 
-        // Try to fetch from API
-        const response = await fetch(`${API_ENDPOINTS.regwatch.changes}?id=${regId}`, {
-          headers: {
-            'Authorization': token,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (response.ok) {
-          const apiData = await response.json();
-          // Handle both single item and array response
-          const eventData = Array.isArray(apiData.data)
-            ? apiData.data.find((e: ApiRegWatchEvent) => String(e.id) === regId)
-            : apiData.data;
+        if (result.ok && result.data) {
+          // normalizeResponse extracts the `data` field from envelope
+          const eventData = Array.isArray(result.data)
+            ? (result.data as ApiRegWatchEvent[]).find((e) => String(e.id) === regId)
+            : result.data as ApiRegWatchEvent;
 
           if (eventData) {
             const data = mapApiEventToItem(eventData);
@@ -151,7 +140,7 @@ export default function RegWatchDetailPage() {
           }
         } else {
           // API failed - show not found
-          console.error('[RegWatch] API fetch failed:', response.status);
+          console.error('[RegWatch] API fetch failed:', result.status, result.error);
           setItem(null);
         }
       } catch (err) {

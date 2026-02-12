@@ -8,6 +8,7 @@
  */
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useDashboardScope, useScopeComplete } from '../scope/useDashboardScope';
+import { api } from '../../_lib/api/client';
 import { getAuthToken } from '../../_lib/auth';
 import { ENDPOINTS, buildScopedUrl } from '../contracts/endpoints';
 import type { AksiyonItem, AksiyonOncelik, AksiyonKaynak, AksiyonTipi } from './types';
@@ -38,17 +39,14 @@ interface ApiTask {
   kurgan_impact?: string;
 }
 
-interface ApiResponse {
-  data?: {
-    tasks?: ApiTask[];
-    summary?: {
-      total_tasks: number;
-      high_priority: number;
-      medium_priority: number;
-      low_priority: number;
-    };
+interface ApiResponseData {
+  tasks?: ApiTask[];
+  summary?: {
+    total_tasks: number;
+    high_priority: number;
+    medium_priority: number;
+    low_priority: number;
   };
-  errors?: string[];
 }
 
 function mapPriority(priority: string): AksiyonOncelik {
@@ -223,25 +221,15 @@ export function useAksiyonlar(): UseAksiyonlarResult {
         return;
       }
 
-      const response = await fetch(url, {
+      const result = await api.get<ApiResponseData>(url, {
         signal: controller.signal,
-        headers: {
-          'Authorization': token,
-          'Content-Type': 'application/json',
-        },
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+      if (!result.ok || !result.data) {
+        throw new Error(result.error || 'Aksiyon verileri yuklenemedi');
       }
 
-      const data: ApiResponse = await response.json();
-
-      if (data.errors && data.errors.length > 0) {
-        throw new Error(data.errors.join(', '));
-      }
-
-      const tasks = data.data?.tasks || [];
+      const tasks = result.data.tasks || [];
 
       if (tasks.length === 0) {
         // No tasks from API, return empty array (not mock)

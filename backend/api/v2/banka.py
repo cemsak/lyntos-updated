@@ -1,11 +1,9 @@
 """
 LYNTOS API v2 - Banka Hareketleri Endpoint
 bank_transactions tablosundan veri çeker.
-
-NO AUTH REQUIRED - Frontend'den doğrudan erişilebilir.
 """
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import BaseModel
 from typing import List, Optional
 import logging
@@ -14,7 +12,9 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
+from middleware.auth import verify_token, check_client_access
 from database.db import get_connection
+from utils.period_utils import get_period_db
 
 logger = logging.getLogger(__name__)
 
@@ -57,8 +57,8 @@ class IslemlerResponse(BaseModel):
 @router.get("/hesaplar", response_model=HesaplarResponse)
 async def get_banka_hesaplar(
     client_id: str = Query(..., description="Müşteri ID"),
-    period_id: str = Query(..., description="Dönem ID (örn: 2025-Q1)"),
-    tenant_id: str = Query("default", description="Tenant ID")
+    period_id: str = Depends(get_period_db),
+    user: dict = Depends(verify_token),
 ):
     """
     Banka hesaplarının listesini getir.
@@ -66,6 +66,7 @@ async def get_banka_hesaplar(
     MAXİM DÜZELTME: Banka adı NULL ise Mizan'dan hesap adını çek.
     Mükellefin aynı bankada birden fazla hesabı olabilir (döviz, yatırım, kredi, POS vb.)
     """
+    await check_client_access(user, client_id)
     try:
         with get_connection() as conn:
             cursor = conn.cursor()
@@ -133,16 +134,17 @@ async def get_banka_hesaplar(
 @router.get("/islemler", response_model=IslemlerResponse)
 async def get_banka_islemler(
     client_id: str = Query(..., description="Müşteri ID"),
-    period_id: str = Query(..., description="Dönem ID"),
+    period_id: str = Depends(get_period_db),
     banka: Optional[str] = Query(None, description="Banka adı filtresi"),
     hesap_kodu: Optional[str] = Query(None, description="Hesap kodu filtresi"),
     page: int = Query(1, ge=1, description="Sayfa numarası"),
     page_size: int = Query(50, ge=1, le=500, description="Sayfa başına kayıt"),
-    tenant_id: str = Query("default", description="Tenant ID")
+    user: dict = Depends(verify_token),
 ):
     """
     Banka işlemlerini getir.
     """
+    await check_client_access(user, client_id)
     try:
         with get_connection() as conn:
             cursor = conn.cursor()

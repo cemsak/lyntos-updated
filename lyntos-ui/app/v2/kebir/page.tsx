@@ -21,8 +21,7 @@ import { useDashboardScope } from '../_components/scope/ScopeProvider';
 import { ScopeGuide } from '../_components/shared/ScopeGuide';
 import { exportToCsv } from '../_lib/exportCsv';
 import { DataFreshness } from '../_components/shared/DataFreshness';
-import { API_BASE_URL } from '../_lib/config/api';
-import { getAuthToken } from '../_lib/auth';
+import { api } from '../_lib/api/client';
 import { formatCurrency, formatDate, formatPeriod } from '../_lib/format';
 
 interface HesapOzet {
@@ -86,16 +85,11 @@ export default function KebirPage() {
         params.append('search', searchTerm);
       }
 
-      const token = getAuthToken();
-      const response = await fetch(`${API_BASE_URL}/api/v2/kebir/hesap-listesi?${params}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const { data } = await api.get<{ hesaplar: HesapOzet[] }>(
+        `/api/v2/kebir/hesap-listesi?${params}`
+      );
 
-      if (response.ok) {
-        const data = await response.json();
+      if (data) {
         setHesaplar(data.hesaplar || []);
         setLastFetchedAt(new Date().toISOString());
       }
@@ -118,19 +112,11 @@ export default function KebirPage() {
         page_size: '100',
       });
 
-      const token = getAuthToken();
-      const response = await fetch(
-        `${API_BASE_URL}/api/v2/kebir/hesap/${encodeURIComponent(hesapKodu)}?${params}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        }
+      const { data } = await api.get<{ entries: KebirEntry[]; pages: number }>(
+        `/api/v2/kebir/hesap/${encodeURIComponent(hesapKodu)}?${params}`
       );
 
-      if (response.ok) {
-        const data = await response.json();
+      if (data) {
         setHareketler(data.entries || []);
         setTotalPages(data.pages || 1);
       }

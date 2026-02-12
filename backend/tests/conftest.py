@@ -440,18 +440,42 @@ def dossier_service(tmp_path):
 
 @pytest.fixture
 def test_client():
-    """FastAPI test client"""
+    """FastAPI test client with auth dependency override"""
     from fastapi.testclient import TestClient
     from main import app
-    return TestClient(app)
+    from middleware.auth import verify_token
+
+    async def mock_verify_token():
+        return {
+            "id": "TEST-ADMIN",
+            "name": "Test Admin",
+            "email": "test@lyntos.dev",
+            "role": "admin",
+            "smmm_id": "TEST-ADMIN"
+        }
+
+    app.dependency_overrides[verify_token] = mock_verify_token
+    client = TestClient(app)
+    yield client
+    app.dependency_overrides.clear()
 
 
 # ============== CLEANUP ==============
 
 @pytest.fixture(autouse=True)
 def cleanup_singletons():
-    """Reset singletons between tests"""
+    """Reset singletons and clean feed_items between tests"""
+    # Clean feed_items before each test for isolation
+    try:
+        from database.db import get_connection
+        with get_connection() as conn:
+            conn.execute("DELETE FROM feed_items")
+            conn.commit()
+    except Exception:
+        pass
+
     yield
+
     # Reset service singletons
     import services.feed.service as feed_mod
     import services.evidence_bundle.service as bundle_mod

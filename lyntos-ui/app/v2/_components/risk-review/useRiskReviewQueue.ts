@@ -5,6 +5,8 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { API_ENDPOINTS } from '../../_lib/config/api';
+import { api } from '../../_lib/api/client';
 import { getAuthToken } from '../../_lib/auth';
 import type { RiskReviewItem, RiskQueueStats, RiskLevel } from './types';
 import { getRiskLevelFromScore } from './types';
@@ -142,16 +144,10 @@ export function useRiskReviewQueue(): UseRiskReviewQueueResult {
         return;
       }
 
-      // Try primary endpoint
-      const response = await fetch('/api/v1/contracts/risk-queue', {
-        headers: {
-          'Authorization': token,
-          'Content-Type': 'application/json',
-        },
-      });
+      // Primary endpoint
+      const { data, ok } = await api.get<ApiQueueResponse>(API_ENDPOINTS.contracts.riskQueue);
 
-      if (response.ok) {
-        const data: ApiQueueResponse = await response.json();
+      if (ok && data?.items) {
         const mappedItems = data.items.map(mapApiItemToRiskItem);
         setItems(mappedItems);
         setStats(data.stats ? {
@@ -165,16 +161,10 @@ export function useRiskReviewQueue(): UseRiskReviewQueueResult {
         return;
       }
 
-      // Try alternative endpoint (analysis/risk-items)
-      const altResponse = await fetch('/api/v1/analysis/risk-items', {
-        headers: {
-          'Authorization': token,
-          'Content-Type': 'application/json',
-        },
-      });
+      // Fallback: analysis/risk-items
+      const { data: altData, ok: altOk } = await api.get<any>(API_ENDPOINTS.analysis.riskItems);
 
-      if (altResponse.ok) {
-        const altData = await altResponse.json();
+      if (altOk && altData) {
         const altItems = Array.isArray(altData) ? altData : (altData.items || []);
         const mappedItems = altItems.map(mapApiItemToRiskItem);
         setItems(mappedItems);

@@ -63,51 +63,27 @@ export interface MizanSummary {
 
 // ============== API CONFIG ==============
 
-import { API_BASE_URL } from '../config/api';
+import { api } from './client';
 
 // ============== SYNC FUNCTION ==============
 
 export async function syncMizanToBackend(payload: MizanSyncPayload): Promise<MizanSyncResponse> {
-  const url = `${API_BASE_URL}/api/v2/mizan/sync`;
+  const { data, error } = await api.post<MizanSyncResponse>('/api/v2/mizan/sync', payload);
 
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      return {
-        success: false,
-        synced_count: 0,
-        error_count: 1,
-        period_id: payload.meta.period_id,
-        totals: { borc_toplam: 0, alacak_toplam: 0, borc_bakiye: 0, alacak_bakiye: 0 },
-        errors: [`HTTP ${response.status}: ${errorText}`],
-        missing_data: { reason: 'Backend request failed' },
-        actions: ['Check backend is running', 'Verify API URL'],
-      };
-    }
-
-    return await response.json();
-
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+  if (error || !data) {
     return {
       success: false,
       synced_count: 0,
       error_count: 1,
       period_id: payload.meta.period_id,
       totals: { borc_toplam: 0, alacak_toplam: 0, borc_bakiye: 0, alacak_bakiye: 0 },
-      errors: [`Network error: ${errorMessage}`],
-      missing_data: { reason: 'Could not reach backend' },
-      actions: ['Check network connection'],
+      errors: [error || 'Unknown error'],
+      missing_data: { reason: 'Backend request failed' },
+      actions: ['Check backend is running'],
     };
   }
+
+  return data;
 }
 
 // ============== GET SUMMARY ==============
@@ -117,15 +93,11 @@ export async function getMizanSummary(
   tenantId: string,
   clientId: string
 ): Promise<MizanSummary | null> {
-  const url = `${API_BASE_URL}/api/v2/mizan/summary/${encodeURIComponent(periodId)}?tenant_id=${encodeURIComponent(tenantId)}&client_id=${encodeURIComponent(clientId)}`;
-
-  try {
-    const response = await fetch(url);
-    if (!response.ok) return null;
-    return await response.json();
-  } catch {
-    return null;
-  }
+  const { data } = await api.get<MizanSummary>(
+    `/api/v2/mizan/summary/${encodeURIComponent(periodId)}`,
+    { params: { tenant_id: tenantId, client_id: clientId } }
+  );
+  return data;
 }
 
 // ============== GET ENTRIES ==============
@@ -142,24 +114,22 @@ export async function getMizanEntries(
   limit: number;
   offset: number;
 } | null> {
-  const params = new URLSearchParams({
+  const params: Record<string, string> = {
     tenant_id: tenantId,
     client_id: clientId,
-  });
+  };
+  if (options?.hesapPrefix) params.hesap_prefix = options.hesapPrefix;
+  if (options?.limit) params.limit = options.limit.toString();
+  if (options?.offset) params.offset = options.offset.toString();
 
-  if (options?.hesapPrefix) params.append('hesap_prefix', options.hesapPrefix);
-  if (options?.limit) params.append('limit', options.limit.toString());
-  if (options?.offset) params.append('offset', options.offset.toString());
-
-  const url = `${API_BASE_URL}/api/v2/mizan/entries/${encodeURIComponent(periodId)}?${params}`;
-
-  try {
-    const response = await fetch(url);
-    if (!response.ok) return null;
-    return await response.json();
-  } catch {
-    return null;
-  }
+  const { data } = await api.get<{
+    period_id: string;
+    entries: MizanEntry[];
+    total: number;
+    limit: number;
+    offset: number;
+  }>(`/api/v2/mizan/entries/${encodeURIComponent(periodId)}`, { params });
+  return data;
 }
 
 // ============== CLEAR MIZAN ==============
@@ -169,13 +139,9 @@ export async function clearMizanData(
   tenantId: string,
   clientId: string
 ): Promise<{ success: boolean; deleted_count: number; period_id: string } | null> {
-  const url = `${API_BASE_URL}/api/v2/mizan/clear/${encodeURIComponent(periodId)}?tenant_id=${encodeURIComponent(tenantId)}&client_id=${encodeURIComponent(clientId)}`;
-
-  try {
-    const response = await fetch(url, { method: 'DELETE' });
-    if (!response.ok) return null;
-    return await response.json();
-  } catch {
-    return null;
-  }
+  const { data } = await api.delete<{ success: boolean; deleted_count: number; period_id: string }>(
+    `/api/v2/mizan/clear/${encodeURIComponent(periodId)}`,
+    { params: { tenant_id: tenantId, client_id: clientId } }
+  );
+  return data;
 }

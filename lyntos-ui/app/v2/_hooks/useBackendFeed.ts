@@ -7,9 +7,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { getAuthToken } from '../_lib/auth';
+import { api } from '../_lib/api/client';
 import type { FeedItem, FeedScope, FeedImpact, EvidenceRef, FeedAction, EvidenceKind } from '../_components/feed/types';
-import { API_BASE_URL } from '../_lib/config/api';
 
 // Backend response types
 interface BackendEvidenceRef {
@@ -184,31 +183,17 @@ export function useBackendFeed({
     setLoading(true);
     setError(null);
 
-    const url = `${API_BASE_URL}/api/v2/feed/${encodeURIComponent(period)}?smmm_id=${encodeURIComponent(smmm_id)}&client_id=${encodeURIComponent(client_id)}`;
-
     try {
-      const token = getAuthToken();
-      const headers: Record<string, string> = {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      };
+      const { data: responseData, error: apiError } = await api.get<BackendFeedResponse>(
+        `/api/v2/feed/${encodeURIComponent(period)}`,
+        { params: { smmm_id, client_id } }
+      );
 
-      if (token) {
-        // Backend expects "Bearer DEV_HKOZKAN" format
-        headers['Authorization'] = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+      if (apiError || !responseData) {
+        throw new Error(apiError || 'Feed verisi alinamadi');
       }
 
-      const response = await fetch(url, {
-        method: 'GET',
-        headers,
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`API Error ${response.status}: ${errorText}`);
-      }
-
-      const data: BackendFeedResponse = await response.json();
+      const data = responseData;
 
       // Map backend response to frontend FeedItem format
       const mappedItems: FeedItem[] = (data.data || []).map(mapFeedItem);

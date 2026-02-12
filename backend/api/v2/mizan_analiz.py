@@ -8,14 +8,16 @@ Endpoint'ler:
   GET /api/v2/mizan-analiz/dikey/{client_id}/{period}
 
 Veri Kaynağı: database/lyntos.db → mizan_entries table
-Auth: Yok (V2 API)
 """
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from typing import Optional, List, Dict, Any
 from pathlib import Path
 import logging
 import sqlite3
+
+from middleware.auth import verify_token, check_client_access
+from utils.period_utils import normalize_period_db
 
 import sys
 backend_path = Path(__file__).parent.parent.parent
@@ -173,6 +175,7 @@ async def get_hesap_karti(
     client_id: str,
     period: str,
     hesap_kodu: str,
+    user: dict = Depends(verify_token),
 ):
     """
     Hesap Kartı - Tek hesap için detaylı davranış analizi
@@ -180,6 +183,8 @@ async def get_hesap_karti(
     SMMM için: Bakiye yönü, ciro oranı, VDK risk, mevzuat referansları,
     alt hesap dağılımı, davranış analizi
     """
+    period = normalize_period_db(period)
+    await check_client_access(user, client_id)
     rows = load_mizan_entries(client_id, period)
     if not rows:
         raise HTTPException(
@@ -207,6 +212,7 @@ async def get_yatay_analiz(
     period: str,
     onceki_period: Optional[str] = Query(None, description="Önceki dönem (ör: 2024-Q4). Belirtilmezse otomatik bulunur."),
     esik_yuzde: float = Query(20.0, description="Materiality eşiği (% olarak)"),
+    user: dict = Depends(verify_token),
 ):
     """
     Yatay Analiz (Horizontal Analysis)
@@ -215,6 +221,10 @@ async def get_yatay_analiz(
     İki dönem karşılaştırması yapar. Eğer onceki_period belirtilmezse,
     aynı client_id için en yakın önceki dönem otomatik bulunur.
     """
+    period = normalize_period_db(period)
+    if onceki_period:
+        onceki_period = normalize_period_db(onceki_period)
+    await check_client_access(user, client_id)
     # Cari dönem
     cari_rows = load_mizan_entries(client_id, period)
     if not cari_rows:
@@ -263,6 +273,7 @@ async def get_yatay_analiz(
 async def get_dikey_analiz(
     client_id: str,
     period: str,
+    user: dict = Depends(verify_token),
 ):
     """
     Dikey Analiz (Vertical / Common-Size Analysis)
@@ -270,6 +281,8 @@ async def get_dikey_analiz(
     Bilanço: Her kalem / Toplam Aktif × 100
     Gelir Tablosu: Her kalem / Net Satışlar × 100
     """
+    period = normalize_period_db(period)
+    await check_client_access(user, client_id)
     rows = load_mizan_entries(client_id, period)
     if not rows:
         raise HTTPException(

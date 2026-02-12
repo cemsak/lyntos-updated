@@ -288,7 +288,7 @@ export const API_ENDPOINTS = {
     me: `${API_BASE_URL}/api/v1/user/me`,
     clients: `${API_BASE_URL}/api/v1/user/me/clients`,
     clientPeriods: (clientId: string) => `${API_BASE_URL}/api/v1/user/clients/${clientId}/periods`,
-    profile: `${API_BASE_URL}/api/v1/profile`,
+    profile: `${API_BASE_URL}/api/v1/user/me`,  // H-04: /profile -> /user/me (ayni endpoint)
   },
 
   // ─── V1: Tenants ──────────────────────────────────────────────────────────
@@ -344,11 +344,15 @@ export const API_ENDPOINTS = {
   // ─── V1: Vergus (Tax Strategist) ──────────────────────────────────────────
   vergus: {
     analyze: `${API_BASE_URL}/api/v1/vergus/analyze`,
+    quickCheck: (clientId: string) => `${API_BASE_URL}/api/v1/vergus/quick-check/${encodeURIComponent(clientId)}`,
   },
 
   // ─── V1: Inspector Prep ───────────────────────────────────────────────────
   inspectorPrep: {
     notes: `${API_BASE_URL}/api/v1/inspector-prep/notes`,
+    notesById: (clientId: string) => `${API_BASE_URL}/api/v1/inspector-prep/notes/${encodeURIComponent(clientId)}`,
+    progress: (clientId: string) => `${API_BASE_URL}/api/v1/inspector-prep/progress/${encodeURIComponent(clientId)}`,
+    exportPdf: (clientId: string) => `${API_BASE_URL}/api/v1/inspector-prep/export-pdf/${encodeURIComponent(clientId)}`,
     documentStatus: `${API_BASE_URL}/api/v1/inspector-prep/document-status`,
   },
 

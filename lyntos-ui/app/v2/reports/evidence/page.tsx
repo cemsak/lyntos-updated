@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Loader2 } from 'lucide-react';
-import { getAuthToken } from '../../_lib/auth';
+import { api } from '../../_lib/api/client';
 import { API_ENDPOINTS } from '../../_lib/config/api';
 import { useDashboardScope, useScopeComplete } from '../../_components/scope/useDashboardScope';
 import type { AuditEntry, BundleSummary } from './_components/types';
@@ -37,7 +37,6 @@ export default function EvidenceBundlePage() {
     if (loadedRef.current === scopeKey) return;
 
     async function fetchBundleData() {
-      const token = getAuthToken();
       setIsLoading(true);
       loadedRef.current = scopeKey;
 
@@ -46,31 +45,25 @@ export default function EvidenceBundlePage() {
           scope.client_id!,
           scope.period!
         );
-        const response = await fetch(url, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
+        const { ok, data } = await api.get<BundleSummary>(url);
 
-        if (!response.ok) {
+        if (!ok || !data) {
           setBundleData(null);
         } else {
-          const data = await response.json();
           setBundleData(data);
         }
 
         // Audit trail
         try {
-          const auditResponse = await fetch('/api/v1/audit/recent?limit=20', {
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-          });
-          if (auditResponse.ok) {
-            const auditData = await auditResponse.json();
-            const entries: AuditEntry[] = (auditData.entries || []).map((e: {
-              id: number;
-              created_at: string;
-              action: string;
-              user_id?: string;
-              details?: string;
-            }) => ({
+          const { ok: auditOk, data: auditData } = await api.get<{ entries: {
+            id: number;
+            created_at: string;
+            action: string;
+            user_id?: string;
+            details?: string;
+          }[] }>('/api/v1/audit/recent?limit=20');
+          if (auditOk && auditData) {
+            const entries: AuditEntry[] = (auditData.entries || []).map((e) => ({
               id: `at-${e.id}`,
               timestamp: e.created_at,
               action: e.action as AuditEntry['action'],

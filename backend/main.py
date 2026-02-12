@@ -37,10 +37,8 @@ from api.v2.evidence_bundle import router as evidence_bundle_router
 from api.v2.brief import router as brief_router
 from api.v2.dossier import router as dossier_router
 from api.v2.periods import router as periods_router
-from api.v2.bulk_upload import router as bulk_upload_router
 from api.v2.mizan_data import router as mizan_data_router
 from api.v2.donem_complete import router as donem_complete_router
-from api.v2.upload import router as upload_router
 from api.v2.period_summary import router as period_summary_router
 from api.v2.yevmiye import router as yevmiye_v2_router
 from api.v2.kebir import router as kebir_v2_router
@@ -49,6 +47,7 @@ from api.v2.banka_mutabakat import router as banka_mutabakat_v2_router
 from api.v2.beyanname_kdv import router as beyanname_kdv_v2_router
 from api.v2.beyanname_muhtasar import router as beyanname_muhtasar_v2_router
 from api.v2.beyanname_tahakkuk import router as beyanname_tahakkuk_v2_router
+from api.v2.beyanname_kurumlar import router as beyanname_kurumlar_v2_router
 from api.v2.yevmiye_kebir import router as yevmiye_kebir_v2_router
 from api.v2.ingest import router as ingest_router  # YENİ DEDUPE SİSTEMİ
 from api.v2.defter_kontrol import router as defter_kontrol_router  # TAVSİYE MEKTUBU 2
@@ -68,36 +67,16 @@ from api.v2.checklists import router as checklists_router  # PRATİK BİLGİLER 
 from api.v2.reports import router as reports_router  # RAPORLAR - BIG4+ PDF EXPORT
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from middleware.rate_limit import RateLimitMiddleware
+from middleware.cache import response_cache
 from services.regwatch_scheduler import start_scheduler, stop_scheduler, get_scheduler_status
 
 from typing import Optional
 # Path ve load_dotenv dosya başında import edildi
 import os
-import jwt
+from jose import jwt
+from jose.exceptions import JWTError
 
-from kpi_service import (
-    kurgan_risk_score,
-    radar_risk_score,
-    smiyb_risk_status,
-    tax_compliance_score,
-    uyum_panel_data,
-    mizan_panel_data,
-    banka_mutabakat_panel_data,
-    karsifirma_panel_data,
-    matrix13_panel_data,
-    fmea_panel_data,
-    anomaly_panel_data,
-    ag_panel_data,
-    bowtie_panel_data,
-    capa_panel_data,
-    why5_panel_data,
-    ishikawa_panel_data,
-    ai_panel_data,
-    vdk_panel_data,
-    edefter_panel_data,
-    musteri_panel_data,
-    risk_model_v1_scores,
-)
 
 # ---------------------------------------------------------------------------
 #  ENV & APP CONFIG
@@ -108,8 +87,7 @@ BASE_DIR = _BASE_DIR  # Dosya başında tanımlandı (load_dotenv için)
 
 API_VERSION = "1.0"
 SCHEMA_VERSION = "2025-11-02"
-SECRET_KEY = os.getenv("JWT_SECRET_KEY", "lyntos_secret_key_2025")
-ALGORITHM = "HS256"
+from config.settings import JWT_SECRET_KEY as SECRET_KEY, JWT_ALGORITHM as ALGORITHM
 
 # Enable/disable scheduler via env
 ENABLE_SCHEDULER = os.getenv("ENABLE_REGWATCH_SCHEDULER", "false").lower() == "true"
@@ -134,20 +112,19 @@ app = FastAPI(
 
 
 # --- LYNTOS v1 API ---
+CORS_ORIGINS = os.getenv(
+    "CORS_ALLOWED_ORIGINS",
+    "http://localhost:3000,http://127.0.0.1:3000"
+).split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://192.168.1.102:3000",
-        "http://192.168.1.172:3000",
-    ],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Accept", "X-Requested-With"],
 )
+# P-7: Rate limiting — DDoS ve API istismarindan koruma
+app.add_middleware(RateLimitMiddleware)
 app.include_router(v1_router, prefix="/api/v1")
 app.include_router(evidence_router, prefix="/api/v1", tags=["Evidence"])
 app.include_router(regwatch_router, prefix="/api/v1", tags=["RegWatch"])
@@ -184,10 +161,8 @@ app.include_router(evidence_bundle_router, prefix="/api/v2")
 app.include_router(brief_router, prefix="/api/v2")
 app.include_router(dossier_router, prefix="/api/v2")
 app.include_router(periods_router, prefix="/api/v2")
-app.include_router(bulk_upload_router, prefix="/api/v2")
 app.include_router(mizan_data_router)  # Prefix already in router
 app.include_router(donem_complete_router)  # TEK ENDPOINT - TÜM VERİ
-app.include_router(upload_router)  # ZIP UPLOAD - FAZ 1
 app.include_router(period_summary_router)  # Q1 ÖZET - NO AUTH
 app.include_router(yevmiye_v2_router)  # YEVMİYE V2 - NO AUTH
 app.include_router(kebir_v2_router)  # KEBİR V2 - NO AUTH
@@ -196,6 +171,7 @@ app.include_router(banka_mutabakat_v2_router)  # BANKA MUTABAKAT V2 - NO AUTH
 app.include_router(beyanname_kdv_v2_router)  # KDV BEYANNAME V2 - NO AUTH
 app.include_router(beyanname_muhtasar_v2_router)  # MUHTASAR BEYANNAME V2 - NO AUTH
 app.include_router(beyanname_tahakkuk_v2_router)  # TAHAKKUK V2 - NO AUTH
+app.include_router(beyanname_kurumlar_v2_router)  # KURUMLAR VERGISI BEYANNAME - H-04
 app.include_router(yevmiye_kebir_v2_router)  # YEVMİYE-KEBİR CROSS-CHECK V2 - NO AUTH
 app.include_router(ingest_router)  # YENİ DEDUPE SİSTEMİ - Tavsiye Mektubu 3
 app.include_router(defter_kontrol_router)  # TAVSİYE MEKTUBU 2 - DEFTER KONTROL - NO AUTH
@@ -226,49 +202,10 @@ def _verify_bearer_token(authorization: Optional[str] = None) -> None:
     token = authorization[7:] if authorization.startswith("Bearer ") else authorization
     try:
         jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-    except jwt.InvalidTokenError:
+    except JWTError:
         raise HTTPException(status_code=401, detail="Geçersiz token")
 
 
-@app.get("/v1/risk_model_v1")
-def api_risk_model_v1(
-    firma: str = Query(..., description="Firma adı veya kodu"),
-    donem: str = Query(..., description="Dönem (örn: 2025Q4)"),
-    authorization: Optional[str] = Depends(lambda authorization: authorization),
-):
-    """Risk motoru v1 — skorlar formüllere göre hesaplanır"""
-    from fastapi import Header as _Header
-    result = risk_model_v1_scores(firma, donem)
-    return JSONResponse(content=result)
-
-@app.get("/api/lyntos_dashboard")
-def api_lyntos_dashboard(
-    firma: str = Query(..., description="Firma adı veya kodu"),
-    donem: str = Query(..., description="Dönem (örn: 2025Q4)"),
-):
-    """Eski dashboard endpoint'i — kpi_service üzerinden veri"""
-    return {
-        "kurgan_risk": kurgan_risk_score(firma, donem),
-        "radar_risk": radar_risk_score(firma, donem),
-        "smiyb_risk": smiyb_risk_status(firma, donem),
-        "tax_compliance": tax_compliance_score(firma, donem),
-        "uyum_panel": uyum_panel_data(firma, donem),
-        "mizan_panel": mizan_panel_data(firma, donem),
-        "banka_panel": banka_mutabakat_panel_data(firma, donem),
-        "karsifirma_panel": karsifirma_panel_data(firma, donem),
-        "matrix13_panel": matrix13_panel_data(firma, donem),
-        "fmea_panel": fmea_panel_data(firma, donem),
-        "anomaly_panel": anomaly_panel_data(firma, donem),
-        "ag_panel": ag_panel_data(firma, donem),
-        "bowtie_panel": bowtie_panel_data(firma, donem),
-        "capa_panel": capa_panel_data(firma, donem),
-        "why5_panel": why5_panel_data(firma, donem),
-        "ishikawa_panel": ishikawa_panel_data(firma, donem),
-        "ai_panel": ai_panel_data(firma, donem),
-        "vdk_panel": vdk_panel_data(firma, donem),
-        "edefter_panel": edefter_panel_data(firma, donem),
-        "musteri_panel": musteri_panel_data(firma, donem),
-    }
 
 # ---------------------------------------------------------------------------
 #  BASİT SAĞLIK VE META ENDPOINTLERİ
@@ -281,6 +218,7 @@ def health():
         "message": "LYNTOS Backend (Risk Motoru v1) aktif",
         "api_version": API_VERSION,
         "schema_version": SCHEMA_VERSION,
+        "cache": response_cache.stats(),
     }
 
 

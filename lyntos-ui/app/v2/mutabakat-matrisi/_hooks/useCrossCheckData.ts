@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useDashboardScope } from '../../_components/scope/ScopeProvider';
 import { API_ENDPOINTS } from '../../_lib/config/api';
-import { getAuthToken } from '../../_lib/auth';
+import { api } from '../../_lib/api/client';
 import type { CrossCheckResultRaw, CrossCheckSummaryRaw } from '../_types/crossCheck';
 import { getPreviousPeriod } from '../_lib/trendCalculator';
 
@@ -29,28 +29,21 @@ export function useCrossCheckData() {
     setError(null);
 
     try {
-      const token = getAuthToken();
-
       // Backend expects: /run/{period_id}?tenant_id=xxx&client_id=xxx
-      const periodId = periodCode; // Use period code as period_id
-      const baseUrl = API_ENDPOINTS.crossCheck.run(periodId);
-      const url = `${baseUrl}?tenant_id=${encodeURIComponent(tenantId)}&client_id=${encodeURIComponent(clientId)}`;
+      const periodId = periodCode;
 
       // Fetch current period data
-      const res = await fetch(url, {
-        headers: {
-          ...(token ? { 'Authorization': token } : {}),
-          'Content-Type': 'application/json',
-        },
-      });
+      const res = await api.get<CrossCheckSummaryRaw>(
+        API_ENDPOINTS.crossCheck.run(periodId),
+        { params: { tenant_id: tenantId, client_id: clientId } }
+      );
 
-      if (!res.ok) {
-        const errorText = await res.text();
-        console.error('[useCrossCheckData] Error response:', res.status, errorText);
-        throw new Error(`HTTP ${res.status}`);
+      if (!res.ok || !res.data) {
+        console.error('[useCrossCheckData] Error response:', res.status, res.error);
+        throw new Error(res.error || `Cross-check API failed`);
       }
 
-      const data: CrossCheckSummaryRaw = await res.json();
+      const data = res.data;
       setSummary(data);
       setChecks(data.checks || []);
 
@@ -58,20 +51,13 @@ export function useCrossCheckData() {
       const prevPeriodCode = getPreviousPeriod(periodCode);
       if (prevPeriodCode) {
         try {
-          const prevPeriodId = prevPeriodCode;
-          const prevBaseUrl = API_ENDPOINTS.crossCheck.run(prevPeriodId);
-          const prevUrl = `${prevBaseUrl}?tenant_id=${encodeURIComponent(tenantId)}&client_id=${encodeURIComponent(clientId)}`;
+          const prevRes = await api.get<CrossCheckSummaryRaw>(
+            API_ENDPOINTS.crossCheck.run(prevPeriodCode),
+            { params: { tenant_id: tenantId, client_id: clientId } }
+          );
 
-          const prevRes = await fetch(prevUrl, {
-            headers: {
-              ...(token ? { 'Authorization': token } : {}),
-              'Content-Type': 'application/json',
-            },
-          });
-
-          if (prevRes.ok) {
-            const prevData: CrossCheckSummaryRaw = await prevRes.json();
-            setPreviousChecks(prevData.checks || []);
+          if (prevRes.ok && prevRes.data) {
+            setPreviousChecks(prevRes.data.checks || []);
           } else {
             // Previous period not available - this is OK, just no trend data
             setPreviousChecks([]);

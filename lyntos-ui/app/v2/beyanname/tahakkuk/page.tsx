@@ -11,7 +11,7 @@ import { useState, useEffect } from 'react';
 import { RefreshCw, FileText, Calendar, AlertCircle as AlertIcon, CheckCircle2 } from 'lucide-react';
 import { ScopeGuide } from '../../_components/shared/ScopeGuide';
 import { useDashboardScope } from '../../_components/scope/ScopeProvider';
-import { API_BASE_URL } from '../../_lib/config/api';
+import { api } from '../../_lib/api/client';
 import { formatCurrency, formatPeriod } from '../../_lib/format';
 
 interface Tahakkuk {
@@ -50,15 +50,12 @@ export default function TahakkukPage() {
 
     setLoading(true);
     try {
-      const params = new URLSearchParams({
-        client_id: clientId,
-        period_id: periodId,
-      });
+      const { data } = await api.get<{ tahakkuklar: Tahakkuk[]; ozet: TahakkukOzet }>(
+        '/api/v2/beyanname/tahakkuk',
+        { params: { client_id: clientId, period_id: periodId } }
+      );
 
-      const response = await fetch(`${API_BASE_URL}/api/v2/beyanname/tahakkuk?${params}`);
-
-      if (response.ok) {
-        const data = await response.json();
+      if (data) {
         setTahakkuklar(data.tahakkuklar || []);
         setOzet(data.ozet || null);
       }

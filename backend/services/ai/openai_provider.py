@@ -8,6 +8,8 @@ import time
 import logging
 from typing import Optional
 
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+
 try:
     import openai
     OPENAI_AVAILABLE = True
@@ -37,7 +39,7 @@ class OpenAIProvider(BaseAIProvider):
         self.client = None
 
         if self.is_available():
-            self.client = openai.OpenAI(api_key=self.api_key)
+            self.client = openai.OpenAI(api_key=self.api_key, timeout=30.0)
             logger.info(f"OpenAI provider initialized with model: {self.model_name}")
         else:
             logger.warning("OpenAI provider not available - API key missing")
@@ -45,6 +47,16 @@ class OpenAIProvider(BaseAIProvider):
     def is_available(self) -> bool:
         """Check if OpenAI is available"""
         return OPENAI_AVAILABLE and bool(self.api_key)
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=1, max=10),
+        retry=retry_if_exception_type((openai.APIConnectionError, openai.RateLimitError, openai.InternalServerError)) if OPENAI_AVAILABLE else retry_if_exception_type(Exception),
+        reraise=True,
+    )
+    def _call_api(self, **kwargs):
+        """Retry-wrapped API call"""
+        return self.client.chat.completions.create(**kwargs)
 
     async def generate(self, request: AIRequest) -> AIResponse:
         """Generate response using OpenAI"""
@@ -83,8 +95,8 @@ class OpenAIProvider(BaseAIProvider):
                         "content": msg.content
                     })
 
-            # Make API call
-            response = self.client.chat.completions.create(
+            # Make API call with retry
+            response = self._call_api(
                 model=self.model_name,
                 max_tokens=request.max_tokens,
                 temperature=request.temperature,

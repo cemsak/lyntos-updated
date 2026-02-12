@@ -17,7 +17,7 @@ VERİ EKSİKLİĞİ UYARILARI:
 - Banka Ekstresi yüklenmemişse: SMMM'ye yükleme uyarısı
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 from datetime import datetime
@@ -25,7 +25,10 @@ from enum import Enum
 import sqlite3
 import logging
 
+from middleware.auth import verify_token, check_client_access
+from middleware.cache import response_cache
 from services.cross_check_engine import cross_check_engine, CrossCheckResult as EngineResult, TeknikKontrolResult
+from utils.period_utils import normalize_period_db
 
 logger = logging.getLogger(__name__)
 
@@ -168,6 +171,7 @@ def check_data_loaded(conn, tenant_id: str, client_id: str, period_id: str) -> D
     Tablo yoksa güvenli şekilde False döner.
 
     NOT: Beyannameler artık beyanname_entries tablosunda beyanname_tipi ile ayrılıyor.
+    VT-7: Toplu sorgu optimizasyonu (12+ sorgu → 2 sorguya düşürüldü).
     """
     cursor = conn.cursor()
     result = {
@@ -182,27 +186,49 @@ def check_data_loaded(conn, tenant_id: str, client_id: str, period_id: str) -> D
         "kurumlar_vergisi_loaded": False,
     }
 
-    # Mizan kontrolü
-    result["mizan_loaded"] = _safe_count_check(cursor, "mizan_entries", tenant_id, client_id, period_id)
+    # VT-7: Tablo varlığını tek sorguda kontrol et
+    cursor.execute("""
+        SELECT name FROM sqlite_master
+        WHERE type='table' AND name IN (
+            'mizan_entries', 'efatura_data', 'banka_bakiye_data', 'beyanname_entries'
+        )
+    """)
+    existing_tables = {row["name"] for row in cursor.fetchall()}
 
-    # KDV Beyanname kontrolü - beyanname_entries tablosundan
-    result["kdv_beyanname_loaded"] = _beyanname_type_exists(cursor, tenant_id, client_id, period_id, "KDV")
+    # VT-7: Toplu COUNT sorgusu — var olan tabloları tek UNION ALL ile tara
+    count_parts = []
+    count_params = []
 
-    # e-Fatura kontrolü (tablo yoksa False döner)
-    result["efatura_loaded"] = _safe_count_check(cursor, "efatura_data", tenant_id, client_id, period_id)
+    if "mizan_entries" in existing_tables:
+        count_parts.append("SELECT 'mizan' as tbl, COUNT(*) as cnt FROM mizan_entries WHERE tenant_id = ? AND client_id = ? AND period_id = ?")
+        count_params.extend([tenant_id, client_id, period_id])
 
-    # Banka ekstresi kontrolü
-    result["banka_loaded"] = _safe_count_check(cursor, "banka_bakiye_data", tenant_id, client_id, period_id)
+    if "efatura_data" in existing_tables:
+        count_parts.append("SELECT 'efatura', COUNT(*) FROM efatura_data WHERE tenant_id = ? AND client_id = ? AND period_id = ?")
+        count_params.extend([tenant_id, client_id, period_id])
 
-    # Muhtasar kontrolü - beyanname_entries tablosundan
-    result["muhtasar_loaded"] = _beyanname_type_exists(cursor, tenant_id, client_id, period_id, "MUHTASAR")
+    if "banka_bakiye_data" in existing_tables:
+        count_parts.append("SELECT 'banka', COUNT(*) FROM banka_bakiye_data WHERE tenant_id = ? AND client_id = ? AND period_id = ?")
+        count_params.extend([tenant_id, client_id, period_id])
 
-    # SGK APHB kontrolü - Muhtasar içinde SGK bilgileri var
-    # Muhtasar yüklüyse SGK APHB de yüklü demektir (aynı beyanname)
+    if "beyanname_entries" in existing_tables:
+        count_parts.append("SELECT 'beyanname_' || beyanname_tipi, COUNT(*) FROM beyanname_entries WHERE tenant_id = ? AND client_id = ? AND period_id = ? GROUP BY beyanname_tipi")
+        count_params.extend([tenant_id, client_id, period_id])
+
+    if count_parts:
+        query = " UNION ALL ".join(count_parts)
+        cursor.execute(query, count_params)
+        counts = {row[0]: row[1] for row in cursor.fetchall()}
+    else:
+        counts = {}
+
+    result["mizan_loaded"] = counts.get("mizan", 0) > 0
+    result["kdv_beyanname_loaded"] = counts.get("beyanname_KDV", 0) > 0
+    result["efatura_loaded"] = counts.get("efatura", 0) > 0
+    result["banka_loaded"] = counts.get("banka", 0) > 0
+    result["muhtasar_loaded"] = counts.get("beyanname_MUHTASAR", 0) > 0
     result["sgk_aphb_loaded"] = result["muhtasar_loaded"]
-
-    # Geçici Vergi kontrolü - beyanname_entries tablosundan
-    result["gecici_vergi_loaded"] = _beyanname_type_exists(cursor, tenant_id, client_id, period_id, "GECICI_VERGI")
+    result["gecici_vergi_loaded"] = counts.get("beyanname_GECICI_VERGI", 0) > 0
 
     return result
 
@@ -1016,12 +1042,15 @@ def check_mizan_600_vs_kdv_matrah(conn, tenant_id: str, client_id: str, period_i
         status = CheckStatus.WARNING
         severity = CheckSeverity.LOW
         message = f"Küçük fark tespit edildi: {difference:,.2f} TL ({diff_percent:.2f}%)"
-        recommendation = "İhracat ve istisna satışları kontrol edin"
+        recommendation = "İhracat (601) ve istisna (602) satışları kontrol edin. Farklı KDV oranlarındaki satış kırılımlarını doğrulayın."
     else:
         status = CheckStatus.FAIL
         severity = CheckSeverity.CRITICAL if diff_percent > 10 else CheckSeverity.HIGH
         message = f"KRİTİK FARK: {difference:,.2f} TL ({diff_percent:.2f}%)"
-        recommendation = "ACİL: Tüm satış kayıtlarını kontrol edin, beyan düzeltmesi gerekebilir"
+        recommendation = (
+            "ACİL: Tüm satış kayıtlarını kontrol edin, beyan düzeltmesi gerekebilir. "
+            "KDV oran kırılımlarını (%%1, %%10, %%20) kontrol edin."
+        )
 
     return CrossCheckResult(
         check_id="mizan_600_vs_kdv_matrah",
@@ -1045,7 +1074,10 @@ def check_mizan_600_vs_kdv_matrah(conn, tenant_id: str, client_id: str, period_i
             "mizan_601_ihracat": ihracat_601,
             "mizan_602_istisna": istisna_602,
             "hesaplanan_matrah": hesaplanan_matrah,
-            "beyanname_matrah": beyanname_matrah
+            "beyanname_matrah": beyanname_matrah,
+            "formula": "KDV Matrah = 600 - 601 - 602",
+            "formula_detail": f"{satis_600:,.2f} - {ihracat_601:,.2f} - {istisna_602:,.2f} = {hesaplanan_matrah:,.2f}",
+            "note": "Toplam matrah karsilastirmasi yapildi. E-fatura detay (satir bazli) eslestirmesi yapilmadi."
         }
     )
 
@@ -1053,7 +1085,7 @@ def check_mizan_600_vs_kdv_matrah(conn, tenant_id: str, client_id: str, period_i
 # ============== MAIN ENDPOINT ==============
 
 @router.get("/run/{period_id}", response_model=CrossCheckSummary)
-async def run_cross_checks(period_id: str, tenant_id: str, client_id: str):
+async def run_cross_checks(period_id: str, client_id: str, user: dict = Depends(verify_token)):
     """
     Run all cross-checks for a period and return summary.
 
@@ -1069,6 +1101,16 @@ async def run_cross_checks(period_id: str, tenant_id: str, client_id: str):
     9. Teknik: Ters Bakiye
     10. Teknik: Eksi Hesap (Kasa, Banka, Stok)
     """
+    period_id = normalize_period_db(period_id)
+    await check_client_access(user, client_id)
+    tenant_id = user["id"]
+
+    # P-10: Cache kontrolü (TTL 2 saat — veri upload'da invalidate edilir)
+    cache_key = f"cross_check:{client_id}:{period_id}"
+    cached = response_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     conn = None
     try:
         conn = get_db_connection()
@@ -1139,7 +1181,7 @@ async def run_cross_checks(period_id: str, tenant_id: str, client_id: str):
             if check.recommendation and check.status in [CheckStatus.FAIL, CheckStatus.WARNING, CheckStatus.NO_DATA]:
                 actions.append(f"{check.check_name_tr}: {check.recommendation}")
 
-        return CrossCheckSummary(
+        result = CrossCheckSummary(
             period_id=period_id,
             tenant_id=tenant_id,
             client_id=client_id,
@@ -1160,6 +1202,10 @@ async def run_cross_checks(period_id: str, tenant_id: str, client_id: str):
             recommended_actions=actions
         )
 
+        # P-10: Cache result (2 saat TTL)
+        response_cache.set(cache_key, result, ttl=7200)
+        return result
+
     except Exception as e:
         logger.error(f"Cross-check error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -1169,12 +1215,14 @@ async def run_cross_checks(period_id: str, tenant_id: str, client_id: str):
 
 
 @router.get("/status/{period_id}")
-async def get_cross_check_status(period_id: str, tenant_id: str, client_id: str):
+async def get_cross_check_status(period_id: str, client_id: str, user: dict = Depends(verify_token)):
     """
     Get quick cross-check status (for dashboard KPI).
     """
+    period_id = normalize_period_db(period_id)
+    await check_client_access(user, client_id)
     try:
-        result = await run_cross_checks(period_id, tenant_id, client_id)
+        result = await run_cross_checks(period_id, client_id, user)
 
         return {
             "period_id": period_id,

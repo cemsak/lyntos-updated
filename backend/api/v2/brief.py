@@ -3,7 +3,7 @@ C-Level Brief API Routes
 POST /api/v2/brief/generate - Generate executive brief
 LYNTOS ResponseEnvelope Standard
 """
-from fastapi import APIRouter, Query, HTTPException
+from fastapi import APIRouter, Query, HTTPException, Depends
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
@@ -11,20 +11,27 @@ from datetime import datetime
 from services.brief import get_brief_service
 from services.feed import get_feed_service
 from schemas.feed import FeedSeverity
+from middleware.auth import verify_token, check_client_access
 
 router = APIRouter(prefix="/brief", tags=["brief"])
 
 
+@router.get("/health")
+async def health():
+    """Health check"""
+    return {"status": "ok", "service": "brief", "timestamp": datetime.now().isoformat()}
+
+
 class GenerateBriefRequest(BaseModel):
-    smmm_id: str
     client_id: str
     period: str
     include_medium: bool = False  # Include MEDIUM severity items
     bundle_id: Optional[str] = None  # Link to evidence bundle
+    smmm_id: Optional[str] = None  # Deprecated: smmm_id token'dan alınır (VT-10)
 
 
 @router.post("/generate")
-async def generate_brief(request: GenerateBriefRequest):
+async def generate_brief(request: GenerateBriefRequest, user: dict = Depends(verify_token)):
     """
     Generate C-Level Brief (5-slide executive summary)
 
@@ -32,6 +39,8 @@ async def generate_brief(request: GenerateBriefRequest):
 
     Returns ResponseEnvelope with CLevelBrief in data field.
     """
+    await check_client_access(user, request.client_id)
+    smmm_id = user["id"]
     brief_service = get_brief_service()
     feed_service = get_feed_service()
 
@@ -41,7 +50,7 @@ async def generate_brief(request: GenerateBriefRequest):
         severity_filter.append(FeedSeverity.MEDIUM)
 
     feed_items = feed_service.get_feed_items(
-        smmm_id=request.smmm_id,
+        smmm_id=smmm_id,
         client_id=request.client_id,
         period=request.period,
         severity_filter=severity_filter
@@ -49,7 +58,7 @@ async def generate_brief(request: GenerateBriefRequest):
 
     # Generate brief
     result = brief_service.generate_brief(
-        smmm_id=request.smmm_id,
+        smmm_id=smmm_id,
         client_id=request.client_id,
         period=request.period,
         feed_items=feed_items,
@@ -60,7 +69,7 @@ async def generate_brief(request: GenerateBriefRequest):
 
 
 @router.get("/{brief_id}")
-async def get_brief(brief_id: str):
+async def get_brief(brief_id: str, user: dict = Depends(verify_token)):
     """
     Get existing brief by ID
 
@@ -81,9 +90,3 @@ async def get_brief(brief_id: str):
         }],
         "warnings": []
     }
-
-
-@router.get("/health")
-async def health():
-    """Health check"""
-    return {"status": "ok", "service": "brief", "timestamp": datetime.now().isoformat()}

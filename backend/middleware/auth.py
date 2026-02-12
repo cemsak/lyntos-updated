@@ -8,7 +8,8 @@ Supports:
 
 from fastapi import HTTPException, Header
 from typing import Optional
-import jwt
+from jose import jwt
+from jose.exceptions import ExpiredSignatureError, JWTError
 import os
 import sys
 import logging
@@ -25,11 +26,7 @@ from database.db import get_connection
 
 logger = logging.getLogger(__name__)
 
-SECRET_KEY = os.getenv("JWT_SECRET_KEY", "LYNTOS_SECRET_CHANGE_IN_PRODUCTION")
-ALGORITHM = "HS256"
-
-# Dev auth bypass - only enabled when LYNTOS_DEV_AUTH_BYPASS=1
-DEV_AUTH_BYPASS = os.getenv("LYNTOS_DEV_AUTH_BYPASS", "0") == "1"
+from config.settings import JWT_SECRET_KEY as SECRET_KEY, JWT_ALGORITHM as ALGORITHM, DEV_AUTH_BYPASS
 logger.info(f"[AUTH] Dev auth bypass: {DEV_AUTH_BYPASS}")
 DEV_TOKEN = "DEV_HKOZKAN"
 
@@ -94,9 +91,9 @@ async def verify_token(authorization: Optional[str] = Header(None)) -> dict:
 
             return dict(row)
 
-    except jwt.ExpiredSignatureError:
+    except ExpiredSignatureError:
         raise HTTPException(401, "Token expired")
-    except jwt.InvalidTokenError:
+    except JWTError:
         raise HTTPException(401, "Invalid token")
 
 

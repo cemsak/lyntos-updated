@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { CheckSquare, ChevronRight, X, Download, Check, Loader2, Cloud, CloudOff } from 'lucide-react';
 import { useToast } from '../../_components/shared/Toast';
 import { API_ENDPOINTS } from '../../_lib/config/api';
-import { getAuthToken } from '../../_lib/auth';
+import { api } from '../../_lib/api/client';
 
 interface KontrolMaddesi {
   id: string;
@@ -139,17 +139,14 @@ export default function KontrolListeleriPage() {
   const loadAllProgress = useCallback(async () => {
     setIsLoadingProgress(true);
     try {
-      const token = getAuthToken();
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) headers['Authorization'] = `Bearer ${token}`;
-
       const promises = KONTROL_LISTELERI.map(async (liste) => {
         try {
-          const url = `${API_ENDPOINTS.checklists.progress(liste.id)}?client_id=${DEFAULT_CLIENT_ID}&period_id=${DEFAULT_PERIOD_ID}`;
-          const res = await fetch(url, { headers });
-          if (!res.ok) return { listeId: liste.id, items: {} };
-          const json = await res.json();
-          if (json.success && Array.isArray(json.data)) {
+          const url = API_ENDPOINTS.checklists.progress(liste.id);
+          const { data: json } = await api.get<{ success: boolean; data: Array<{ item_index: number; checked: number }> }>(
+            url,
+            { params: { client_id: DEFAULT_CLIENT_ID, period_id: DEFAULT_PERIOD_ID } }
+          );
+          if (json?.success && Array.isArray(json.data)) {
             const itemStates: Record<string, boolean> = {};
             for (const item of json.data) {
               const itemId = String(item.item_index + 1);
@@ -198,22 +195,14 @@ export default function KontrolListeleriPage() {
     // Backend'e kaydet
     setSyncStatus('saving');
     try {
-      const token = getAuthToken();
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) headers['Authorization'] = `Bearer ${token}`;
-
-      const res = await fetch(API_ENDPOINTS.checklists.toggle(listeId), {
-        method: 'PUT',
-        headers,
-        body: JSON.stringify({
-          client_id: DEFAULT_CLIENT_ID,
-          period_id: DEFAULT_PERIOD_ID,
-          item_index: parseInt(itemId) - 1,
-          checked: newChecked
-        })
+      const { error: apiError } = await api.put(API_ENDPOINTS.checklists.toggle(listeId), {
+        client_id: DEFAULT_CLIENT_ID,
+        period_id: DEFAULT_PERIOD_ID,
+        item_index: parseInt(itemId) - 1,
+        checked: newChecked
       });
 
-      if (res.ok) {
+      if (!apiError) {
         setSyncStatus('saved');
         setTimeout(() => setSyncStatus('idle'), 2000);
       } else {

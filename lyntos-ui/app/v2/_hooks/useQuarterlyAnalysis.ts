@@ -10,7 +10,8 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { getApiBaseUrl, API_ENDPOINTS } from '../_lib/config/api';
+import { API_ENDPOINTS } from '../_lib/config/api';
+import { api } from '../_lib/api/client';
 import type {
   EngineCheckReport,
   EngineCheckResult,
@@ -317,7 +318,6 @@ export function useQuarterlyAnalysis() {
     opts?: { clientId?: string; period?: string; tenantId?: string }
   ) => {
     const startTime = Date.now();
-    const apiBase = getApiBaseUrl();
     const clientId = opts?.clientId || 'default';
     const period = opts?.period || `${new Date().getFullYear()}-Q${Math.ceil((new Date().getMonth() + 1) / 3)}`;
     const tenantId = opts?.tenantId || 'default';
@@ -338,17 +338,13 @@ export function useQuarterlyAnalysis() {
       formData.append('period', period);
       formData.append('tenant_id', tenantId);
 
-      const ingestResponse = await fetch(API_ENDPOINTS.ingest.upload, {
-        method: 'POST',
-        body: formData,
-      });
+      const { data: ingestData, error: ingestError } = await api.post<IngestResponse>(
+        API_ENDPOINTS.ingest.upload, formData, { timeout: 120_000 }
+      );
 
-      if (!ingestResponse.ok) {
-        const errText = await ingestResponse.text();
-        throw new Error(`Ingest hatasi (${ingestResponse.status}): ${errText.slice(0, 200)}`);
+      if (ingestError || !ingestData) {
+        throw new Error(`Ingest hatasi: ${ingestError || 'Veri alinamadi'}`);
       }
-
-      const ingestData: IngestResponse = await ingestResponse.json();
 
       // Update file stats from ingest response
       const parseResults = ingestData.parse_results || [];
@@ -374,21 +370,14 @@ export function useQuarterlyAnalysis() {
         currentFile: 'Capraz kontroller...',
       });
 
-      const ccParams = new URLSearchParams({
-        tenant_id: tenantId,
-        client_id: clientId,
-      });
-
-      const ccResponse = await fetch(
-        `${apiBase}/api/v2/cross-check/run/${encodeURIComponent(period)}?${ccParams}`,
+      const { data: ccData, error: ccError } = await api.get<BackendCrossCheckSummary>(
+        API_ENDPOINTS.crossCheck.run(period),
+        { params: { tenant_id: tenantId, client_id: clientId } }
       );
 
-      if (!ccResponse.ok) {
-        const errText = await ccResponse.text();
-        throw new Error(`Cross-check hatasi (${ccResponse.status}): ${errText.slice(0, 200)}`);
+      if (ccError || !ccData) {
+        throw new Error(`Cross-check hatasi: ${ccError || 'Veri alinamadi'}`);
       }
-
-      const ccData: BackendCrossCheckSummary = await ccResponse.json();
 
       // Phase 3: Adapt backend response to frontend EngineCheckReport
       const endTime = Date.now();
@@ -421,44 +410,36 @@ export function useQuarterlyAnalysis() {
   const loadExistingResults = useCallback(async (
     clientId: string, period: string, tenantId: string
   ): Promise<boolean> => {
-    const apiBase = getApiBaseUrl();
-
     try {
       updateState({ isAutoLoading: true });
 
-      // 1. Mizan verisi var mı?
-      const checkParams = new URLSearchParams({ client_id: clientId, period_id: period });
-      const checkRes = await fetch(`${apiBase}/api/v2/mizan-data/check?${checkParams}`);
+      // 1. Mizan verisi var mi?
+      const { data: checkData, ok: checkOk } = await api.get<{ exists: boolean }>(
+        API_ENDPOINTS.mizanData.check,
+        { params: { client_id: clientId, period_id: period } }
+      );
 
-      if (!checkRes.ok) {
+      if (!checkOk || !checkData?.exists) {
         updateState({ isAutoLoading: false });
         return false;
       }
 
-      const checkData = await checkRes.json();
-      if (!checkData.exists) {
-        updateState({ isAutoLoading: false });
-        return false;
-      }
-
-      // 2. Cross-check sonuçlarını çek
+      // 2. Cross-check sonuclarini cek
       updateState({
         phase: 'checking',
         progress: 50,
-        currentFile: 'Mevcut veriler yükleniyor...',
+        currentFile: 'Mevcut veriler yukleniyor...',
       });
 
-      const ccParams = new URLSearchParams({ tenant_id: tenantId, client_id: clientId });
-      const ccRes = await fetch(
-        `${apiBase}/api/v2/cross-check/run/${encodeURIComponent(period)}?${ccParams}`
+      const { data: ccData, ok: ccOk } = await api.get<BackendCrossCheckSummary>(
+        API_ENDPOINTS.crossCheck.run(period),
+        { params: { tenant_id: tenantId, client_id: clientId } }
       );
 
-      if (!ccRes.ok) {
+      if (!ccOk || !ccData) {
         updateState({ phase: 'idle', progress: 0, currentFile: '', isAutoLoading: false });
         return false;
       }
-
-      const ccData: BackendCrossCheckSummary = await ccRes.json();
       const checkReport = adaptBackendToReport(ccData, 0);
 
       updateState({

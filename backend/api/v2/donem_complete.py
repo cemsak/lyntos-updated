@@ -19,7 +19,7 @@ NOT: Disk fallback KALDIRILDI (2026-01-26)
      - Dedupe ve tracking tutarlı çalışır
 """
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 from pathlib import Path
@@ -28,6 +28,9 @@ import sqlite3
 import logging
 import json
 import csv
+
+from middleware.auth import verify_token, check_client_access
+from utils.period_utils import normalize_period_db
 
 logger = logging.getLogger(__name__)
 
@@ -477,7 +480,7 @@ def calculate_risk_score(vdk_risks: List[Dict]) -> tuple:
 async def get_donem_complete(
     client_id: str,
     period: str,
-    smmm_id: str = Query(default="HKOZKAN"),
+    user: dict = Depends(verify_token),
     include_accounts: bool = Query(default=True, description="Hesap listesini dahil et"),
     limit_accounts: int = Query(default=500, description="Maksimum hesap sayısı")
 ):
@@ -493,8 +496,12 @@ async def get_donem_complete(
 
     Frontend artık localStorage kullanmayacak, her şey buradan gelecek.
 
-    Örnek: GET /api/v2/donem/OZKAN_KIRTASIYE/2025-Q1?smmm_id=HKOZKAN
+    Örnek: GET /api/v2/donem/OZKAN_KIRTASIYE/2025-Q1
     """
+    period = normalize_period_db(period)
+
+    await check_client_access(user, client_id)
+    smmm_id = user["id"]
 
     conn = get_db()
     cursor = conn.cursor()
@@ -681,7 +688,7 @@ async def get_donem_complete(
 async def delete_donem_data(
     client_id: str,
     period: str,
-    smmm_id: str = Query(default="HKOZKAN"),
+    user: dict = Depends(verify_token),
     confirm: bool = Query(default=False, description="Silme işlemini onayla")
 ):
     """
@@ -690,6 +697,10 @@ async def delete_donem_data(
     DİKKAT: Bu işlem geri alınamaz!
     confirm=true parametresi gereklidir.
     """
+    period = normalize_period_db(period)
+
+    await check_client_access(user, client_id)
+    smmm_id = user["id"]
 
     if not confirm:
         raise HTTPException(
@@ -735,18 +746,24 @@ async def delete_donem_data(
 
 
 @router.get("/list/{smmm_id}")
-async def list_donem_data(smmm_id: str = "HKOZKAN"):
+async def list_donem_data(
+    smmm_id: str,
+    limit: int = Query(1000, ge=1, le=5000, description="Max kayıt (VT-8)"),
+    user: dict = Depends(verify_token)
+):
     """
     SMMM'nin tüm müşteri/dönem kombinasyonlarını listele.
 
     Dashboard'un dönem seçici için kullanacağı endpoint.
     """
 
+    smmm_id = user["id"]
+
     conn = get_db()
     cursor = conn.cursor()
 
     try:
-        # Müşterileri al
+        # Müşterileri al (VT-8: LIMIT eklendi)
         cursor.execute("""
             SELECT DISTINCT client_id, period_id,
                    COUNT(*) as file_count,
@@ -755,7 +772,8 @@ async def list_donem_data(smmm_id: str = "HKOZKAN"):
             WHERE tenant_id = ? AND is_active = 1
             GROUP BY client_id, period_id
             ORDER BY client_id, period_id DESC
-        """, (smmm_id,))
+            LIMIT ?
+        """, (smmm_id, limit))
 
         rows = cursor.fetchall()
 

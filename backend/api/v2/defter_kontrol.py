@@ -15,7 +15,9 @@ Author: Claude
 Date: 2026-01-25
 """
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
+from utils.period_utils import get_period_db
+from middleware.auth import verify_token, check_client_access
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 from pathlib import Path
@@ -104,7 +106,8 @@ class QuickSummaryResponse(BaseModel):
 @router.get("/full", response_model=FullReportResponse)
 async def get_full_defter_kontrol(
     client_id: str = Query(..., description="Mükellef ID"),
-    period_id: str = Query(..., description="Dönem ID (örn: 2025_Q1)")
+    period_id: str = Depends(get_period_db),
+    user: dict = Depends(verify_token)
 ):
     """
     TAM DEFTER KONTROL RAPORU
@@ -119,6 +122,7 @@ async def get_full_defter_kontrol(
 
     Hesap bazlı detayları içerir.
     """
+    await check_client_access(user, client_id)
     try:
         service = get_cross_check_service()
         report = service.run_full_cross_check(client_id, period_id)
@@ -132,7 +136,8 @@ async def get_full_defter_kontrol(
 @router.get("/balance")
 async def get_balance_checks(
     client_id: str = Query(..., description="Mükellef ID"),
-    period_id: str = Query(..., description="Dönem ID")
+    period_id: str = Depends(get_period_db),
+    user: dict = Depends(verify_token)
 ):
     """
     DENGE KONTROLLERİ (C1, C4)
@@ -143,6 +148,7 @@ async def get_balance_checks(
     Bu kontroller defterlerin kendi içinde tutarlılığını kontrol eder.
     Çift taraflı kayıt sistemi (double-entry) gereği borç ve alacak eşit olmalıdır.
     """
+    await check_client_access(user, client_id)
     try:
         service = get_cross_check_service()
         results = service.run_balance_checks(client_id, period_id)
@@ -163,8 +169,9 @@ async def get_balance_checks(
 @router.get("/reconciliation")
 async def get_reconciliation_checks(
     client_id: str = Query(..., description="Mükellef ID"),
-    period_id: str = Query(..., description="Dönem ID"),
-    include_details: bool = Query(False, description="Hesap detaylarını dahil et")
+    period_id: str = Depends(get_period_db),
+    include_details: bool = Query(False, description="Hesap detaylarını dahil et"),
+    user: dict = Depends(verify_token)
 ):
     """
     MUTABAKAT KONTROLLERİ (C2, C3)
@@ -179,6 +186,7 @@ async def get_reconciliation_checks(
     NOT: Karşılaştırma NET BAKİYE üzerinden değil, BORÇ ve ALACAK TOPLAMLARI
     üzerinden ayrı ayrı yapılır (Tavsiye Mektubu 2 prensibi).
     """
+    await check_client_access(user, client_id)
     try:
         service = get_cross_check_service()
         conn = service._get_connection()
@@ -218,7 +226,8 @@ async def get_reconciliation_checks(
 @router.get("/summary", response_model=QuickSummaryResponse)
 async def get_quick_summary(
     client_id: str = Query(..., description="Mükellef ID"),
-    period_id: str = Query(..., description="Dönem ID")
+    period_id: str = Depends(get_period_db),
+    user: dict = Depends(verify_token)
 ):
     """
     HIZLI ÖZET
@@ -226,6 +235,7 @@ async def get_quick_summary(
     Tüm kontrollerin kısa özeti. Dashboard için idealdir.
     Detay içermez, sadece pass/fail durumları döner.
     """
+    await check_client_access(user, client_id)
     try:
         service = get_cross_check_service()
         report = service.run_full_cross_check(client_id, period_id)
@@ -277,7 +287,8 @@ async def get_quick_summary(
 @router.get("/c1")
 async def get_c1_yevmiye_balance(
     client_id: str = Query(..., description="Mükellef ID"),
-    period_id: str = Query(..., description="Dönem ID")
+    period_id: str = Depends(get_period_db),
+    user: dict = Depends(verify_token)
 ):
     """
     C1: YEVMİYE DENGE KONTROLÜ
@@ -291,6 +302,7 @@ async def get_c1_yevmiye_balance(
 
     Dengesiz fiş = Bir fişte borç toplamı ≠ alacak toplamı
     """
+    await check_client_access(user, client_id)
     try:
         service = get_cross_check_service()
         conn = service._get_connection()
@@ -312,8 +324,9 @@ async def get_c1_yevmiye_balance(
 @router.get("/c2")
 async def get_c2_yevmiye_kebir(
     client_id: str = Query(..., description="Mükellef ID"),
-    period_id: str = Query(..., description="Dönem ID"),
-    only_diffs: bool = Query(True, description="Sadece farkı olanları göster")
+    period_id: str = Depends(get_period_db),
+    only_diffs: bool = Query(True, description="Sadece farkı olanları göster"),
+    user: dict = Depends(verify_token)
 ):
     """
     C2: YEVMİYE ↔ KEBİR MUTABAKATI
@@ -327,6 +340,7 @@ async def get_c2_yevmiye_kebir(
 
     NOT: Net bakiye değil, borç ve alacak AYRI AYRI karşılaştırılır!
     """
+    await check_client_access(user, client_id)
     try:
         service = get_cross_check_service()
         conn = service._get_connection()
@@ -352,8 +366,9 @@ async def get_c2_yevmiye_kebir(
 @router.get("/c3")
 async def get_c3_kebir_mizan(
     client_id: str = Query(..., description="Mükellef ID"),
-    period_id: str = Query(..., description="Dönem ID"),
-    only_diffs: bool = Query(True, description="Sadece farkı olanları göster")
+    period_id: str = Depends(get_period_db),
+    only_diffs: bool = Query(True, description="Sadece farkı olanları göster"),
+    user: dict = Depends(verify_token)
 ):
     """
     C3: KEBİR ↔ MİZAN MUTABAKATI
@@ -368,6 +383,7 @@ async def get_c3_kebir_mizan(
     NOT: Mizan'da çok seviyeli hesaplar var (ana hesap → alt hesap).
     Sadece YAPRAK HESAPLAR karşılaştırılır (çift sayımı önlemek için).
     """
+    await check_client_access(user, client_id)
     try:
         service = get_cross_check_service()
         conn = service._get_connection()
@@ -393,7 +409,8 @@ async def get_c3_kebir_mizan(
 @router.get("/c4")
 async def get_c4_mizan_balance(
     client_id: str = Query(..., description="Mükellef ID"),
-    period_id: str = Query(..., description="Dönem ID")
+    period_id: str = Depends(get_period_db),
+    user: dict = Depends(verify_token)
 ):
     """
     C4: MİZAN DENGE KONTROLÜ
@@ -407,6 +424,7 @@ async def get_c4_mizan_balance(
     Ana hesaplar (100, 101 vs.) alt hesaplarının toplamını içerdiğinden
     sadece en alt seviye hesaplar (100.01.001 gibi) toplanır.
     """
+    await check_client_access(user, client_id)
     try:
         service = get_cross_check_service()
         conn = service._get_connection()

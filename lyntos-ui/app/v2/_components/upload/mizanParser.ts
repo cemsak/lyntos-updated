@@ -3,7 +3,7 @@
  * Extracts account balances from Excel/CSV mizan files
  */
 
-import * as XLSX from 'xlsx';
+// P-6: xlsx dynamic import (~100KB bundle azaltma)
 
 // Account balance structure
 export interface AccountBalance {
@@ -66,7 +66,10 @@ function parseNumber(value: unknown): number {
 }
 
 // Parse Excel/CSV buffer
-export function parseMizanFile(buffer: ArrayBuffer, fileName: string): ParsedMizan {
+export async function parseMizanFile(buffer: ArrayBuffer, fileName: string): Promise<ParsedMizan> {
+  // P-6: Dynamic import — sadece parse sırasında yüklenir (~100KB tasarruf)
+  const XLSX = await import('xlsx');
+
   const workbook = XLSX.read(buffer, { type: 'array' });
   const sheetName = workbook.SheetNames[0];
   const sheet = workbook.Sheets[sheetName];

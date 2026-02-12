@@ -8,6 +8,8 @@ import { ExplainModal } from '../kpi/ExplainModal';
 import { useFailSoftFetch } from '../hooks/useFailSoftFetch';
 import { ENDPOINTS } from '../contracts/endpoints';
 import { useScopeComplete } from '../scope/useDashboardScope';
+import { API_ENDPOINTS } from '../../_lib/config/api';
+import { api } from '../../_lib/api/client';
 import { formatCurrency as formatCurrencyCentral, formatPercent } from '../../_lib/format';
 
 import type { YiufeData, InflationResult } from './inflationTypes';
@@ -61,26 +63,20 @@ export function InflationPanel() {
       setYiufeData(prev => ({ ...prev, isLoading: true, error: null }));
 
       try {
-        // Backend API route'u cagir (API key server-side'da guvenli)
-        const response = await fetch('/api/v2/tcmb/yiufe');
-        const result = await response.json();
+        const { data: result, error: apiErr, ok } = await api.get<any>(API_ENDPOINTS.tcmb.yiufe);
 
-        if (!response.ok) {
-          // API key eksikse ozel mesaj goster
-          if (result.code === 'API_KEY_MISSING') {
-            throw new Error('TCMB API anahtari tanimli degil. .env.local dosyasini kontrol edin.');
-          }
-          throw new Error(result.error || 'Yi-UFE verisi alinamadi');
+        if (!ok || !result) {
+          throw new Error(apiErr || 'Yi-UFE verisi alinamadi');
         }
 
-        if (result.success && result.data) {
+        if (result) {
           setYiufeData({
-            son3Yil: result.data.son3Yil,
+            son3Yil: result.son3Yil,
             son3YilEsik: YIUFE_ESIK_DEGERLERI.son3YilEsik,
-            son12Ay: result.data.son12Ay,
+            son12Ay: result.son12Ay,
             son12AyEsik: YIUFE_ESIK_DEGERLERI.son12AyEsik,
-            duzeltmeKatsayisi: result.data.duzeltmeKatsayisi,
-            referansTarih: result.data.referansTarih,
+            duzeltmeKatsayisi: result.duzeltmeKatsayisi,
+            referansTarih: result.referansTarih,
             isLoading: false,
             error: null,
           });

@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Stamp, Loader2, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { formatNumber } from '../../../_lib/format';
 import { API_ENDPOINTS } from '../../../_lib/config/api';
-import { getAuthToken } from '../../../_lib/auth';
+import { api } from '../../../_lib/api/client';
 
 interface DamgaResult {
   tutar: number;
@@ -43,21 +43,14 @@ export default function DamgaVergisiCalculator() {
     setResult(null);
 
     try {
-      const token = getAuthToken();
-      const response = await fetch(API_ENDPOINTS.taxParams.calculateDamga, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ tutar: tutarNum, belge_tipi: belgeTipi }),
+      const result = await api.post<DamgaResult>(API_ENDPOINTS.taxParams.calculateDamga, {
+        tutar: tutarNum,
+        belge_tipi: belgeTipi,
       });
-
-      const json = await response.json();
-      if (json.success) {
-        setResult(json.data);
+      if (result.data) {
+        setResult(result.data);
       } else {
-        setError(json.detail || 'Hesaplama başarısız');
+        setError(result.error || 'Hesaplama başarısız');
       }
     } catch {
       setError('Hesaplama sırasında hata oluştu');

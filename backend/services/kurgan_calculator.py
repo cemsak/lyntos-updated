@@ -24,6 +24,17 @@ from datetime import datetime
 from decimal import Decimal
 import logging
 
+# P-11: Modeller ve config ayrı dosyalara çıkarıldı (dosya bölme)
+from services.kurgan_models import (
+    HesapKontrol, KategoriAnalizi, KurganSenaryo, TTK376Sonucu,
+    OrtulSermayeSonucu, FinansmanGiderKisitlamasi, AcilAksiyon,
+    KurganCriteria, KurganRiskResult,
+)
+from services.kurgan_config import (
+    KURGAN_SENARYOLARI, WEIGHTS as _WEIGHTS, ESIKLER as _ESIKLER,
+    PUAN_ETKISI as _PUAN_ETKISI, CEZA_ORANLARI as _CEZA_ORANLARI,
+)
+
 # GİB Risk Servisi - KRG-01, KRG-02, KRG-12, KRG-16 için
 # ⚠️ KRİTİK: GERÇEK VERİ SERVİSİ - SİMÜLASYON DEĞİL
 try:
@@ -74,301 +85,8 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-
-# =============================================================================
-# HESAP KATEGORI ANALIZ YAPILARI
-# =============================================================================
-
-@dataclass
-class HesapKontrol:
-    """Tek bir hesap kontrolu sonucu"""
-    hesap_kodu: str
-    hesap_adi: str
-    kontrol_adi: str
-    deger: float
-    esik_uyari: float
-    esik_kritik: float
-    durum: str  # "NORMAL", "UYARI", "KRITIK"
-    risk_puani: int  # 0-100
-    aciklama: str
-    oneri: str
-    mevzuat_ref: List[str] = field(default_factory=list)
-
-
-@dataclass
-class KategoriAnalizi:
-    """Bir kategori icin analiz sonucu"""
-    kategori_id: str
-    kategori_adi: str
-    toplam_risk: int  # 0-100
-    kontroller: List[HesapKontrol] = field(default_factory=list)
-    uyarilar: List[str] = field(default_factory=list)
-    aksiyonlar: List[str] = field(default_factory=list)
-    kritik_sayisi: int = 0
-    uyari_sayisi: int = 0
-    normal_sayisi: int = 0
-
-
-@dataclass
-class KurganSenaryo:
-    """KURGAN 16 senaryo yapisi"""
-    senaryo_id: str
-    senaryo_adi: str
-    risk_puani: int
-    aksiyon: str  # "TAKIP", "BILGI_ISTEME", "IZAHA_DAVET", "INCELEME"
-    sure: Optional[str]  # "15 gun", "30 gun", None
-    tetiklendi: bool = False
-    tetikleme_nedeni: Optional[str] = None
-    oneriler: List[str] = field(default_factory=list)
-
-
-@dataclass
-class TTK376Sonucu:
-    """TTK 376 Sermaye Kaybi Analizi"""
-    sermaye: float
-    yasal_yedekler: float
-    ozkaynaklar: float
-    sermaye_kaybi_orani: float
-    durum: str  # "NORMAL", "YARI_KAYIP", "UCTE_IKI_KAYIP", "BORCA_BATIK"
-    aksiyon: Optional[str]
-    aciklama: str
-
-
-@dataclass
-class OrtulSermayeSonucu:
-    """KVK 12 Ortulu Sermaye Analizi"""
-    donem_basi_ozkaynak: float
-    sinir: float  # 3x ozkaynak
-    iliskili_borc: float
-    ortulu_sermaye_tutari: float
-    durum: str  # "SINIR_ALTINDA", "SINIR_UZERINDE"
-    kkeg_tutari: float
-    aksiyon: Optional[str]
-
-
-@dataclass
-class FinansmanGiderKisitlamasi:
-    """KVK 11/1-i Finansman Gider Kisitlamasi"""
-    ozkaynak: float
-    yabanci_kaynak: float
-    toplam_finansman_gideri: float
-    asan_kisim: float
-    kisitlamaya_tabi_gider: float
-    kkeg_tutari: float
-    uygulanir_mi: bool
-
-
-@dataclass
-class AcilAksiyon:
-    """Acil yapilacak is"""
-    aksiyon: str
-    oncelik: str  # "high", "medium", "low"
-    tahmini_sure: str
-    kategori: str
-    ilgili_hesap: Optional[str] = None
-
-
-# =============================================================================
-# KURGAN 16 SENARYO TANIMLARI
-# =============================================================================
-
-KURGAN_SENARYOLARI = {
-    "KRG-01": {
-        "ad": "Riskli Satıcıdan Alım",
-        "risk": 85,
-        "aksiyon": "IZAHA_DAVET",
-        "sure": "30 gün",
-        "mevzuat": ["VUK 359", "VUK 370", "KURGAN Rehberi"],
-        "aciklama": "Kod-3/Kod-4 veya VTR düzenlenen satıcıdan alım yapılması"
-    },
-    "KRG-02": {
-        "ad": "Zincirleme Riskli Alım",
-        "risk": 75,
-        "aksiyon": "BILGI_ISTEME",
-        "sure": "15 gün",
-        "mevzuat": ["VUK 359", "KDV Genel Uygulama Tebliği"],
-        "aciklama": "Tedarik zincirinde 2. veya 3. kademe riskli mükellef"
-    },
-    "KRG-03": {
-        "ad": "Mal/Hizmet Akışı Tutarsızlığı",
-        "risk": 80,
-        "aksiyon": "IZAHA_DAVET",
-        "sure": "30 gün",
-        "mevzuat": ["VUK 359", "VUK 3/B"],
-        "aciklama": "NACE faaliyet kodu ile alım yapılan mal/hizmet uyumsuzluğu"
-    },
-    "KRG-04": {
-        "ad": "Stok-Satış Uyumsuzluğu",
-        "risk": 85,
-        "aksiyon": "IZAHA_DAVET",
-        "sure": "30 gün",
-        "mevzuat": ["VUK 186", "VUK 257", "VUK 359"],
-        "aciklama": "Satış tutarı > (Alış + Açılış Stoku), olası kayıtdışı satış"
-    },
-    "KRG-05": {
-        "ad": "Sevk Belgesi Eksikliği",
-        "risk": 70,
-        "aksiyon": "BILGI_ISTEME",
-        "sure": "15 gün",
-        "mevzuat": ["VUK 230", "VUK 359"],
-        "aciklama": "Yüksek tutarlı mal alımında sevk irsaliyesi/taşıma belgesi eksikliği"
-    },
-    "KRG-06": {
-        "ad": "Ödeme Yöntemi Uyumsuzluğu",
-        "risk": 75,
-        "aksiyon": "BILGI_ISTEME",
-        "sure": "15 gün",
-        "mevzuat": ["VUK 232", "VUK 234", "VUK 359"],
-        "aciklama": "7.000 TL üstü faturalarda banka ödeme kaydı eksikliği"
-    },
-    "KRG-07": {
-        "ad": "Karşılıklı Ödeme Döngüsü",
-        "risk": 80,
-        "aksiyon": "IZAHA_DAVET",
-        "sure": "30 gün",
-        "mevzuat": ["VUK 359", "KVK 13"],
-        "aciklama": "Aynı gün karşılıklı ödeme/tahsilat (Ciro dolandırıcılığı şüphesi)"
-    },
-    "KRG-08": {
-        "ad": "Sektörel Kârlılık Anomalisi",
-        "risk": 65,
-        "aksiyon": "TAKIP",
-        "sure": None,
-        "mevzuat": ["VUK 134", "KVK 6"],
-        "aciklama": "Brüt/Net kâr marjı sektör ortalamasının %25 altında"
-    },
-    "KRG-09": {
-        "ad": "Beyan-Yaşam Standardı Uyumsuzluğu",
-        "risk": 70,
-        "aksiyon": "BILGI_ISTEME",
-        "sure": "15 gün",
-        "mevzuat": ["VUK 134", "GVK 30"],
-        "aciklama": "Ortakların lüks tüketimi ile beyan edilen gelir uyumsuzluğu"
-    },
-    "KRG-10": {
-        "ad": "KDV Beyan-Fatura Uyumsuzluğu",
-        "risk": 85,
-        "aksiyon": "IZAHA_DAVET",
-        "sure": "30 gün",
-        "mevzuat": ["KDVK 29", "VUK 341", "VUK 344"],
-        "aciklama": "KDV beyanname matrahı ile e-Fatura/e-Arşiv toplamı arasında fark"
-    },
-    "KRG-11": {
-        "ad": "Riskli KDV İade Talebi",
-        "risk": 90,
-        "aksiyon": "INCELEME",
-        "sure": "Derhal",
-        "mevzuat": ["KDVK 32", "KDV Genel Uygulama Tebliği"],
-        "aciklama": "İade matrahında riskli satıcı veya yüksek yüklenilen KDV"
-    },
-    "KRG-12": {
-        "ad": "Sahte Belge Şüphesi",
-        "risk": 95,
-        "aksiyon": "INCELEME",
-        "sure": "Derhal",
-        "mevzuat": ["VUK 359 (Kaçakçılık)", "VUK 341-344", "CMK"],
-        "aciklama": "SMİYB düzenleyen/kullanan mükellef ile işlem - HAPİS CEZASI RİSKİ"
-    },
-    "KRG-13": {
-        "ad": "Transfer Fiyatlandırması Riski",
-        "risk": 80,
-        "aksiyon": "IZAHA_DAVET",
-        "sure": "30 gün",
-        "mevzuat": ["KVK 12 (Örtülü Sermaye)", "KVK 13 (Transfer Fiyatlandırması)", "1 Seri No'lu TF Tebliği"],
-        "aciklama": "İlişkili kişi işlemleri/Ciro > %25, ortaklara borç faizi eksikliği",
-        "hesap_kodlari": ["131", "231", "331", "431"],
-        "esik": 0.25
-    },
-    "KRG-14": {
-        "ad": "Sürekli Zarar Beyanı",
-        "risk": 70,
-        "aksiyon": "BILGI_ISTEME",
-        "sure": "15 gün",
-        "mevzuat": ["VUK 134", "KVK 6", "TTK 376"],
-        "aciklama": "3+ yıl üst üste zarar beyanı, teknik iflas riski"
-    },
-    "KRG-15": {
-        "ad": "Düşük Vergi Yükü",
-        "risk": 75,
-        "aksiyon": "BILGI_ISTEME",
-        "sure": "15 gün",
-        "mevzuat": ["VUK 134", "KVK 6", "GVK 40-41"],
-        "aciklama": "Efektif vergi yükü sektör ortalamasının %50'sinin altında"
-    },
-    "KRG-16": {
-        "ad": "Ortak/Yönetici Risk Geçmişi",
-        "risk": 80,
-        "aksiyon": "IZAHA_DAVET",
-        "sure": "30 gün",
-        "mevzuat": ["VUK 359", "VUK 3/B", "KURGAN Rehberi"],
-        "aciklama": "Ortağın başka şirketinde VTR veya sahte belge tespiti"
-    },
-}
-
-
-# =============================================================================
-# LEGACY YAPILAR (Geriye Uyumluluk)
-# =============================================================================
-
-@dataclass
-class KurganCriteria:
-    """13 KURGAN kriteri icin veri yapisi (Legacy)"""
-    faaliyet_uyumu: bool = True
-    faaliyet_uyum_score: int = 100
-    organik_temas: bool = False
-    atif_var: bool = False
-    vergiye_uyum_score: int = 100
-    surekli_zarar: bool = False
-    devreden_kdv_yuksek: bool = False
-    dusuk_vergi_beyani: bool = False
-    devamlilik_var: bool = False
-    tekrar_alim_sayisi: int = 0
-    iliskili_kisi_var: bool = False
-    ayni_smmm: bool = False
-    depolama_kapasitesi: bool = True
-    e_imza_uyumu: bool = True
-    e_imza_gap_days: int = 0
-    emtia_tespiti_var: bool = False
-    sevkiyat_belgeleri: bool = True
-    irsaliye_var: bool = True
-    plaka_takip: bool = True
-    odeme_seffafligi_score: int = 100
-    fiktif_odeme_riski: bool = False
-    cek_ciro_karmasik: bool = False
-    dbs_kullanimi: bool = True
-    gecmis_inceleme_var: bool = False
-    smiyb_gecmisi_var: bool = False
-    ortak_gecmisi_temiz: bool = True
-
-
-@dataclass
-class KurganRiskResult:
-    """KURGAN risk analizi sonucu (Legacy + V2)"""
-    score: int
-    risk_level: str
-    warnings: List[str]
-    action_items: List[str]
-    criteria_scores: Dict[str, int]
-    criteria_details: Dict[str, Any]
-    vdk_reference: str = "E-55935724-010.06-7361"
-    effective_date: str = "2025-10-01"
-    calculated_at: str = ""
-
-    # V2 Yeni Alanlar
-    risk_summary: Optional[Dict] = None
-    urgent_actions: Optional[Dict] = None
-    category_analysis: Optional[Dict] = None
-    kurgan_scenarios: Optional[List[Dict]] = None
-    ttk_376: Optional[Dict] = None
-    ortulu_sermaye: Optional[Dict] = None
-    finansman_gider_kisitlamasi: Optional[Dict] = None
-    muhtemel_cezalar: Optional[Dict] = None  # Müfettiş Gözü için ceza hesaplaması
-    mukellef_finansal_oranlari: Optional[Dict] = None  # Sektör karşılaştırması için mükellef oranları
-
-    def __post_init__(self):
-        if not self.calculated_at:
-            self.calculated_at = datetime.utcnow().isoformat() + "Z"
-
+# P-11: Dataclass tanımları → kurgan_models.py
+# P-11: KURGAN_SENARYOLARI, WEIGHTS, ESIKLER, PUAN_ETKISI, CEZA_ORANLARI → kurgan_config.py
 
 # =============================================================================
 # ANA HESAPLAYICI SINIF
@@ -377,61 +95,11 @@ class KurganRiskResult:
 class KurganCalculator:
     """KURGAN 13 kriter + Kategori bazli hesap analizi"""
 
-    WEIGHTS: Dict[str, int] = {
-        "vergiye_uyum": 25,
-        "odeme_seffafligi": 20,
-        "sevkiyat": 10,
-        "e_imza_uyumu": 10,
-        "gecmis_inceleme": 15,
-        "ortak_gecmisi": 10,
-        "diger": 10
-    }
-
-    # Hesap esikleri
-    ESIKLER = {
-        # LIKIDITE
-        "100_siskinlik_uyari": 0.05,      # %5
-        "100_siskinlik_kritik": 0.15,     # %15
-        # ORTAKLAR
-        "131_sermaye_uyari": 0.10,        # %10
-        "131_sermaye_kritik": 0.30,       # %30
-        "331_ortulu_katsayi": 3.0,        # 3x ozkaynak
-        # KDV
-        "190_devreden_ay": 36,            # 36 ay
-        # TICARI
-        "120_yaslandirma_uyari": 90,      # 90 gun
-        "120_yaslandirma_kritik": 180,    # 180 gun
-        "320_yaslandirma_uyari": 90,      # 90 gun
-        # STOK
-        "153_devir_uyari": 180,           # 180 gun
-        # DURAN VARLIK
-        "dogrudan_gider_haddi_2026": 12000,  # 12.000 TL
-    }
-
-    # Aksiyon bazında tahmini puan etkisi (düşüş)
-    PUAN_ETKISI = {
-        "kasa_sayim": -12,          # Kasa sayım tutanağı hazırla
-        "kasa_adat": -15,           # Kasa adat hesabı yap
-        "adat_faizi": -18,          # 131 hesap için adat faizi hesapla
-        "ortulu_sermaye_kkeg": -10, # Örtülü sermaye KKEG hesapla
-        "banka_kmh": -8,            # KMH belgesi temin et
-        "ttk_376_bildirim": -5,     # TTK 376 bildirimi yap
-        "stok_sayim": -10,          # Stok sayım tutanağı hazırla
-        "sgk_mutabakat": -8,        # SGK mutabakatı yap
-        "kdv_beyan_kontrol": -12,   # KDV beyan kontrolü
-        "default": -5,              # Varsayılan etki
-    }
-
-    # Vergi ceza oranları — VUK madde 112 gecikme faizi
-    # NOT: Bu oranlar config/economic_rates.json'daki oranlardan FARKLIDIR.
-    # gecikme_faizi_aylik (%1.8) = VUK 112 gecikme faizi (vergi aslı üzerinden)
-    # economic_rates.json gecikme_zammi_aylik (%4.4) = 6183 sayılı kanun gecikme zammı
-    CEZA_ORANLARI = {
-        "vergi_ziyai_cezasi": 0.50,  # %50 VZC
-        "gecikme_faizi_aylik": 0.018,  # %1.8 aylık (VUK 112)
-        "kurumlar_vergisi": 0.25,    # %25 KV oranı
-        "kdv_orani": 0.20,           # %20 KDV oranı
-    }
+    # P-11: Sabitler kurgan_config.py'den import edilir
+    WEIGHTS = _WEIGHTS
+    ESIKLER = _ESIKLER
+    PUAN_ETKISI = _PUAN_ETKISI
+    CEZA_ORANLARI = _CEZA_ORANLARI
 
     def __init__(self) -> None:
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")

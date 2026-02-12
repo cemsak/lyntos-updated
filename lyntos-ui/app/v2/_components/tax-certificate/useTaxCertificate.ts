@@ -7,7 +7,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { getAuthToken } from '../../_lib/auth';
+import { api } from '../../_lib/api/client';
 import type { UploadResponse, TaxCertificateData, ConfirmResponse } from './types';
 
 interface UseTaxCertificateOptions {
@@ -30,22 +30,18 @@ export function useTaxCertificate({ clientId, onSuccess, onError }: UseTaxCertif
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch(`/api/v1/tax-certificate/upload?client_id=${encodeURIComponent(clientId)}`, {
-        method: 'POST',
-        body: formData,
-        headers: {
-          'Authorization': getAuthToken() || '', // Dev auth header
-        },
-      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const res = await api.post<any>(
+        `/api/v1/tax-certificate/upload`,
+        formData,
+        { params: { client_id: clientId } }
+      );
 
-      const json = await response.json();
-
-      if (!response.ok) {
-        throw new Error(json.detail || json.message || 'Yükleme başarısız');
+      if (!res.ok || !res.data) {
+        throw new Error(res.error || 'Yükleme başarısız');
       }
 
-      // Extract data from ResponseEnvelope
-      const data = json.data || json;
+      const data = res.data;
 
       const result: UploadResponse = {
         success: data.success,
@@ -120,22 +116,18 @@ export function useTaxCertificate({ clientId, onSuccess, onError }: UseTaxCertif
         year: data.year,
       };
 
-      const response = await fetch(`/api/v1/tax-certificate/confirm?client_id=${encodeURIComponent(clientId)}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': getAuthToken() || '',
-        },
-        body: JSON.stringify(apiData),
-      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const res = await api.post<any>(
+        `/api/v1/tax-certificate/confirm`,
+        apiData,
+        { params: { client_id: clientId } }
+      );
 
-      const json = await response.json();
-
-      if (!response.ok) {
-        throw new Error(json.detail || json.message || 'Kayıt başarısız');
+      if (!res.ok || !res.data) {
+        throw new Error(res.error || 'Kayıt başarısız');
       }
 
-      const responseData = json.data || json;
+      const responseData = res.data;
 
       const result: ConfirmResponse = {
         success: responseData.success,

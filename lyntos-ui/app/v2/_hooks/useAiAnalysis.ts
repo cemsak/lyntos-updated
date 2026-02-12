@@ -8,7 +8,8 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { getAuthToken } from '../_lib/auth';
+import { API_ENDPOINTS } from '../_lib/config/api';
+import { api } from '../_lib/api/client';
 
 // ============================================================================
 // TYPES
@@ -96,35 +97,16 @@ export function useAiAnalysis() {
       return null;
     }
 
-    const token = getAuthToken();
-    if (!token) {
-      setState({
-        response: null,
-        isLoading: false,
-        isError: true,
-        error: 'Oturum bilgisi bulunamadı',
-      });
-      return null;
-    }
-
     setState((prev) => ({ ...prev, isLoading: true, isError: false, error: null }));
 
     try {
-      const response = await fetch('/api/v1/contracts/vdk-ai-analysis', {
-        method: 'POST',
-        headers: {
-          Authorization: token,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(request),
-      });
+      const { data: result, error: apiError } = await api.post<AiAnalysisResponse>(
+        API_ENDPOINTS.contracts.vdkAiAnalysis, request, { timeout: 120_000 }
+      );
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      if (apiError || !result) {
+        throw new Error(apiError || 'AI analiz yanitialinmadi');
       }
-
-      const result: AiAnalysisResponse = await response.json();
 
       setState({
         response: result,
@@ -183,12 +165,6 @@ export function useAiChat(clientId: string | null, period: string | null) {
         return;
       }
 
-      const token = getAuthToken();
-      if (!token) {
-        setError('Oturum bilgisi bulunamadi');
-        return;
-      }
-
       // Add user message
       const userMsg: ChatMessage = {
         role: 'user',
@@ -206,13 +182,9 @@ export function useAiChat(clientId: string | null, period: string | null) {
       }));
 
       try {
-        const response = await fetch('/api/v1/contracts/vdk-ai-analysis', {
-          method: 'POST',
-          headers: {
-            Authorization: token,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
+        const { data: result, error: chatApiError } = await api.post<AiAnalysisResponse>(
+          API_ENDPOINTS.contracts.vdkAiAnalysis,
+          {
             client_id: clientId,
             period: period,
             analysis_type: 'question',
@@ -220,14 +192,13 @@ export function useAiChat(clientId: string | null, period: string | null) {
               question: userMessage,
               conversation_history: history,
             },
-          }),
-        });
+          },
+          { timeout: 120_000 }
+        );
 
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
+        if (chatApiError || !result) {
+          throw new Error(chatApiError || 'AI yaniti alinamadi');
         }
-
-        const result: AiAnalysisResponse = await response.json();
 
         if (result.response.success) {
           const assistantMsg: ChatMessage = {
@@ -451,17 +422,6 @@ export function useMevzuatRAG() {
       return null;
     }
 
-    const token = getAuthToken();
-    if (!token) {
-      setState({
-        response: null,
-        isLoading: false,
-        isError: true,
-        error: 'Oturum bilgisi bulunamadı',
-      });
-      return null;
-    }
-
     setState({
       response: null,
       isLoading: true,
@@ -470,24 +430,15 @@ export function useMevzuatRAG() {
     });
 
     try {
-      const response = await fetch('/api/v1/ai/mevzuat-rag', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          question,
-          context: context || null,
-          include_sources: true,
-        }),
-      });
+      const { data: result, error: apiError } = await api.post<MevzuatRAGResponse>(
+        API_ENDPOINTS.ai.mevzuatRag,
+        { question, context: context || null, include_sources: true },
+        { timeout: 60_000 }
+      );
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      if (apiError || !result) {
+        throw new Error(apiError || 'Mevzuat RAG yaniti alinamadi');
       }
-
-      const result: MevzuatRAGResponse = await response.json();
 
       setState({
         response: result,

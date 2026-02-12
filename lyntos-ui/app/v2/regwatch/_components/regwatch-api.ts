@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '../../_lib/config/api';
+import { api } from '../../_lib/api/client';
 import type { MevzuatResult, Statistics } from './regwatch-types';
 
 export async function searchMevzuat(params: {
@@ -8,37 +8,33 @@ export async function searchMevzuat(params: {
   limit?: number;
   offset?: number;
 }): Promise<{ results: MevzuatResult[]; total: number }> {
-  const searchParams = new URLSearchParams();
+  const qp: Record<string, string> = {};
+  if (params.query) qp.q = params.query;
+  if (params.types?.length) qp.types = params.types.join(',');
+  if (params.kurumlar?.length) qp.kurumlar = params.kurumlar.join(',');
+  if (params.limit) qp.limit = params.limit.toString();
+  if (params.offset) qp.offset = params.offset.toString();
 
-  if (params.query) searchParams.set('q', params.query);
-  if (params.types?.length) searchParams.set('types', params.types.join(','));
-  if (params.kurumlar?.length) searchParams.set('kurumlar', params.kurumlar.join(','));
-  if (params.limit) searchParams.set('limit', params.limit.toString());
-  if (params.offset) searchParams.set('offset', params.offset.toString());
-
-  const res = await fetch(`${API_BASE_URL}/api/v2/mevzuat/search?${searchParams}`);
-  const data = await res.json();
-
-  if (!data.success) throw new Error('Arama başarısız');
-
-  return {
-    results: data.data.results,
-    total: data.data.total
-  };
+  const { data, error } = await api.get<{ results: MevzuatResult[]; total: number }>(
+    '/api/v2/mevzuat/search',
+    { params: qp }
+  );
+  if (error || !data) throw new Error(error || 'Arama başarısız');
+  return { results: data.results, total: data.total };
 }
 
 export async function fetchStatistics(): Promise<Statistics> {
-  const res = await fetch(`${API_BASE_URL}/api/v2/mevzuat/statistics`);
-  const data = await res.json();
-  if (!data.success) throw new Error('İstatistikler alınamadı');
-  return data.data;
+  const { data, error } = await api.get<Statistics>('/api/v2/mevzuat/statistics');
+  if (error || !data) throw new Error(error || 'İstatistikler alınamadı');
+  return data;
 }
 
 export async function fetchRecent(): Promise<MevzuatResult[]> {
-  const res = await fetch(`${API_BASE_URL}/api/v2/mevzuat/recent?limit=10`);
-  const data = await res.json();
-  if (!data.success) throw new Error('Son mevzuatlar alınamadı');
-  return data.data;
+  const { data, error } = await api.get<MevzuatResult[]>('/api/v2/mevzuat/recent', {
+    params: { limit: 10 },
+  });
+  if (error || !data) throw new Error(error || 'Son mevzuatlar alınamadı');
+  return data;
 }
 
 export async function fetchByType(
@@ -46,14 +42,10 @@ export async function fetchByType(
   limit: number = 50,
   offset: number = 0
 ): Promise<{ results: MevzuatResult[]; total: number; type_label: string }> {
-  const res = await fetch(
-    `${API_BASE_URL}/api/v2/mevzuat/by-type/${type}?limit=${limit}&offset=${offset}`
+  const { data, error } = await api.get<{ results: MevzuatResult[]; total: number; type_label: string }>(
+    `/api/v2/mevzuat/by-type/${type}`,
+    { params: { limit, offset } }
   );
-  const data = await res.json();
-  if (!data.success) throw new Error('Mevzuat listesi alınamadı');
-  return {
-    results: data.data.results,
-    total: data.data.total,
-    type_label: data.data.type_label
-  };
+  if (error || !data) throw new Error(error || 'Mevzuat listesi alınamadı');
+  return { results: data.results, total: data.total, type_label: data.type_label };
 }

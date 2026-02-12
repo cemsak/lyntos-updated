@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useDashboardScope } from '../scope/useDashboardScope';
 import { ENDPOINTS_V2 } from '../contracts/endpoints';
+import { api } from '../../_lib/api/client';
 import type {
   YatayData,
   DikeyData,
@@ -47,31 +48,29 @@ export function YatayDikeyAnaliz() {
       try {
         if (viewMode === 'yatay') {
           const url = ENDPOINTS_V2.MIZAN_YATAY(scope.client_id, scope.period);
-          const res = await fetch(url, { headers: { Accept: 'application/json' } });
-          if (!res.ok) {
-            if (res.status === 404) {
+          const { data: json, error: apiError, status } = await api.get<YatayData>(url);
+          if (apiError || !json) {
+            if (status === 404) {
               setError('Yatay analiz için en az 2 dönem verisi gerekli.');
             } else {
-              setError(`Sunucu hatası: HTTP ${res.status}`);
+              setError(apiError || 'Yatay analiz verisi alınamadı');
             }
             setLoading(false);
             return;
           }
-          const json = await res.json();
           setYatayData(json);
         } else {
           const url = ENDPOINTS_V2.MIZAN_DIKEY(scope.client_id, scope.period);
-          const res = await fetch(url, { headers: { Accept: 'application/json' } });
-          if (!res.ok) {
-            if (res.status === 404) {
+          const { data: json, error: apiError, status } = await api.get<DikeyData>(url);
+          if (apiError || !json) {
+            if (status === 404) {
               setError('Bu dönem için mizan verisi bulunamadı.');
             } else {
-              setError(`Sunucu hatası: HTTP ${res.status}`);
+              setError(apiError || 'Dikey analiz verisi alınamadı');
             }
             setLoading(false);
             return;
           }
-          const json = await res.json();
           setDikeyData(json);
         }
       } catch (err) {

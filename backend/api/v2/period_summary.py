@@ -1,11 +1,9 @@
 """
 LYNTOS API v2 - Period Summary Endpoint
 Q1 Özet sayfası için beyanname, tahakkuk ve diğer dönem verilerini sağlar.
-
-NO AUTH REQUIRED - Frontend'den doğrudan erişilebilir.
 """
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 import logging
@@ -15,6 +13,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from database.db import get_connection
+from middleware.auth import verify_token, check_client_access
+from utils.period_utils import get_period_db
 
 logger = logging.getLogger(__name__)
 
@@ -178,15 +178,16 @@ def _parse_date_safe(date_str: Optional[str]) -> Optional['date']:
 @router.get("/ozet", response_model=PeriodSummaryResponse)
 async def get_period_summary(
     client_id: str = Query(..., description="Müşteri ID"),
-    period_id: str = Query(..., description="Dönem ID (örn: 2025-Q1)"),
-    tenant_id: str = Query("default", description="Tenant ID")
+    period_id: str = Depends(get_period_db),
+    user: dict = Depends(verify_token)
 ):
     """
     Dönem özet verilerini getir (Q1 Özet sayfası için).
 
     Tüm beyanname ve tahakkuk verilerini yeni tablo yapısından çeker.
-    Auth gerektirmez.
     """
+    await check_client_access(user, client_id)
+    tenant_id = user["id"]  # VT-10: token'dan al, Query parametresinden değil
     try:
         with get_connection() as conn:
             cursor = conn.cursor()
@@ -430,43 +431,26 @@ async def get_period_summary(
                 ))
 
             # =================================================================
-            # KAYIT SAYILARI
+            # KAYIT SAYILARI (VT-7: 5 sorgu → 1 UNION ALL)
             # =================================================================
-
-            # Banka işlem sayısı
             cursor.execute("""
-                SELECT COUNT(*) FROM bank_transactions
-                WHERE client_id = ? AND period_id = ?
-            """, (client_id, period_id))
-            banka_count = cursor.fetchone()[0] or 0
+                SELECT 'bank' as tbl, COUNT(*) as cnt FROM bank_transactions WHERE client_id = ? AND period_id = ?
+                UNION ALL
+                SELECT 'edefter_Y', COUNT(*) FROM edefter_entries WHERE client_id = ? AND period_id = ? AND defter_tipi = 'Y'
+                UNION ALL
+                SELECT 'edefter_K', COUNT(*) FROM edefter_entries WHERE client_id = ? AND period_id = ? AND defter_tipi = 'K'
+                UNION ALL
+                SELECT 'mizan', COUNT(*) FROM mizan_entries WHERE client_id = ? AND period_id = ?
+                UNION ALL
+                SELECT 'edefter_all', COUNT(*) FROM edefter_entries WHERE client_id = ? AND period_id = ?
+            """, (client_id, period_id) * 5)
 
-            # Yevmiye sayısı (E-Defter'den)
-            cursor.execute("""
-                SELECT COUNT(*) FROM edefter_entries
-                WHERE client_id = ? AND period_id = ? AND defter_tipi = 'Y'
-            """, (client_id, period_id))
-            yevmiye_count = cursor.fetchone()[0] or 0
-
-            # Kebir sayısı (E-Defter'den)
-            cursor.execute("""
-                SELECT COUNT(*) FROM edefter_entries
-                WHERE client_id = ? AND period_id = ? AND defter_tipi = 'K'
-            """, (client_id, period_id))
-            kebir_count = cursor.fetchone()[0] or 0
-
-            # Mizan sayısı
-            cursor.execute("""
-                SELECT COUNT(*) FROM mizan_entries
-                WHERE client_id = ? AND period_id = ?
-            """, (client_id, period_id))
-            mizan_count = cursor.fetchone()[0] or 0
-
-            # E-Defter sayısı
-            cursor.execute("""
-                SELECT COUNT(*) FROM edefter_entries
-                WHERE client_id = ? AND period_id = ?
-            """, (client_id, period_id))
-            edefter_count = cursor.fetchone()[0] or 0
+            _counts = {row[0]: row[1] for row in cursor.fetchall()}
+            banka_count = _counts.get("bank", 0) or 0
+            yevmiye_count = _counts.get("edefter_Y", 0) or 0
+            kebir_count = _counts.get("edefter_K", 0) or 0
+            mizan_count = _counts.get("mizan", 0) or 0
+            edefter_count = _counts.get("edefter_all", 0) or 0
 
             # =================================================================
             # AÇILIŞ BAKİYESİ DURUMU (TD-002)
@@ -539,9 +523,9 @@ async def get_period_summary(
 @router.get("/odeme-durumu", response_model=OdemeOzetiResponse)
 async def get_odeme_durumu(
     client_id: str = Query(..., description="Müşteri ID"),
-    period_id: str = Query(..., description="Dönem ID (örn: 2025-Q1)"),
-    tenant_id: str = Query("default", description="Tenant ID"),
-    refresh: bool = Query(False, description="Ödemeleri yeniden analiz et")
+    period_id: str = Depends(get_period_db),
+    refresh: bool = Query(False, description="Ödemeleri yeniden analiz et"),
+    user: dict = Depends(verify_token)
 ):
     """
     Tahakkuk ödeme durumlarını getir.
@@ -551,6 +535,8 @@ async def get_odeme_durumu(
 
     refresh=True ile ödemeleri yeniden analiz eder ve veritabanını günceller.
     """
+    await check_client_access(user, client_id)
+    tenant_id = user["id"]  # VT-10: token'dan al
     try:
         from services.vergi_odeme_takip import (
             update_tahakkuk_payment_status,
@@ -581,12 +567,14 @@ async def get_odeme_durumu(
 @router.post("/odeme-durumu/refresh")
 async def refresh_odeme_durumu(
     client_id: str = Query(..., description="Müşteri ID"),
-    period_id: str = Query(..., description="Dönem ID (örn: 2025-Q1)"),
-    tenant_id: str = Query("default", description="Tenant ID")
+    period_id: str = Depends(get_period_db),
+    user: dict = Depends(verify_token)
 ):
     """
     Ödeme durumlarını yeniden analiz et ve veritabanını güncelle.
     """
+    await check_client_access(user, client_id)
+    tenant_id = user["id"]  # VT-10: token'dan al
     try:
         from services.vergi_odeme_takip import update_tahakkuk_payment_status
         from database.db import get_db_path
@@ -628,7 +616,7 @@ class ManuelOdemeRequest(BaseModel):
 @router.post("/tahakkuk/manuel-odeme")
 async def manuel_odeme_isaretle(
     request: ManuelOdemeRequest,
-    tenant_id: str = Query("default", description="Tenant ID")
+    user: dict = Depends(verify_token)
 ):
     """
     SMMM'nin manuel olarak tahakkuk ödeme durumunu güncellemesi.
@@ -643,15 +631,18 @@ async def manuel_odeme_isaretle(
         from database.db import get_connection
         from datetime import datetime
 
+        tenant_id = user["id"]  # VT-10: token'dan al
+
         with get_connection() as conn:
             cursor = conn.cursor()
 
-            # Tahakkuk var mı kontrol et
+            # VT-10: Tahakkuk var mı + bu SMMM'ye ait mi kontrol et
             cursor.execute("""
-                SELECT id, tahakkuk_tipi, toplam_borc, payment_status
-                FROM tahakkuk_entries
-                WHERE id = ?
-            """, (request.tahakkuk_id,))
+                SELECT te.id, te.tahakkuk_tipi, te.toplam_borc, te.payment_status
+                FROM tahakkuk_entries te
+                JOIN clients c ON te.client_id = c.id
+                WHERE te.id = ? AND c.smmm_id = ?
+            """, (request.tahakkuk_id, tenant_id))
 
             row = cursor.fetchone()
             if not row:
@@ -681,7 +672,7 @@ async def manuel_odeme_isaretle(
                 request.odeme_tutari,
                 request.odeme_kaynagi,
                 request.aciklama,
-                tenant_id,  # SMMM ID
+                user["id"],  # SMMM ID from auth token
                 datetime.now().isoformat(),
                 request.odeme_durumu,
                 request.tahakkuk_id
@@ -707,7 +698,7 @@ async def manuel_odeme_isaretle(
 @router.post("/tahakkuk/odeme-iptal")
 async def odeme_iptal(
     tahakkuk_id: int = Query(..., description="Tahakkuk ID"),
-    tenant_id: str = Query("default", description="Tenant ID")
+    user: dict = Depends(verify_token)
 ):
     """
     Manuel olarak işaretlenmiş ödemeyi iptal et ve otomatik taramaya geri dön.
@@ -715,8 +706,19 @@ async def odeme_iptal(
     try:
         from database.db import get_connection
 
+        tenant_id = user["id"]  # VT-10: token'dan al
+
         with get_connection() as conn:
             cursor = conn.cursor()
+
+            # VT-10: Tahakkuk bu SMMM'ye ait mi kontrol et
+            cursor.execute("""
+                SELECT te.id FROM tahakkuk_entries te
+                JOIN clients c ON te.client_id = c.id
+                WHERE te.id = ? AND c.smmm_id = ?
+            """, (tahakkuk_id, tenant_id))
+            if not cursor.fetchone():
+                raise HTTPException(status_code=403, detail="Bu tahakkuk üzerinde yetkiniz yok")
 
             cursor.execute("""
                 UPDATE tahakkuk_entries

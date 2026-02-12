@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getAuthToken } from '../../_lib/auth';
 import { API_BASE_URL } from '../../_lib/config/api';
+import { api } from '../../_lib/api/client';
 import type {
   Taxpayer,
   ParsedTaxpayer,
@@ -73,19 +74,13 @@ export function useClients(smmmId: string): UseClientsReturn {
         return;
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/v1/tenants/${smmmId}/taxpayers`, {
-        headers: {
-          Authorization: token,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+      const result = await api.get<{ taxpayers?: Taxpayer[] }>(
+        `${API_BASE_URL}/api/v1/tenants/${smmmId}/taxpayers`
+      );
+      if (result.error || !result.data) {
+        throw new Error(result.error || 'Mükellef listesi yüklenemedi');
       }
-
-      const result = await response.json();
-      setTaxpayers(result.data?.taxpayers || []);
+      setTaxpayers(result.data.taxpayers || []);
     } catch (err) {
       console.error('Mükellef listesi yüklenemedi:', err);
       setError('Mükellef listesi yüklenemedi');
@@ -145,28 +140,15 @@ export function useClients(smmmId: string): UseClientsReturn {
   // Add client
   const addClient = useCallback(async (client: NewClientForm): Promise<boolean> => {
     try {
-      const token = getAuthToken();
-      const response = await fetch(`${API_BASE_URL}/api/v1/tenants/${smmmId}/taxpayers`, {
-        method: 'POST',
-        headers: {
-          Authorization: token || '',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: client.name.trim(),
-          vkn: client.vkn.replace(/\D/g, ''),
-          type: client.type,
-        }),
-      });
-
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.detail || `HTTP ${response.status}`);
+      const result = await api.post<{ taxpayer?: Taxpayer }>(
+        `${API_BASE_URL}/api/v1/tenants/${smmmId}/taxpayers`,
+        { name: client.name.trim(), vkn: client.vkn.replace(/\D/g, ''), type: client.type }
+      );
+      if (result.error || !result.data) {
+        throw new Error(result.error || 'Mükellef eklenemedi');
       }
-
-      const result = await response.json();
-      if (result.data?.taxpayer) {
-        setTaxpayers((prev) => [...prev, result.data.taxpayer]);
+      if (result.data.taxpayer) {
+        setTaxpayers((prev) => [...prev, result.data!.taxpayer!]);
       }
       return true;
     } catch (err) {
@@ -178,23 +160,12 @@ export function useClients(smmmId: string): UseClientsReturn {
   // Delete client
   const deleteClient = useCallback(async (id: string): Promise<boolean> => {
     try {
-      const token = getAuthToken();
-      const response = await fetch(
-        `${API_BASE_URL}/api/v1/tenants/${smmmId}/taxpayers/${id}`,
-        {
-          method: 'DELETE',
-          headers: {
-            Authorization: token || '',
-            'Content-Type': 'application/json',
-          },
-        }
+      const result = await api.delete(
+        `${API_BASE_URL}/api/v1/tenants/${smmmId}/taxpayers/${id}`
       );
-
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.detail || `HTTP ${response.status}`);
+      if (result.error) {
+        throw new Error(result.error);
       }
-
       setTaxpayers((prev) => prev.filter((t) => t.id !== id));
       return true;
     } catch (err) {
@@ -210,18 +181,10 @@ export function useClients(smmmId: string): UseClientsReturn {
 
     for (const id of selectedIds) {
       try {
-        const token = getAuthToken();
-        const response = await fetch(
-          `${API_BASE_URL}/api/v1/tenants/${smmmId}/taxpayers/${id}`,
-          {
-            method: 'DELETE',
-            headers: {
-              Authorization: token || '',
-              'Content-Type': 'application/json',
-            },
-          }
+        const result = await api.delete(
+          `${API_BASE_URL}/api/v1/tenants/${smmmId}/taxpayers/${id}`
         );
-        if (response.ok) {
+        if (result.ok) {
           successCount++;
         } else {
           errorCount++;
@@ -304,28 +267,17 @@ export function useClients(smmmId: string): UseClientsReturn {
       const item = validItems[i];
       const originalIdx = items.indexOf(item);
       try {
-        const token = getAuthToken();
-        const response = await fetch(`${API_BASE_URL}/api/v1/tenants/${smmmId}/taxpayers`, {
-          method: 'POST',
-          headers: {
-            Authorization: token || '',
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            name: item.name,
-            vkn: item.vkn,
-            type: item.type || 'limited',
-          }),
-        });
-
-        if (response.ok) {
+        const result = await api.post(
+          `${API_BASE_URL}/api/v1/tenants/${smmmId}/taxpayers`,
+          { name: item.name, vkn: item.vkn, type: item.type || 'limited' }
+        );
+        if (result.ok) {
           successCount++;
         } else {
-          const errData = await response.json().catch(() => ({}));
           errors.push({
             satir: originalIdx + 1,
             vkn: item.vkn,
-            hata: errData.detail || `HTTP ${response.status}`,
+            hata: result.error || 'Ekleme başarısız',
           });
         }
       } catch (err) {
@@ -342,35 +294,20 @@ export function useClients(smmmId: string): UseClientsReturn {
 
   // Parse PDF file
   const parsePdfFile = useCallback(async (file: File): Promise<VergiLevhasiData> => {
-    const token = getAuthToken();
     const formData = new FormData();
     formData.append('file', file);
 
     try {
-      const response = await fetch(
+      const result = await api.post<{ success?: boolean; parsed_data?: Record<string, string>; message?: string }>(
         `${API_BASE_URL}/api/v1/tax-certificate/parse`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: token || '',
-          },
-          body: formData,
-        }
+        formData
       );
 
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        return {
-          unvan: file.name,
-          vkn: '',
-          valid: false,
-          error: errData.detail || `HTTP ${response.status}`,
-        };
+      if (result.error || !result.data) {
+        return { unvan: file.name, vkn: '', valid: false, error: result.error || 'PDF okunamadı' };
       }
 
-      const result = await response.json();
       const data = result.data;
-
       if (data.success && data.parsed_data) {
         const parsed = data.parsed_data;
         const existingVkn = taxpayers.some(t => t.vkn_full === parsed.vkn);
@@ -383,20 +320,10 @@ export function useClients(smmmId: string): UseClientsReturn {
           error: !parsed.vkn ? 'VKN okunamadı' : existingVkn ? 'Bu VKN zaten kayıtlı' : undefined,
         };
       } else {
-        return {
-          unvan: file.name,
-          vkn: '',
-          valid: false,
-          error: data.message || 'PDF okunamadı',
-        };
+        return { unvan: file.name, vkn: '', valid: false, error: data.message || 'PDF okunamadı' };
       }
     } catch (err) {
-      return {
-        unvan: file.name,
-        vkn: '',
-        valid: false,
-        error: err instanceof Error ? err.message : 'Bağlantı hatası',
-      };
+      return { unvan: file.name, vkn: '', valid: false, error: err instanceof Error ? err.message : 'Bağlantı hatası' };
     }
   }, [taxpayers]);
 
@@ -408,21 +335,11 @@ export function useClients(smmmId: string): UseClientsReturn {
 
     for (const item of validItems) {
       try {
-        const token = getAuthToken();
-        const response = await fetch(`${API_BASE_URL}/api/v1/tenants/${smmmId}/taxpayers`, {
-          method: 'POST',
-          headers: {
-            Authorization: token || '',
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            name: item.unvan,
-            vkn: item.vkn,
-            type: 'limited',
-          }),
-        });
-
-        if (response.ok) {
+        const result = await api.post(
+          `${API_BASE_URL}/api/v1/tenants/${smmmId}/taxpayers`,
+          { name: item.unvan, vkn: item.vkn, type: 'limited' }
+        );
+        if (result.ok) {
           successCount++;
         } else {
           errorCount++;

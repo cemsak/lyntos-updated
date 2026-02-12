@@ -17,6 +17,7 @@ import {
   createMissingEnvelope,
 } from '../contracts/envelope';
 import { useDashboardScope, useScopeComplete } from '../scope/useDashboardScope';
+import { api } from '../../_lib/api/client';
 
 interface FetchOptions {
   timeout?: number;
@@ -89,30 +90,25 @@ export function useV2Fetch<T>(
 
       try {
         const url = buildUrl(scope.smmm_id, scope.client_id, scope.period);
-        const timeoutId = setTimeout(() => controller.abort(), timeout);
 
-        // V2 API - NO AUTH REQUIRED
-        const response = await fetch(url, {
+        const result = await api.get<unknown>(url, {
           signal: controller.signal,
-          headers: {
-            Accept: 'application/json',
-            'Content-Type': 'application/json',
-          },
+          timeout,
+          skipAuth: true,
         });
 
-        clearTimeout(timeoutId);
+        if (controller.signal.aborted) return;
 
-        if (!response.ok) {
+        if (!result.ok) {
           // 404 = veri yok, hata değil - empty state göster
-          if (response.status === 404) {
+          if (result.status === 404) {
             setEnvelope(createEmptyEnvelope<T>('Bu dönem için veri bulunamadı.'));
             return;
           }
-          throw new Error(`HTTP ${response.status}`);
+          throw new Error(result.error || `HTTP ${result.status}`);
         }
 
-        const raw = await response.json();
-        setEnvelope(normalizer(raw, requestId));
+        setEnvelope(normalizer(result.data, requestId));
       } catch (error) {
         if ((error as Error).name === 'AbortError') return;
         if (attempt < (retries || 0)) {

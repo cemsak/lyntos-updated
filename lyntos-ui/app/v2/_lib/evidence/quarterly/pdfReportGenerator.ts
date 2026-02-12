@@ -3,8 +3,9 @@
  * Profesyonel çapraz kontrol raporu PDF'i oluşturur
  */
 
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+// P-6: jsPDF + autoTable dynamic import (~750KB bundle azaltma)
+// import { jsPDF } from 'jspdf';
+// import autoTable from 'jspdf-autotable';
 import type { EngineCheckReport } from '../../parsers/crosscheck/types';
 import { formatNumber as formatNumberBase, formatDate as formatDateBase } from '../../format';
 
@@ -14,6 +15,8 @@ declare module 'jspdf' {
     lastAutoTable: { finalY: number };
   }
 }
+
+type JsPDFType = import('jspdf').jsPDF;
 
 const COLORS = {
   primary: [37, 99, 235] as [number, number, number],    // Blue
@@ -51,6 +54,11 @@ function getStatusText(status: string): string {
 }
 
 export async function generatePDFReport(report: EngineCheckReport): Promise<Blob> {
+  // P-6: Dynamic import — sadece PDF export sırasında yüklenir (~750KB tasarruf)
+  const { jsPDF } = await import('jspdf');
+  const autoTableModule = await import('jspdf-autotable');
+  const autoTable = autoTableModule.default;
+
   const doc = new jsPDF('p', 'mm', 'a4');
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 15;

@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Briefcase, Loader2 } from 'lucide-react';
 import { formatNumber } from '../../../_lib/format';
 import { API_ENDPOINTS } from '../../../_lib/config/api';
-import { getAuthToken } from '../../../_lib/auth';
+import { api } from '../../../_lib/api/client';
 
 interface KidemResult {
   brut_ucret: number;
@@ -56,33 +56,18 @@ export default function KidemIhbarCalculator() {
 
     setLoading(true);
     setError(null);
-    const token = getAuthToken();
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    };
 
     try {
+      const body = { brut_ucret: ucret, ise_giris: iseGiris, cikis_tarihi: cikisTarihi };
       const [kidemRes, ihbarRes] = await Promise.all([
-        fetch(API_ENDPOINTS.taxParams.calculateKidem, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({ brut_ucret: ucret, ise_giris: iseGiris, cikis_tarihi: cikisTarihi }),
-        }),
-        fetch(API_ENDPOINTS.taxParams.calculateIhbar, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({ brut_ucret: ucret, ise_giris: iseGiris, cikis_tarihi: cikisTarihi }),
-        }),
+        api.post<KidemResult>(API_ENDPOINTS.taxParams.calculateKidem, body),
+        api.post<IhbarResult>(API_ENDPOINTS.taxParams.calculateIhbar, body),
       ]);
 
-      const kidemJson = await kidemRes.json();
-      const ihbarJson = await ihbarRes.json();
+      if (kidemRes.data) setKidemResult(kidemRes.data);
+      else setError(kidemRes.error || 'Kıdem hesaplanamadı');
 
-      if (kidemJson.success) setKidemResult(kidemJson.data);
-      else setError(kidemJson.detail || 'Kıdem hesaplanamadı');
-
-      if (ihbarJson.success) setIhbarResult(ihbarJson.data);
+      if (ihbarRes.data) setIhbarResult(ihbarRes.data);
     } catch {
       setError('Hesaplama sırasında hata oluştu');
     } finally {

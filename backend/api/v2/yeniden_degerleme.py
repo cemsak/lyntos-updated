@@ -9,9 +9,12 @@ Mevzuat: VUK Mük. 298/Ç, VUK Geçici 37
 TDHP: 250-255, 257, 522
 """
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Depends
+from utils.period_utils import get_period_db
 from typing import Optional
 import logging
+
+from middleware.auth import verify_token, check_client_access
 
 logger = logging.getLogger(__name__)
 
@@ -24,8 +27,8 @@ router = APIRouter(
 @router.get("/hesapla")
 async def hesapla_yeniden_degerleme(
     client_id: str = Query(..., description="Müşteri ID"),
-    period_id: str = Query(..., description="Dönem (örn: 2025-Q1)"),
-    smmm_id: str = Query(default="HKOZKAN", description="SMMM ID"),
+    period_id: str = Depends(get_period_db),
+    user: dict = Depends(verify_token),
 ):
     """
     VUK Mük. 298/Ç - Sürekli Yeniden Değerleme Hesaplama
@@ -39,6 +42,7 @@ async def hesapla_yeniden_degerleme(
 
     Örnek: GET /api/v2/yeniden-degerleme/hesapla?client_id=CLIENT_048_76E7913D&period_id=2025-Q1
     """
+    await check_client_access(user, client_id)
     try:
         from services.yeniden_degerleme import hesapla_yeniden_degerleme as _hesapla
         result = _hesapla(client_id, period_id)
@@ -59,13 +63,15 @@ async def hesapla_yeniden_degerleme(
 @router.get("/durum")
 async def yeniden_degerleme_durum(
     client_id: str = Query(..., description="Müşteri ID"),
-    period_id: str = Query(..., description="Dönem (örn: 2025-Q1)"),
+    period_id: str = Depends(get_period_db),
+    user: dict = Depends(verify_token),
 ):
     """
     Yeniden değerleme ön kontrol: Yİ-ÜFE verisi ve MDV bakiyesi mevcut mu?
 
     Dönem Sonu İşlemleri sayfasından Step 2'de kullanılır.
     """
+    await check_client_access(user, client_id)
     from services.enflasyon_duzeltme import has_tufe_data, has_fixed_asset_dates
 
     yiufe_mevcut = has_tufe_data()

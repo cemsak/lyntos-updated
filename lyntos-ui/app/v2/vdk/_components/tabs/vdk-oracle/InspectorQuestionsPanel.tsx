@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import type { KurganAlarm } from '../../../../_components/vdk-simulator/types';
 import type { VdkFullAnalysisData } from '../../../../_hooks/useVdkFullAnalysis';
+import { api } from '../../../../_lib/api/client';
 
 // Birleşik soru tipi
 export interface MergedQuestion {
@@ -79,17 +80,17 @@ export function InspectorQuestionsPanel({
       if (q.alarm_code) params.set('alarm_code', q.alarm_code);
       if (q.category) params.set('category', q.category);
 
-      const response = await fetch(`/api/v1/vdk-inspector/answer?${params.toString()}`, {
-        method: 'POST',
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const res = await api.post<any>(`/api/v1/vdk-inspector/answer`, null, {
+        params: Object.fromEntries(params),
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+      if (!res.ok) {
+        throw new Error(res.error || 'HTTP hatası');
       }
 
-      const result = await response.json();
-      if (result.success && result.data?.answer) {
-        setAnswers((prev) => ({ ...prev, [q.id]: result.data.answer }));
+      if (res.data?.answer) {
+        setAnswers((prev) => ({ ...prev, [q.id]: res.data.answer }));
       } else {
         throw new Error('Beklenmeyen yanıt');
       }

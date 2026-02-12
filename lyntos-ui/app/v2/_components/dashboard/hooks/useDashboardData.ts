@@ -25,45 +25,32 @@ import {
 
 // API base URL - from centralized config
 import { API_BASE_URL } from '../../../_lib/config/api';
-import { getAuthToken } from '../../../_lib/auth';
+import { api } from '../../../_lib/api/client';
 const API_BASE = API_BASE_URL;
 
-// Auth header - uses centralized getAuthToken with dev bypass support
-function getAuthHeader(): Record<string, string> {
-  const token = getAuthToken();
-  return {
-    'Authorization': token || '',
-    'Content-Type': 'application/json',
-  };
-}
-
-// Generic fetch with error handling
+// Generic fetch with error handling using centralized api client
 // SMMM GÜVENİ: Transform null döndürürse empty envelope döndür
 async function fetchWithEnvelope<T>(
   url: string,
   transform?: (data: unknown) => T | null
 ): Promise<PanelEnvelope<T>> {
   try {
-    const response = await fetch(url, {
-      headers: getAuthHeader(),
-    });
+    const result = await api.get<unknown>(url);
 
-    if (!response.ok) {
-      if (response.status === 401) {
+    if (!result.ok) {
+      if (result.status === 401) {
         return { status: 'auth', data: null, message: 'Oturum açmanız gerekiyor' };
       }
-      if (response.status === 404) {
+      if (result.status === 404) {
         return { status: 'empty', data: null, message: 'Veri bulunamadı' };
       }
-      throw new Error(`HTTP ${response.status}`);
+      throw new Error(result.error || `HTTP ${result.status}`);
     }
 
-    const json = await response.json();
-    const data = transform ? transform(json) : json as T;
+    const data = transform ? transform(result.data) : result.data as T;
 
     // SMMM GÜVENİ: Transform null döndürdüyse veya veri boşsa
     if (data === null || data === undefined || (Array.isArray(data) && data.length === 0)) {
-      // Empty data returned from transform
       return createEmptyEnvelope<T>('Bu dönem için analiz verisi bulunamadı');
     }
 
@@ -72,7 +59,6 @@ async function fetchWithEnvelope<T>(
     if (process.env.NODE_ENV === 'development') {
       console.error(`Fetch error for ${url}:`, error);
     }
-    // onClick callback will be provided by the component using refetch
     return createErrorEnvelope<T>(
       'Veri yüklenirken hata oluştu'
     );

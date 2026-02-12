@@ -19,13 +19,32 @@ def get_db_path() -> Path:
     return DB_PATH
 
 
+def _configure_connection(conn: sqlite3.Connection):
+    """
+    Performans ve güvenlik pragmalarını ayarla.
+
+    P-1: WAL mode — eş zamanlı read/write desteği
+    P-2: DB size limit — 10GB max (taşmaya karşı koruma)
+    P-3: Foreign keys — referansiyel bütünlük
+    """
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA foreign_keys=ON")
+    conn.execute("PRAGMA busy_timeout=5000")  # 5 saniye bekleme süresi
+    # P-2: Max 10GB (page_size=4096, 10GB/4096 = 2621440 pages)
+    conn.execute("PRAGMA max_page_count=2621440")
+
+
 @contextmanager
 def get_connection():
     """Context manager for database connections"""
     conn = sqlite3.connect(str(DB_PATH))
     conn.row_factory = sqlite3.Row  # Enable dict-like access
+    _configure_connection(conn)
     try:
         yield conn
+    except Exception:
+        conn.rollback()
+        raise
     finally:
         conn.close()
 
@@ -1669,6 +1688,37 @@ def init_database():
                 cursor.execute(f"ALTER TABLE {_tbl} ADD COLUMN source_file_id TEXT")
             except Exception:
                 pass  # Column already exists
+
+        # ═════════════════════════════════════════════════════════════
+        # P-4: Eksik index'ler — sık sorgulanan tablolara composite index
+        # ═════════════════════════════════════════════════════════════
+        _perf_indexes = [
+            # journal_entries — yevmiye sorgularında kullanılır
+            "CREATE INDEX IF NOT EXISTS idx_journal_entries_client_period ON journal_entries(client_id, period_id)",
+            # ledger_entries — kebir sorgularında kullanılır
+            "CREATE INDEX IF NOT EXISTS idx_ledger_entries_client_period ON ledger_entries(client_id, period_id)",
+            # edefter_entries — e-defter sorgularında kullanılır
+            "CREATE INDEX IF NOT EXISTS idx_edefter_entries_client_period ON edefter_entries(client_id, period_id)",
+            "CREATE INDEX IF NOT EXISTS idx_edefter_entries_type ON edefter_entries(client_id, period_id, defter_tipi)",
+            # bank_transactions — banka sorguları
+            "CREATE INDEX IF NOT EXISTS idx_bank_transactions_client_period ON bank_transactions(client_id, period_id)",
+            # beyanname_entries — beyanname sorguları
+            "CREATE INDEX IF NOT EXISTS idx_beyanname_entries_client_period ON beyanname_entries(client_id, period_id)",
+            "CREATE INDEX IF NOT EXISTS idx_beyanname_entries_type ON beyanname_entries(client_id, period_id, beyanname_tipi)",
+            # feed_items — feed sorguları
+            "CREATE INDEX IF NOT EXISTS idx_feed_items_client ON feed_items(client_id, period_id)",
+            # rule_execution_log — kural analiz sonuçları
+            "CREATE INDEX IF NOT EXISTS idx_rule_exec_log_client ON rule_execution_log(client_id, period_id)",
+            # upload_sessions — tenant bazlı sorgular
+            "CREATE INDEX IF NOT EXISTS idx_upload_sessions_tenant ON upload_sessions(tenant_id, client_id)",
+            # document_uploads — dönem listesi sorguları
+            "CREATE INDEX IF NOT EXISTS idx_document_uploads_tenant ON document_uploads(tenant_id, client_id, period_id) WHERE is_active = 1",
+        ]
+        for idx_sql in _perf_indexes:
+            try:
+                cursor.execute(idx_sql)
+            except Exception:
+                pass  # Table or index may not exist yet
 
         conn.commit()
         logger.info(f"Database initialized: {DB_PATH}")

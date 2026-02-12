@@ -12,7 +12,7 @@ import {
   FileSpreadsheet,
   Calculator
 } from 'lucide-react';
-import { getAuthToken } from '../../_lib/auth';
+import { api } from '../../_lib/api/client';
 import { API_ENDPOINTS } from '../../_lib/config/api';
 import { useToast } from '../../_components/shared/Toast';
 
@@ -80,20 +80,6 @@ export default function EnflasyonUploadPage() {
       },
     }));
 
-    const token = getAuthToken();
-    if (!token) {
-      setUploadedFiles(prev => ({
-        ...prev,
-        [documentId]: {
-          ...prev[documentId],
-          status: 'error',
-          errorMessage: 'Oturum bulunamadı. Lütfen giriş yapın.',
-        },
-      }));
-      showToast('error', 'Oturum bulunamadı. Lütfen giriş yapın.');
-      return;
-    }
-
     const controller = new AbortController();
     abortControllers.current[documentId] = controller;
 
@@ -101,32 +87,31 @@ export default function EnflasyonUploadPage() {
     formData.append('file', file);
     formData.append('doc_type', documentId);
 
-    // Real API upload
-    fetch(API_ENDPOINTS.upload, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-      body: formData,
-      signal: controller.signal,
-    })
-      .then(async (response) => {
-        if (!response.ok) {
-          const errorText = await response.text().catch(() => '');
-          throw new Error(errorText || `HTTP ${response.status}`);
+    // Real API upload via centralized client
+    api.post(API_ENDPOINTS.upload, formData, { signal: controller.signal })
+      .then(({ ok, error: apiErr }) => {
+        if (ok) {
+          setUploadedFiles(prev => ({
+            ...prev,
+            [documentId]: {
+              ...prev[documentId],
+              status: 'success',
+              progress: 100,
+            },
+          }));
+          showToast('success', `${file.name} başarıyla yüklendi`);
+        } else {
+          setUploadedFiles(prev => ({
+            ...prev,
+            [documentId]: {
+              ...prev[documentId],
+              status: 'error',
+              progress: 0,
+              errorMessage: apiErr || 'Yükleme başarısız',
+            },
+          }));
+          showToast('error', `Yükleme başarısız: ${apiErr}`);
         }
-        return response.json();
-      })
-      .then(() => {
-        setUploadedFiles(prev => ({
-          ...prev,
-          [documentId]: {
-            ...prev[documentId],
-            status: 'success',
-            progress: 100,
-          },
-        }));
-        showToast('success', `${file.name} başarıyla yüklendi`);
       })
       .catch((error: Error) => {
         if (error.name === 'AbortError') return;

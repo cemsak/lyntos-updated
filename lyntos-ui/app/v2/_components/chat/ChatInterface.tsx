@@ -11,7 +11,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageSquare, Send, Loader2 } from 'lucide-react';
 import { API_ENDPOINTS } from '../../_lib/config/api';
-import { getAuthToken } from '../../_lib/auth';
+import { api } from '../../_lib/api/client';
 import { sanitizeHtml } from '../../_lib/sanitize';
 import { useDashboardScope } from '../scope/useDashboardScope';
 
@@ -109,19 +109,11 @@ export default function ChatInterface({
 
   const loadSessionHistory = async (sid: string) => {
     try {
-      const token = getAuthToken();
-      const res = await fetch(API_ENDPOINTS.chat.history(sid), {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      if (res.ok) {
-        const data = await res.json();
+      const { data } = await api.get<{ messages: Message[] }>(API_ENDPOINTS.chat.history(sid));
+      if (data) {
         setMessages(data.messages || []);
       }
     } catch (err) {
-      // Production'da console.error kullanmıyoruz
       if (process.env.NODE_ENV === 'development') {
         console.error('Failed to load history:', err);
       }
@@ -138,27 +130,19 @@ export default function ChatInterface({
     setLoading(true);
 
     try {
-      const token = getAuthToken();
       // Agent tipine göre doğru endpoint seçimi
       const chatEndpoint = API_ENDPOINTS.chat[agentType] || API_ENDPOINTS.chat.assistant;
-      const res = await fetch(chatEndpoint, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      const { data, error: apiError } = await api.post<{ session_id?: string; response?: string; content?: string }>(
+        chatEndpoint,
+        {
           message: text,
           session_id: sessionId,
-          // Multi-tenant güvenlik: Scope'tan user bilgilerini al
           user_id: scope.smmm_id || 'anonymous',
           client_id: scope.client_id || undefined,
-        })
-      });
+        }
+      );
 
-      if (!res.ok) throw new Error('Chat request failed');
-
-      const data = await res.json();
+      if (apiError || !data) throw new Error(apiError || 'Chat request failed');
 
       if (!sessionId && data.session_id) {
         setSessionId(data.session_id);
@@ -167,7 +151,7 @@ export default function ChatInterface({
 
       const assistantMessage: Message = {
         role: 'assistant',
-        content: data.response || data.content
+        content: data.response || data.content || ''
       };
       setMessages(prev => [...prev, assistantMessage]);
 

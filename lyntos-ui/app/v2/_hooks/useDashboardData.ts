@@ -62,7 +62,8 @@ const DOC_TYPE_LABELS: Record<string, string> = {
 // API CONFIGURATION
 // ============================================================================
 
-import { getApiBaseUrl } from '../_lib/config/api';
+import { API_ENDPOINTS } from '../_lib/config/api';
+import { api } from '../_lib/api/client';
 
 // ============================================================================
 // HOOK
@@ -95,31 +96,30 @@ export function useDashboardData(
     setIsError(false);
     setError(null);
 
-    const apiBase = getApiBaseUrl();
-    const url = `${apiBase}/api/v2/donem/status/${encodeURIComponent(period)}?tenant_id=${encodeURIComponent(tenantId)}&client_id=${encodeURIComponent(clientId)}`;
-
     try {
-      const response = await fetch(url);
+      const url = API_ENDPOINTS.donem.status(period);
+      const { data: result, error: apiError, status } = await api.get<Record<string, unknown>>(url, {
+        params: { tenant_id: tenantId, client_id: clientId },
+      });
 
-      if (!response.ok) {
-        if (response.status === 404) {
-          // No data for this period - not an error, just empty
-          setData(null);
-          setIsLoading(false);
-          return;
-        }
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      if (status === 404) {
+        // No data for this period - not an error, just empty
+        setData(null);
+        setIsLoading(false);
+        return;
       }
 
-      const result = await response.json();
+      if (apiError || !result) {
+        throw new Error(apiError || 'Veri alinamadi');
+      }
 
       setData({
-        periodId: result.periodId || period,
-        tenantId: result.tenantId || tenantId,
-        clientId: result.clientId || clientId,
-        totalCount: result.totalCount || 0,
-        byDocType: result.byDocType || {},
-        syncedAt: result.syncedAt || null,
+        periodId: (result.periodId as string) || period,
+        tenantId: (result.tenantId as string) || tenantId,
+        clientId: (result.clientId as string) || clientId,
+        totalCount: (result.totalCount as number) || 0,
+        byDocType: (result.byDocType as Record<string, SyncedFile[]>) || {},
+        syncedAt: (result.syncedAt as string) || null,
       });
 
     } catch (err) {
@@ -169,21 +169,21 @@ export async function fetchDashboardData(
   tenantId: string = 'default',
   clientId: string = 'default'
 ): Promise<DashboardPeriodData | null> {
-  const apiBase = getApiBaseUrl();
-  const url = `${apiBase}/api/v2/donem/status/${encodeURIComponent(period)}?tenant_id=${encodeURIComponent(tenantId)}&client_id=${encodeURIComponent(clientId)}`;
+  const url = API_ENDPOINTS.donem.status(period);
 
   try {
-    const response = await fetch(url);
-    if (!response.ok) return null;
+    const { data: result, ok } = await api.get<Record<string, unknown>>(url, {
+      params: { tenant_id: tenantId, client_id: clientId },
+    });
+    if (!ok || !result) return null;
 
-    const result = await response.json();
     return {
-      periodId: result.periodId || period,
-      tenantId: result.tenantId || tenantId,
-      clientId: result.clientId || clientId,
-      totalCount: result.totalCount || 0,
-      byDocType: result.byDocType || {},
-      syncedAt: result.syncedAt || null,
+      periodId: (result.periodId as string) || period,
+      tenantId: (result.tenantId as string) || tenantId,
+      clientId: (result.clientId as string) || clientId,
+      totalCount: (result.totalCount as number) || 0,
+      byDocType: (result.byDocType as Record<string, SyncedFile[]>) || {},
+      syncedAt: (result.syncedAt as string) || null,
     };
   } catch {
     return null;

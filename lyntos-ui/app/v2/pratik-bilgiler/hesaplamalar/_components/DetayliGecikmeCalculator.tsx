@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Clock, Loader2, AlertTriangle } from 'lucide-react';
 import { formatNumber } from '../../../_lib/format';
 import { API_ENDPOINTS } from '../../../_lib/config/api';
-import { getAuthToken } from '../../../_lib/auth';
+import { api } from '../../../_lib/api/client';
 
 interface DonemDetay {
   donem_baslangic: string;
@@ -48,25 +48,15 @@ export default function DetayliGecikmeCalculator() {
     setResult(null);
 
     try {
-      const token = getAuthToken();
-      const response = await fetch(API_ENDPOINTS.taxParams.calculateGecikme, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
-          ana_para: para,
-          baslangic_tarihi: vadeTarihi,
-          bitis_tarihi: odemeTarihi,
-        }),
+      const res = await api.post<GecikmeResult>(API_ENDPOINTS.taxParams.calculateGecikme, {
+        ana_para: para,
+        baslangic_tarihi: vadeTarihi,
+        bitis_tarihi: odemeTarihi,
       });
-
-      const json = await response.json();
-      if (json.success) {
-        setResult(json.data);
+      if (res.data) {
+        setResult(res.data);
       } else {
-        setError(json.detail || 'Hesaplama başarısız');
+        setError(res.error || 'Hesaplama başarısız');
       }
     } catch {
       setError('Hesaplama sırasında hata oluştu');

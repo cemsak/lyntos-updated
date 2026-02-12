@@ -5,10 +5,11 @@ POST /api/v2/validate/vdk
 Sprint 5.3: Upload -> VDK Validation Integration
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
 from datetime import datetime
+from middleware.auth import verify_token
 
 # Import VDK engine
 import sys
@@ -21,7 +22,7 @@ if str(backend_path) not in sys.path:
 
 from risk_model.vdk_kurgan_engine import get_vdk_engine
 
-router = APIRouter(prefix="/api/v2/validate", tags=["VDK Validation"])
+router = APIRouter(prefix="/api/v2/validate", tags=["VDK Validation"], dependencies=[Depends(verify_token)])
 
 
 class TaxpayerDataRequest(BaseModel):

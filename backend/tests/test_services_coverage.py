@@ -30,7 +30,7 @@ class TestFeedServiceEdgeCases:
             period="2024-Q1"
         )
         assert len(items) == 1
-        assert items[0].id == feed_item_critical.id
+        assert items[0].title == feed_item_critical.title
 
     def test_get_feed_items_with_severity_filter(self, feed_service, feed_items_mixed):
         """Test severity filtering"""

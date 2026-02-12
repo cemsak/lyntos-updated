@@ -361,6 +361,8 @@ async def get_portfolio(smmm_id: str, active_only: bool = True):
         if active_only:
             query += " AND is_active = 1"
 
+        query += " LIMIT 500"
+
         cursor.execute(query, params)
         results = cursor.fetchall()
 

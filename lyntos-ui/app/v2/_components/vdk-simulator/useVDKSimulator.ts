@@ -8,7 +8,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { getAuthToken } from '../../_lib/auth';
+import { api } from '../../_lib/api/client';
 import type { SimulationResult, SimulationResponse } from './types';
 
 interface UseVDKSimulatorOptions {
@@ -30,28 +30,20 @@ export function useVDKSimulator({
       setError(null);
 
       try {
-        const params = new URLSearchParams({ client_id: clientId });
-        if (period) params.append('period', period);
+        const queryParams: Record<string, string> = { client_id: clientId };
+        if (period) queryParams.period = period;
 
-        const response = await fetch(
-          `/api/v1/vdk-simulator/analyze?${params}`,
-          {
-            method: 'POST',
-            headers: {
-              Authorization: getAuthToken() || '', // Dev auth header
-            },
-          }
+        const res = await api.post<SimulationResponse>(
+          '/api/v1/vdk-simulator/analyze',
+          null,
+          { params: queryParams }
         );
 
-        if (!response.ok) {
-          const err = await response.json().catch(() => ({}));
-          throw new Error(
-            err.detail || err.message || 'Simulasyon basarisiz'
-          );
+        if (!res.ok || !res.data) {
+          throw new Error(res.error || 'Simulasyon basarisiz');
         }
 
-        const json: SimulationResponse = await response.json();
-
+        const json = res.data;
         if (!json.success || !json.data) {
           throw new Error('Simulasyon sonucu alinamadi');
         }

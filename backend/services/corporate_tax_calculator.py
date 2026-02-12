@@ -233,6 +233,23 @@ class CorporateTaxCalculator:
         if gecmis_zarar == 0:
             gecmis_zarar = portfolio_data.get("gecmis_donem_zarari", 0)
 
+        # 5 yil siniri kontrolu (KVK Md.9)
+        # Gecmis donem zararlari ancak 5 yil icinde mahsup edilebilir
+        if gecmis_zarar > 0:
+            from datetime import datetime
+            zarar_yili = portfolio_data.get("zarar_yili") or (
+                vergi_beyani_onceki.get("zarar_yili") if vergi_beyani_onceki else None
+            )
+            current_year = portfolio_data.get("donem_yil") or datetime.now().year
+            if isinstance(current_year, str):
+                current_year = int(current_year[:4])
+            if zarar_yili and (int(current_year) - int(zarar_yili)) > 5:
+                self.logger.warning(
+                    f"Gecmis zarar 5 yil sinirini asti (zarar yili: {zarar_yili}, "
+                    f"mevcut yil: {current_year}). {gecmis_zarar:,.0f} TL mahsup edilemiyor."
+                )
+                gecmis_zarar = 0
+
         # Mali kar hesapla
         mali_kar_tutar = ticari_kar.net_donem_kari + kkeg - istisna - gecmis_zarar
 

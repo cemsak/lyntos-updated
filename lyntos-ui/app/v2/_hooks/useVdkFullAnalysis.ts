@@ -8,7 +8,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { getAuthToken } from '../_lib/auth';
+import { API_ENDPOINTS } from '../_lib/config/api';
+import { api } from '../_lib/api/client';
 
 // ============================================================================
 // TYPES
@@ -299,36 +300,28 @@ export function useVdkFullAnalysis(
       return;
     }
 
-    const token = getAuthToken();
-    if (!token) {
-      setError('Oturum bilgisi bulunamadi');
-      setIsError(true);
-      setIsLoading(false);
-      return;
-    }
-
     setIsLoading(true);
     setIsError(false);
     setError(null);
 
-    const url = `/api/v1/contracts/kurgan-risk?client_id=${encodeURIComponent(clientId)}&period=${encodeURIComponent(period)}`;
-
     try {
-      const response = await fetch(url, {
-        headers: { Authorization: token },
-      });
+      const { data: result, error: apiError, status } = await api.get<Record<string, unknown>>(
+        API_ENDPOINTS.contracts.kurganRisk,
+        { params: { client_id: clientId, period } }
+      );
 
-      if (!response.ok) {
-        if (response.status === 404) {
-          setData(null);
-          setIsLoading(false);
-          return;
-        }
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      if (status === 404) {
+        setData(null);
+        setIsLoading(false);
+        return;
       }
 
-      const result = await response.json();
-      const responseData = result.data || result;
+      if (apiError || !result) {
+        throw new Error(apiError || 'Veri alinamadi');
+      }
+
+      // api client auto-normalizes envelope ({success, data} -> data)
+      const responseData = result as Record<string, any>;
 
       // no_data durumu: Mizan verisi yüklenmemiş
       if (responseData.status === 'no_data') {

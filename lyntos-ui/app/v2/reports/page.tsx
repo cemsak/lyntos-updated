@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useDashboardScope, useScopeComplete } from '../_components/scope/useDashboardScope';
-import { getAuthToken } from '../_lib/auth';
+import { api } from '../_lib/api/client';
 import { API_ENDPOINTS } from '../_lib/config/api';
 import { useToast } from '../_components/shared/Toast';
 
@@ -64,15 +64,11 @@ export default function ReportsPage() {
       setCheckingData(true);
 
       try {
-        const token = getAuthToken();
         const params = new URLSearchParams({ client_id: scope.client_id!, period_id: scope.period! });
-        const res = await fetch(`${API_ENDPOINTS.mizanData.check}?${params.toString()}`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
+        const { ok, data: json } = await api.get<{ exists: boolean }>(`${API_ENDPOINTS.mizanData.check}?${params.toString()}`);
         if (cancelled) return;
 
-        if (res.ok) {
-          const json = await res.json();
+        if (ok && json) {
           setHasData(json.exists === true);
           setCheckingData(false);
         } else if (attempt < 3) {
@@ -108,21 +104,17 @@ export default function ReportsPage() {
 
     const loadReports = async () => {
       try {
-        const token = getAuthToken();
         const params = new URLSearchParams();
         if (scope.client_id) params.set('client_id', scope.client_id);
         if (scope.period) params.set('period', scope.period);
         const url = `${API_ENDPOINTS.reports.list}?${params.toString()}`;
-        const res = await fetch(url, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
-        if (!res.ok) return;
-        const json = await res.json();
-        if (json.success && Array.isArray(json.data)) {
+        const { ok, data: json } = await api.get<Record<string, unknown>[]>(url);
+        if (!ok) return;
+        if (Array.isArray(json)) {
           const raporTipAdlari: Record<string, string> = {};
           RAPOR_TIPLERI.forEach(r => { raporTipAdlari[r.id] = r.name; });
 
-          const mapped: OlusturulanRapor[] = json.data.map((r: Record<string, unknown>) => ({
+          const mapped: OlusturulanRapor[] = json.map((r: Record<string, unknown>) => ({
             id: r.id as string,
             raporTipiId: r.report_type as string,
             name: raporTipAdlari[r.report_type as string] || (r.report_type as string),
@@ -173,57 +165,34 @@ export default function ReportsPage() {
       return;
     }
 
-    const token = getAuthToken();
-    if (!token) {
-      showToast('error', 'Oturum bulunamadı. Lütfen giriş yapın.');
-      return;
-    }
-
     setIsGenerating(rapor.id);
 
     try {
       // Step 1: Generate report via backend
-      const response = await fetch(API_ENDPOINTS.reports.generate, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          report_type: rapor.id,
-          format: format.toLowerCase(),
-          client_id: scope.client_id,
-          period: scope.period,
-          smmm_id: scope.smmm_id || '',
-        }),
-      });
-
-      if (!response.ok) {
-        const errBody = await response.json().catch(() => ({}));
-        throw new Error((errBody as Record<string, string>).detail || `HTTP ${response.status}`);
-      }
-
-      const json = await response.json();
-      if (!json.success) {
-        throw new Error(json.detail || 'Rapor üretim hatası');
-      }
-
-      const genData = json.data as {
+      const { ok, data: genData, error: genErr } = await api.post<{
         id: string;
         report_type: string;
         file_size: number;
         file_size_display: string;
         generated_at: string;
-      };
+      }>(API_ENDPOINTS.reports.generate, {
+        report_type: rapor.id,
+        format: format.toLowerCase(),
+        client_id: scope.client_id,
+        period: scope.period,
+        smmm_id: scope.smmm_id || '',
+      });
+
+      if (!ok || !genData) {
+        throw new Error(genErr || 'Rapor üretim hatası');
+      }
 
       // Step 2: Trigger download via download endpoint
       const downloadUrl = API_ENDPOINTS.reports.download(genData.id);
-      const dlRes = await fetch(downloadUrl, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
+      const dlResult = await api.get<Response>(downloadUrl, { rawResponse: true });
 
-      if (dlRes.ok) {
-        const blob = await dlRes.blob();
+      if (dlResult.ok && dlResult.data) {
+        const blob = await (dlResult.data as unknown as Response).blob();
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
         a.download = `${rapor.id}_${scope.period || 'rapor'}.${format.toLowerCase() === 'pdf' ? 'pdf' : format.toLowerCase()}`;
@@ -445,11 +414,11 @@ export default function ReportsPage() {
                 onView={() => handleGoruntuile(rapor.raporTipiId)}
                 onDownload={() => {
                   if (rapor.downloadUrl) {
-                    const token = getAuthToken();
-                    fetch(rapor.downloadUrl, {
-                      headers: token ? { Authorization: `Bearer ${token}` } : {},
-                    })
-                      .then(r => r.blob())
+                    api.get<Response>(rapor.downloadUrl, { rawResponse: true })
+                      .then(({ ok, data: res }) => {
+                        if (ok && res) return (res as unknown as Response).blob();
+                        throw new Error('Download failed');
+                      })
                       .then(blob => {
                         const a = document.createElement('a');
                         a.href = URL.createObjectURL(blob);

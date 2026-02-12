@@ -9,11 +9,13 @@ KUTSAL KİTAP KURALLARI:
 - ⚠️ Yanlış kural = MALİYE CEZASI riski
 """
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 import logging
 
+from middleware.auth import verify_token
+from middleware.cache import response_cache
 from services.rule_manager import (
     RuleManager,
     RuleVersionManager,
@@ -23,7 +25,7 @@ from services.rule_manager import (
 )
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/rules", tags=["Rules"])
+router = APIRouter(prefix="/rules", tags=["Rules"], dependencies=[Depends(verify_token)])
 
 
 # ═══════════════════════════════════════════════════════════
@@ -91,6 +93,12 @@ async def get_rules(
     offset: int = Query(0, ge=0)
 ):
     """Kuralları listele (filtreli)"""
+    # P-10: Rules nadiren değişir — 12 saat cache
+    cache_key = f"rules:list:{category}:{priority}:{severity}:{search}:{is_active}:{limit}:{offset}"
+    cached = response_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     try:
         rules, total = RuleManager.get_all_rules(
             category=category,
@@ -102,13 +110,15 @@ async def get_rules(
             offset=offset
         )
 
-        return {
+        result = {
             "success": True,
             "data": rules,
             "total": total,
             "limit": limit,
             "offset": offset
         }
+        response_cache.set(cache_key, result, ttl=43200)
+        return result
 
     except Exception as e:
         logger.error(f"Error getting rules: {e}")
@@ -118,9 +128,15 @@ async def get_rules(
 @router.get("/statistics")
 async def get_statistics():
     """Kural istatistikleri"""
+    cached = response_cache.get("rules:statistics")
+    if cached is not None:
+        return cached
+
     try:
         stats = RuleManager.get_statistics()
-        return {"success": True, "data": stats}
+        result = {"success": True, "data": stats}
+        response_cache.set("rules:statistics", result, ttl=43200)
+        return result
     except Exception as e:
         logger.error(f"Error getting statistics: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -129,9 +145,15 @@ async def get_statistics():
 @router.get("/categories")
 async def get_categories():
     """Kategorileri ve sayılarını getir"""
+    cached = response_cache.get("rules:categories")
+    if cached is not None:
+        return cached
+
     try:
         categories = RuleManager.get_categories()
-        return {"success": True, "data": categories}
+        result = {"success": True, "data": categories}
+        response_cache.set("rules:categories", result, ttl=86400)
+        return result
     except Exception as e:
         logger.error(f"Error getting categories: {e}")
         raise HTTPException(status_code=500, detail=str(e))

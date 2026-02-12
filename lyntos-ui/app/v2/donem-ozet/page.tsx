@@ -16,7 +16,7 @@ import { useDashboardScope } from '../_components/scope/ScopeProvider';
 import { ScopeGuide } from '../_components/shared/ScopeGuide';
 import { KDVRiskPanel } from '../_components/beyanname/KDVRiskPanel';
 import { MuhtasarRiskPanel } from '../_components/beyanname/MuhtasarRiskPanel';
-import { API_BASE_URL } from '../_lib/config/api';
+import { api } from '../_lib/api/client';
 import { formatCurrency } from '../_lib/format';
 import { useToast } from '../_components/shared/Toast';
 import type { DonemTab, DonemSummary, OdemeDurumu, Tahakkuk, ManuelOdemeForm } from './_components/types';
@@ -68,25 +68,19 @@ export default function DonemOzetPage() {
       const clientId = selectedClient.id;
       const periodId = `${selectedPeriod.year}-Q${selectedPeriod.periodNumber}`;
 
-      const [summaryResponse, odemeResponse] = await Promise.all([
-        fetch(`${API_BASE_URL}/api/v2/period-summary/ozet?client_id=${clientId}&period_id=${periodId}`, {
-          headers: { 'Content-Type': 'application/json' }
-        }),
-        fetch(`${API_BASE_URL}/api/v2/period-summary/odeme-durumu?client_id=${clientId}&period_id=${periodId}&tenant_id=${encodeURIComponent(user?.id || 'default')}`, {
-          headers: { 'Content-Type': 'application/json' }
-        })
+      const [summaryResult, odemeResult] = await Promise.all([
+        api.get<DonemSummary>(`/api/v2/period-summary/ozet?client_id=${clientId}&period_id=${periodId}`),
+        api.get<OdemeDurumu>(`/api/v2/period-summary/odeme-durumu?client_id=${clientId}&period_id=${periodId}&tenant_id=${encodeURIComponent(user?.id || 'default')}`)
       ]);
 
-      if (!summaryResponse.ok) {
-        throw new Error(`HTTP ${summaryResponse.status}`);
+      if (!summaryResult.ok) {
+        throw new Error(summaryResult.error || 'Veri yüklenemedi');
       }
 
-      const summaryResult = await summaryResponse.json();
-      setData(summaryResult);
+      setData(summaryResult.data!);
 
-      if (odemeResponse.ok) {
-        const odemeResult = await odemeResponse.json();
-        setOdemeDurumu(odemeResult);
+      if (odemeResult.ok && odemeResult.data) {
+        setOdemeDurumu(odemeResult.data);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Veri yüklenemedi');
@@ -103,13 +97,11 @@ export default function DonemOzetPage() {
       const clientId = selectedClient.id;
       const periodId = `${selectedPeriod.year}-Q${selectedPeriod.periodNumber}`;
 
-      const response = await fetch(
-        `${API_BASE_URL}/api/v2/period-summary/odeme-durumu/refresh?client_id=${clientId}&period_id=${periodId}&tenant_id=${encodeURIComponent(user?.id || 'default')}`,
-        { method: 'POST', headers: { 'Content-Type': 'application/json' } }
+      const { data: result, ok } = await api.post<{ ozet: OdemeDurumu }>(
+        `/api/v2/period-summary/odeme-durumu/refresh?client_id=${clientId}&period_id=${periodId}&tenant_id=${encodeURIComponent(user?.id || 'default')}`
       );
 
-      if (response.ok) {
-        const result = await response.json();
+      if (ok && result) {
         setOdemeDurumu(result.ozet);
         await fetchData();
       }
@@ -150,25 +142,23 @@ export default function DonemOzetPage() {
     try {
       const targetTahakkuk = manuelOdemeModal.tahakkuk;
 
-      const response = await fetch(`${API_BASE_URL}/api/v2/period-summary/tahakkuk/manuel-odeme?tenant_id=${encodeURIComponent(user?.id || 'default')}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const { ok, error: apiErr } = await api.post(
+        `/api/v2/period-summary/tahakkuk/manuel-odeme?tenant_id=${encodeURIComponent(user?.id || 'default')}`,
+        {
           tahakkuk_id: targetTahakkuk.id,
           odeme_durumu: 'odendi',
           odeme_tarihi: manuelOdemeForm.odeme_tarihi,
           odeme_tutari: manuelOdemeForm.odeme_tutari,
           odeme_kaynagi: manuelOdemeForm.odeme_kaynagi,
           aciklama: manuelOdemeForm.aciklama || `${targetTahakkuk.beyanname_turu} ${targetTahakkuk.donem} manuel ödeme`
-        })
-      });
+        }
+      );
 
-      if (response.ok) {
+      if (ok) {
         closeManuelOdemeModal();
         await fetchData();
       } else {
-        const err = await response.json();
-        showToast('error', `Hata: ${err.detail || 'Bilinmeyen hata'}`);
+        showToast('error', `Hata: ${apiErr || 'Bilinmeyen hata'}`);
       }
     } catch (err) {
       console.error('Manuel ödeme hatası:', err);

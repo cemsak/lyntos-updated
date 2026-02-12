@@ -138,10 +138,8 @@ class GibSektorIstatistikServisi:
         logger.info("[GibSektorIstatistik] İstatistikler güncelleniyor...")
 
         try:
-            # SSL context - development ortamında sertifika sorunlarını aş
+            # SSL context with proper certificate verification
             ssl_context = ssl.create_default_context(cafile=certifi.where())
-            ssl_context.check_hostname = False
-            ssl_context.verify_mode = ssl.CERT_NONE  # Development only
 
             connector = aiohttp.TCPConnector(ssl=ssl_context)
             async with aiohttp.ClientSession(connector=connector) as session:
@@ -370,7 +368,7 @@ class GibSektorIstatistikServisi:
             val_str = re.sub(r'[^\d.-]', '', val_str)
 
             return float(val_str) if val_str else 0
-        except:
+        except (ValueError, AttributeError):
             return 0
 
     def _get_nace_adi(self, nace_kodu: str) -> str:

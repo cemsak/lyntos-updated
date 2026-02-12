@@ -36,6 +36,7 @@ import shutil
 from datetime import datetime
 
 from middleware.auth import verify_token
+from middleware.cache import response_cache
 
 from services.parse_service import (
     parse_mizan_file,
@@ -667,16 +668,25 @@ async def ingest_upload(
             )
 
         # Session güncelle
-        cursor.execute("""
-            UPDATE upload_sessions
-            SET status = 'completed',
-                total_files = ?,
-                new_files = ?,
-                duplicate_files = ?,
-                completed_at = ?
-            WHERE id = ?
-        """, (len(results), total_new, total_dup, datetime.utcnow().isoformat(), session_id))
-        conn.commit()
+        try:
+            cursor.execute("""
+                UPDATE upload_sessions
+                SET status = 'completed',
+                    total_files = ?,
+                    new_files = ?,
+                    duplicate_files = ?,
+                    completed_at = ?
+                WHERE id = ?
+            """, (len(results), total_new, total_dup, datetime.utcnow().isoformat(), session_id))
+            conn.commit()
+        except sqlite3.Error:
+            conn.rollback()
+            raise
+
+        # P-10: Upload sonrası cache invalidation
+        normalized_period = period_code.replace('-', '_').upper()
+        response_cache.invalidate_client(resolved_client_id)
+        logger.info(f"[Ingest] Cache invalidated for client {resolved_client_id}")
 
         # Pipeline başlat (cross-check + risk analizi) — arka plan
         try:
@@ -686,7 +696,7 @@ async def ingest_upload(
                 session_id=session_id,
                 tenant_id=smmm_id,
                 client_id=resolved_client_id,
-                period_id=period_code.replace('-', '_').upper(),
+                period_id=normalized_period,
             )
             logger.info(f"[Ingest] Pipeline arka planda başlatıldı: {session_id[:8]}")
         except Exception as e:
@@ -818,7 +828,8 @@ def _process_single_file(
         'message': '',
     }
 
-    # === Dedup: Aynı dönem + aynı hash ===
+    # === VT-9: Atomik dedup — SELECT + UNIQUE index ile çifte koruma ===
+    # Önce SELECT ile kontrol (hızlı path)
     cursor.execute("""
         SELECT id, original_filename FROM uploaded_files
         WHERE client_id = ? AND period_code = ? AND file_hash_sha256 = ?
@@ -914,9 +925,10 @@ def _process_single_file(
     # === Diske kaydet ===
     stored_path = _store_file(tenant_id, client_id, period_code, filename, content)
 
-    # === uploaded_files tablosuna kaydet ===
+    # === VT-9: uploaded_files tablosuna kaydet (INSERT OR IGNORE ile race condition koruması) ===
+    # UNIQUE index (idx_uploaded_files_dedup) concurrent insert'i engeller
     cursor.execute("""
-        INSERT INTO uploaded_files
+        INSERT OR IGNORE INTO uploaded_files
         (id, session_id, tenant_id, client_id, period_code,
          original_filename, doc_type, file_hash_sha256, file_size, mime_type,
          stored_path, duplicate_in_period,
@@ -930,6 +942,15 @@ def _process_single_file(
         result.get('period_validation_status', 'unknown'),
         result.get('period_validation_detail', ''),
     ))
+
+    # VT-9: INSERT OR IGNORE ile race condition yakalandı mı kontrol et
+    if cursor.rowcount == 0:
+        # Eş zamanlı upload bu dosyayı zaten eklemiş
+        result['is_duplicate'] = True
+        result['parse_status'] = 'skipped'
+        result['message'] = f"Eş zamanlı upload tarafından zaten kaydedilmiş: '{filename}'"
+        logger.warning(f"[Ingest] VT-9 race condition yakalandı: {filename} hash={file_hash[:16]}")
+        return result
 
     # === Parse et ===
     try:
@@ -1059,7 +1080,11 @@ async def delete_uploaded_file(file_id: str):
         # İlgili cache tabloları temizle
         _cleanup_caches(cursor, client_id, period_code)
 
-        conn.commit()
+        try:
+            conn.commit()
+        except sqlite3.Error:
+            conn.rollback()
+            raise
         conn.close()
 
         logger.info(f"[Ingest] Dosya silindi: {filename} ({doc_type}), "
@@ -1098,9 +1123,11 @@ def _delete_file_data(cursor, file_id: str, doc_type: str,
         'TAHAKKUK': ['tahakkuk_entries'],
     }
 
+    _VALID_TABLES = frozenset(t for ts in tables_by_type.values() for t in ts)
     tables = tables_by_type.get(doc_type, [])
 
     for table in tables:
+        assert table in _VALID_TABLES, f"Invalid table name: {table}"
         try:
             # Önce source_file_id ile dene (yeni kayıtlar)
             cursor.execute(f"""
@@ -1135,8 +1162,10 @@ def _cleanup_caches(cursor, client_id: str, period_code: str):
         ("generated_reports", "client_id = ? AND period_code = ?"),
         ("feed_items", "client_id = ? AND period = ?"),
     ]
+    _VALID_CACHE_TABLES = frozenset(t for t, _ in cache_tables)
 
     for table, condition in cache_tables:
+        assert table in _VALID_CACHE_TABLES, f"Invalid cache table: {table}"
         try:
             cursor.execute(f"DELETE FROM {table} WHERE {condition}", (client_id, period_id))
         except sqlite3.OperationalError:

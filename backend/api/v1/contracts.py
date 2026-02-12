@@ -3332,10 +3332,9 @@ async def get_kurgan_risk(
                 import urllib.request
                 import ssl
 
-                # SSL context (TCMB bazen sertifika sorunları yaşıyor)
-                ssl_context = ssl.create_default_context()
-                ssl_context.check_hostname = False
-                ssl_context.verify_mode = ssl.CERT_NONE
+                # SSL context with proper certificate verification
+                import certifi
+                ssl_context = ssl.create_default_context(cafile=certifi.where())
 
                 # TCMB günlük kur XML
                 tcmb_url = "https://www.tcmb.gov.tr/kurlar/today.xml"
@@ -4847,3 +4846,164 @@ async def vdk_ai_analysis(
     except Exception as e:
         _kurgan_logger.error(f"VDK AI analysis error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"VDK AI analiz hatasi: {str(e)}")
+
+
+# ═══════════════════════════════════════════════════════════════════
+# H-04: Risk Queue Endpoint
+# ═══════════════════════════════════════════════════════════════════
+
+@router.get("/contracts/risk-queue")
+async def get_risk_queue(
+    client_id: str = Query(None),
+    period: str = Query(None),
+    user: dict = Depends(verify_token)
+):
+    """
+    Risk inceleme kuyrugu — KURGAN risk analiz sonuclarindan
+    onem sirasina gore sirali risk ogelerini doner.
+
+    Frontend: useRiskReviewQueue.ts
+    """
+    smmm_id = user.get("id", "default")
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # rule_execution_log'dan en son risk sonuclarini cek
+        query = """
+            SELECT rule_code, rule_name, severity, status, result_detail,
+                   client_id, period_id, executed_at
+            FROM rule_execution_log
+            WHERE smmm_id = ?
+        """
+        params = [smmm_id]
+
+        if client_id:
+            query += " AND client_id = ?"
+            params.append(client_id)
+        if period:
+            norm_period = period.replace('-', '_').upper()
+            query += " AND period_id = ?"
+            params.append(norm_period)
+
+        query += " ORDER BY CASE severity WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 WHEN 'low' THEN 4 ELSE 5 END, executed_at DESC LIMIT 100"
+
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+
+        items = []
+        for row in rows:
+            severity = (row["severity"] or "medium").lower()
+            risk_level_map = {"critical": "kritik", "high": "yuksek", "medium": "orta", "low": "dusuk"}
+            items.append({
+                "id": f"{row['rule_code']}_{row['client_id']}_{row['period_id']}",
+                "rule_code": row["rule_code"],
+                "title": row["rule_name"] or row["rule_code"],
+                "risk_level": risk_level_map.get(severity, "orta"),
+                "severity": severity,
+                "status": row["status"] or "pending",
+                "detail": row["result_detail"],
+                "client_id": row["client_id"],
+                "period_id": row["period_id"],
+                "detected_at": row["executed_at"],
+                "ai_suggestion": None,
+            })
+
+        conn.close()
+
+        # Stats
+        stats = {
+            "total": len(items),
+            "critical": sum(1 for i in items if i["severity"] == "critical"),
+            "high": sum(1 for i in items if i["severity"] == "high"),
+            "medium": sum(1 for i in items if i["severity"] == "medium"),
+            "low": sum(1 for i in items if i["severity"] == "low"),
+            "pending": sum(1 for i in items if i["status"] == "pending"),
+        }
+
+        return {"items": items, "stats": stats}
+
+    except Exception as e:
+        _kurgan_logger.error(f"Risk queue error: {e}", exc_info=True)
+        return {"items": [], "stats": {"total": 0, "critical": 0, "high": 0, "medium": 0, "low": 0, "pending": 0}}
+
+
+# ═══════════════════════════════════════════════════════════════════
+# H-04: Fake Invoice Risk Endpoint
+# ═══════════════════════════════════════════════════════════════════
+
+@router.get("/contracts/fake-invoice-risk")
+async def get_fake_invoice_risk(
+    client_id: str = Query(None),
+    period: str = Query(None),
+    smmm_id: str = Query(None),
+    user: dict = Depends(verify_token)
+):
+    """
+    Sahte fatura risk degerlendirmesi.
+
+    Mevzuat: VUK 359 (sahte belge), KDVK 29 (indirim reddi)
+    Kaynak: tax_certificate_analyzer.py servisi
+    """
+    resolved_smmm = smmm_id or user.get("id", "default")
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # tax_certificates tablosundan analiz sonucu cek
+        query = """
+            SELECT risk_score, risk_level, analysis_result
+            FROM tax_certificates
+            WHERE smmm_id = ?
+        """
+        params = [resolved_smmm]
+
+        if client_id:
+            query += " AND client_id = ?"
+            params.append(client_id)
+
+        query += " ORDER BY created_at DESC LIMIT 1"
+
+        cursor.execute(query, params)
+        row = cursor.fetchone()
+        conn.close()
+
+        if not row:
+            return wrap_response({
+                "overall_status": "NO_DATA",
+                "message": "Sahte fatura risk analizi icin vergi levhasi yukleyin.",
+                "risk_score": 0,
+                "risk_level": "bilinmiyor",
+                "indicators": [],
+            })
+
+        import json as _json
+        analysis = {}
+        if row["analysis_result"]:
+            try:
+                analysis = _json.loads(row["analysis_result"])
+            except Exception:
+                pass
+
+        return wrap_response({
+            "overall_status": "OK",
+            "risk_score": row["risk_score"] or 0,
+            "risk_level": row["risk_level"] or "bilinmiyor",
+            "fake_invoice_risk_score": analysis.get("fake_invoice_risk_score", 0),
+            "indicators": analysis.get("indicators", []),
+            "recommendations": analysis.get("recommendations", []),
+            "sector_risk": analysis.get("sector_risk", {}),
+            "city_risk": analysis.get("city_risk", {}),
+        })
+
+    except Exception as e:
+        _kurgan_logger.error(f"Fake invoice risk error: {e}", exc_info=True)
+        return wrap_response({
+            "overall_status": "ERROR",
+            "message": f"Sahte fatura risk analizi hatasi: {str(e)}",
+            "risk_score": 0,
+            "risk_level": "bilinmiyor",
+            "indicators": [],
+        })

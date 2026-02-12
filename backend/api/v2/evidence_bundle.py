@@ -4,8 +4,9 @@ POST /api/v2/evidence-bundle/generate - Generate evidence bundle
 GET  /api/v2/evidence-bundle/summary  - Get Big4 workpaper summary from DB
 LYNTOS V1 Critical
 """
-from fastapi import APIRouter, Query, HTTPException
+from fastapi import APIRouter, Query, HTTPException, Depends
 from fastapi.responses import FileResponse
+from utils.period_utils import get_period_db
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
@@ -16,6 +17,8 @@ import os
 from schemas.feed import FeedSeverity
 from services.feed import get_feed_service
 from services.evidence_bundle import get_evidence_bundle_service
+from middleware.auth import verify_token, check_client_access
+from middleware.cache import response_cache
 
 logger = logging.getLogger(__name__)
 
@@ -23,11 +26,11 @@ router = APIRouter(prefix="/evidence-bundle", tags=["evidence-bundle"])
 
 
 class GenerateBundleRequest(BaseModel):
-    smmm_id: str
     client_id: str
     period: str
     severity_filter: Optional[List[str]] = ["CRITICAL", "HIGH"]
     evidence_files_dir: Optional[str] = None
+    smmm_id: Optional[str] = None  # Deprecated: smmm_id token'dan alınır (VT-10)
 
 
 # ============================================================================
@@ -67,13 +70,21 @@ def _section_status(docs: list) -> str:
 @router.get("/summary")
 async def get_evidence_summary(
     client_id: str = Query(..., description="Mükellef ID"),
-    period_id: str = Query(..., description="Dönem (ör: 2025-Q1)"),
+    period_id: str = Depends(get_period_db),
+    user: dict = Depends(verify_token),
 ):
     """
     Big4 formatında kanıt paketi özeti.
     DB'deki mevcut verileri tarayarak 8 bölümlük (A-H) workpaper durumunu döner.
     """
+    await check_client_access(user, client_id)
     from database.db import get_connection
+
+    # P-10: Cache kontrolü (TTL 4 saat)
+    cache_key = f"evidence_summary:{client_id}:{period_id}"
+    cached = response_cache.get(cache_key)
+    if cached is not None:
+        return cached
 
     try:
         with get_connection() as conn:
@@ -106,43 +117,60 @@ async def get_evidence_summary(
                 ))
 
             # ------------------------------------------------------------------
+            # VT-7: Toplu COUNT sorgusu (14 sorgu → 1 UNION ALL)
+            # ------------------------------------------------------------------
+            cursor.execute("""
+                SELECT 'mizan' as tbl, COUNT(*) as cnt FROM mizan_entries WHERE client_id = ? AND period_id = ?
+                UNION ALL
+                SELECT 'journal', COUNT(*) FROM journal_entries WHERE client_id = ? AND period_id = ?
+                UNION ALL
+                SELECT 'ledger', COUNT(*) FROM ledger_entries WHERE client_id = ? AND period_id = ?
+                UNION ALL
+                SELECT 'kdv_beyanname', COUNT(*) FROM kdv_beyanname_data WHERE client_id = ? AND period_id = ?
+                UNION ALL
+                SELECT 'tahakkuk', COUNT(*) FROM tahakkuk_entries WHERE client_id = ? AND period_id = ?
+                UNION ALL
+                SELECT 'edefter', COUNT(*) FROM edefter_entries WHERE client_id = ? AND period_id = ?
+                UNION ALL
+                SELECT 'bank', COUNT(*) FROM bank_transactions WHERE client_id = ? AND period_id = ?
+                UNION ALL
+                SELECT 'banka_bakiye', COUNT(*) FROM banka_bakiye_data WHERE client_id = ? AND period_id = ?
+                UNION ALL
+                SELECT 'efatura_upload', COUNT(*) FROM document_uploads WHERE client_id = ? AND period_id = ? AND doc_type IN ('EFATURA', 'EARSIV', 'E-FATURA', 'E-ARSIV')
+                UNION ALL
+                SELECT 'sgk_upload', COUNT(*) FROM document_uploads WHERE client_id = ? AND period_id = ? AND doc_type IN ('SGK', 'BORDRO', 'APHB')
+                UNION ALL
+                SELECT 'rule_log', COUNT(*) FROM rule_execution_log WHERE client_id = ? AND period_id = ?
+            """, (client_id, period_id) * 11)
+
+            counts = {}
+            for row in cursor.fetchall():
+                counts[row["tbl"]] = row["cnt"]
+
+            # Beyanname tipleri (ayrı sorgu — DISTINCT gerekli)
+            cursor.execute(
+                "SELECT DISTINCT beyanname_tipi FROM beyanname_entries WHERE client_id = ? AND period_id = ?",
+                (client_id, period_id)
+            )
+            beyanname_rows = cursor.fetchall()
+
+            # ------------------------------------------------------------------
             # B - Mizan ve Defterler
             # ------------------------------------------------------------------
             b_docs = []
-
-            # Mizan
-            cursor.execute(
-                "SELECT COUNT(*) as cnt FROM mizan_entries WHERE client_id = ? AND period_id = ?",
-                (client_id, period_id)
-            )
-            mizan_row = cursor.fetchone()
-            mizan_count = mizan_row["cnt"] if mizan_row else 0
+            mizan_count = counts.get("mizan", 0)
             if mizan_count > 0:
                 b_docs.append(_make_document(
                     "B-001", f"B-001_Mizan_{period_id}.xlsx",
                     "Mizan ve Defterler", "verified", mizan_count * 120, "Sistem"
                 ))
-
-            # Yevmiye
-            cursor.execute(
-                "SELECT COUNT(*) as cnt FROM journal_entries WHERE client_id = ? AND period_id = ?",
-                (client_id, period_id)
-            )
-            yevmiye_row = cursor.fetchone()
-            yevmiye_count = yevmiye_row["cnt"] if yevmiye_row else 0
+            yevmiye_count = counts.get("journal", 0)
             if yevmiye_count > 0:
                 b_docs.append(_make_document(
                     "B-002", f"B-002_Yevmiye_{period_id}.xlsx",
                     "Mizan ve Defterler", "verified", yevmiye_count * 80, "Sistem"
                 ))
-
-            # Kebir
-            cursor.execute(
-                "SELECT COUNT(*) as cnt FROM ledger_entries WHERE client_id = ? AND period_id = ?",
-                (client_id, period_id)
-            )
-            kebir_row = cursor.fetchone()
-            kebir_count = kebir_row["cnt"] if kebir_row else 0
+            kebir_count = counts.get("ledger", 0)
             if kebir_count > 0:
                 b_docs.append(_make_document(
                     "B-003", f"B-003_Kebir_{period_id}.xlsx",
@@ -153,39 +181,18 @@ async def get_evidence_summary(
             # C - Vergi Beyannameleri
             # ------------------------------------------------------------------
             c_docs = []
-
-            # KDV beyanname
-            cursor.execute(
-                "SELECT COUNT(*) as cnt FROM kdv_beyanname_data WHERE client_id = ? AND period_id = ?",
-                (client_id, period_id)
-            )
-            kdv_row = cursor.fetchone()
-            if kdv_row and kdv_row["cnt"] > 0:
+            if counts.get("kdv_beyanname", 0) > 0:
                 c_docs.append(_make_document(
                     "C-001", f"C-001_KDV_Beyannamesi_{period_id}.pdf",
                     "Vergi Beyannameleri", "verified", 8192, "Sistem"
                 ))
-
-            # Beyanname entries (generic)
-            cursor.execute(
-                "SELECT DISTINCT beyanname_tipi FROM beyanname_entries WHERE client_id = ? AND period_id = ?",
-                (client_id, period_id)
-            )
-            beyanname_rows = cursor.fetchall()
             for idx, br in enumerate(beyanname_rows):
                 btype = br["beyanname_tipi"]
                 c_docs.append(_make_document(
                     f"C-{idx + 2:03d}", f"C-{idx + 2:03d}_{btype}_{period_id}.pdf",
                     "Vergi Beyannameleri", "verified", 6144, "Sistem"
                 ))
-
-            # Tahakkuk
-            cursor.execute(
-                "SELECT COUNT(*) as cnt FROM tahakkuk_entries WHERE client_id = ? AND period_id = ?",
-                (client_id, period_id)
-            )
-            tahakkuk_row = cursor.fetchone()
-            if tahakkuk_row and tahakkuk_row["cnt"] > 0:
+            if counts.get("tahakkuk", 0) > 0:
                 c_docs.append(_make_document(
                     f"C-{len(c_docs) + 1:03d}", f"C-{len(c_docs) + 1:03d}_Tahakkuk_Fisleri_{period_id}.pdf",
                     "Vergi Beyannameleri", "verified", 4096, "Sistem"
@@ -195,25 +202,13 @@ async def get_evidence_summary(
             # D - E-Fatura / E-Arşiv
             # ------------------------------------------------------------------
             d_docs = []
-            cursor.execute(
-                "SELECT COUNT(*) as cnt FROM edefter_entries WHERE client_id = ? AND period_id = ?",
-                (client_id, period_id)
-            )
-            edefter_row = cursor.fetchone()
-            edefter_count = edefter_row["cnt"] if edefter_row else 0
+            edefter_count = counts.get("edefter", 0)
             if edefter_count > 0:
                 d_docs.append(_make_document(
                     "D-001", f"D-001_EDefter_Kayitlari_{period_id}.xlsx",
                     "E-Fatura / E-Arşiv", "verified", edefter_count * 150, "Sistem"
                 ))
-
-            # Check document_uploads for e-fatura
-            cursor.execute(
-                "SELECT COUNT(*) as cnt FROM document_uploads WHERE client_id = ? AND period_id = ? AND doc_type IN ('EFATURA', 'EARSIV', 'E-FATURA', 'E-ARSIV')",
-                (client_id, period_id)
-            )
-            efatura_upload = cursor.fetchone()
-            if efatura_upload and efatura_upload["cnt"] > 0:
+            if counts.get("efatura_upload", 0) > 0:
                 d_docs.append(_make_document(
                     "D-002", f"D-002_EFatura_Belgeleri_{period_id}.zip",
                     "E-Fatura / E-Arşiv", "verified", 32768, "Sistem"
@@ -223,55 +218,33 @@ async def get_evidence_summary(
             # E - Banka ve Finansal
             # ------------------------------------------------------------------
             e_docs = []
-            cursor.execute(
-                "SELECT COUNT(*) as cnt FROM bank_transactions WHERE client_id = ? AND period_id = ?",
-                (client_id, period_id)
-            )
-            bank_row = cursor.fetchone()
-            bank_count = bank_row["cnt"] if bank_row else 0
+            bank_count = counts.get("bank", 0)
             if bank_count > 0:
                 e_docs.append(_make_document(
                     "E-001", f"E-001_Banka_Ekstreleri_{period_id}.xlsx",
                     "Banka ve Finansal", "verified", bank_count * 90, "Sistem"
                 ))
-
-            # Banka bakiye
-            cursor.execute(
-                "SELECT COUNT(*) as cnt FROM banka_bakiye_data WHERE client_id = ? AND period_id = ?",
-                (client_id, period_id)
-            )
-            bakiye_row = cursor.fetchone()
-            if bakiye_row and bakiye_row["cnt"] > 0:
+            if counts.get("banka_bakiye", 0) > 0:
                 e_docs.append(_make_document(
                     "E-002", f"E-002_Banka_Mutabakat_{period_id}.xlsx",
                     "Banka ve Finansal", "verified", 4096, "Sistem"
                 ))
 
             # ------------------------------------------------------------------
-            # F - SGK ve Bordro (check document_uploads)
+            # F - SGK ve Bordro
             # ------------------------------------------------------------------
             f_docs = []
-            cursor.execute(
-                "SELECT COUNT(*) as cnt FROM document_uploads WHERE client_id = ? AND period_id = ? AND doc_type IN ('SGK', 'BORDRO', 'APHB')",
-                (client_id, period_id)
-            )
-            sgk_row = cursor.fetchone()
-            if sgk_row and sgk_row["cnt"] > 0:
+            if counts.get("sgk_upload", 0) > 0:
                 f_docs.append(_make_document(
                     "F-001", f"F-001_SGK_Bildirgeleri_{period_id}.pdf",
                     "SGK ve Bordro", "verified", 12288, "Sistem"
                 ))
 
             # ------------------------------------------------------------------
-            # G - Analitik İnceleme (rule_execution_log)
+            # G - Analitik İnceleme
             # ------------------------------------------------------------------
             g_docs = []
-            cursor.execute(
-                "SELECT COUNT(*) as cnt FROM rule_execution_log WHERE client_id = ? AND period_id = ?",
-                (client_id, period_id)
-            )
-            rule_row = cursor.fetchone()
-            rule_count = rule_row["cnt"] if rule_row else 0
+            rule_count = counts.get("rule_log", 0)
             if rule_count > 0:
                 g_docs.append(_make_document(
                     "G-001", f"G-001_VDK_Risk_Analizi_{period_id}.pdf",
@@ -398,7 +371,7 @@ async def get_evidence_summary(
             hash_input = f"{client_id}_{period_id}_{total_files}_{datetime.now().isoformat()}"
             bundle_hash = hashlib.sha256(hash_input.encode()).hexdigest()[:16]
 
-            return {
+            result = {
                 "sections": sections,
                 "totalFiles": total_files,
                 "completedFiles": completed_files,
@@ -406,6 +379,10 @@ async def get_evidence_summary(
                 "preparedBy": "LYNTOS Sistem",
                 "bundleHash": bundle_hash,
             }
+
+            # P-10: Cache result (4 saat TTL)
+            response_cache.set(cache_key, result, ttl=14400)
+            return result
 
     except Exception as e:
         logger.error(f"Evidence summary error: {e}")
@@ -421,7 +398,7 @@ async def get_evidence_summary(
 
 
 @router.post("/generate")
-async def generate_evidence_bundle(request: GenerateBundleRequest):
+async def generate_evidence_bundle(request: GenerateBundleRequest, user: dict = Depends(verify_token)):
     """
     Generate Evidence Bundle from feed items
 
@@ -432,6 +409,8 @@ async def generate_evidence_bundle(request: GenerateBundleRequest):
 
     Returns ResponseEnvelope with bundle info
     """
+    await check_client_access(user, request.client_id)
+    smmm_id = user["id"]
     feed_service = get_feed_service()
     bundle_service = get_evidence_bundle_service()
 
@@ -439,7 +418,7 @@ async def generate_evidence_bundle(request: GenerateBundleRequest):
     severity_filter = [FeedSeverity(s) for s in request.severity_filter if s in FeedSeverity.__members__]
 
     feed_items = feed_service.get_feed_items(
-        smmm_id=request.smmm_id,
+        smmm_id=smmm_id,
         client_id=request.client_id,
         period=request.period,
         severity_filter=severity_filter if severity_filter else [FeedSeverity.CRITICAL, FeedSeverity.HIGH]
@@ -454,7 +433,7 @@ async def generate_evidence_bundle(request: GenerateBundleRequest):
                 "generated_at": datetime.now().isoformat()
             },
             "meta": {
-                "smmm_id": request.smmm_id,
+                "smmm_id": smmm_id,
                 "client_id": request.client_id,
                 "period": request.period
             },
@@ -469,7 +448,7 @@ async def generate_evidence_bundle(request: GenerateBundleRequest):
 
     # Generate bundle
     result = bundle_service.generate_bundle(
-        smmm_id=request.smmm_id,
+        smmm_id=smmm_id,
         client_id=request.client_id,
         period=request.period,
         feed_items=feed_items,
@@ -480,7 +459,7 @@ async def generate_evidence_bundle(request: GenerateBundleRequest):
 
 
 @router.get("/download/{bundle_id}")
-async def download_bundle(bundle_id: str):
+async def download_bundle(bundle_id: str, user: dict = Depends(verify_token)):
     """Download the ZIP bundle"""
     bundle_service = get_evidence_bundle_service()
     zip_path = bundle_service.output_dir / f"{bundle_id}.zip"
@@ -496,7 +475,7 @@ async def download_bundle(bundle_id: str):
 
 
 @router.get("/download/{bundle_id}/pdf")
-async def download_pdf(bundle_id: str):
+async def download_pdf(bundle_id: str, user: dict = Depends(verify_token)):
     """Download only the PDF report"""
     bundle_service = get_evidence_bundle_service()
     pdf_path = bundle_service.output_dir / f"{bundle_id}.pdf"

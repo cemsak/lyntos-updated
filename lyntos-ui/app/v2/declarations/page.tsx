@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, Calendar, CheckCircle2, Clock, AlertTriangle, Loader2, Upload } from 'lucide-react';
 import Link from 'next/link';
-import { getAuthToken } from '../_lib/auth';
+import { API_ENDPOINTS } from '../_lib/config/api';
+import { api } from '../_lib/api/client';
 
 interface Declaration {
   id: string;
@@ -21,27 +22,16 @@ export default function DeclarationsPage() {
 
   useEffect(() => {
     async function fetchDeclarations() {
-      const token = getAuthToken();
-      if (!token) {
-        // Token yoksa empty state göster (demo mode)
-        setDeclarations([]);
-        setIsLoading(false);
-        return;
-      }
-
       try {
-        const response = await fetch('/api/v1/contracts/declarations', {
-          headers: { Authorization: token },
-        });
+        const { data, ok } = await api.get<Record<string, any>>(API_ENDPOINTS.contracts.declarations);
 
-        if (!response.ok) {
+        if (!ok || !data) {
           // API henuz hazir degil, empty state goster
           setDeclarations([]);
           setIsLoading(false);
           return;
         }
 
-        const data = await response.json();
         setDeclarations(data.items || []);
       } catch {
         // API baglantisi yok, empty state goster

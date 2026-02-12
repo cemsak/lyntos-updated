@@ -7,12 +7,15 @@ Primary source: database/lyntos.db → mizan_entries table
 Fallback source: backend/data/luca/{smmm_id}/{client_id}/{period}/mizan.csv
 """
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 from pathlib import Path
 import logging
 import sqlite3
+
+from middleware.auth import verify_token, check_client_access
+from utils.period_utils import get_period_db, normalize_period_db
 
 # Import the mizan parser from data_engine
 import sys
@@ -306,12 +309,14 @@ def extract_vdk_data(accounts: List[Dict], summary: MizanSummaryResponse) -> Dic
 @router.get("/check")
 async def check_mizan_exists(
     client_id: str = Query(...),
-    period_id: str = Query(...),
+    period_id: str = Depends(get_period_db),
+    user: dict = Depends(verify_token),
 ):
     """
     Lightweight check: does mizan data exist in DB for given client+period?
     Returns { exists: bool, count: int }
     """
+    await check_client_access(user, client_id)
     from database.db import get_connection
     try:
         with get_connection() as conn:
@@ -329,45 +334,47 @@ async def check_mizan_exists(
 
 
 @router.get("/available")
-async def list_available_data():
+async def list_available_data(user: dict = Depends(verify_token)):
     """
     List all available SMMM/Client/Period combinations with mizan data on disk.
     This helps frontend discover what data is available without manual upload.
     """
+    smmm_id = user["id"]
     available = []
     luca_dir = DATA_DIR / "luca"
 
     if not luca_dir.exists():
         return {"available": [], "count": 0}
 
-    for smmm_dir in luca_dir.iterdir():
-        if not smmm_dir.is_dir():
+    # KRİTİK: Sadece bu SMMM'ye ait dizini tara (VT-10 güvenlik düzeltmesi)
+    # Diğer SMMM'lerin dizinlerini listelememeli
+    smmm_dir = luca_dir / smmm_id
+    if not smmm_dir.exists() or not smmm_dir.is_dir():
+        return {"available": [], "count": 0}
+
+    for client_dir in smmm_dir.iterdir():
+        if not client_dir.is_dir():
             continue
-        smmm_id = smmm_dir.name
+        client_id = client_dir.name
 
-        for client_dir in smmm_dir.iterdir():
-            if not client_dir.is_dir():
+        for period_dir in client_dir.iterdir():
+            if not period_dir.is_dir():
                 continue
-            client_id = client_dir.name
 
-            for period_dir in client_dir.iterdir():
-                if not period_dir.is_dir():
-                    continue
+            mizan_path = period_dir / "mizan.csv"
+            if mizan_path.exists():
+                # Extract period code from folder name
+                period_code = period_dir.name.split('__')[0]  # Handle "2025-Q1__SMOKETEST..."
 
-                mizan_path = period_dir / "mizan.csv"
-                if mizan_path.exists():
-                    # Extract period code from folder name
-                    period_code = period_dir.name.split('__')[0]  # Handle "2025-Q1__SMOKETEST..."
-
-                    available.append({
-                        "smmm_id": smmm_id,
-                        "client_id": client_id,
-                        "period": period_code,
-                        "folder": period_dir.name,
-                        "mizan_size": mizan_path.stat().st_size,
-                        "has_beyanname": (period_dir / "beyanname").exists(),
-                        "has_tahakkuk": (period_dir / "tahakkuk").exists(),
-                    })
+                available.append({
+                    "smmm_id": smmm_id,
+                    "client_id": client_id,
+                    "period": period_code,
+                    "folder": period_dir.name,
+                    "mizan_size": mizan_path.stat().st_size,
+                    "has_beyanname": (period_dir / "beyanname").exists(),
+                    "has_tahakkuk": (period_dir / "tahakkuk").exists(),
+                })
 
     return {
         "available": available,
@@ -380,7 +387,10 @@ async def load_mizan_data(
     smmm_id: str,
     client_id: str,
     period: str,
-    include_accounts: bool = Query(True, description="Include full account list")
+    include_accounts: bool = Query(True, description="Include full account list"),
+    limit: int = Query(5000, ge=1, le=10000, description="Max account sayısı (VT-8 pagination)"),
+    offset: int = Query(0, ge=0, description="Sayfa offset"),
+    user: dict = Depends(verify_token),
 ):
     """
     Load mizan data for a specific SMMM/Client/Period.
@@ -392,6 +402,11 @@ async def load_mizan_data(
     1. Database (mizan_entries table) - uses client_id directly
     2. Disk fallback - searches for matching folder
     """
+    period = normalize_period_db(period)
+
+    await check_client_access(user, client_id)
+    # Use authenticated user's id as smmm_id (path param kept for backward compat)
+    smmm_id = user["id"]
 
     rows = None
     source_file = "database"
@@ -476,6 +491,10 @@ async def load_mizan_data(
         # Extract VDK data
         vdk_data = extract_vdk_data(rows, summary)
 
+        # VT-8: Pagination uygula
+        total_accounts = len(accounts)
+        paginated_accounts = accounts[offset:offset + limit] if include_accounts else []
+
         return MizanDataResponse(
             ok=True,
             smmm_id=smmm_id,
@@ -485,7 +504,7 @@ async def load_mizan_data(
             row_count=len(rows),
             validation=validation,
             summary=summary,
-            accounts=accounts if include_accounts else [],
+            accounts=paginated_accounts,
             vdk_data=vdk_data
         )
 
@@ -497,7 +516,7 @@ async def load_mizan_data(
 
 
 @router.get("/analyze/{smmm_id}/{client_id}/{period}")
-async def analyze_mizan(smmm_id: str, client_id: str, period: str):
+async def analyze_mizan(smmm_id: str, client_id: str, period: str, user: dict = Depends(verify_token)):
     """
     Run mizan omurga (backbone) analysis on the data.
 
@@ -512,6 +531,11 @@ async def analyze_mizan(smmm_id: str, client_id: str, period: str):
     1. Database (mizan_entries table) - uses client_id directly
     2. Disk fallback - searches for matching folder
     """
+    period = normalize_period_db(period)
+
+    await check_client_access(user, client_id)
+    # Use authenticated user's id as smmm_id (path param kept for backward compat)
+    smmm_id = user["id"]
 
     rows = None
     source = "unknown"
@@ -740,11 +764,16 @@ async def analyze_mizan(smmm_id: str, client_id: str, period: str):
 
 
 @router.get("/account/{smmm_id}/{client_id}/{period}/{hesap_kodu}")
-async def get_account_detail(smmm_id: str, client_id: str, period: str, hesap_kodu: str):
+async def get_account_detail(smmm_id: str, client_id: str, period: str, hesap_kodu: str, user: dict = Depends(verify_token)):
     """
     Get detailed information for a specific account code.
     Useful for drill-down from Dashboard panels.
     """
+    period = normalize_period_db(period)
+
+    await check_client_access(user, client_id)
+    # Use authenticated user's id as smmm_id (path param kept for backward compat)
+    smmm_id = user["id"]
 
     period_dir = find_period_folder(DATA_DIR, smmm_id, client_id, period)
 

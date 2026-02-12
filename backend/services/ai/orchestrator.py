@@ -10,6 +10,7 @@ from .base_provider import (
     AIProvider, TaskType, Complexity, AIRequest, AIResponse, AIMessage
 )
 from .router import AIRouter
+from services.pii_guard import mask_vkn, mask_company_name
 
 logger = logging.getLogger(__name__)
 
@@ -300,7 +301,7 @@ Somut ve aksiyon odakli ol."""
 
         prompt = f"""VDK RİSK ANALİZİ - HIZLI ÖZET
 
-MÜVEKKİL: {mukellef.get('ad', 'N/A')} (VKN: {mukellef.get('vkn', 'N/A')})
+MÜVEKKİL: {mask_company_name(mukellef.get('ad'))} (VKN: {mask_vkn(mukellef.get('vkn'))})
 DÖNEM: {risk_data.get('donem', 'N/A')}
 
 📊 RİSK METRİKLERİ:
@@ -429,8 +430,8 @@ TETİKLENEN KURGAN SENARYOLARI - DETAY
 VDK RİSK ANALİZİ - DETAYLI RAPOR
 ═══════════════════════════════════════════════════════════════
 
-MÜVEKKİL: {mukellef.get('ad', 'N/A')}
-VKN: {mukellef.get('vkn', 'N/A')}
+MÜVEKKİL: {mask_company_name(mukellef.get('ad'))}
+VKN: {mask_vkn(mukellef.get('vkn'))}
 SEKTÖR: {mukellef.get('sektor', 'N/A')} (NACE: {mukellef.get('nace_kodu', 'N/A')})
 DÖNEM: {donem}
 
@@ -629,11 +630,11 @@ Yazdigin metinler:
 ═══════════════════════════════════════════════════════════════
 MÜVEKKİL BİLGİLERİ
 ═══════════════════════════════════════════════════════════════
-Unvan: {mukellef.get('ad', 'N/A')}
-VKN: {mukellef.get('vkn', 'N/A')}
+Unvan: {mask_company_name(mukellef.get('ad'))}
+VKN: {mask_vkn(mukellef.get('vkn'))}
 Sektör: {mukellef.get('sektor', 'N/A')}
 NACE Kodu: {mukellef.get('nace_kodu', 'N/A')}
-Vergi Dairesi: {mukellef.get('vergi_dairesi', 'N/A')}
+Vergi Dairesi: VD_***
 Analiz Dönemi: {donem}
 """
 

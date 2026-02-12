@@ -110,7 +110,7 @@ def get_audit_trail(
             if row_dict.get("details"):
                 try:
                     row_dict["details"] = json.loads(row_dict["details"])
-                except:
+                except (json.JSONDecodeError, TypeError):
                     pass
             results.append(row_dict)
 

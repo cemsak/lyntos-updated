@@ -14,12 +14,14 @@ Time-Shield:
 - If period end_date > today: is_future=True, missing_docs=[]
 - If period end_date <= today: is_future=False, missing_docs=[list]
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, field_validator
 from typing import Optional, List
 from datetime import datetime, date
 from pathlib import Path
 import sqlite3
+
+from middleware.auth import verify_token, check_client_access
 
 router = APIRouter(prefix="/periods", tags=["periods"])
 
@@ -145,7 +147,7 @@ def get_required_doc_types() -> List[str]:
 # ============== UTILITY (MUST BE BEFORE DYNAMIC ROUTES) ==============
 
 @router.get("/utils/current-period")
-def get_current_period():
+async def get_current_period(user: dict = Depends(verify_token)):
     """Get current period code based on today's date"""
     today = date.today()
     year = today.year
@@ -175,8 +177,9 @@ def get_current_period():
 # ============== CRUD ENDPOINTS ==============
 
 @router.get("/{client_id}", response_model=List[PeriodResponse])
-def list_periods(client_id: str):
+async def list_periods(client_id: str, user: dict = Depends(verify_token)):
     """List all periods for a client, sorted by date descending"""
+    await check_client_access(user, client_id)
     conn = get_db()
     cursor = conn.cursor()
 
@@ -186,14 +189,20 @@ def list_periods(client_id: str):
         conn.close()
         raise HTTPException(status_code=404, detail=f"Mükellef bulunamadı: {client_id}")
 
+    # P-5: Correlated subquery → LEFT JOIN ile optimizasyon
     cursor.execute("""
         SELECT p.*,
-               (SELECT COUNT(*) FROM document_uploads d
-                WHERE d.client_id = p.client_id AND d.period_id = p.period_code) as doc_count
+               COALESCE(dc.cnt, 0) as doc_count
         FROM periods p
+        LEFT JOIN (
+            SELECT client_id, period_id, COUNT(*) as cnt
+            FROM document_uploads
+            WHERE client_id = ?
+            GROUP BY client_id, period_id
+        ) dc ON dc.client_id = p.client_id AND dc.period_id = p.period_code
         WHERE p.client_id = ?
         ORDER BY p.start_date DESC
-    """, (client_id,))
+    """, (client_id, client_id))
 
     rows = cursor.fetchall()
     conn.close()
@@ -223,8 +232,9 @@ def list_periods(client_id: str):
 
 
 @router.get("/{client_id}/{period_code}", response_model=PeriodResponse)
-def get_period(client_id: str, period_code: str):
+async def get_period(client_id: str, period_code: str, user: dict = Depends(verify_token)):
     """Get single period"""
+    await check_client_access(user, client_id)
     conn = get_db()
     cursor = conn.cursor()
 
@@ -232,13 +242,18 @@ def get_period(client_id: str, period_code: str):
     period_normalized = period_code.upper().replace('-', '_')
     period_id = f"{client_id}_{period_normalized}"
 
+    # P-5: Correlated subquery → LEFT JOIN
     cursor.execute("""
         SELECT p.*,
-               (SELECT COUNT(*) FROM document_uploads d
-                WHERE d.client_id = p.client_id AND d.period_id = p.period_code) as doc_count
+               COALESCE(dc.cnt, 0) as doc_count
         FROM periods p
+        LEFT JOIN (
+            SELECT client_id, period_id, COUNT(*) as cnt
+            FROM document_uploads
+            WHERE client_id = ? AND period_id = ?
+        ) dc ON dc.client_id = p.client_id AND dc.period_id = p.period_code
         WHERE p.id = ?
-    """, (period_id,))
+    """, (client_id, period_normalized, period_id))
 
     row = cursor.fetchone()
     conn.close()
@@ -266,8 +281,9 @@ def get_period(client_id: str, period_code: str):
 
 
 @router.post("/", response_model=PeriodResponse)
-def create_period(period: PeriodCreate):
+async def create_period(period: PeriodCreate, user: dict = Depends(verify_token)):
     """Create new period for client"""
+    await check_client_access(user, period.client_id)
     conn = get_db()
     cursor = conn.cursor()
 
@@ -291,16 +307,21 @@ def create_period(period: PeriodCreate):
     # Get dates
     start_date, end_date = get_period_dates(period_code)
 
-    cursor.execute("""
-        INSERT INTO periods (id, client_id, period_code, start_date, end_date, status, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    """, (
-        period_id, period.client_id, period_code,
-        start_date, end_date, "active", datetime.now().isoformat()
-    ))
+    try:
+        cursor.execute("""
+            INSERT INTO periods (id, client_id, period_code, start_date, end_date, status, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (
+            period_id, period.client_id, period_code,
+            start_date, end_date, "active", datetime.now().isoformat()
+        ))
 
-    conn.commit()
-    conn.close()
+        conn.commit()
+    except sqlite3.Error:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
     is_future = is_period_future(end_date)
 
@@ -319,11 +340,12 @@ def create_period(period: PeriodCreate):
 
 
 @router.post("/ensure")
-def ensure_period(request: EnsurePeriodRequest):
+async def ensure_period(request: EnsurePeriodRequest, user: dict = Depends(verify_token)):
     """
     Ensure period exists - create if not.
     Used for auto-creation during document upload.
     """
+    await check_client_access(user, request.client_id)
     conn = get_db()
     cursor = conn.cursor()
 
@@ -349,23 +371,29 @@ def ensure_period(request: EnsurePeriodRequest):
     # Create
     start_date, end_date = get_period_dates(period_code)
 
-    cursor.execute("""
-        INSERT INTO periods (id, client_id, period_code, start_date, end_date, status, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    """, (
-        period_id, request.client_id, period_code,
-        start_date, end_date, "active", datetime.now().isoformat()
-    ))
+    try:
+        cursor.execute("""
+            INSERT INTO periods (id, client_id, period_code, start_date, end_date, status, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (
+            period_id, request.client_id, period_code,
+            start_date, end_date, "active", datetime.now().isoformat()
+        ))
 
-    conn.commit()
-    conn.close()
+        conn.commit()
+    except sqlite3.Error:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
     return {"status": "created", "period_id": period_id, "created": True}
 
 
 @router.delete("/{client_id}/{period_code}")
-def delete_period(client_id: str, period_code: str):
+async def delete_period(client_id: str, period_code: str, user: dict = Depends(verify_token)):
     """Delete period (use with caution - may orphan documents)"""
+    await check_client_access(user, client_id)
     conn = get_db()
     cursor = conn.cursor()
 
@@ -392,9 +420,14 @@ def delete_period(client_id: str, period_code: str):
             detail=f"Bu döneme ait {doc_count} belge var. Önce belgeleri silin."
         )
 
-    cursor.execute("DELETE FROM periods WHERE id = ?", (period_id,))
-    conn.commit()
-    conn.close()
+    try:
+        cursor.execute("DELETE FROM periods WHERE id = ?", (period_id,))
+        conn.commit()
+    except sqlite3.Error:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
     return {"status": "deleted", "period_id": period_id}
 
@@ -402,7 +435,7 @@ def delete_period(client_id: str, period_code: str):
 # ============== DOCUMENT STATUS (TIME-SHIELD) ==============
 
 @router.get("/{client_id}/{period_code}/status", response_model=PeriodDocumentStatus)
-def get_document_status(client_id: str, period_code: str):
+async def get_document_status(client_id: str, period_code: str, user: dict = Depends(verify_token)):
     """
     Get document upload status for a period.
 
@@ -412,6 +445,7 @@ def get_document_status(client_id: str, period_code: str):
 
     This prevents showing "Eksik: E-Fatura" for Q1 when we're still in January.
     """
+    await check_client_access(user, client_id)
     conn = get_db()
     cursor = conn.cursor()
 

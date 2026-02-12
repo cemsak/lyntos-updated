@@ -958,7 +958,7 @@ class IngestService:
                     WHERE id = ?
                 """, (str(e), session_id))
                 conn.commit()
-            except:
+            except sqlite3.Error:
                 pass
 
             conn.rollback()

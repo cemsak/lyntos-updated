@@ -25,8 +25,7 @@ import { ScopeGuide } from '../_components/shared/ScopeGuide';
 import { useDashboardScope } from '../_components/scope/ScopeProvider';
 import { exportToCsv } from '../_lib/exportCsv';
 import { DataFreshness } from '../_components/shared/DataFreshness';
-import { API_BASE_URL } from '../_lib/config/api';
-import { getAuthToken } from '../_lib/auth';
+import { api } from '../_lib/api/client';
 import { formatCurrency, formatDate, formatPeriod } from '../_lib/format';
 
 interface BankaHesap {
@@ -81,19 +80,11 @@ export default function BankaPage() {
 
     setLoading(true);
     try {
-      const token = getAuthToken();
-      const response = await fetch(
-        `${API_BASE_URL}/api/v2/banka/hesaplar?client_id=${clientId}&period_id=${periodId}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        }
+      const { data } = await api.get<{ hesaplar: BankaHesap[] }>(
+        `/api/v2/banka/hesaplar?client_id=${clientId}&period_id=${periodId}`
       );
 
-      if (response.ok) {
-        const data = await response.json();
+      if (data) {
         setHesaplar(data.hesaplar || []);
         setLastFetchedAt(new Date().toISOString());
       }
@@ -120,16 +111,11 @@ export default function BankaPage() {
         params.append('hesap_kodu', hesapKodu);
       }
 
-      const token = getAuthToken();
-      const response = await fetch(`${API_BASE_URL}/api/v2/banka/islemler?${params}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const { data } = await api.get<{ islemler: BankaIslem[]; total: number; pages: number; ozet: { toplam_giris: number; toplam_cikis: number; islem_sayisi: number } }>(
+        `/api/v2/banka/islemler?${params}`
+      );
 
-      if (response.ok) {
-        const data = await response.json();
+      if (data) {
         setIslemler(data.islemler || []);
         setTotal(data.total || 0);
         setTotalPages(data.pages || 1);

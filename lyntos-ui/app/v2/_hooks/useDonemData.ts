@@ -14,8 +14,8 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useDashboardScope, useScopeComplete } from '../_components/scope/useDashboardScope';
+import { api } from '../_lib/api/client';
 import { getAuthToken } from '../_lib/auth';
-import { API_BASE_URL } from '../_lib/config/api';
 
 // ============== TYPES ==============
 
@@ -147,34 +147,22 @@ async function fetchDonemData(
   period: string,
   includeAccounts: boolean = true
 ): Promise<DonemData> {
-  const token = getAuthToken();
-
-  const params = new URLSearchParams({
-    smmm_id: smmmId,
-    include_accounts: includeAccounts.toString(),
-  });
-
-  const response = await fetch(
-    `${API_BASE_URL}/api/v2/donem/${encodeURIComponent(clientId)}/${encodeURIComponent(period)}?${params}`,
-    {
-      headers: {
-        'Authorization': token || '',
-        'Content-Type': 'application/json',
-      },
-    }
+  const { data, error, status } = await api.get<DonemData>(
+    `/api/v2/donem/${encodeURIComponent(clientId)}/${encodeURIComponent(period)}`,
+    { params: { smmm_id: smmmId, include_accounts: includeAccounts } }
   );
 
-  if (!response.ok) {
-    if (response.status === 401) {
+  if (error || !data) {
+    if (status === 401) {
       throw new Error('Oturum süresi dolmuş. Lütfen tekrar giriş yapın.');
     }
-    if (response.status === 404) {
+    if (status === 404) {
       throw new Error('Bu dönem için veri bulunamadı.');
     }
-    throw new Error(`API Hatası: ${response.status}`);
+    throw new Error(error || 'API Hatası');
   }
 
-  return response.json();
+  return data;
 }
 
 // ============== MAIN HOOK ==============

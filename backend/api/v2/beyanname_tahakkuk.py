@@ -1,11 +1,11 @@
 """
 LYNTOS API v2 - Tahakkuk Endpoint
 tahakkuk_data tablosundan veri çeker.
-
-NO AUTH REQUIRED - Frontend'den doğrudan erişilebilir.
 """
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
+from middleware.auth import verify_token, check_client_access
+from utils.period_utils import get_period_db
 from pydantic import BaseModel
 from typing import List, Optional
 import logging
@@ -46,12 +46,13 @@ class TahakkukResponse(BaseModel):
 @router.get("/tahakkuk", response_model=TahakkukResponse)
 async def get_tahakkuk(
     client_id: str = Query(..., description="Müşteri ID"),
-    period_id: str = Query(..., description="Dönem ID (örn: 2025-Q1)"),
-    tenant_id: str = Query("default", description="Tenant ID")
+    period_id: str = Depends(get_period_db),
+    user: dict = Depends(verify_token)
 ):
     """
     Tahakkuk (vergi borçları) verilerini getir.
     """
+    await check_client_access(user, client_id)
     try:
         with get_connection() as conn:
             cursor = conn.cursor()

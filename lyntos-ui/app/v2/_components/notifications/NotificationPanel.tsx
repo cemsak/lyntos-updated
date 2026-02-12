@@ -5,7 +5,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { API_BASE_URL } from '../../_lib/config/api';
+import { api } from '../../_lib/api/client';
 import { formatDate as formatDateCentral } from '../../_lib/format';
 
 interface Notification {
@@ -52,16 +52,18 @@ export default function NotificationPanel() {
 
   const fetchNotifications = async () => {
     try {
-      const params = new URLSearchParams({
+      const params: Record<string, string> = {
         user_id: userId,
         include_read: showAll.toString(),
         limit: '20'
-      });
-      if (filter) params.append('severity', filter);
+      };
+      if (filter) params.severity = filter;
 
-      const res = await fetch(`${API_BASE_URL}/api/v1/notifications?${params}`);
-      const data = await res.json();
-      setNotifications(data.notifications || []);
+      const { data } = await api.get<{ notifications: Notification[] }>(
+        '/api/v1/notifications',
+        { params }
+      );
+      setNotifications(data?.notifications || []);
     } catch (err) {
       console.error('Failed to fetch notifications:', err);
     } finally {
@@ -71,9 +73,11 @@ export default function NotificationPanel() {
 
   const fetchStats = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/v1/notifications/stats?user_id=${userId}`);
-      const data = await res.json();
-      setStats(data);
+      const { data } = await api.get<NotificationStats>(
+        '/api/v1/notifications/stats',
+        { params: { user_id: userId } }
+      );
+      if (data) setStats(data);
     } catch (err) {
       console.error('Failed to fetch stats:', err);
     }
@@ -81,8 +85,8 @@ export default function NotificationPanel() {
 
   const markAsRead = async (id: string) => {
     try {
-      await fetch(`${API_BASE_URL}/api/v1/notifications/${id}/read?user_id=${userId}`, {
-        method: 'POST'
+      await api.post(`/api/v1/notifications/${id}/read`, null, {
+        params: { user_id: userId }
       });
       fetchNotifications();
       fetchStats();
@@ -93,8 +97,8 @@ export default function NotificationPanel() {
 
   const markAllAsRead = async () => {
     try {
-      await fetch(`${API_BASE_URL}/api/v1/notifications/read-all?user_id=${userId}`, {
-        method: 'POST'
+      await api.post('/api/v1/notifications/read-all', null, {
+        params: { user_id: userId }
       });
       fetchNotifications();
       fetchStats();
@@ -105,9 +109,7 @@ export default function NotificationPanel() {
 
   const dismissNotification = async (id: string) => {
     try {
-      await fetch(`${API_BASE_URL}/api/v1/notifications/${id}/dismiss`, {
-        method: 'POST'
-      });
+      await api.post(`/api/v1/notifications/${id}/dismiss`);
       fetchNotifications();
       fetchStats();
     } catch (err) {

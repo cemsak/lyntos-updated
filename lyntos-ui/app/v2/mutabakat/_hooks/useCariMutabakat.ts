@@ -16,6 +16,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useDashboardScope } from '../../_components/scope/ScopeProvider';
 import { API_ENDPOINTS } from '../../_lib/config/api';
+import { api } from '../../_lib/api/client';
 import type {
   MutabakatSatir,
   MutabakatOzet,
@@ -72,14 +73,10 @@ async function migrateLocalStorageKararlar(
       not_metni: data.not || '',
     }));
 
-    const res = await fetch(API_ENDPOINTS.cariMutabakat.kararlarToplu, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        client_id: clientId,
-        period_id: periodId,
-        kararlar,
-      }),
+    const res = await api.post(API_ENDPOINTS.cariMutabakat.kararlarToplu, {
+      client_id: clientId,
+      period_id: periodId,
+      kararlar,
     });
 
     if (res.ok) {
@@ -181,15 +178,15 @@ export function useCariMutabakat(): UseCariMutabakatReturn {
       await migrateLocalStorageKararlar(clientId, periodId);
 
       // 2. Backend'den kararları çek
-      const res = await fetch(
-        `${API_ENDPOINTS.cariMutabakat.kararlar}?client_id=${encodeURIComponent(clientId)}&period_id=${encodeURIComponent(periodId)}`,
+      const res = await api.get<{ kararlar?: Record<string, SmmmKararData> }>(
+        API_ENDPOINTS.cariMutabakat.kararlar,
+        { params: { client_id: clientId, period_id: periodId } }
       );
 
-      if (res.ok) {
-        const data = await res.json();
-        setKararlar(data.kararlar || {});
+      if (res.ok && res.data) {
+        setKararlar(res.data.kararlar || {});
       } else {
-        console.warn('[useCariMutabakat] Kararlar API hatası:', res.status);
+        console.warn('[useCariMutabakat] Kararlar API hatası:', res.error);
         setKararlar({});
       }
     } catch (err) {
@@ -217,23 +214,20 @@ export function useCariMutabakat(): UseCariMutabakatReturn {
     setError(null);
 
     try {
+      const params: Record<string, string> = { client_id: clientId, period_id: periodId };
+      if (filtre !== 'tumu') params.filtre = filtre;
+
       const [ozetRes, listeRes] = await Promise.all([
-        fetch(
-          `${API_ENDPOINTS.cariMutabakat.ozet}?client_id=${encodeURIComponent(clientId)}&period_id=${encodeURIComponent(periodId)}`,
-        ),
-        fetch(
-          `${API_ENDPOINTS.cariMutabakat.list}?client_id=${encodeURIComponent(clientId)}&period_id=${encodeURIComponent(periodId)}${filtre !== 'tumu' ? `&filtre=${filtre}` : ''}`,
-        ),
+        api.get<MutabakatOzet>(API_ENDPOINTS.cariMutabakat.ozet, { params: { client_id: clientId, period_id: periodId } }),
+        api.get<{ sonuclar?: MutabakatSatir[] }>(API_ENDPOINTS.cariMutabakat.list, { params }),
       ]);
 
-      if (ozetRes.ok) {
-        const ozetData = await ozetRes.json();
-        setOzet(ozetData);
+      if (ozetRes.ok && ozetRes.data) {
+        setOzet(ozetRes.data);
       }
 
-      if (listeRes.ok) {
-        const listeData = await listeRes.json();
-        setSatirlar(listeData.sonuclar || []);
+      if (listeRes.ok && listeRes.data) {
+        setSatirlar(listeRes.data.sonuclar || []);
       }
 
       setLastFetchedAt(new Date().toISOString());
@@ -269,17 +263,13 @@ export function useCariMutabakat(): UseCariMutabakatReturn {
         const formData = new FormData();
         formData.append('file', file);
 
-        const res = await fetch(API_ENDPOINTS.cariMutabakat.preview, {
-          method: 'POST',
-          body: formData,
-        });
+        const res = await api.post<PreviewData>(API_ENDPOINTS.cariMutabakat.preview, formData);
 
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({ detail: 'Bilinmeyen hata' }));
-          throw new Error(errData.detail || `HTTP ${res.status}`);
+        if (!res.ok || !res.data) {
+          throw new Error(res.error || 'Bilinmeyen hata');
         }
 
-        const result = await res.json();
+        const result = res.data;
 
         // Preview moduna geç
         setPreviewData({
@@ -321,16 +311,15 @@ export function useCariMutabakat(): UseCariMutabakatReturn {
         formData.append('file', previewFileRef.current);
 
         const mappingJson = JSON.stringify(mapping);
-        const url = `${API_ENDPOINTS.cariMutabakat.confirm}?client_id=${encodeURIComponent(clientId)}&period_id=${encodeURIComponent(periodId)}&column_mapping=${encodeURIComponent(mappingJson)}`;
 
-        const res = await fetch(url, {
-          method: 'POST',
-          body: formData,
-        });
+        const res = await api.post(
+          API_ENDPOINTS.cariMutabakat.confirm,
+          formData,
+          { params: { client_id: clientId, period_id: periodId, column_mapping: mappingJson } }
+        );
 
         if (!res.ok) {
-          const errData = await res.json().catch(() => ({ detail: 'Bilinmeyen hata' }));
-          throw new Error(errData.detail || `HTTP ${res.status}`);
+          throw new Error(res.error || 'Bilinmeyen hata');
         }
 
         // Başarılı: preview'ı kapat ve verileri yenile
@@ -363,15 +352,10 @@ export function useCariMutabakat(): UseCariMutabakatReturn {
       if (ids.length === 0) return;
 
       try {
-        const res = await fetch(API_ENDPOINTS.cariMutabakat.onayla, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ids, onaylayan: 'SMMM' }),
-        });
+        const res = await api.post(API_ENDPOINTS.cariMutabakat.onayla, { ids, onaylayan: 'SMMM' });
 
         if (!res.ok) {
-          const errData = await res.json().catch(() => ({ detail: 'Onay hatası' }));
-          throw new Error(errData.detail);
+          throw new Error(res.error || 'Onay hatası');
         }
 
         await fetchData();
@@ -399,27 +383,21 @@ export function useCariMutabakat(): UseCariMutabakatReturn {
       }));
 
       // 2. Backend'e kaydet (arka planda)
-      fetch(API_ENDPOINTS.cariMutabakat.karar, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          client_id: clientId,
-          period_id: periodId,
-          hesap_kodu: hesapKodu,
-          karar,
-          not_metni: not,
-        }),
+      api.post(API_ENDPOINTS.cariMutabakat.karar, {
+        client_id: clientId,
+        period_id: periodId,
+        hesap_kodu: hesapKodu,
+        karar,
+        not_metni: not,
       })
         .then((res) => {
           if (!res.ok) {
-            console.error('[useCariMutabakat] Karar kayıt API hatası:', res.status);
-            // Rollback: backend hata verirse eski state'e dön
+            console.error('[useCariMutabakat] Karar kayıt API hatası:', res.error);
             fetchKararlar();
           }
         })
         .catch((err) => {
           console.error('[useCariMutabakat] Karar kayıt hatası:', err);
-          // Rollback
           fetchKararlar();
         });
     },

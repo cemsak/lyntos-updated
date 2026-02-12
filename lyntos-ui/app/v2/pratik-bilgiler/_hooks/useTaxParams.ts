@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { API_ENDPOINTS } from '../../_lib/config/api';
-import { getAuthToken } from '../../_lib/auth';
+import { api } from '../../_lib/api/client';
 
 interface TaxParam {
   id: string;
@@ -57,20 +57,13 @@ export function useTaxParams(category: string): UseTaxParamsResult {
     setIsLoading(true);
     setError(null);
     try {
-      const token = getAuthToken();
       const url = API_ENDPOINTS.taxParams.byCategory(category);
-      const response = await fetch(url, {
-        headers: {
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-          'Content-Type': 'application/json',
-        },
-      });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const json = await response.json();
-      if (json.success && Array.isArray(json.data)) {
-        setData(json.data);
-      } else {
+      const result = await api.get<TaxParam[]>(url);
+      if (result.error || !result.data) {
+        setError(result.error || 'Bilinmeyen hata');
         setData([]);
+      } else {
+        setData(Array.isArray(result.data) ? result.data : []);
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Bilinmeyen hata';
@@ -102,22 +95,18 @@ export function useDeadlines(options?: { upcoming?: boolean; limit?: number }): 
     setIsLoading(true);
     setError(null);
     try {
-      const token = getAuthToken();
       const url = upcoming
-        ? `${API_ENDPOINTS.taxParams.deadlinesUpcoming}?limit=${limit}`
-        : `${API_ENDPOINTS.taxParams.deadlines}?year=${new Date().getFullYear()}`;
-      const response = await fetch(url, {
-        headers: {
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-          'Content-Type': 'application/json',
-        },
-      });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const json = await response.json();
-      if (json.success && Array.isArray(json.data)) {
-        setData(json.data);
-      } else {
+        ? API_ENDPOINTS.taxParams.deadlinesUpcoming
+        : API_ENDPOINTS.taxParams.deadlines;
+      const params = upcoming
+        ? { limit }
+        : { year: new Date().getFullYear() };
+      const result = await api.get<Deadline[]>(url, { params });
+      if (result.error || !result.data) {
+        setError(result.error || 'Bilinmeyen hata');
         setData([]);
+      } else {
+        setData(Array.isArray(result.data) ? result.data : []);
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Bilinmeyen hata';

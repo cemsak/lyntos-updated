@@ -17,6 +17,7 @@ import {
 import { Badge } from '../shared/Badge';
 import { useDashboardScope } from '../scope/useDashboardScope';
 import { ENDPOINTS_V2 } from '../contracts/endpoints';
+import { api } from '../../_lib/api/client';
 import { formatNumber } from '../../_lib/format';
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -98,21 +99,18 @@ export function HesapKartiModal({ isOpen, onClose, hesapKodu }: HesapKartiModalP
 
       try {
         const url = ENDPOINTS_V2.MIZAN_HESAP_KARTI(scope.client_id, scope.period, hesapKodu);
-        const res = await fetch(url, {
-          headers: { Accept: 'application/json' },
-        });
+        const { data: json, error: apiError, status: respStatus } = await api.get<HesapKartiData>(url);
 
-        if (!res.ok) {
-          if (res.status === 404) {
+        if (apiError || !json) {
+          if (respStatus === 404) {
             setError('Bu hesap kodu için veri bulunamadı.');
           } else {
-            setError(`Sunucu hatası: HTTP ${res.status}`);
+            setError(apiError || 'Hesap kartı verisi alınamadı');
           }
           setLoading(false);
           return;
         }
 
-        const json = await res.json();
         setData(json);
       } catch (err) {
         const msg = (err as Error).message;

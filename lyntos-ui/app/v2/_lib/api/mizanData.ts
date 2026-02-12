@@ -6,17 +6,7 @@
  * without requiring manual file upload.
  */
 
-// Use relative URLs for browser (via Next.js proxy) to avoid CORS
-// In browser: /api/v2/mizan-data/... -> Next.js proxy -> Backend
-// On server: Direct to backend
-function getBaseUrl(): string {
-  if (typeof window !== 'undefined') {
-    // Browser - use relative URL to go through Next.js proxy
-    return '';
-  }
-  // Server-side - use backend URL directly
-  return process.env.LYNTOS_BACKEND_BASE || 'http://localhost:8000';
-}
+import { api } from './client';
 
 // ============== TYPES ==============
 
@@ -136,13 +126,9 @@ export interface AccountDetailResponse {
  * List all available SMMM/Client/Period combinations with mizan data on disk.
  */
 export async function fetchAvailableMizanData(): Promise<AvailableDataResponse> {
-  const response = await fetch(`${getBaseUrl()}/api/v2/mizan-data/available`);
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch available data: ${response.statusText}`);
-  }
-
-  return response.json();
+  const { data, error } = await api.get<AvailableDataResponse>('/api/v2/mizan-data/available');
+  if (error || !data) throw new Error(error || 'Failed to fetch available data');
+  return data;
 }
 
 /**
@@ -155,19 +141,12 @@ export async function loadMizanData(
   period: string,
   includeAccounts: boolean = true
 ): Promise<MizanDataResponse> {
-  const baseUrl = getBaseUrl();
   const urlPath = `/api/v2/mizan-data/load/${encodeURIComponent(smmmId)}/${encodeURIComponent(clientId)}/${encodeURIComponent(period)}`;
-  const url = baseUrl ? new URL(urlPath, baseUrl) : new URL(urlPath, window.location.origin);
-  url.searchParams.set('include_accounts', includeAccounts.toString());
-
-  const response = await fetch(url.toString());
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.detail || `Failed to load mizan data: ${response.statusText}`);
-  }
-
-  return response.json();
+  const { data, error } = await api.get<MizanDataResponse>(urlPath, {
+    params: { include_accounts: includeAccounts.toString() },
+  });
+  if (error || !data) throw new Error(error || 'Failed to load mizan data');
+  return data;
 }
 
 /**
@@ -179,16 +158,10 @@ export async function analyzeMizan(
   clientId: string,
   period: string
 ): Promise<MizanAnalysisResponse> {
-  const response = await fetch(
-    `${getBaseUrl()}/api/v2/mizan-data/analyze/${encodeURIComponent(smmmId)}/${encodeURIComponent(clientId)}/${encodeURIComponent(period)}`
-  );
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.detail || `Failed to analyze mizan: ${response.statusText}`);
-  }
-
-  return response.json();
+  const urlPath = `/api/v2/mizan-data/analyze/${encodeURIComponent(smmmId)}/${encodeURIComponent(clientId)}/${encodeURIComponent(period)}`;
+  const { data, error } = await api.get<MizanAnalysisResponse>(urlPath);
+  if (error || !data) throw new Error(error || 'Failed to analyze mizan');
+  return data;
 }
 
 /**
@@ -200,16 +173,10 @@ export async function getAccountDetail(
   period: string,
   hesapKodu: string
 ): Promise<AccountDetailResponse> {
-  const response = await fetch(
-    `${getBaseUrl()}/api/v2/mizan-data/account/${encodeURIComponent(smmmId)}/${encodeURIComponent(clientId)}/${encodeURIComponent(period)}/${encodeURIComponent(hesapKodu)}`
-  );
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.detail || `Failed to get account detail: ${response.statusText}`);
-  }
-
-  return response.json();
+  const urlPath = `/api/v2/mizan-data/account/${encodeURIComponent(smmmId)}/${encodeURIComponent(clientId)}/${encodeURIComponent(period)}/${encodeURIComponent(hesapKodu)}`;
+  const { data, error } = await api.get<AccountDetailResponse>(urlPath);
+  if (error || !data) throw new Error(error || 'Failed to get account detail');
+  return data;
 }
 
 // ============== HELPER FUNCTIONS ==============

@@ -239,7 +239,7 @@ class FeedService:
                         try:
                             val = str(row[key]).replace('.', '').replace(',', '.').strip()
                             return float(val) if val else 0.0
-                        except:
+                        except (ValueError, TypeError):
                             pass
                 return 0.0
 
@@ -444,6 +444,28 @@ class FeedService:
                 if severity_filter and severity not in severity_filter:
                     continue
 
+                # Extract category and score from metadata if available
+                meta = {}
+                if row.get('metadata'):
+                    try:
+                        meta = json.loads(row['metadata']) if isinstance(row['metadata'], str) else row['metadata']
+                    except (json.JSONDecodeError, TypeError):
+                        pass
+
+                category_str = meta.get('category', 'VDK')
+                # Handle both "FeedCategory.VDK" and "VDK" formats
+                if '.' in category_str:
+                    category_str = category_str.split('.')[-1]
+                # Case-insensitive category matching
+                category_map = {c.value.upper(): c for c in FeedCategory}
+                category = category_map.get(category_str.upper(), FeedCategory.VDK)
+
+                # Filter by category if specified
+                if category_filter and category not in category_filter:
+                    continue
+
+                score = meta.get('score', 70 if severity == FeedSeverity.HIGH else 50)
+
                 # Create EvidenceRef from row data
                 evidence_ref = EvidenceRef(
                     ref_id=f"EVID-{row['id']}",
@@ -474,8 +496,8 @@ class FeedService:
                     summary=row.get('message', '') or '',
                     why=f"VDK Analiz - {row.get('type', 'risk')}",
                     severity=severity,
-                    category=FeedCategory.VDK,  # Default category for analysis results
-                    score=70 if severity == FeedSeverity.HIGH else 50,
+                    category=category,
+                    score=score,
                     scope=FeedScope(
                         smmm_id=row.get('tenant_id', smmm_id),
                         client_id=row['client_id'],
@@ -518,7 +540,7 @@ class FeedService:
             period_id=item.scope.period,
             item_type='risk' if item.severity in [FeedSeverity.CRITICAL, FeedSeverity.HIGH] else 'info',
             title=item.title,
-            message=item.subtitle,
+            message=item.summary,
             severity=item.severity.value if hasattr(item.severity, 'value') else str(item.severity),
             metadata={'score': item.score, 'category': str(item.category)}
         )

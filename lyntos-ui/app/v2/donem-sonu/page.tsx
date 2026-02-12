@@ -10,7 +10,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDashboardScope } from '../_components/scope/ScopeProvider';
-import { API_BASE_URL } from '../_lib/config/api';
+import { api } from '../_lib/api/client';
 import {
   FileSpreadsheet,
   Calculator,
@@ -80,15 +80,15 @@ export default function DonemSonuPage() {
 
     const checkDataStatus = async () => {
       try {
-        const res = await fetch(
-          `${API_BASE_URL}/api/v2/periods/${encodeURIComponent(selectedClient.id)}/${encodeURIComponent(selectedPeriod.code)}/status`
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const res = await api.get<any>(
+          `/api/v2/periods/${encodeURIComponent(selectedClient.id)}/${encodeURIComponent(selectedPeriod.code)}/status`
         );
-        if (!res.ok) {
+        if (!res.ok || !res.data) {
           setHasData(false);
           return;
         }
-        const data = await res.json();
-        const uploadedTypes: string[] = data.uploaded_doc_types || [];
+        const uploadedTypes: string[] = res.data.uploaded_doc_types || [];
         setHasData(uploadedTypes.includes('MIZAN'));
       } catch {
         setHasData(false);

@@ -466,16 +466,12 @@ async def delete_taxpayer(
             'periods',
         ]
 
+        _VALID_CLEANUP_TABLES = frozenset(CLEANUP_TABLES)
         deleted_records = {}
-        for table in CLEANUP_TABLES:
-            try:
-                cursor.execute(f"DELETE FROM {table} WHERE client_id = ?", (taxpayer_id,))
-                if cursor.rowcount > 0:
-                    deleted_records[table] = cursor.rowcount
-            except sqlite3.OperationalError:
-                pass  # Tablo yoksa veya sütun yoksa geç
 
         # task_comments ve task_history: task_id üzerinden temizle
+        # KRITIK: tasks tablosu CLEANUP_TABLES'da olduğu için,
+        # task_id'leri ÖNCE oku, yoksa tasks silinince referans kaybolur
         try:
             cursor.execute("SELECT id FROM tasks WHERE client_id = ?", (taxpayer_id,))
             task_ids = [r["id"] for r in cursor.fetchall()]
@@ -489,6 +485,15 @@ async def delete_taxpayer(
                     deleted_records["task_history"] = cursor.rowcount
         except sqlite3.OperationalError:
             pass
+
+        for table in CLEANUP_TABLES:
+            assert table in _VALID_CLEANUP_TABLES, f"Invalid table: {table}"
+            try:
+                cursor.execute(f"DELETE FROM {table} WHERE client_id = ?", (taxpayer_id,))
+                if cursor.rowcount > 0:
+                    deleted_records[table] = cursor.rowcount
+            except sqlite3.OperationalError:
+                pass  # Tablo yoksa veya sütun yoksa geç
 
         # Son olarak client kaydını sil
         cursor.execute("DELETE FROM clients WHERE id = ?", (taxpayer_id,))

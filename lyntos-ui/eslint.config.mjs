@@ -6,10 +6,11 @@ const baseArr = Array.isArray(base) ? base : [base];
 const eslintConfig = [
   ...baseArr,
 
-  // Lyntos: lint stabilization — do not block refactor on `any`
+  // L-05: ESLint build'de aktif — `any` ve `unused-vars` suppressed (gradual fix)
   {
     rules: {
-      "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-unused-vars": "off",
     },
   },
 

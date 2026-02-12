@@ -21,8 +21,7 @@ import { useDashboardScope } from '../_components/scope/ScopeProvider';
 import { ScopeGuide } from '../_components/shared/ScopeGuide';
 import { exportToCsv } from '../_lib/exportCsv';
 import { DataFreshness } from '../_components/shared/DataFreshness';
-import { API_BASE_URL } from '../_lib/config/api';
-import { getAuthToken } from '../_lib/auth';
+import { api } from '../_lib/api/client';
 import { formatCurrency, formatDate, formatPeriod } from '../_lib/format';
 
 interface YevmiyeEntry {
@@ -101,20 +100,15 @@ export default function YevmiyePage() {
         params.append('date_to', dateTo);
       }
 
-      const token = getAuthToken();
-      const response = await fetch(`${API_BASE_URL}/api/v2/yevmiye/list?${params}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const { data, error: apiError } = await api.get<{ entries: YevmiyeEntry[]; total: number; pages: number }>(
+        `/api/v2/yevmiye/list?${params}`
+      );
 
-      if (!response.ok) throw new Error('API hatası');
+      if (apiError) throw new Error(apiError);
 
-      const data = await response.json();
-      setEntries(data.entries || []);
-      setTotal(data.total || 0);
-      setTotalPages(data.pages || 1);
+      setEntries(data?.entries || []);
+      setTotal(data?.total || 0);
+      setTotalPages(data?.pages || 1);
       setLastFetchedAt(new Date().toISOString());
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Bilinmeyen hata');

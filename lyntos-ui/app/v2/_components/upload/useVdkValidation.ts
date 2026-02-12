@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { getAuthToken } from '../../_lib/auth';
+import { api } from '../../_lib/api/client';
 import { TaxpayerData } from './dataAggregator';
 
 // VDK Assessment result (matches backend output)
@@ -53,30 +53,14 @@ export function useVdkValidation(): UseVdkValidationReturn {
     setError(null);
 
     try {
-      const token = getAuthToken();
-      if (!token) {
-        // Token yoksa validasyon yapılamaz
-        setLoading(false);
-        return null;
+      const res = await api.post<VdkAssessmentResult>(VDK_VALIDATE_ENDPOINT, data);
+
+      if (!res.ok || !res.data) {
+        throw new Error(res.error || 'Validation failed');
       }
 
-      const response = await fetch(VDK_VALIDATE_ENDPOINT, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': token,
-        },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || errorData.detail || `HTTP ${response.status}`);
-      }
-
-      const assessment = await response.json() as VdkAssessmentResult;
-      setResult(assessment);
-      return assessment;
+      setResult(res.data);
+      return res.data;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Validation failed';
       setError(message);

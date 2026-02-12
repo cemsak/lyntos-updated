@@ -12,7 +12,7 @@
  * - Eksik gün nedenleri
  */
 
-import * as XLSX from 'xlsx';
+// P-6: xlsx dynamic import (~100KB bundle azaltma)
 import type { DetectedFile } from './types';
 
 // Teşvik Kodları Haritası
@@ -250,10 +250,13 @@ function detectColumnType(header: string): string | null {
 /**
  * APHB Excel/CSV dosyasını parse et
  */
-export function parseAPHBExcel(file: DetectedFile): ParsedAPHB {
+export async function parseAPHBExcel(file: DetectedFile): Promise<ParsedAPHB> {
   if (!file.rawContent) {
     throw new Error('Dosya içeriği bulunamadı');
   }
+
+  // P-6: Dynamic import — sadece parse sırasında yüklenir (~100KB tasarruf)
+  const XLSX = await import('xlsx');
 
   const workbook = XLSX.read(file.rawContent, { type: 'array' });
   const sheetName = workbook.SheetNames[0];
@@ -459,7 +462,7 @@ export function parseAPHBExcel(file: DetectedFile): ParsedAPHB {
 /**
  * ArrayBuffer'dan parse et
  */
-export function parseAPHBFromBuffer(content: ArrayBuffer, fileName: string): ParsedAPHB {
+export async function parseAPHBFromBuffer(content: ArrayBuffer, fileName: string): Promise<ParsedAPHB> {
   const file: DetectedFile = {
     id: `aphb-${Date.now()}`,
     originalPath: fileName,
@@ -478,15 +481,15 @@ export function parseAPHBFromBuffer(content: ArrayBuffer, fileName: string): Par
 /**
  * Birden fazla APHB dosyasını parse et
  */
-export function parseMultipleAPHB(
+export async function parseMultipleAPHB(
   files: { content: ArrayBuffer; fileName: string }[]
-): { success: ParsedAPHB[]; errors: { fileName: string; error: string }[] } {
+): Promise<{ success: ParsedAPHB[]; errors: { fileName: string; error: string }[] }> {
   const success: ParsedAPHB[] = [];
   const errors: { fileName: string; error: string }[] = [];
 
   for (const file of files) {
     try {
-      const parsed = parseAPHBFromBuffer(file.content, file.fileName);
+      const parsed = await parseAPHBFromBuffer(file.content, file.fileName);
       success.push(parsed);
     } catch (err) {
       errors.push({

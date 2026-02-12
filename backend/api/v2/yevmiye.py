@@ -1,11 +1,10 @@
 """
 LYNTOS API v2 - Yevmiye Defteri Endpoint
 E-Defter entries'den yevmiye verilerini çeker.
-
-NO AUTH REQUIRED - Frontend'den doğrudan erişilebilir.
 """
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
+from middleware.auth import verify_token, check_client_access
 from pydantic import BaseModel
 from typing import List, Optional
 import logging
@@ -15,6 +14,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from database.db import get_connection
+from utils.period_utils import get_period_db
 
 logger = logging.getLogger(__name__)
 
@@ -44,18 +44,18 @@ class YevmiyeListResponse(BaseModel):
 @router.get("/list", response_model=YevmiyeListResponse)
 async def get_yevmiye_list(
     client_id: str = Query(..., description="Müşteri ID"),
-    period_id: str = Query(..., description="Dönem ID (örn: 2025-Q1)"),
+    period_id: str = Depends(get_period_db),
     page: int = Query(1, ge=1, description="Sayfa numarası"),
     page_size: int = Query(50, ge=1, le=500, description="Sayfa başına kayıt"),
     search: Optional[str] = Query(None, description="Arama terimi"),
-    tenant_id: str = Query("default", description="Tenant ID")
+    user: dict = Depends(verify_token)
 ):
     """
     Yevmiye defteri kayıtlarını listele.
 
     E-defter entries tablosundan defter_tipi='Y' olan kayıtları çeker.
-    Auth gerektirmez.
     """
+    await check_client_access(user, client_id)
     try:
         with get_connection() as conn:
             cursor = conn.cursor()
@@ -126,12 +126,13 @@ async def get_yevmiye_list(
 @router.get("/summary")
 async def get_yevmiye_summary(
     client_id: str = Query(..., description="Müşteri ID"),
-    period_id: str = Query(..., description="Dönem ID"),
-    tenant_id: str = Query("default", description="Tenant ID")
+    period_id: str = Depends(get_period_db),
+    user: dict = Depends(verify_token)
 ):
     """
     Yevmiye özet bilgilerini getir.
     """
+    await check_client_access(user, client_id)
     try:
         with get_connection() as conn:
             cursor = conn.cursor()

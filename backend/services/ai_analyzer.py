@@ -24,6 +24,8 @@ except ImportError:
     ANTHROPIC_AVAILABLE = False
     Anthropic = None
 
+from services.pii_guard import mask_vkn, mask_company_name
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -209,8 +211,8 @@ Icerik:
         content = f"""
 Asagidaki sirket degisikligini analiz et:
 
-Sirket: {change.get('company_name', 'Bilinmiyor')}
-Vergi No: {change.get('tax_number', 'Bilinmiyor')}
+Sirket: {mask_company_name(change.get('company_name', 'Bilinmiyor'))}
+Vergi No: {mask_vkn(change.get('tax_number', 'Bilinmiyor'))}
 Degisiklik Turu: {change.get('change_type', 'Bilinmiyor')}
 Eski Deger: {change.get('old_value', '-')}
 Yeni Deger: {change.get('new_value', '-')}
@@ -704,13 +706,12 @@ YANIT YAPISI:
         """
         import urllib.request
         import ssl
+        import certifi
 
         results = []
 
-        # SSL context (bazı devlet siteleri eski sertifika kullanıyor)
-        ssl_context = ssl.create_default_context()
-        ssl_context.check_hostname = False
-        ssl_context.verify_mode = ssl.CERT_NONE
+        # SSL context with proper certificate verification
+        ssl_context = ssl.create_default_context(cafile=certifi.where())
 
         # Önce statik veritabanından ara
         for keyword in keywords:

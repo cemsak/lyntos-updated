@@ -10,10 +10,11 @@ KURGAN senaryoları için gerçek veri kaynakları:
 ⚠️ HARDCODED/MOCK/DEMO YASAK - SADECE GERÇEK VERİ
 """
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from typing import Optional, List
 from pydantic import BaseModel
 import logging
+from middleware.auth import verify_token
 
 # Servisler
 try:
@@ -42,7 +43,7 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/gib", tags=["GİB Public Data"])
+router = APIRouter(prefix="/gib", tags=["GİB Public Data"], dependencies=[Depends(verify_token)])
 
 
 # ═══════════════════════════════════════════════════════════════════════════

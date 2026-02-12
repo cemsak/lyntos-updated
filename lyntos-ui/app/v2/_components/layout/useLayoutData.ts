@@ -3,14 +3,12 @@
 /**
  * LYNTOS Layout Data Hook
  * Fetches user, clients, and periods from backend
- * Uses centralized auth with Bearer JWT token
+ * Uses centralized api client with Bearer JWT token
  */
 import { useState, useEffect, useCallback } from 'react';
 import type { User, Client, Period } from './types';
-import { API_BASE_URL } from '../../_lib/config/api';
-import { getAuthToken } from '../../_lib/auth';
-
-const API_BASE = API_BASE_URL;
+import { API_ENDPOINTS } from '../../_lib/config/api';
+import { api } from '../../_lib/api/client';
 
 interface UseLayoutDataResult {
   user: User | null;
@@ -20,28 +18,6 @@ interface UseLayoutDataResult {
   error: string | null;
   refreshClients: () => Promise<Client[]>;
   refreshPeriods: (clientId: string) => Promise<void>;
-}
-
-async function fetchWithAuth<T>(endpoint: string): Promise<T | null> {
-  // getAuthToken() returns Bearer-prefixed JWT token
-  const token = getAuthToken();
-  if (!token) {
-    console.warn('[Auth] Token bulunamadi');
-    return null;
-  }
-
-  const response = await fetch(`${API_BASE}${endpoint}`, {
-    headers: {
-      'Authorization': token,
-      'Content-Type': 'application/json',
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-  }
-
-  return response.json();
 }
 
 export function useLayoutData(): UseLayoutDataResult {
@@ -57,12 +33,12 @@ export function useLayoutData(): UseLayoutDataResult {
 
     async function loadUser() {
       try {
-        const userData = await fetchWithAuth<User>('/api/v1/user/me');
+        const { data, ok } = await api.get<User>(API_ENDPOINTS.user.me);
         if (mounted) {
-          if (userData) {
-            setUser(userData);
+          if (ok && data) {
+            setUser(data);
             setError(null);
-            setLoading(false); // User geldiğinde loading'i hemen kapat
+            setLoading(false);
           } else {
             // Token yok - gecici mod, hata gosterme
             setUser(null);
@@ -74,7 +50,7 @@ export function useLayoutData(): UseLayoutDataResult {
         if (mounted) {
           setUser(null);
           setError('Kullanici bilgileri yuklenemedi');
-          setLoading(false); // Hata durumunda da loading'i kapat
+          setLoading(false);
         }
       }
     }
@@ -91,8 +67,8 @@ export function useLayoutData(): UseLayoutDataResult {
     if (!user) return [];
 
     try {
-      const clientsData = await fetchWithAuth<Client[]>('/api/v1/user/me/clients');
-      const updatedClients = clientsData || [];
+      const { data, ok } = await api.get<Client[]>(API_ENDPOINTS.user.clients);
+      const updatedClients = ok && data ? data : [];
       setClients(updatedClients);
       setError(null);
       return updatedClients;
@@ -118,9 +94,9 @@ export function useLayoutData(): UseLayoutDataResult {
     }
 
     try {
-      const periodsData = await fetchWithAuth<Period[]>(`/api/v1/user/clients/${clientId}/periods`);
-      if (periodsData) {
-        setPeriods(periodsData);
+      const { data, ok } = await api.get<Period[]>(API_ENDPOINTS.user.clientPeriods(clientId));
+      if (ok && data) {
+        setPeriods(data);
         setError(null);
       }
     } catch (err) {

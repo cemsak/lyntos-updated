@@ -2,6 +2,8 @@ import type { NextConfig } from "next";
 import path from "path";
 
 const nextConfig: NextConfig = {
+  // L-05: ESLint build sırasında devre dışı (warn bile fail ediyor)
+  // Lint: `pnpm lint` ile ayrıca çalıştırılmalı
   eslint: { ignoreDuringBuilds: true },
 
   // Next 15'te appDir varsayılan; experimental.appDir kullanmayın.

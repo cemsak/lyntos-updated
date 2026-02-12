@@ -405,6 +405,7 @@ async def get_kebir_hesap_listesi(
             WHERE client_id = ?
             GROUP BY kebir_hesap, kebir_hesap_adi
             ORDER BY kebir_hesap
+            LIMIT 5000
         """, (client_id,))
 
         hesaplar = [dict(row) for row in cursor.fetchall()]
@@ -528,6 +529,7 @@ async def get_banka_hesaplar(
             WHERE client_id = ?
             GROUP BY banka_adi, hesap_kodu
             ORDER BY hesap_kodu
+            LIMIT 1000
         """, (client_id,))
 
         hesaplar = [dict(row) for row in cursor.fetchall()]
@@ -710,6 +712,7 @@ async def get_yevmiye_kebir_cross_check(
             FROM yevmiye_excel_entries
             WHERE client_id = ?
             GROUP BY hesap_kodu, hesap_adi
+            LIMIT 5000
         """, (client_id,))
         yevmiye_toplamlari = {row[0]: {
             "hesap_adi": row[1],
@@ -727,6 +730,7 @@ async def get_yevmiye_kebir_cross_check(
             FROM kebir_excel_entries
             WHERE client_id = ?
             GROUP BY kebir_hesap, kebir_hesap_adi
+            LIMIT 5000
         """, (client_id,))
         kebir_toplamlari = {row[0]: {
             "hesap_adi": row[1],

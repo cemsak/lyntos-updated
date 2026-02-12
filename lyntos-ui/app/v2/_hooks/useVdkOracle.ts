@@ -8,7 +8,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { getAuthToken } from '../_lib/auth';
+import { API_ENDPOINTS } from '../_lib/config/api';
+import { api } from '../_lib/api/client';
 import type {
   VdkFullAnalysisData,
 } from './useVdkFullAnalysis';
@@ -63,36 +64,25 @@ export function useVdkOracle(
       return;
     }
 
-    const token = getAuthToken();
-    if (!token) {
-      setError('Oturum bilgisi bulunamadı');
-      setIsError(true);
-      setIsLoading(false);
-      return;
-    }
-
     setIsLoading(true);
     setIsError(false);
     setError(null);
 
-    const url = `/api/v1/contracts/vdk-oracle?client_id=${encodeURIComponent(clientId)}&period=${encodeURIComponent(period)}`;
-
     try {
-      const response = await fetch(url, {
-        headers: { Authorization: token },
-      });
+      const { data: responseData, error: apiError, status } = await api.get<Record<string, any>>(
+        API_ENDPOINTS.contracts.kurganRisk,
+        { params: { client_id: clientId, period } }
+      );
 
-      if (!response.ok) {
-        if (response.status === 404) {
-          setData(null);
-          setIsLoading(false);
-          return;
-        }
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      if (status === 404) {
+        setData(null);
+        setIsLoading(false);
+        return;
       }
 
-      const result = await response.json();
-      const responseData = result.data || result;
+      if (apiError || !responseData) {
+        throw new Error(apiError || 'Veri alinamadi');
+      }
 
       // no_data durumu: Backend mizan verisi bulamadı
       if (responseData.status === 'no_data') {
@@ -230,21 +220,18 @@ export function useInspectorAnswer() {
       if (alarmCode) params.set('alarm_code', alarmCode);
       if (category) params.set('category', category);
 
-      const response = await fetch(`/api/v1/vdk-inspector/answer?${params.toString()}`, {
-        method: 'POST',
-      });
+      const { data: answerData, error: apiError } = await api.post<InspectorAnswer>(
+        API_ENDPOINTS.vdkInspector.answer,
+        undefined,
+        { params: Object.fromEntries(params.entries()) }
+      );
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      if (apiError || !answerData) {
+        throw new Error(apiError || 'Beklenmeyen yanitformati');
       }
 
-      const result = await response.json();
-      if (result.success && result.data) {
-        setState({ answer: result.data, isLoading: false, error: null });
-        return result.data;
-      } else {
-        throw new Error('Beklenmeyen yanıt formatı');
-      }
+      setState({ answer: answerData, isLoading: false, error: null });
+      return answerData;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Bilinmeyen hata';
       setState({ answer: null, isLoading: false, error: errorMessage });

@@ -6,7 +6,7 @@ import { Upload, Info, RefreshCw } from 'lucide-react';
 import { useDashboardScope } from '../_components/scope/ScopeProvider';
 import { ScopeGuide } from '../_components/shared/ScopeGuide';
 import { API_ENDPOINTS } from '../_lib/config/api';
-import { getAuthToken } from '../_lib/auth';
+import { api } from '../_lib/api/client';
 import { formatPeriod } from '../_lib/format';
 import type { UploadMode, UploadPhase, UploadResult } from './types';
 import { validateFile } from './constants';
@@ -72,23 +72,15 @@ export default function UploadPage() {
       setPhase('processing');
       setProgress(50);
 
-      const token = getAuthToken();
-      const response = await fetch(API_ENDPOINTS.ingest.upload, {
-        method: 'POST',
-        headers: {
-          ...(token ? { 'Authorization': token } : {}),
-        },
-        body: formData,
-      });
+      const res = await api.post<UploadResult>(API_ENDPOINTS.ingest.upload, formData);
 
       setProgress(80);
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || `Sunucu hatas\u0131: ${response.status}`);
+      if (!res.ok || !res.data) {
+        throw new Error(res.error || 'Sunucu hatası');
       }
 
-      const data: UploadResult = await response.json();
+      const data: UploadResult = res.data;
 
       setProgress(100);
       setResult(data);

@@ -178,9 +178,14 @@ async def update_preferences(user_id: str, data: PreferencesUpdate):
 
         update_data = {k: v for k, v in data.model_dump().items() if v is not None}
 
+        ALLOWED_COLUMNS = frozenset(PreferencesUpdate.model_fields.keys())
+
         if existing:
             # Build update query dynamically
             if update_data:
+                for col in update_data.keys():
+                    if col not in ALLOWED_COLUMNS:
+                        raise HTTPException(status_code=400, detail=f"Invalid field: {col}")
                 set_clause = ", ".join([f"{k} = ?" for k in update_data.keys()])
                 set_clause += ", updated_at = datetime('now')"
                 values = list(update_data.values()) + [user_id]
@@ -190,6 +195,9 @@ async def update_preferences(user_id: str, data: PreferencesUpdate):
                 )
         else:
             # Insert new preferences
+            for col in update_data.keys():
+                if col not in ALLOWED_COLUMNS:
+                    raise HTTPException(status_code=400, detail=f"Invalid field: {col}")
             columns = ["id", "user_id"] + list(update_data.keys()) + ["created_at"]
             placeholders = ["?"] * len(columns)
             # Use datetime('now') for created_at

@@ -21,7 +21,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { ScopeGuide } from '../shared/ScopeGuide';
-import { API_BASE_URL } from '../../_lib/config/api';
+import { api } from '../../_lib/api/client';
 import { formatCurrency as formatCurrencyCentral, formatPeriod as formatPeriodCentral } from '../../_lib/format';
 
 // ─── Types ────────────────────────────────────────────────────────
@@ -112,18 +112,15 @@ export function KDVRiskPanel({ clientId, periodId }: KDVRiskPanelProps) {
     setLoading(true);
     setError(null);
     try {
-      const params = new URLSearchParams({
-        client_id: clientId,
-        period_id: periodId,
-      });
+      const { data: result, error: apiError } = await api.get<KDVRiskResponse>(
+        '/api/v2/beyanname/kdv',
+        { params: { client_id: clientId, period_id: periodId } }
+      );
 
-      const response = await fetch(`${API_BASE_URL}/api/v2/beyanname/kdv?${params}`);
-
-      if (!response.ok) {
-        throw new Error(`API hatası: ${response.status}`);
+      if (apiError || !result) {
+        throw new Error(apiError || 'KDV verisi alınamadı');
       }
 
-      const result = await response.json();
       setData(result);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Bilinmeyen hata';

@@ -18,6 +18,9 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 import logging
 
+from middleware.auth import verify_token
+from services.ai.prompt_guard import validate_user_input
+
 # Agent imports
 from services.ai.agents import (
     MasterChefAgent,
@@ -144,7 +147,7 @@ def get_priority(priority_str: str) -> TaskPriority:
 # ============================================================================
 
 @router.post("/orchestrate", response_model=AgentResponse)
-async def orchestrate_task(request: OrchestrateRequest):
+async def orchestrate_task(request: OrchestrateRequest, user: dict = Depends(verify_token)):
     """
     MasterChef ile görev orkestre et.
 
@@ -163,6 +166,10 @@ async def orchestrate_task(request: OrchestrateRequest):
     }
     ```
     """
+    is_valid, error_msg = validate_user_input(request.user_request)
+    if not is_valid:
+        raise HTTPException(status_code=400, detail=error_msg)
+
     try:
         chef = get_masterchef()
         result = await chef.orchestrate(
@@ -177,7 +184,7 @@ async def orchestrate_task(request: OrchestrateRequest):
 
 
 @router.post("/mevzuat/scan", response_model=AgentResponse)
-async def scan_mevzuat(request: MevzuatScanRequest):
+async def scan_mevzuat(request: MevzuatScanRequest, user: dict = Depends(verify_token)):
     """
     Mevzuat taraması yap.
 
@@ -205,7 +212,7 @@ async def scan_mevzuat(request: MevzuatScanRequest):
 
 
 @router.post("/mevzuat/search", response_model=AgentResponse)
-async def search_mevzuat(request: MevzuatSearchRequest):
+async def search_mevzuat(request: MevzuatSearchRequest, user: dict = Depends(verify_token)):
     """
     Mevzuat araması yap.
 
@@ -218,6 +225,10 @@ async def search_mevzuat(request: MevzuatSearchRequest):
     }
     ```
     """
+    is_valid, error_msg = validate_user_input(request.query)
+    if not is_valid:
+        raise HTTPException(status_code=400, detail=error_msg)
+
     try:
         agent = get_mevzuat_agent()
         task = AgentTask(
@@ -233,7 +244,7 @@ async def search_mevzuat(request: MevzuatSearchRequest):
 
 
 @router.post("/rapor/generate", response_model=AgentResponse)
-async def generate_rapor(request: RaporGenerateRequest):
+async def generate_rapor(request: RaporGenerateRequest, user: dict = Depends(verify_token)):
     """
     Profesyonel rapor oluştur.
 
@@ -282,13 +293,18 @@ async def generate_rapor(request: RaporGenerateRequest):
 async def generate_izah_metni(
     senaryo: str,
     risk_data: Dict[str, Any] = None,
-    specific_issue: str = None
+    specific_issue: str = None,
+    user: dict = Depends(verify_token),
 ):
     """
     VDK izah metni oluştur.
 
     İzaha davet için savunma metni hazırlar.
     """
+    is_valid, error_msg = validate_user_input(senaryo)
+    if not is_valid:
+        raise HTTPException(status_code=400, detail=error_msg)
+
     try:
         agent = get_rapor_agent()
         task = AgentTask(
@@ -308,7 +324,7 @@ async def generate_izah_metni(
 
 
 @router.get("/status", response_model=AgentStatusResponse)
-async def get_agent_status():
+async def get_agent_status(user: dict = Depends(verify_token)):
     """
     Tüm ajanların durumunu getir.
     """
@@ -336,7 +352,7 @@ async def get_agent_status():
 
 
 @router.get("/registered")
-async def get_registered_agents():
+async def get_registered_agents(user: dict = Depends(verify_token)):
     """
     MasterChef'e kayıtlı tüm ajanları listele.
     """
@@ -352,7 +368,7 @@ async def get_registered_agents():
 
 
 @router.get("/execution-log")
-async def get_execution_log(limit: int = 50):
+async def get_execution_log(limit: int = 50, user: dict = Depends(verify_token)):
     """
     Son çalıştırma loglarını getir.
     """

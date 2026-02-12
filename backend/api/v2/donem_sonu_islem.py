@@ -11,13 +11,16 @@ TDHP: 250-255 MDV, 257 Birikmiş Amortisman, 121 Alacak Senetleri,
       321 Borç Senetleri, 120 Alıcılar, 654 Karşılık Giderleri
 """
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Depends
+from utils.period_utils import get_period_db
 from typing import Dict, List, Optional
 from pathlib import Path
 from datetime import datetime
 import sqlite3
 import json
 import logging
+
+from middleware.auth import verify_token, check_client_access
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +66,8 @@ VUK_AMORTISMAN_ORANLARI = {
 @router.get("/amortisman/hesapla")
 async def hesapla_amortisman(
     client_id: str = Query(..., description="Müşteri ID"),
-    period_id: str = Query(..., description="Dönem (örn: 2025-Q1)"),
+    period_id: str = Depends(get_period_db),
+    user: dict = Depends(verify_token),
 ):
     """
     VUK Md. 315/316 - Amortisman Hesaplama
@@ -74,6 +78,7 @@ async def hesapla_amortisman(
     NOT: 250 (Arazi/Arsalar) amortismana tabi değildir.
     NOT: Q1 dönemi için yıllık amortismanın 3/12'si hesaplanır.
     """
+    await check_client_access(user, client_id)
     conn = _get_db()
     try:
         cursor = conn.cursor()
@@ -220,7 +225,8 @@ async def hesapla_amortisman(
 @router.get("/reeskont/hesapla")
 async def hesapla_reeskont(
     client_id: str = Query(..., description="Müşteri ID"),
-    period_id: str = Query(..., description="Dönem (örn: 2025-Q1)"),
+    period_id: str = Depends(get_period_db),
+    user: dict = Depends(verify_token),
 ):
     """
     VUK Md. 281/285 - Reeskont Hesaplama
@@ -234,6 +240,7 @@ async def hesapla_reeskont(
     NOT: Gerçek senet vadesi bilinmediğinden, dönem sonu bakiyesi üzerinden
     kalan gün tahmini yapılır. Kesin hesaplama için senet vadesi gereklidir.
     """
+    await check_client_access(user, client_id)
     rates = _get_economic_rates()
     reeskont_faizi = rates.get("faiz_oranlari", {}).get("reeskont_faizi", 0.55)
 
@@ -352,7 +359,8 @@ async def hesapla_reeskont(
 @router.get("/karsilik/hesapla")
 async def hesapla_karsilik(
     client_id: str = Query(..., description="Müşteri ID"),
-    period_id: str = Query(..., description="Dönem (örn: 2025-Q1)"),
+    period_id: str = Depends(get_period_db),
+    user: dict = Depends(verify_token),
 ):
     """
     VUK Md. 323 - Şüpheli Alacak Karşılığı Hesaplama
@@ -367,6 +375,7 @@ async def hesapla_karsilik(
     NOT: Yaşlandırma analizi için işlem tarihi bilinmediğinden, bakiye
     büyüklüğü ve hesap hareketliliği üzerinden risk tespiti yapılır.
     """
+    await check_client_access(user, client_id)
     conn = _get_db()
     try:
         cursor = conn.cursor()

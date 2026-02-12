@@ -17,10 +17,7 @@ from pathlib import Path
 # Veritabanı yolu
 DB_PATH = Path(__file__).parent.parent.parent / "database" / "lyntos.db"
 
-# Secret key — middleware/auth.py ile aynı env var
-SECRET_KEY = os.getenv("JWT_SECRET_KEY", "LYNTOS_SECRET_CHANGE_IN_PRODUCTION")
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 240  # 4 saat
+from config.settings import JWT_SECRET_KEY as SECRET_KEY, JWT_ALGORITHM as ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
 
 router = APIRouter(prefix="/v1/auth", tags=["auth"])
 

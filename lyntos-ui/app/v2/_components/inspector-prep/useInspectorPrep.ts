@@ -8,7 +8,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { getAuthToken } from '../../_lib/auth';
+import { api } from '../../_lib/api/client';
 import type {
   PreparationNote,
   PreparationProgress,
@@ -29,18 +29,13 @@ export function useInspectorPrep({ clientId, period }: UseInspectorPrepOptions) 
   const loadNotes = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(
-        `/api/v1/inspector-prep/notes/${clientId}?period=${period}`,
-        {
-          headers: {
-            Authorization: getAuthToken() || '',
-          },
-        }
+      const res = await api.get<NotesResponse>(
+        `/api/v1/inspector-prep/notes/${clientId}`,
+        { params: { period } }
       );
-      if (response.ok) {
-        const data: NotesResponse = await response.json();
+      if (res.ok && res.data) {
         const notesMap: Record<string, PreparationNote> = {};
-        data.notes.forEach((n: PreparationNote) => {
+        res.data.notes.forEach((n: PreparationNote) => {
           notesMap[`${n.rule_id}-${n.question_index}`] = n;
         });
         setNotes(notesMap);
@@ -54,17 +49,12 @@ export function useInspectorPrep({ clientId, period }: UseInspectorPrepOptions) 
 
   const loadProgress = useCallback(async () => {
     try {
-      const response = await fetch(
-        `/api/v1/inspector-prep/progress/${clientId}?period=${period}`,
-        {
-          headers: {
-            Authorization: getAuthToken() || '',
-          },
-        }
+      const res = await api.get<PreparationProgress>(
+        `/api/v1/inspector-prep/progress/${clientId}`,
+        { params: { period } }
       );
-      if (response.ok) {
-        const data: PreparationProgress = await response.json();
-        setProgress(data);
+      if (res.ok && res.data) {
+        setProgress(res.data);
       }
     } catch (err) {
       console.error('Failed to load progress:', err);
@@ -79,22 +69,15 @@ export function useInspectorPrep({ clientId, period }: UseInspectorPrepOptions) 
     ): Promise<boolean> => {
       setIsSaving(true);
       try {
-        const response = await fetch('/api/v1/inspector-prep/notes', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: getAuthToken() || '',
-          },
-          body: JSON.stringify({
-            client_id: clientId,
-            period,
-            rule_id: ruleId,
-            question_index: questionIndex,
-            note_text: noteText,
-          }),
+        const res = await api.post('/api/v1/inspector-prep/notes', {
+          client_id: clientId,
+          period,
+          rule_id: ruleId,
+          question_index: questionIndex,
+          note_text: noteText,
         });
 
-        if (response.ok) {
+        if (res.ok) {
           const key = `${ruleId}-${questionIndex}`;
           setNotes((prev) => ({
             ...prev,
@@ -125,22 +108,15 @@ export function useInspectorPrep({ clientId, period }: UseInspectorPrepOptions) 
       fileUrl?: string
     ): Promise<boolean> => {
       try {
-        const response = await fetch('/api/v1/inspector-prep/document-status', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: getAuthToken() || '',
-          },
-          body: JSON.stringify({
-            client_id: clientId,
-            period,
-            document_id: documentId,
-            status,
-            file_url: fileUrl,
-          }),
+        const res = await api.post('/api/v1/inspector-prep/document-status', {
+          client_id: clientId,
+          period,
+          document_id: documentId,
+          status,
+          file_url: fileUrl,
         });
 
-        if (response.ok) {
+        if (res.ok) {
           await loadProgress();
           return true;
         }

@@ -79,9 +79,7 @@ export interface SyncStatusResponse {
 // API CONFIGURATION
 // ============================================================================
 
-import { getApiBaseUrl } from '../config/api';
-
-const getApiBase = getApiBaseUrl;
+import { api } from './client';
 
 // ============================================================================
 // SYNC FUNCTION
@@ -94,47 +92,21 @@ const getApiBase = getApiBaseUrl;
  * @returns SyncResponse with detailed results
  */
 export async function syncDonemToBackend(payload: SyncPayload): Promise<SyncResponse> {
-  const apiBase = getApiBase();
-  const url = `${apiBase}/api/v2/donem/sync`;
+  const { data, error } = await api.post<SyncResponse>('/api/v2/donem/sync', payload);
 
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[DonemSync] HTTP error:', response.status, errorText);
-      return {
-        success: false,
-        syncedCount: 0,
-        errorCount: 1,
-        skippedCount: 0,
-        results: [],
-        errors: [`HTTP ${response.status}: ${errorText.slice(0, 200)}`],
-      };
-    }
-
-    const data: SyncResponse = await response.json();
-
-    return data;
-
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[DonemSync] Network error:', errorMessage);
+  if (error || !data) {
+    console.error('[DonemSync] Sync error:', error);
     return {
       success: false,
       syncedCount: 0,
       errorCount: 1,
       skippedCount: 0,
       results: [],
-      errors: [`Network error: ${errorMessage}`],
+      errors: [error || 'Unknown error'],
     };
   }
+
+  return data;
 }
 
 // ============================================================================
@@ -150,24 +122,16 @@ export async function getDonemSyncStatus(
   tenantId: string,
   clientId: string
 ): Promise<SyncStatusResponse | null> {
-  const apiBase = getApiBase();
-  const params = new URLSearchParams({
-    tenant_id: tenantId,
-    client_id: clientId
-  });
-  const url = `${apiBase}/api/v2/donem/status/${encodeURIComponent(period)}?${params}`;
+  const { data, error } = await api.get<SyncStatusResponse>(
+    `/api/v2/donem/status/${encodeURIComponent(period)}`,
+    { params: { tenant_id: tenantId, client_id: clientId } }
+  );
 
-  try {
-    const response = await fetch(url);
-    if (!response.ok) {
-      console.warn('[DonemSync] Status check failed:', response.status);
-      return null;
-    }
-    return await response.json();
-  } catch (error) {
-    console.warn('[DonemSync] Status check error:', error);
+  if (error || !data) {
+    console.warn('[DonemSync] Status check failed:', error);
     return null;
   }
+  return data;
 }
 
 // ============================================================================
@@ -194,51 +158,27 @@ export async function clearDonemFromBackend(
   tenantId: string = 'default',
   clientId: string = 'current'
 ): Promise<ClearResponse> {
-  const apiBase = getApiBase();
-  const params = new URLSearchParams({
-    tenant_id: tenantId,
-    client_id: clientId
-  });
-  const url = `${apiBase}/api/v2/donem/clear/${encodeURIComponent(period)}?${params}`;
+  const { data, error } = await api.delete<{ message?: string; deleted_count?: number }>(
+    `/api/v2/donem/clear/${encodeURIComponent(period)}`,
+    { params: { tenant_id: tenantId, client_id: clientId } }
+  );
 
-  try {
-    const response = await fetch(url, {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[DonemSync] Clear failed:', response.status, errorText);
-      return {
-        success: false,
-        message: `HTTP ${response.status}: ${errorText.slice(0, 200)}`,
-        deletedCount: 0,
-        period,
-      };
-    }
-
-    const data = await response.json();
-
-    return {
-      success: true,
-      message: data.message || 'Veri başarıyla silindi',
-      deletedCount: data.deleted_count || 0,
-      period,
-    };
-
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[DonemSync] Clear network error:', errorMessage);
+  if (error || !data) {
+    console.error('[DonemSync] Clear failed:', error);
     return {
       success: false,
-      message: `Network error: ${errorMessage}`,
+      message: error || 'Unknown error',
       deletedCount: 0,
       period,
     };
   }
+
+  return {
+    success: true,
+    message: data.message || 'Veri başarıyla silindi',
+    deletedCount: data.deleted_count || 0,
+    period,
+  };
 }
 
 // ============================================================================

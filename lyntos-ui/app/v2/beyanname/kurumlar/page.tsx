@@ -9,7 +9,8 @@
 
 import { useState, useEffect } from 'react';
 import { useDashboardScope } from '../../_components/scope/ScopeProvider';
-import { API_BASE_URL } from '../../_lib/config/api';
+import { API_ENDPOINTS } from '../../_lib/config/api';
+import { api } from '../../_lib/api/client';
 import { formatCurrency } from '../../_lib/format';
 import {
   Landmark,
@@ -59,26 +60,21 @@ export default function KurumlarVergisiBeyannameHazirlik() {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(
-          `${API_BASE_URL}/api/v2/beyanname/kurumlar?client_id=${clientId}&period_id=${periodId}`
+        const { data, ok: resOk } = await api.get<Record<string, any>>(
+          API_ENDPOINTS.beyanname.kurumlar,
+          { params: { client_id: clientId, period_id: periodId } }
         );
-        if (res.ok) {
-          const data = await res.json();
-          if (data && typeof data.ticariKar === 'number') {
-            setHesaplama({
-              ticariKar: data.ticariKar ?? 0,
-              kkeg: data.kkeg ?? 0,
-              istisnalar: data.istisnalar ?? 0,
-              indirimler: data.indirimler ?? 0,
-              gecmisYilZarar: data.gecmisYilZarar ?? 0,
-              odenecekGeciciVergi: data.odenecekGeciciVergi ?? 0,
-            });
-          }
-          // API 200 dönüp veri yoksa — sıfır kalır (veri henüz yüklenmemiş)
-        } else if (res.status !== 404) {
-          setError('Kurumlar vergisi verileri yüklenemedi');
+        if (resOk && data && typeof data.ticariKar === 'number') {
+          setHesaplama({
+            ticariKar: data.ticariKar ?? 0,
+            kkeg: data.kkeg ?? 0,
+            istisnalar: data.istisnalar ?? 0,
+            indirimler: data.indirimler ?? 0,
+            gecmisYilZarar: data.gecmisYilZarar ?? 0,
+            odenecekGeciciVergi: data.odenecekGeciciVergi ?? 0,
+          });
         }
-        // 404 = endpoint henüz mevcut değil, sıfır ile devam et
+        // API basarili degilse sessizce sifir ile devam et
       } catch {
         // API erişilemiyorsa sessizce sıfır ile devam et
         console.warn('Kurumlar vergisi API erişilemedi — sıfır değerlerle devam ediliyor');

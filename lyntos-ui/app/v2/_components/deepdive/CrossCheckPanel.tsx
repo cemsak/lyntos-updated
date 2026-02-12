@@ -4,7 +4,7 @@ import { HelpCircle, Check, Info, XCircle, AlertTriangle, CheckCircle2, FileSpre
 import { Card } from '../shared/Card';
 import { Badge } from '../shared/Badge';
 import { useDashboardScope, useScopeComplete } from '../scope/useDashboardScope';
-import { API_BASE_URL } from '../../_lib/config/api';
+import { api } from '../../_lib/api/client';
 import type { V2CrossCheckResult } from './crosscheck-types';
 import { EMPTY_STATE_STRUCTURE } from './crosscheck-constants';
 import { getStatusConfig, getSeverityIcon, formatAmount } from './crosscheck-helpers';
@@ -31,12 +31,13 @@ export function CrossCheckPanel() {
       setLoading(true);
       setError(null);
       try {
-        const url = `${API_BASE_URL}/api/v2/cross-check/run/${scope.period}?tenant_id=${scope.smmm_id}&client_id=${scope.client_id}`;
-        const response = await fetch(url);
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
+        const { data, error: apiError } = await api.get<V2CrossCheckResult>(
+          `/api/v2/cross-check/run/${scope.period}`,
+          { params: { tenant_id: scope.smmm_id, client_id: scope.client_id } }
+        );
+        if (apiError || !data) {
+          throw new Error(apiError || 'Kontrol verisi alınamadı');
         }
-        const data = await response.json();
         setV2Data(data);
       } catch (err) {
         setError((err as Error).message);

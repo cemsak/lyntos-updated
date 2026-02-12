@@ -7,8 +7,10 @@
  * - Sheet adi: "MIZAN" veya ilk sheet
  */
 
-import * as XLSX from 'xlsx';
+// P-6: xlsx dynamic import (~100KB bundle azaltma)
 import type { ParsedMizan, MizanHesap, DetectedFile } from '../types';
+
+type XLSX = typeof import('xlsx');
 
 // Olasi header kolonlari (Turkce karakter varyasyonlari dahil)
 const HEADER_VARIANTS = {
@@ -29,18 +31,18 @@ interface HeaderMapping {
   alacakBakiye: number;
 }
 
-function findHeaderRow(sheet: XLSX.WorkSheet): { row: number; mapping: HeaderMapping } | null {
+function findHeaderRow(xl: XLSX, sheet: import('xlsx').WorkSheet): { row: number; mapping: HeaderMapping } | null {
   const ref = sheet['!ref'];
   if (!ref) return null;
 
-  const range = XLSX.utils.decode_range(ref);
+  const range = xl.utils.decode_range(ref);
 
   // Ilk 10 satirda header ara
   for (let r = 0; r <= Math.min(10, range.e.r); r++) {
     const mapping: Partial<HeaderMapping> = {};
 
     for (let c = range.s.c; c <= range.e.c; c++) {
-      const cellAddr = XLSX.utils.encode_cell({ r, c });
+      const cellAddr = xl.utils.encode_cell({ r, c });
       const cell = sheet[cellAddr];
       if (!cell || !cell.v) continue;
 
@@ -126,7 +128,10 @@ export async function parseMizan(file: DetectedFile): Promise<ParsedMizan> {
     throw new Error('Dosya icerigi bulunamadi');
   }
 
-  const workbook = XLSX.read(file.rawContent, { type: 'array' });
+  // P-6: Dynamic import — sadece parse sırasında yüklenir (~100KB tasarruf)
+  const xl = await import('xlsx');
+
+  const workbook = xl.read(file.rawContent, { type: 'array' });
 
   // Sheet bul: "MIZAN" veya ilk sheet
   let sheetName = workbook.SheetNames.find(
@@ -142,7 +147,7 @@ export async function parseMizan(file: DetectedFile): Promise<ParsedMizan> {
   }
 
   // Header satirini bul
-  const headerInfo = findHeaderRow(sheet);
+  const headerInfo = findHeaderRow(xl, sheet);
   if (!headerInfo) {
     throw new Error('Mizan header satiri bulunamadi. Beklenen: HESAP KODU, HESAP ADI, BORC, ALACAK...');
   }
@@ -152,7 +157,7 @@ export async function parseMizan(file: DetectedFile): Promise<ParsedMizan> {
   if (!ref) {
     throw new Error('Sheet referansi bulunamadi');
   }
-  const range = XLSX.utils.decode_range(ref);
+  const range = xl.utils.decode_range(ref);
 
   // Satirlari parse et
   const hesaplar: MizanHesap[] = [];
@@ -163,7 +168,7 @@ export async function parseMizan(file: DetectedFile): Promise<ParsedMizan> {
 
   for (let r = headerRow + 1; r <= range.e.r; r++) {
     // Hesap kodu al
-    const kodCell = sheet[XLSX.utils.encode_cell({ r, c: mapping.hesapKodu })];
+    const kodCell = sheet[xl.utils.encode_cell({ r, c: mapping.hesapKodu })];
     const hesapKodu = normalizeHesapKodu(kodCell?.v);
 
     // Bos satir atla
@@ -173,11 +178,11 @@ export async function parseMizan(file: DetectedFile): Promise<ParsedMizan> {
     if (hesapKodu.toUpperCase().includes('TOPLAM')) continue;
 
     // Degerleri al
-    const hesapAdi = String(sheet[XLSX.utils.encode_cell({ r, c: mapping.hesapAdi })]?.v || '').trim();
-    const borc = mapping.borc >= 0 ? parseNumericValue(sheet[XLSX.utils.encode_cell({ r, c: mapping.borc })]?.v) : 0;
-    const alacak = mapping.alacak >= 0 ? parseNumericValue(sheet[XLSX.utils.encode_cell({ r, c: mapping.alacak })]?.v) : 0;
-    const borcBakiye = mapping.borcBakiye >= 0 ? parseNumericValue(sheet[XLSX.utils.encode_cell({ r, c: mapping.borcBakiye })]?.v) : 0;
-    const alacakBakiye = mapping.alacakBakiye >= 0 ? parseNumericValue(sheet[XLSX.utils.encode_cell({ r, c: mapping.alacakBakiye })]?.v) : 0;
+    const hesapAdi = String(sheet[xl.utils.encode_cell({ r, c: mapping.hesapAdi })]?.v || '').trim();
+    const borc = mapping.borc >= 0 ? parseNumericValue(sheet[xl.utils.encode_cell({ r, c: mapping.borc })]?.v) : 0;
+    const alacak = mapping.alacak >= 0 ? parseNumericValue(sheet[xl.utils.encode_cell({ r, c: mapping.alacak })]?.v) : 0;
+    const borcBakiye = mapping.borcBakiye >= 0 ? parseNumericValue(sheet[xl.utils.encode_cell({ r, c: mapping.borcBakiye })]?.v) : 0;
+    const alacakBakiye = mapping.alacakBakiye >= 0 ? parseNumericValue(sheet[xl.utils.encode_cell({ r, c: mapping.alacakBakiye })]?.v) : 0;
 
     const bakiye = borcBakiye - alacakBakiye;
 

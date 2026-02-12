@@ -12,8 +12,7 @@ import { RefreshCw, Info } from 'lucide-react';
 import { useDashboardScope } from '../../_components/scope/ScopeProvider';
 import { ScopeGuide } from '../../_components/shared/ScopeGuide';
 import { DataFreshness } from '../../_components/shared/DataFreshness';
-import { API_BASE_URL } from '../../_lib/config/api';
-import { getAuthToken } from '../../_lib/auth';
+import { api } from '../../_lib/api/client';
 import type { EDefterRapor, RaporSummary, ClientInfo } from './types';
 import { GibGonderimDurumu } from './GibGonderimDurumu';
 import { IcerikOzeti } from './IcerikOzeti';
@@ -46,16 +45,11 @@ export default function EDefterRaporPage() {
         period_id: periodId,
       });
 
-      const token = getAuthToken();
-      const response = await fetch(`${API_BASE_URL}/api/v2/edefter/rapor?${params}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const { data } = await api.get<{ raporlar: EDefterRapor[]; summary: RaporSummary | null; client_info: ClientInfo | null }>(
+        `/api/v2/edefter/rapor?${params}`
+      );
 
-      if (response.ok) {
-        const data = await response.json();
+      if (data) {
         setRaporlar(data.raporlar || []);
         setSummary(data.summary || null);
         setClientInfo(data.client_info || null);
@@ -63,8 +57,6 @@ export default function EDefterRaporPage() {
         if (data.raporlar && data.raporlar.length > 0) {
           setSelectedRapor(data.raporlar[0]);
         }
-      } else {
-        console.error('E-Defter rapor API hatası:', response.status);
       }
     } catch (err) {
       console.error('E-Defter rapor yükleme hatası:', err);

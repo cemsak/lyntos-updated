@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Settings, User, Bell, Shield, Palette, Globe, Loader2, AlertCircle, CheckCircle2, Save } from 'lucide-react';
-import { getAuthToken } from '../_lib/auth';
+import { api } from '../_lib/api/client';
 import { API_ENDPOINTS } from '../_lib/config/api';
 import { useToast } from '../_components/shared/Toast';
 
@@ -50,23 +50,10 @@ export default function SettingsPage() {
 
   useEffect(() => {
     async function fetchProfile() {
-      const token = getAuthToken();
-      if (!token) {
-        // SAHTE VERİ YASAK - Token yoksa profil gösterme
-        setProfile(null);
-        setProfileName('');
-        setProfileEmail('');
-        setProfileTitle('');
-        setIsLoading(false);
-        return;
-      }
-
       try {
-        const response = await fetch(API_ENDPOINTS.user.profile, {
-          headers: { 'Authorization': `Bearer ${token}` },
-        });
+        const { data, ok } = await api.get<Profile>(API_ENDPOINTS.user.profile);
 
-        if (!response.ok) {
+        if (!ok || !data) {
           // Use default profile
           setProfile({
             name: 'SMMM Kullanıcı',
@@ -80,7 +67,6 @@ export default function SettingsPage() {
           return;
         }
 
-        const data = await response.json();
         setProfile(data);
         setProfileName(data.name || '');
         setProfileEmail(data.email || '');
@@ -116,42 +102,22 @@ export default function SettingsPage() {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
 
     // Save profile via API
-    const token = getAuthToken();
-    if (token) {
-      try {
-        const response = await fetch(API_ENDPOINTS.user.profile, {
-          method: 'PUT',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            name: profileName,
-            email: profileEmail,
-            title: profileTitle,
-            settings,
-          }),
-        });
+    try {
+      const { ok } = await api.put(API_ENDPOINTS.user.profile, {
+        name: profileName,
+        email: profileEmail,
+        title: profileTitle,
+        settings,
+      });
 
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-
-        setSaveSuccess(true);
-        showToast('success', 'Ayarlar kaydedildi');
-      } catch {
-        // API failed - save to localStorage as fallback
-        const profileData = {
-          name: profileName,
-          email: profileEmail,
-          title: profileTitle
-        };
-        localStorage.setItem('lyntos_profile', JSON.stringify(profileData));
-        setSaveSuccess(true);
-        showToast('warning', 'Sunucu bağlantısı kurulamadı, ayarlar yerel olarak kaydedildi');
+      if (!ok) {
+        throw new Error('API error');
       }
-    } else {
-      // No token - save locally only
+
+      setSaveSuccess(true);
+      showToast('success', 'Ayarlar kaydedildi');
+    } catch {
+      // API failed - save to localStorage as fallback
       const profileData = {
         name: profileName,
         email: profileEmail,
@@ -159,7 +125,7 @@ export default function SettingsPage() {
       };
       localStorage.setItem('lyntos_profile', JSON.stringify(profileData));
       setSaveSuccess(true);
-      showToast('info', 'Ayarlar yerel olarak kaydedildi');
+      showToast('warning', 'Sunucu bağlantısı kurulamadı, ayarlar yerel olarak kaydedildi');
     }
 
     setIsSaving(false);

@@ -65,6 +65,7 @@ async def get_kdv_beyanname(
                 SELECT * FROM kdv_beyanname
                 WHERE client_id = ?
                 ORDER BY donem_yil DESC, donem_ay DESC
+                LIMIT 200
             """, (client_id,))
 
         rows = [dict(row) for row in cursor.fetchall()]
@@ -132,6 +133,7 @@ async def get_muhtasar_beyanname(
                 SELECT * FROM muhtasar_beyanname
                 WHERE client_id = ?
                 ORDER BY donem_yil DESC, donem_ay DESC
+                LIMIT 200
             """, (client_id,))
 
         rows = [dict(row) for row in cursor.fetchall()]
@@ -198,6 +200,7 @@ async def get_gecici_vergi_beyanname(
                 SELECT * FROM gecici_vergi_beyanname
                 WHERE client_id = ?
                 ORDER BY donem_yil DESC, donem_ceyrek DESC
+                LIMIT 200
             """, (client_id,))
 
         rows = [dict(row) for row in cursor.fetchall()]
@@ -264,6 +267,7 @@ async def get_tahakkuk(
             SELECT * FROM tahakkuk
             WHERE {where}
             ORDER BY vade_tarihi, beyanname_turu
+            LIMIT 1000
         """, params)
 
         rows = [dict(row) for row in cursor.fetchall()]

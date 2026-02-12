@@ -21,8 +21,7 @@ import {
 import { useDashboardScope } from '../../_components/scope/ScopeProvider';
 import { ScopeGuide } from '../../_components/shared/ScopeGuide';
 import { DataFreshness } from '../../_components/shared/DataFreshness';
-import { API_BASE_URL } from '../../_lib/config/api';
-import { getAuthToken } from '../../_lib/auth';
+import { api } from '../../_lib/api/client';
 import { formatCurrency, formatPeriod } from '../../_lib/format';
 
 interface MutabakatSatir {
@@ -69,16 +68,11 @@ export default function BankaMutabakatPage() {
         period_id: periodId,
       });
 
-      const token = getAuthToken();
-      const response = await fetch(`${API_BASE_URL}/api/v2/banka/mutabakat?${params}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const { data } = await api.get<{ mutabakat: MutabakatSatir[]; ozet: MutabakatOzet | null; toplam_fark: number }>(
+        `/api/v2/banka/mutabakat?${params}`
+      );
 
-      if (response.ok) {
-        const data = await response.json();
+      if (data) {
         setMutabakat(data.mutabakat || []);
         setOzet(data.ozet || null);
         setToplamFark(data.toplam_fark || 0);

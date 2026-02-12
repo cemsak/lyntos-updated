@@ -7,8 +7,10 @@
  * - Hesap gruplari: Ilk sutunda ana hesap kodu
  */
 
-import * as XLSX from 'xlsx';
+// P-6: xlsx dynamic import (~100KB bundle azaltma)
 import type { ParsedKebir, KebirHesapOzet, KebirHareket, DetectedFile } from '../types';
+
+type XLSX = typeof import('xlsx');
 
 interface KebirHeaderMapping {
   kebirHesap: number;
@@ -23,11 +25,11 @@ interface KebirHeaderMapping {
   alacak: number;
 }
 
-function findKebirHeader(sheet: XLSX.WorkSheet): { row: number; mapping: KebirHeaderMapping } | null {
+function findKebirHeader(xl: XLSX, sheet: import('xlsx').WorkSheet): { row: number; mapping: KebirHeaderMapping } | null {
   const ref = sheet['!ref'];
   if (!ref) return null;
 
-  const range = XLSX.utils.decode_range(ref);
+  const range = xl.utils.decode_range(ref);
 
   for (let r = 0; r <= Math.min(5, range.e.r); r++) {
     let foundKebir = false;
@@ -35,7 +37,7 @@ function findKebirHeader(sheet: XLSX.WorkSheet): { row: number; mapping: KebirHe
     const mapping: Partial<KebirHeaderMapping> = {};
 
     for (let c = range.s.c; c <= range.e.c; c++) {
-      const cell = sheet[XLSX.utils.encode_cell({ r, c })];
+      const cell = sheet[xl.utils.encode_cell({ r, c })];
       if (!cell?.v) continue;
 
       const val = String(cell.v).trim().toUpperCase();
@@ -100,6 +102,9 @@ function parseNumeric(value: unknown): number {
   return isNaN(num) ? 0 : num;
 }
 
+// Note: parseDate needs XLSX.SSF — we pass xl instance from caller
+let _xlInstance: XLSX | null = null;
+
 function parseDate(value: unknown): string {
   if (!value) return '';
 
@@ -108,8 +113,8 @@ function parseDate(value: unknown): string {
   }
 
   // Excel serial date
-  if (typeof value === 'number') {
-    const date = XLSX.SSF.parse_date_code(value);
+  if (typeof value === 'number' && _xlInstance) {
+    const date = _xlInstance.SSF.parse_date_code(value);
     if (date) {
       return `${date.y}-${String(date.m).padStart(2, '0')}-${String(date.d).padStart(2, '0')}`;
     }
@@ -143,7 +148,11 @@ export async function parseKebir(file: DetectedFile): Promise<ParsedKebir> {
     throw new Error('Dosya icerigi bulunamadi');
   }
 
-  const workbook = XLSX.read(file.rawContent, { type: 'array' });
+  // P-6: Dynamic import — sadece parse sırasında yüklenir (~100KB tasarruf)
+  const xl = await import('xlsx');
+  _xlInstance = xl;
+
+  const workbook = xl.read(file.rawContent, { type: 'array' });
 
   // Sheet bul
   let sheetName = workbook.SheetNames.find(
@@ -158,7 +167,7 @@ export async function parseKebir(file: DetectedFile): Promise<ParsedKebir> {
     throw new Error(`Sheet "${sheetName}" okunamadi`);
   }
 
-  const headerInfo = findKebirHeader(sheet);
+  const headerInfo = findKebirHeader(xl, sheet);
   if (!headerInfo) {
     throw new Error('Kebir header satiri bulunamadi');
   }
@@ -168,7 +177,7 @@ export async function parseKebir(file: DetectedFile): Promise<ParsedKebir> {
   if (!ref) {
     throw new Error('Sheet referansi bulunamadi');
   }
-  const range = XLSX.utils.decode_range(ref);
+  const range = xl.utils.decode_range(ref);
 
   // Hesaplari topla
   const hesapMap = new Map<string, KebirHesapOzet>();
@@ -176,7 +185,7 @@ export async function parseKebir(file: DetectedFile): Promise<ParsedKebir> {
 
   for (let r = headerRow + 1; r <= range.e.r; r++) {
     // Kebir hesap sutununu kontrol et
-    const kebirCell = sheet[XLSX.utils.encode_cell({ r, c: mapping.kebirHesap })];
+    const kebirCell = sheet[xl.utils.encode_cell({ r, c: mapping.kebirHesap })];
     if (kebirCell?.v) {
       const kebirVal = String(kebirCell.v).trim();
       // Yeni ana hesap mi?
@@ -198,8 +207,8 @@ export async function parseKebir(file: DetectedFile): Promise<ParsedKebir> {
     if (!currentKebirHesap) continue;
 
     // Hareket satiri mi?
-    const borcVal = mapping.borc >= 0 ? parseNumeric(sheet[XLSX.utils.encode_cell({ r, c: mapping.borc })]?.v) : 0;
-    const alacakVal = mapping.alacak >= 0 ? parseNumeric(sheet[XLSX.utils.encode_cell({ r, c: mapping.alacak })]?.v) : 0;
+    const borcVal = mapping.borc >= 0 ? parseNumeric(sheet[xl.utils.encode_cell({ r, c: mapping.borc })]?.v) : 0;
+    const alacakVal = mapping.alacak >= 0 ? parseNumeric(sheet[xl.utils.encode_cell({ r, c: mapping.alacak })]?.v) : 0;
 
     // En az borc veya alacak olmali
     if (borcVal === 0 && alacakVal === 0) continue;
@@ -207,14 +216,14 @@ export async function parseKebir(file: DetectedFile): Promise<ParsedKebir> {
     const hesap = hesapMap.get(currentKebirHesap)!;
 
     const hareket: KebirHareket = {
-      tarih: mapping.tarih >= 0 ? parseDate(sheet[XLSX.utils.encode_cell({ r, c: mapping.tarih })]?.v) : '',
-      maddeNo: mapping.maddeNo >= 0 ? parseNumeric(sheet[XLSX.utils.encode_cell({ r, c: mapping.maddeNo })]?.v) : 0,
-      fisNo: mapping.fisNo >= 0 ? parseNumeric(sheet[XLSX.utils.encode_cell({ r, c: mapping.fisNo })]?.v) : 0,
-      evrakNo: mapping.evrakNo >= 0 ? String(sheet[XLSX.utils.encode_cell({ r, c: mapping.evrakNo })]?.v || '') : '',
+      tarih: mapping.tarih >= 0 ? parseDate(sheet[xl.utils.encode_cell({ r, c: mapping.tarih })]?.v) : '',
+      maddeNo: mapping.maddeNo >= 0 ? parseNumeric(sheet[xl.utils.encode_cell({ r, c: mapping.maddeNo })]?.v) : 0,
+      fisNo: mapping.fisNo >= 0 ? parseNumeric(sheet[xl.utils.encode_cell({ r, c: mapping.fisNo })]?.v) : 0,
+      evrakNo: mapping.evrakNo >= 0 ? String(sheet[xl.utils.encode_cell({ r, c: mapping.evrakNo })]?.v || '') : '',
       evrakTarihi: '',
-      hesapKodu: mapping.hesapKodu >= 0 ? String(sheet[XLSX.utils.encode_cell({ r, c: mapping.hesapKodu })]?.v || '') : '',
-      hesapAdi: mapping.hesapAdi >= 0 ? String(sheet[XLSX.utils.encode_cell({ r, c: mapping.hesapAdi })]?.v || '') : '',
-      aciklama: mapping.aciklama >= 0 ? String(sheet[XLSX.utils.encode_cell({ r, c: mapping.aciklama })]?.v || '') : '',
+      hesapKodu: mapping.hesapKodu >= 0 ? String(sheet[xl.utils.encode_cell({ r, c: mapping.hesapKodu })]?.v || '') : '',
+      hesapAdi: mapping.hesapAdi >= 0 ? String(sheet[xl.utils.encode_cell({ r, c: mapping.hesapAdi })]?.v || '') : '',
+      aciklama: mapping.aciklama >= 0 ? String(sheet[xl.utils.encode_cell({ r, c: mapping.aciklama })]?.v || '') : '',
       borc: borcVal,
       alacak: alacakVal,
       bakiye: borcVal - alacakVal,

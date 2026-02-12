@@ -14,6 +14,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { API_ENDPOINTS } from '../../_lib/config/api';
+import { api } from '../../_lib/api/client';
 import type {
   EvidenceData,
   EvidenceBlockState,
@@ -128,15 +129,14 @@ async function fetchDefter(
   periodId: string,
   hesapKodu: string,
 ): Promise<DefterKaydi[]> {
-  const url = `${API_ENDPOINTS.kebir.hesap(hesapKodu)}?client_id=${encodeURIComponent(clientId)}&period_id=${encodeURIComponent(periodId)}&page_size=20`;
+  const { data, error } = await api.get<{ entries?: Record<string, unknown>[] }>(
+    API_ENDPOINTS.kebir.hesap(hesapKodu),
+    { params: { client_id: clientId, period_id: periodId, page_size: 20 } }
+  );
+  if (error || !data) throw new Error(error || 'Kebir API hatası');
 
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Kebir API hatası: ${res.status}`);
-
-  const data = await res.json();
   const entries = data.entries || [];
-
-  return entries.map((e: Record<string, unknown>) => ({
+  return entries.map((e) => ({
     id: e.id as number,
     tarih: (e.tarih as string) || '',
     fis_no: e.fis_no as string | null,
@@ -154,12 +154,12 @@ async function fetchBanka(
   periodId: string,
   karsiTaraf: string | null,
 ): Promise<BankaHareketi[]> {
-  const url = `${API_ENDPOINTS.banka.islemler}?client_id=${encodeURIComponent(clientId)}&period_id=${encodeURIComponent(periodId)}&page_size=100`;
+  const { data, error } = await api.get<{ islemler?: Record<string, unknown>[] }>(
+    API_ENDPOINTS.banka.islemler,
+    { params: { client_id: clientId, period_id: periodId, page_size: 100 } }
+  );
+  if (error || !data) throw new Error(error || 'Banka API hatası');
 
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Banka API hatası: ${res.status}`);
-
-  const data = await res.json();
   let islemler = data.islemler || [];
 
   // Client-side filtreleme: açıklama'da karşı taraf adını ara
@@ -188,12 +188,12 @@ async function fetchKasa(
   periodId: string,
   karsiTaraf: string | null,
 ): Promise<KasaHareketi[]> {
-  const url = `${API_ENDPOINTS.kebir.hesap('100')}?client_id=${encodeURIComponent(clientId)}&period_id=${encodeURIComponent(periodId)}&page_size=100`;
+  const { data, error } = await api.get<{ entries?: Record<string, unknown>[] }>(
+    API_ENDPOINTS.kebir.hesap('100'),
+    { params: { client_id: clientId, period_id: periodId, page_size: 100 } }
+  );
+  if (error || !data) throw new Error(error || 'Kasa API hatası');
 
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Kasa API hatası: ${res.status}`);
-
-  const data = await res.json();
   let entries = data.entries || [];
 
   // Client-side filtreleme: açıklama'da karşı taraf adını ara
@@ -222,15 +222,14 @@ async function fetchMahsup(
   periodId: string,
   hesapKodu: string,
 ): Promise<MahsupFisi[]> {
-  const url = `${API_ENDPOINTS.yevmiye.list}?client_id=${encodeURIComponent(clientId)}&period_id=${encodeURIComponent(periodId)}&search=${encodeURIComponent(hesapKodu)}&page_size=20`;
+  const { data, error } = await api.get<{ entries?: Record<string, unknown>[] }>(
+    API_ENDPOINTS.yevmiye.list,
+    { params: { client_id: clientId, period_id: periodId, search: hesapKodu, page_size: 20 } }
+  );
+  if (error || !data) throw new Error(error || 'Yevmiye API hatası');
 
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Yevmiye API hatası: ${res.status}`);
-
-  const data = await res.json();
   const entries = data.entries || [];
-
-  return entries.map((e: Record<string, unknown>) => ({
+  return entries.map((e) => ({
     id: e.id as number,
     fis_no: (e.fis_no as string) || '',
     tarih: (e.tarih as string) || '',

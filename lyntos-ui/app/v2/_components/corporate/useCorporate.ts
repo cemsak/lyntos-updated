@@ -9,7 +9,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { getAuthToken } from '../../_lib/auth';
+import { api } from '../../_lib/api/client';
 import type {
   CorporateEventType,
   TTK376Request,
@@ -189,12 +189,12 @@ export function useEventTypes(companyType?: string) {
         const params = new URLSearchParams();
         if (companyType) params.set('company_type', companyType);
 
-        const res = await fetch(`/api/v1/corporate/event-types?${params}`, {
-          headers: { Authorization: getAuthToken() || '' },
-        });
+        const result = await api.get<{ event_types?: CorporateEventType[] }>(
+          `/api/v1/corporate/event-types`,
+          { params: companyType ? { company_type: companyType } : undefined }
+        );
 
-        if (!res.ok) {
-          // API basarisiz - varsayilan kullan
+        if (!result.ok || !result.data) {
           console.warn('[Corporate] API yanit vermedi, varsayilan islem tipleri kullaniliyor');
           let filtered = DEFAULT_EVENT_TYPES;
           if (companyType) {
@@ -205,8 +205,7 @@ export function useEventTypes(companyType?: string) {
           return;
         }
 
-        const json = await res.json();
-        setData(json.data?.event_types || DEFAULT_EVENT_TYPES);
+        setData(result.data.event_types || DEFAULT_EVENT_TYPES);
         setError(null);
       } catch (err) {
         // Hata - varsayilan kullan
@@ -243,14 +242,11 @@ export function useEventType(eventCode: string | null) {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`/api/v1/corporate/event-types/${eventCode}`, {
-          headers: { Authorization: getAuthToken() || '' },
-        });
-
-        if (!res.ok) throw new Error('Islem tipi bulunamadi');
-
-        const json = await res.json();
-        setData(json.data || null);
+        const result = await api.get<CorporateEventType>(
+          `/api/v1/corporate/event-types/${eventCode}`
+        );
+        if (!result.ok || !result.data) throw new Error('Islem tipi bulunamadi');
+        setData(result.data);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Bilinmeyen hata');
       } finally {
@@ -305,25 +301,19 @@ export function useTTK376Analysis() {
       setLoading(true);
       setError(null);
 
-      const res = await fetch('/api/v1/corporate/ttk376-analysis', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: getAuthToken() || '',
-        },
-        body: JSON.stringify(request),
-      });
+      const res = await api.post<{ analysis?: TTK376Analysis }>(
+        '/api/v1/corporate/ttk376-analysis',
+        request
+      );
 
-      if (!res.ok) {
-        // API basarisiz - local hesapla
+      if (!res.ok || !res.data) {
         console.warn('[Corporate] TTK 376 API yanit vermedi, local hesaplama yapiliyor');
         const localAnalysis = calculateTTK376Locally(request);
         setResult(localAnalysis);
         return localAnalysis;
       }
 
-      const json = await res.json();
-      const analysis = json.data?.analysis || calculateTTK376Locally(request);
+      const analysis = res.data.analysis || calculateTTK376Locally(request);
       setResult(analysis);
       return analysis;
     } catch (err) {
@@ -370,20 +360,18 @@ export function useMinCapitalRequirements() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await fetch('/api/v1/corporate/min-capital-requirements', {
-          headers: { Authorization: getAuthToken() || '' },
-        });
+        const result = await api.get<MinCapitalRequirements>(
+          '/api/v1/corporate/min-capital-requirements'
+        );
 
-        if (!res.ok) {
-          // API basarisiz - varsayilan kullan
+        if (!result.ok || !result.data) {
           console.warn('[Corporate] Sermaye gereksinimleri API yanit vermedi, varsayilan kullaniliyor');
           setData(DEFAULT_MIN_CAPITAL);
           setError(null);
           return;
         }
 
-        const json = await res.json();
-        setData(json.data || DEFAULT_MIN_CAPITAL);
+        setData(result.data);
         setError(null);
       } catch (err) {
         // Hata - varsayilan kullan
@@ -410,14 +398,9 @@ export function useGKQuorumGuide() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await fetch('/api/v1/corporate/gk-quorum-guide', {
-          headers: { Authorization: getAuthToken() || '' },
-        });
-
-        if (!res.ok) throw new Error('Nisap rehberi yuklenemedi');
-
-        const json = await res.json();
-        setData(json.data || null);
+        const result = await api.get<GKQuorumGuide>('/api/v1/corporate/gk-quorum-guide');
+        if (!result.ok || !result.data) throw new Error('Nisap rehberi yuklenemedi');
+        setData(result.data);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Bilinmeyen hata');
       } finally {

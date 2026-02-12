@@ -467,18 +467,16 @@ class TicaretSicilTamEntegrasyon:
 
         except aiohttp.ClientSSLError as e:
             self.logger.warning(f"SSL hatası ({url}): {e}")
-            # SSL hatası durumunda verify=False dene (güvenli değil ama çalışır)
+            # SSL hatası durumunda certifi ile tekrar dene
             try:
-                ssl_ctx_unsafe = ssl.create_default_context()
-                ssl_ctx_unsafe.check_hostname = False
-                ssl_ctx_unsafe.verify_mode = ssl.CERT_NONE
+                ssl_ctx_retry = ssl.create_default_context(cafile=certifi.where())
 
                 if method == "GET":
-                    async with session.get(url, headers=headers, ssl=ssl_ctx_unsafe,
+                    async with session.get(url, headers=headers, ssl=ssl_ctx_retry,
                                            timeout=aiohttp.ClientTimeout(total=30)) as resp:
                         return resp.status, await resp.text()
                 else:
-                    async with session.post(url, headers=headers, data=data, ssl=ssl_ctx_unsafe,
+                    async with session.post(url, headers=headers, data=data, ssl=ssl_ctx_retry,
                                             timeout=aiohttp.ClientTimeout(total=30)) as resp:
                         return resp.status, await resp.text()
             except Exception as e2:

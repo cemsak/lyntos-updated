@@ -6,11 +6,10 @@ MAXİM DÜZELTME: Doğru dönem sonu bakiye hesaplama
 - MAX(id) yerine TARİH bazlı sıralama
 - DD.MM.YYYY formatını YYYYMMDD'ye çevirerek doğru sıralama
 - Eksik banka verisi için uyarı
-
-NO AUTH REQUIRED - Frontend'den doğrudan erişilebilir.
 """
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
+from utils.period_utils import get_period_db
 from pydantic import BaseModel
 from typing import List, Optional
 import logging
@@ -19,6 +18,7 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
+from middleware.auth import verify_token, check_client_access
 from database.db import get_connection
 
 logger = logging.getLogger(__name__)
@@ -58,7 +58,7 @@ def tarih_to_sortable(tarih: str) -> str:
         parts = tarih.split('.')
         if len(parts) == 3:
             return f"{parts[2]}{parts[1]}{parts[0]}"
-    except:
+    except (ValueError, IndexError, AttributeError):
         pass
     return "00000000"
 
@@ -66,8 +66,8 @@ def tarih_to_sortable(tarih: str) -> str:
 @router.get("/mutabakat", response_model=MutabakatResponse)
 async def get_banka_mutabakat(
     client_id: str = Query(..., description="Müşteri ID"),
-    period_id: str = Query(..., description="Dönem ID (örn: 2025-Q1)"),
-    tenant_id: str = Query("default", description="Tenant ID")
+    period_id: str = Depends(get_period_db),
+    user: dict = Depends(verify_token),
 ):
     """
     Banka - Mizan mutabakatını hesapla.
@@ -76,6 +76,7 @@ async def get_banka_mutabakat(
 
     DÜZELTME: Tarih bazlı sıralama ile doğru dönem sonu bakiye hesaplanır.
     """
+    await check_client_access(user, client_id)
     try:
         with get_connection() as conn:
             cursor = conn.cursor()

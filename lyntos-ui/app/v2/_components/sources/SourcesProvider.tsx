@@ -1,7 +1,8 @@
 'use client';
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { setSourceCache } from '../contracts/map';
-import { getAuthToken } from '../../_lib/auth';
+import { API_ENDPOINTS } from '../../_lib/config/api';
+import { api } from '../../_lib/api/client';
 
 interface Source {
   id: string;
@@ -26,21 +27,11 @@ export function SourcesProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     async function fetchSources() {
       try {
-        const token = getAuthToken();
-        if (!token) {
-          console.warn('[SourcesProvider] No auth token found (set NEXT_PUBLIC_DEV_AUTH_BYPASS=1 for dev mode)');
-          setIsLoaded(true);
-          return;
-        }
+        const { data: json, ok } = await api.get<Record<string, any>>(API_ENDPOINTS.contracts.sources);
 
-        const response = await fetch('/api/v1/contracts/sources', {
-          headers: { 'Authorization': token },
-        });
-
-        if (response.ok) {
-          const json = await response.json();
-          // Backend returns { data: { sources: [...] } }
-          const sourceList = json.data?.sources || json.sources || [];
+        if (ok && json) {
+          // api client auto-unwraps envelope {success, data}
+          const sourceList = json.sources || [];
 
           // Map backend format to our interface
           const mapped: Source[] = sourceList.map((s: Record<string, unknown>) => ({
@@ -55,7 +46,7 @@ export function SourcesProvider({ children }: { children: ReactNode }) {
           // Populate the cache in map.ts
           setSourceCache(mapped);
         } else {
-          console.error('[SourcesProvider] Failed to fetch:', response.status);
+          console.error('[SourcesProvider] Failed to fetch sources');
         }
       } catch (error) {
         console.error('[SourcesProvider] Error:', error);

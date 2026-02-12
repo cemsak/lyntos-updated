@@ -48,10 +48,9 @@ logger = logging.getLogger("tcmb_evds")
 EVDS_API_KEY = os.getenv("TCMB_EVDS_API_KEY", "77lXIAV7kc")
 EVDS_ENDPOINT = os.getenv("TCMB_EVDS_ENDPOINT", "https://evds2.tcmb.gov.tr/service/evds")
 
-# SSL Context
-SSL_CONTEXT = ssl.create_default_context()
-SSL_CONTEXT.check_hostname = False
-SSL_CONTEXT.verify_mode = ssl.CERT_NONE
+# SSL Context with proper certificate verification
+import certifi
+SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
 
 # EVDS Veri Grubu Kodları
 EVDS_SERIES = {

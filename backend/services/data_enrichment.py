@@ -111,7 +111,7 @@ class TCMBClient:
             match = re.search(pattern, xml_text, re.DOTALL)
             if match:
                 return float(match.group(1))
-        except:
+        except (ValueError, IndexError, AttributeError):
             pass
         return 32.0 if currency == "USD" else 35.0
 

@@ -8,6 +8,7 @@
  */
 
 import { useState, useCallback } from 'react';
+import { api } from '../../_lib/api/client';
 import { getAuthToken } from '../../_lib/auth';
 import type { ChecklistResponse } from './types';
 
@@ -32,21 +33,16 @@ export function useDocumentChecklist({
     setError(null);
 
     try {
-      const response = await fetch(
-        `/api/v1/documents/checklist/${clientId}?period=${period}`,
-        {
-          headers: {
-            Authorization: getAuthToken() || '',
-          },
-        }
+      const res = await api.get<ChecklistResponse>(
+        `/api/v1/documents/checklist/${clientId}`,
+        { params: { period } }
       );
 
-      if (!response.ok) {
-        throw new Error('Kontrol listesi yuklenemedi');
+      if (!res.ok) {
+        throw new Error(res.error || 'Kontrol listesi yuklenemedi');
       }
 
-      const data: ChecklistResponse = await response.json();
-      setChecklist(data);
+      setChecklist(res.data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Bir hata olustu');
     } finally {
@@ -72,17 +68,10 @@ export function useDocumentChecklist({
         formData.append('file', file);
         if (notes) formData.append('notes', notes);
 
-        const response = await fetch('/api/v1/documents/upload', {
-          method: 'POST',
-          headers: {
-            Authorization: getAuthToken() || '',
-          },
-          body: formData,
-        });
+        const res = await api.post('/api/v1/documents/upload', formData);
 
-        if (!response.ok) {
-          const err = await response.json();
-          throw new Error(err.detail || 'Yukleme basarisiz');
+        if (!res.ok) {
+          throw new Error(res.error || 'Yukleme basarisiz');
         }
 
         // Reload checklist
@@ -101,18 +90,13 @@ export function useDocumentChecklist({
   const deleteDocument = useCallback(
     async (documentId: string): Promise<boolean> => {
       try {
-        const response = await fetch(
-          `/api/v1/documents/${documentId}?client_id=${clientId}`,
-          {
-            method: 'DELETE',
-            headers: {
-              Authorization: getAuthToken() || '',
-            },
-          }
+        const res = await api.delete(
+          `/api/v1/documents/${documentId}`,
+          { params: { client_id: clientId } }
         );
 
-        if (!response.ok) {
-          throw new Error('Silme basarisiz');
+        if (!res.ok) {
+          throw new Error(res.error || 'Silme basarisiz');
         }
 
         await loadChecklist();

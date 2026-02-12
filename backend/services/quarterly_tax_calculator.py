@@ -21,10 +21,13 @@ class QuarterlyTaxResult:
     quarter: str  # "Q1", "Q2", "Q3"
     current_profit: float  # Ceyrek cari kar
     annual_estimate: float  # Yillik tahmin
-    tax_base: float  # Gecici matrah
+    tax_base: float  # Gecici matrah (mali kar)
     calculated_tax: float  # Hesaplanan vergi
     previous_payments: float  # Onceki odemeler toplami
     payable: float  # Bu ceyrekte odenecek
+    kkeg: float = 0  # Kanunen Kabul Edilmeyen Giderler (KVK Md.11)
+    istisna: float = 0  # Istisna kazanclar
+    gecmis_zarar: float = 0  # Gecmis donem zararlari (KVK Md.9, 5 yil sinirli)
     legal_basis_refs: List[str] = field(default_factory=lambda: ["SRC-0023"])  # 5520 KVK Md. 32
     trust_score: float = 1.0
 
@@ -48,15 +51,24 @@ class QuarterlyTaxCalculator:
         self,
         quarter: str,
         profits: Dict[str, float],  # {"Q1": 100000, "Q2": 105400, ...}
-        previous_payments: float = 0
+        previous_payments: float = 0,
+        kkeg: float = 0,
+        istisna: float = 0,
+        gecmis_zarar: float = 0,
     ) -> QuarterlyTaxResult:
         """
         Ceyreklik gecici vergi hesapla
+
+        Mali Kar = Ticari Kar (yillik tahmin) + KKEG - Istisna - Gecmis Zarar
+        KVK Md.32, KVK Md.11 (KKEG), KVK Md.9 (zarar mahsubu, 5 yil sinirli)
 
         Args:
             quarter: "Q1", "Q2", "Q3"
             profits: Ceyreklik karlar {"Q1": amount, "Q2": amount, ...}
             previous_payments: Onceki ceyreklerde odenen toplam
+            kkeg: Kanunen Kabul Edilmeyen Giderler (KVK Md.11)
+            istisna: Istisna kazanclar (istirak, ihracat vb.)
+            gecmis_zarar: Gecmis donem zararlari (KVK Md.9, caller 5 yil sinirini uygular)
 
         Returns:
             QuarterlyTaxResult
@@ -70,8 +82,10 @@ class QuarterlyTaxCalculator:
             # Yillik tahmin (quarter'a gore)
             annual_estimate = self._estimate_annual_profit(quarter, profits)
 
-            # Matrah (gecmis zarar varsa dusulur, simdilik 0)
-            tax_base = max(0, annual_estimate)
+            # Mali kar hesabi (KVK Md.32)
+            # Matrah = Ticari Kar + KKEG - Istisna - Gecmis Zarar
+            mali_kar = annual_estimate + kkeg - istisna - gecmis_zarar
+            tax_base = max(0, mali_kar)
 
             # Hesaplanan vergi
             calculated_tax = tax_base * self.TAX_RATE
@@ -86,7 +100,10 @@ class QuarterlyTaxCalculator:
                 tax_base=tax_base,
                 calculated_tax=calculated_tax,
                 previous_payments=previous_payments,
-                payable=payable
+                payable=payable,
+                kkeg=kkeg,
+                istisna=istisna,
+                gecmis_zarar=gecmis_zarar,
             )
 
             self.logger.info(f"{quarter}: Odenecek={payable:,.0f} TL")
@@ -122,7 +139,10 @@ class QuarterlyTaxCalculator:
     def project_year_end(
         self,
         profits: Dict[str, float],
-        quarterly_payments: float
+        quarterly_payments: float,
+        kkeg: float = 0,
+        istisna: float = 0,
+        gecmis_zarar: float = 0,
     ) -> Dict:
         """
         Yil sonu kurumlar vergisi projeksiyonu
@@ -130,6 +150,9 @@ class QuarterlyTaxCalculator:
         Args:
             profits: Gerceklesen ceyreklik karlar
             quarterly_payments: Odenen gecici vergi toplami
+            kkeg: Kanunen Kabul Edilmeyen Giderler (KVK Md.11)
+            istisna: Istisna kazanclar
+            gecmis_zarar: Gecmis donem zararlari (5 yil sinirli)
 
         Returns:
             {
@@ -155,8 +178,9 @@ class QuarterlyTaxCalculator:
             avg_per_quarter = realized / quarters_done if quarters_done > 0 else 0
             estimated_annual = avg_per_quarter * 4
 
-        # Matrah (KKEG + Istisna burada devreye girer, basitlestirme icin direk kar)
-        tax_base = estimated_annual
+        # Mali kar hesabi (KVK Md.32)
+        mali_kar = estimated_annual + kkeg - istisna - gecmis_zarar
+        tax_base = max(0, mali_kar)
 
         # KV hesapla
         corporate_tax = tax_base * self.TAX_RATE
@@ -170,6 +194,9 @@ class QuarterlyTaxCalculator:
             "estimated_corporate_tax": corporate_tax,
             "quarterly_offset": quarterly_payments,
             "estimated_payable_or_refund": net,
+            "kkeg": kkeg,
+            "istisna": istisna,
+            "gecmis_zarar": gecmis_zarar,
             "confidence": "HIGH" if quarters_done >= 3 else "MEDIUM" if quarters_done >= 2 else "LOW"
         }
 

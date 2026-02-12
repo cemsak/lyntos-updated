@@ -4,6 +4,7 @@ import { PanelEnvelope, createLoadingEnvelope, createErrorEnvelope, createMissin
 import { useDashboardScope, useScopeComplete } from '../scope/useDashboardScope';
 import { buildScopedUrl, type ScopeParams } from '../contracts/endpoints';
 import { getAuthToken } from '../../_lib/auth';
+import { api } from '../../_lib/api/client';
 
 interface FetchOptions {
   timeout?: number;
@@ -100,28 +101,23 @@ export function useFailSoftFetch<T>(
         period: scope.period,
       };
       const url = buildScopedUrl(endpoint, scopeParams);
-      const timeoutId = setTimeout(() => controller.abort(), timeout);
 
-      const response = await fetch(url, {
+      const result = await api.get<unknown>(url, {
         signal: controller.signal,
-        headers: {
-          'Authorization': token,
-          'Content-Type': 'application/json',
-        },
+        timeout,
       });
 
-      clearTimeout(timeoutId);
+      if (controller.signal.aborted) return;
 
-      if (!response.ok) {
-        if (response.status === 401) {
+      if (!result.ok) {
+        if (result.status === 401) {
           setEnvelope({ ...createErrorEnvelope<T>('Oturum suresi dolmus.', requestId), status: 'auth' });
           return;
         }
-        throw new Error(`HTTP ${response.status}`);
+        throw new Error(result.error || `HTTP ${result.status}`);
       }
 
-      const raw = await response.json();
-      setEnvelope(normalizer(raw, requestId));
+      setEnvelope(normalizer(result.data, requestId));
     } catch (error) {
       if ((error as Error).name === 'AbortError') return;
       if (attempt < (retries || 0)) {

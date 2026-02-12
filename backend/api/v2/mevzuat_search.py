@@ -9,9 +9,10 @@ SMMM/YMM İş Akışı:
 - Güncel mevzuat takibi
 """
 
-from fastapi import APIRouter, Query, HTTPException
+from fastapi import APIRouter, Query, HTTPException, Depends
 from typing import List, Optional
 from dataclasses import asdict
+from middleware.auth import verify_token
 from services.mevzuat_search import (
     MevzuatSearchService,
     SearchFilters,
@@ -22,7 +23,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v2/mevzuat", tags=["mevzuat-search"])
+router = APIRouter(prefix="/api/v2/mevzuat", tags=["mevzuat-search"], dependencies=[Depends(verify_token)])
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

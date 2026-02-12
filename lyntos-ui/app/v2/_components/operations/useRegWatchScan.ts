@@ -7,10 +7,8 @@
  * Fetches regulatory events from backend - no mock fallback
  */
 import { useState, useCallback, useRef } from 'react';
-import { API_BASE_URL } from '../../_lib/config/api';
+import { api } from '../../_lib/api/client';
 import { getAuthToken } from '../../_lib/auth';
-
-const API_BASE = API_BASE_URL;
 
 // Trusted sources for scanning animation
 export const TRUSTED_SOURCES = [
@@ -47,19 +45,15 @@ interface ApiEvent {
 }
 
 interface ApiStatusResponse {
-  data?: {
-    items?: ApiEvent[];
-    pending_count?: number;
-    status?: string;
-    last_check?: string;
-  };
+  items?: ApiEvent[];
+  pending_count?: number;
+  status?: string;
+  last_check?: string;
 }
 
 interface ApiPendingResponse {
-  data?: {
-    pending_events?: ApiEvent[];
-    total?: number;
-  };
+  pending_events?: ApiEvent[];
+  total?: number;
 }
 
 interface UseRegWatchScanResult {
@@ -161,37 +155,23 @@ export function useRegWatchScan(): UseRegWatchScanResult {
 
       // Try to trigger actual scrape (may fail for non-admin)
       try {
-        await fetch(`${API_BASE}/api/v1/regwatch/scrape`, {
-          method: 'POST',
-          signal: controller.signal,
-          headers: {
-            'Authorization': token,
-            'Content-Type': 'application/json',
-          },
-        });
+        await api.post('/api/v1/regwatch/scrape', null, { signal: controller.signal });
       } catch {
         // Scrape endpoint requires admin - this is expected to fail for regular users
         console.info('[useRegWatchScan] Scrape endpoint requires admin, fetching cached results');
       }
 
       // Fetch latest events from status endpoint (always works)
-      const statusResponse = await fetch(`${API_BASE}/api/v1/regwatch/status`, {
-        signal: controller.signal,
-        headers: {
-          'Authorization': token,
-          'Content-Type': 'application/json',
-        },
-      });
+      const statusResult = await api.get<ApiStatusResponse>('/api/v1/regwatch/status', { signal: controller.signal });
 
       if (controller.signal.aborted) return;
       setScanProgress(95);
 
-      if (!statusResponse.ok) {
-        throw new Error(`HTTP ${statusResponse.status}`);
+      if (!statusResult.ok || !statusResult.data) {
+        throw new Error(statusResult.error || 'Status API failed');
       }
 
-      const statusData: ApiStatusResponse = await statusResponse.json();
-      const items = statusData.data?.items || [];
+      const items = statusResult.data?.items || [];
 
       if (items.length > 0) {
         // Map API events to ScanResult format
@@ -200,17 +180,10 @@ export function useRegWatchScan(): UseRegWatchScanResult {
         setError(null);
       } else {
         // No items from API, try pending endpoint
-        const pendingResponse = await fetch(`${API_BASE}/api/v1/regwatch/pending`, {
-          signal: controller.signal,
-          headers: {
-            'Authorization': token,
-            'Content-Type': 'application/json',
-          },
-        });
+        const pendingResult = await api.get<ApiPendingResponse>('/api/v1/regwatch/pending', { signal: controller.signal });
 
-        if (pendingResponse.ok) {
-          const pendingData: ApiPendingResponse = await pendingResponse.json();
-          const pendingEvents = pendingData.data?.pending_events || [];
+        if (pendingResult.ok && pendingResult.data) {
+          const pendingEvents = pendingResult.data?.pending_events || [];
           if (pendingEvents.length > 0) {
             const results = pendingEvents.slice(0, 10).map(mapApiEventToScanResult);
             setScanResults(results);

@@ -5,13 +5,15 @@ LYNTOS Checklist Persistence API
 Kontrol listelerinin client_id + period_id bazında kalıcı saklanması.
 """
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime
 import logging
 
 from database.db import get_connection
+from middleware.auth import verify_token, check_client_access
+from utils.period_utils import get_period_db
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/checklists", tags=["Checklists"])
@@ -29,9 +31,11 @@ class ToggleRequest(BaseModel):
 async def get_progress(
     checklist_id: str,
     client_id: str = Query(...),
-    period_id: str = Query(...)
+    period_id: str = Depends(get_period_db),
+    user: dict = Depends(verify_token)
 ):
     """Belirli bir checklist'in ilerleme durumunu getir"""
+    await check_client_access(user, client_id)
     try:
         with get_connection() as conn:
             cursor = conn.cursor()
@@ -54,8 +58,9 @@ async def get_progress(
 
 
 @router.put("/{checklist_id}/toggle")
-async def toggle_item(checklist_id: str, req: ToggleRequest):
+async def toggle_item(checklist_id: str, req: ToggleRequest, user: dict = Depends(verify_token)):
     """Tek bir öğeyi toggle et"""
+    await check_client_access(user, req.client_id)
     try:
         now = datetime.now().isoformat()
         with get_connection() as conn:
@@ -84,9 +89,11 @@ async def toggle_item(checklist_id: str, req: ToggleRequest):
 @router.get("/summary")
 async def get_summary(
     client_id: str = Query(...),
-    period_id: str = Query(...)
+    period_id: str = Depends(get_period_db),
+    user: dict = Depends(verify_token)
 ):
     """Tüm checklist'lerin özet durumunu getir"""
+    await check_client_access(user, client_id)
     try:
         with get_connection() as conn:
             cursor = conn.cursor()

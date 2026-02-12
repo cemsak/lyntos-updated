@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Trash2, FileText, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { useDashboardScope } from '../scope/useDashboardScope';
 import { API_ENDPOINTS } from '../../_lib/config/api';
-import { getAuthToken } from '../../_lib/auth';
+import { api } from '../../_lib/api/client';
 import { useToast } from '../shared/Toast';
 import { PIPELINE_COMPLETE_EVENT } from './useDonemVerileriV2';
 
@@ -53,16 +53,12 @@ export function UploadedFilesList({ filterDocType, onFileDeleted }: UploadedFile
 
     try {
       const url = API_ENDPOINTS.ingest.files(scope.client_id, scope.period);
-      const token = getAuthToken();
-      const resp = await fetch(url, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
+      const { data, error: apiError } = await api.get<UploadedFilesResponse>(url);
 
-      if (!resp.ok) {
-        throw new Error(`Dosya listesi alınamadı: ${resp.status}`);
+      if (apiError || !data) {
+        throw new Error(apiError || 'Dosya listesi alınamadı');
       }
 
-      const data: UploadedFilesResponse = await resp.json();
       setFiles(data.files || []);
       setSummary(data.summary || null);
     } catch (e) {
@@ -87,15 +83,10 @@ export function UploadedFilesList({ filterDocType, onFileDeleted }: UploadedFile
 
     try {
       const url = API_ENDPOINTS.ingest.deleteFile(fileId);
-      const token = getAuthToken();
-      const resp = await fetch(url, {
-        method: 'DELETE',
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
+      const { error: apiError } = await api.delete(url);
 
-      if (!resp.ok) {
-        const errData = await resp.json().catch(() => ({}));
-        throw new Error(errData.detail || `Silme hatası: ${resp.status}`);
+      if (apiError) {
+        throw new Error(apiError);
       }
 
       showToast('success', `${filename} silindi`);

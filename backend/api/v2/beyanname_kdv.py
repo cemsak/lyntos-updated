@@ -6,11 +6,11 @@ Mizan ile çapraz kontrol yapar ve risk sinyalleri üretir.
 
 Mevzuat: KDVK Md. 29 (indirim), KDVK Md. 33 (indirilemeyenler)
 TDHP: 191 İndirilecek KDV, 391 Hesaplanan KDV, 600 Yurt İçi Satışlar
-
-NO AUTH REQUIRED - Frontend'den doğrudan erişilebilir.
 """
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
+from middleware.auth import verify_token, check_client_access
+from utils.period_utils import get_period_db
 from pydantic import BaseModel
 from typing import List, Optional
 import logging
@@ -397,8 +397,8 @@ def _capraz_kontrol_yap(
 @router.get("/kdv", response_model=KDVRiskResponse)
 async def get_kdv_risk_kontrol(
     client_id: str = Query(..., description="Müşteri ID"),
-    period_id: str = Query(..., description="Dönem ID (örn: 2025-Q1)"),
-    tenant_id: str = Query("default", description="Tenant ID")
+    period_id: str = Depends(get_period_db),
+    user: dict = Depends(verify_token)
 ):
     """
     KDV Beyanname Risk Kontrol
@@ -409,6 +409,7 @@ async def get_kdv_risk_kontrol(
     - Dönemler arası devreden tutarlılığı
     - Efektif KDV oran kontrolü
     """
+    await check_client_access(user, client_id)
     try:
         with get_connection() as conn:
             cursor = conn.cursor()

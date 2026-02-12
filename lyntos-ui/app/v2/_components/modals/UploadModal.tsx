@@ -4,7 +4,8 @@ import { X } from 'lucide-react';
 import { BELGE_TANIMLARI } from '../donem-verileri/types';
 import { useToast } from '../shared/Toast';
 import { useDashboardScope } from '../scope/useDashboardScope';
-import { API_BASE_URL, API_ENDPOINTS } from '../../_lib/config/api';
+import { API_ENDPOINTS } from '../../_lib/config/api';
+import { api } from '../../_lib/api/client';
 import { PIPELINE_COMPLETE_EVENT } from '../donem-verileri/useDonemVerileriV2';
 
 import type { IngestResult, PipelineStatus, PipelinePhase, UploadModalProps } from './uploadModalTypes';
@@ -77,10 +78,8 @@ export function UploadModal({
     const poll = async () => {
       try {
         const url = API_ENDPOINTS.ingest.pipelineStatus(sessionId);
-        const resp = await fetch(url);
-        if (!resp.ok) return;
-
-        const data: PipelineStatus = await resp.json();
+        const { data, error: apiError } = await api.get<PipelineStatus>(url);
+        if (apiError || !data) return;
 
         const status = data.pipeline_status as PipelinePhase;
         setPipelinePhase(status);
@@ -165,31 +164,32 @@ export function UploadModal({
 
       setPipelinePhase('parsing');
 
-      // Backend'e gönder
-      const response = await fetch(API_ENDPOINTS.ingest.upload, {
-        method: 'POST',
-        body: formData,
-      });
+      // Backend'e gönder (FormData — api.post handles auth automatically)
+      const { data: result, error: uploadApiError, status: uploadStatus } = await api.post<IngestResult>(
+        API_ENDPOINTS.ingest.upload,
+        formData,
+        { timeout: 120_000 }
+      );
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        // Dönem uyuşmazlığı hatası — detaylı mesaj göster
-        if (response.status === 400 && errorData.detail?.period_errors) {
-          const detail = errorData.detail;
-          const periodFiles = (detail.period_errors as Array<{filename: string; detected_period: string}>)
-            .map((pe: {filename: string; detected_period: string}) => `${pe.filename} → ${pe.detected_period}`)
-            .join(', ');
-          throw new Error(
-            `Dönem uyuşmazlığı: ${detail.message || ''} [${periodFiles}]`
-          );
+      if (uploadApiError || !result) {
+        // Try to parse structured error from api client error message
+        if (uploadStatus === 400 && uploadApiError) {
+          try {
+            const errorData = JSON.parse(uploadApiError);
+            if (errorData.period_errors) {
+              const periodFiles = (errorData.period_errors as Array<{filename: string; detected_period: string}>)
+                .map((pe: {filename: string; detected_period: string}) => `${pe.filename} → ${pe.detected_period}`)
+                .join(', ');
+              throw new Error(
+                `Dönem uyuşmazlığı: ${errorData.message || ''} [${periodFiles}]`
+              );
+            }
+          } catch (parseErr) {
+            if (parseErr instanceof Error && parseErr.message.startsWith('Dönem')) throw parseErr;
+          }
         }
-        const msg = typeof errorData.detail === 'string'
-          ? errorData.detail
-          : errorData.detail?.message || `Sunucu hatası: ${response.status}`;
-        throw new Error(msg);
+        throw new Error(uploadApiError || `Sunucu hatası: ${uploadStatus}`);
       }
-
-      const result: IngestResult = await response.json();
 
       setIngestResult(result);
       setUploading(false);

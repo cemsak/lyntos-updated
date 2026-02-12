@@ -5,6 +5,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { api } from '../api/client';
 
 // ═══════════════════════════════════════════════════════════════════
 // TİP TANIMLARI
@@ -189,9 +190,10 @@ export const useOranlarStore = create<OranlarState>()(
       fetchTcmbOranlar: async () => {
         set({ guncellemeDurumu: 'updating' });
         try {
-          const response = await fetch('/api/tcmb?tip=oranlar');
-          if (!response.ok) throw new Error('TCMB API hatası');
-          const data = await response.json();
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const res = await api.get<any>('/api/tcmb', { params: { tip: 'oranlar' } });
+          if (!res.ok) throw new Error('TCMB API hatası');
+          const data = res.data;
 
           if (data.success && data.faizOranlari) {
             set({
@@ -215,9 +217,10 @@ export const useOranlarStore = create<OranlarState>()(
         set({ guncellemeDurumu: 'updating' });
         try {
           const targetDate = tarih || new Date().toISOString().split('T')[0];
-          const response = await fetch(`/api/tcmb?tip=kurlar&tarih=${targetDate}`);
-          if (!response.ok) throw new Error('TCMB Kur API hatası');
-          const data = await response.json();
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const res = await api.get<any>('/api/tcmb', { params: { tip: 'kurlar', tarih: targetDate } });
+          if (!res.ok) throw new Error('TCMB Kur API hatası');
+          const data = res.data;
 
           if (data.success && data.kurlar) {
             set({

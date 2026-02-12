@@ -7,8 +7,10 @@
  * - Fis gruplari: "00001-----00001-----" pattern ile ayrilir
  */
 
-import * as XLSX from 'xlsx';
+// P-6: xlsx dynamic import (~100KB bundle azaltma)
 import type { ParsedYevmiye, YevmiyeKayit, YevmiyeSatir, DetectedFile } from '../types';
+
+type XLSX = typeof import('xlsx');
 
 interface YevmiyeHeaderMapping {
   hesapKodu: number;
@@ -32,17 +34,17 @@ const YEVMIYE_HEADER_VARIANTS = {
   fisNo: ['FIS NO', 'FİŞ NO', 'Fis No', 'MADDE NO']
 };
 
-function findYevmiyeHeader(sheet: XLSX.WorkSheet): { row: number; mapping: YevmiyeHeaderMapping } | null {
+function findYevmiyeHeader(xl: XLSX, sheet: import('xlsx').WorkSheet): { row: number; mapping: YevmiyeHeaderMapping } | null {
   const ref = sheet['!ref'];
   if (!ref) return null;
 
-  const range = XLSX.utils.decode_range(ref);
+  const range = xl.utils.decode_range(ref);
 
   for (let r = 0; r <= Math.min(10, range.e.r); r++) {
     const mapping: Partial<YevmiyeHeaderMapping> = {};
 
     for (let c = range.s.c; c <= range.e.c; c++) {
-      const cellAddr = XLSX.utils.encode_cell({ r, c });
+      const cellAddr = xl.utils.encode_cell({ r, c });
       const cell = sheet[cellAddr];
       if (!cell || !cell.v) continue;
 
@@ -116,7 +118,10 @@ export async function parseYevmiye(file: DetectedFile): Promise<ParsedYevmiye> {
     throw new Error('Dosya icerigi bulunamadi');
   }
 
-  const workbook = XLSX.read(file.rawContent, { type: 'array' });
+  // P-6: Dynamic import — sadece parse sırasında yüklenir (~100KB tasarruf)
+  const xl = await import('xlsx');
+
+  const workbook = xl.read(file.rawContent, { type: 'array' });
 
   // Sheet bul
   let sheetName = workbook.SheetNames.find(
@@ -131,7 +136,7 @@ export async function parseYevmiye(file: DetectedFile): Promise<ParsedYevmiye> {
     throw new Error(`Sheet "${sheetName}" okunamadi`);
   }
 
-  const headerInfo = findYevmiyeHeader(sheet);
+  const headerInfo = findYevmiyeHeader(xl, sheet);
   if (!headerInfo) {
     throw new Error('Yevmiye header satiri bulunamadi');
   }
@@ -141,14 +146,14 @@ export async function parseYevmiye(file: DetectedFile): Promise<ParsedYevmiye> {
   if (!ref) {
     throw new Error('Sheet referansi bulunamadi');
   }
-  const range = XLSX.utils.decode_range(ref);
+  const range = xl.utils.decode_range(ref);
 
   // Tum satirlari oku
   const allRows: { data: string[]; rowNum: number }[] = [];
   for (let r = headerRow + 1; r <= range.e.r; r++) {
     const rowData: string[] = [];
     for (let c = range.s.c; c <= range.e.c; c++) {
-      const cell = sheet[XLSX.utils.encode_cell({ r, c })];
+      const cell = sheet[xl.utils.encode_cell({ r, c })];
       rowData.push(cell?.v !== undefined ? String(cell.v) : '');
     }
     allRows.push({ data: rowData, rowNum: r });

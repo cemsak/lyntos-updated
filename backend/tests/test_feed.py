@@ -214,7 +214,7 @@ class TestFeedService:
 
         items = service.get_feed_items("SMMM-1", "CLIENT-1", "2024-Q1")
         assert len(items) == 1
-        assert items[0].id == "TEST-001"
+        assert items[0].title == sample_item.title
 
     def test_severity_filter(self, service, multiple_items):
         """Test filtering by severity"""

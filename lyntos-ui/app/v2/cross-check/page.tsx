@@ -15,8 +15,7 @@ import { RefreshCw, AlertCircle, FileText } from 'lucide-react';
 import { useDashboardScope } from '../_components/scope/ScopeProvider';
 import { ScopeGuide } from '../_components/shared/ScopeGuide';
 import { DataFreshness } from '../_components/shared/DataFreshness';
-import { API_BASE_URL } from '../_lib/config/api';
-import { getAuthToken } from '../_lib/auth';
+import { api } from '../_lib/api/client';
 
 // Types
 import type { FullReportResponse, OpeningBalanceStatus, FilterType, TabType } from './_types';
@@ -56,32 +55,22 @@ export default function CrossCheckPage() {
       });
 
       // Defter kontrol ve açılış bakiyesi verilerini paralel çek
-      const token = getAuthToken();
-      const authHeaders = {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      };
-
-      const [crossCheckResponse, openingBalanceResponse] = await Promise.all([
-        fetch(`${API_BASE_URL}/api/v2/defter-kontrol/full?${params}`, { headers: authHeaders }),
-        fetch(`${API_BASE_URL}/api/v2/opening-balance/${clientId}/${periodId}/status`, { headers: authHeaders }).catch(() => null)
+      const [crossCheckResult, obResult] = await Promise.all([
+        api.get<FullReportResponse>(`/api/v2/defter-kontrol/full?${params}`),
+        api.get<OpeningBalanceStatus>(`/api/v2/opening-balance/${clientId}/${periodId}/status`).catch(() => ({ data: null, error: null, ok: false, status: 0 }))
       ]);
 
-      if (crossCheckResponse.ok) {
-        const result = await crossCheckResponse.json();
-        setData(result);
+      if (crossCheckResult.ok && crossCheckResult.data) {
+        setData(crossCheckResult.data);
         setLastFetchedAt(new Date().toISOString());
       } else {
-        const errData = await crossCheckResponse.json().catch(() => ({}));
-        setError(errData.detail || 'Veri yüklenirken hata oluştu');
+        setError(crossCheckResult.error || 'Veri yüklenirken hata oluştu');
       }
 
       // Açılış bakiyesi durumu
-      if (openingBalanceResponse?.ok) {
-        const obResult = await openingBalanceResponse.json();
-        setOpeningBalance(obResult);
+      if (obResult.ok && obResult.data) {
+        setOpeningBalance(obResult.data);
       } else {
-        // API yoksa veya hata varsa varsayılan "yüklenmedi" durumu
         setOpeningBalance({
           has_data: false,
           status: 'missing',

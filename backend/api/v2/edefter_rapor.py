@@ -1,11 +1,11 @@
 """
 LYNTOS API v2 - E-Defter Rapor Endpoint
 E-Defter entries tablosundan özet rapor oluşturur.
-
-NO AUTH REQUIRED - Frontend'den doğrudan erişilebilir.
 """
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
+from middleware.auth import verify_token, check_client_access
+from utils.period_utils import get_period_db, get_period_db_optional
 from typing import Optional
 import logging
 
@@ -23,8 +23,8 @@ router = APIRouter(prefix="/api/v2/edefter", tags=["edefter"])
 @router.get("/rapor")
 async def get_edefter_rapor(
     client_id: str = Query(..., description="Müşteri ID"),
-    period_id: str = Query(None, description="Dönem ID (örn: 2025-Q1)"),
-    tenant_id: str = Query("default", description="Tenant ID")
+    period_id: Optional[str] = Depends(get_period_db_optional),
+    user: dict = Depends(verify_token)
 ):
     """
     E-Defter Raporu - edefter_entries tablosundan özet bilgiler.
@@ -35,6 +35,7 @@ async def get_edefter_rapor(
     - Toplam borç/alacak tutarları
     - Hesap bazlı özet
     """
+    await check_client_access(user, client_id)
     try:
         with get_connection() as conn:
             cursor = conn.cursor()
@@ -125,15 +126,17 @@ async def get_edefter_rapor(
 @router.get("/detay")
 async def get_edefter_detay(
     client_id: str = Query(..., description="Müşteri ID"),
-    period_id: str = Query(..., description="Dönem ID"),
+    period_id: str = Depends(get_period_db),
     fis_no: str = Query(None, description="Fiş No filtresi"),
     hesap_kodu: str = Query(None, description="Hesap kodu filtresi"),
     limit: int = Query(100, description="Maksimum kayıt sayısı"),
-    offset: int = Query(0, description="Başlangıç offset")
+    offset: int = Query(0, description="Başlangıç offset"),
+    user: dict = Depends(verify_token)
 ):
     """
     E-Defter Detay - Fiş bazlı detaylı kayıtlar.
     """
+    await check_client_access(user, client_id)
     try:
         with get_connection() as conn:
             cursor = conn.cursor()
@@ -206,7 +209,8 @@ async def health_check():
 @router.get("/durum")
 async def get_edefter_durum(
     client_id: str = Query(..., description="Müşteri ID"),
-    period_id: str = Query(..., description="Dönem ID (örn: 2025-Q1)")
+    period_id: str = Depends(get_period_db),
+    user: dict = Depends(verify_token)
 ):
     """
     E-Defter Durum - Yevmiye ve Kebir yüklenmiş mi kontrol et.
@@ -222,6 +226,7 @@ async def get_edefter_durum(
         yevmiye_satir: int - Yevmiye satır sayısı
         kebir_satir: int - Kebir satır sayısı
     """
+    await check_client_access(user, client_id)
     try:
         with get_connection() as conn:
             cursor = conn.cursor()

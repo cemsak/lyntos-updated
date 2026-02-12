@@ -5,7 +5,7 @@ Receives parsed period data from frontend and persists to document_uploads table
 Sprint 2.1: Frontend -> Backend Data Sync
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any, List
 from datetime import datetime
@@ -22,6 +22,8 @@ if str(backend_path) not in sys.path:
     sys.path.insert(0, str(backend_path))
 
 from database.db import get_connection
+from middleware.auth import verify_token, check_client_access
+from utils.period_utils import normalize_period_db
 
 logger = logging.getLogger(__name__)
 
@@ -265,7 +267,7 @@ def generate_content_hash(file_id: str, filename: str, file_type: str) -> str:
 # ============================================================================
 
 @router.post("/sync", response_model=DonemSyncResponse)
-async def sync_donem_data(request: DonemSyncRequest):
+async def sync_donem_data(request: DonemSyncRequest, user: dict = Depends(verify_token)):
     """
     Sync parsed dönem data from frontend to database.
 
@@ -276,6 +278,10 @@ async def sync_donem_data(request: DonemSyncRequest):
 
     NO DUMMY DATA: If required fields are missing, returns fail-soft response.
     """
+
+    # Override tenantId with authenticated user's ID
+    smmm_id = user["id"]
+    request.tenantId = smmm_id
 
     results: List[SyncResultItem] = []
     errors: List[str] = []
@@ -303,6 +309,8 @@ async def sync_donem_data(request: DonemSyncRequest):
             results=[],
             errors=["Missing required field: meta.period"]
         )
+
+    await check_client_access(user, request.meta.clientId)
 
     if not request.fileSummaries:
         return DonemSyncResponse(
@@ -492,15 +500,20 @@ async def sync_donem_data(request: DonemSyncRequest):
 @router.get("/status/{period}")
 async def get_donem_status(
     period: str,
-    tenant_id: str = "default",
-    client_id: str = ""
+    client_id: str = "",
+    user: dict = Depends(verify_token)
 ):
     """
     Get sync status for a specific period.
     Useful for frontend to check what's already synced.
     """
+    smmm_id = user["id"]
+    period = normalize_period_db(period)  # M-02: 2025-Q1 → 2025_Q1
+
     if not client_id:
         raise HTTPException(status_code=400, detail="client_id query parameter required")
+
+    await check_client_access(user, client_id)
 
     try:
         with get_connection() as conn:
@@ -514,7 +527,7 @@ async def get_donem_status(
                 WHERE tenant_id = ? AND client_id = ? AND period_id = ?
                   AND is_active = 1
                 ORDER BY updated_at DESC
-            """, (tenant_id, client_id, period))
+            """, (smmm_id, client_id, period))
 
             rows = cursor.fetchall()
 
@@ -535,7 +548,7 @@ async def get_donem_status(
 
             return {
                 "periodId": period,
-                "tenantId": tenant_id,
+                "tenantId": smmm_id,
                 "clientId": client_id,
                 "totalCount": len(rows),
                 "byDocType": by_type,
@@ -549,15 +562,20 @@ async def get_donem_status(
 @router.delete("/clear/{period}")
 async def clear_donem_data(
     period: str,
-    tenant_id: str = "default",
-    client_id: str = ""
+    client_id: str = "",
+    user: dict = Depends(verify_token)
 ):
     """
     Clear all synced data for a specific period (soft delete).
     Sets is_active = 0 instead of deleting records.
     """
+    smmm_id = user["id"]
+    period = normalize_period_db(period)  # M-02: 2025-Q1 → 2025_Q1
+
     if not client_id:
         raise HTTPException(status_code=400, detail="client_id query parameter required")
+
+    await check_client_access(user, client_id)
 
     try:
         with get_connection() as conn:
@@ -568,7 +586,7 @@ async def clear_donem_data(
                 SET is_active = 0, updated_at = ?
                 WHERE tenant_id = ? AND client_id = ? AND period_id = ?
                   AND is_active = 1
-            """, (datetime.utcnow().isoformat(), tenant_id, client_id, period))
+            """, (datetime.utcnow().isoformat(), smmm_id, client_id, period))
 
             affected = cursor.rowcount
             conn.commit()

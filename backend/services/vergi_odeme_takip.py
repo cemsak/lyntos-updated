@@ -200,7 +200,7 @@ class VergiOdemeTakipServisi:
             elif '-' in vade_str:
                 parts = vade_str.split('-')
                 return date(int(parts[0]), int(parts[1]), int(parts[2]))
-        except:
+        except (ValueError, IndexError):
             return None
         return None
 
@@ -325,7 +325,7 @@ class VergiOdemeTakipServisi:
                 odeme_tarihi_str = eslesen_islem['islem_tarihi']
                 try:
                     odeme_tarihi = datetime.strptime(odeme_tarihi_str, '%Y-%m-%d').date()
-                except:
+                except (ValueError, TypeError):
                     odeme_tarihi = None
 
                 # Gecikme hesapla

@@ -474,7 +474,7 @@ JSON formatında yanıtla: {{"passed": true/false, "issues": [...]}}"""
                 try:
                     ai_check = json.loads(response.content)
                     checks["ai_review"] = ai_check
-                except:
+                except (json.JSONDecodeError, TypeError):
                     pass
 
         checks["overall_passed"] = checks["has_output"] and checks["no_failures"]

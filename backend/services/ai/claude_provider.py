@@ -8,6 +8,8 @@ import time
 import logging
 from typing import Optional
 
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+
 try:
     import anthropic
     ANTHROPIC_AVAILABLE = True
@@ -35,7 +37,7 @@ class ClaudeProvider(BaseAIProvider):
         self.client = None
 
         if self.is_available():
-            self.client = anthropic.Anthropic(api_key=self.api_key)
+            self.client = anthropic.Anthropic(api_key=self.api_key, timeout=30.0)
             logger.info(f"Claude provider initialized with model: {self.model_name}")
         else:
             logger.warning("Claude provider not available - API key missing")
@@ -43,6 +45,16 @@ class ClaudeProvider(BaseAIProvider):
     def is_available(self) -> bool:
         """Check if Claude is available"""
         return ANTHROPIC_AVAILABLE and bool(self.api_key)
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=1, max=10),
+        retry=retry_if_exception_type((anthropic.APIConnectionError, anthropic.RateLimitError, anthropic.InternalServerError)) if ANTHROPIC_AVAILABLE else retry_if_exception_type(Exception),
+        reraise=True,
+    )
+    def _call_api(self, **kwargs):
+        """Retry-wrapped API call"""
+        return self.client.messages.create(**kwargs)
 
     async def generate(self, request: AIRequest) -> AIResponse:
         """Generate response using Claude"""
@@ -76,8 +88,8 @@ class ClaudeProvider(BaseAIProvider):
             if request.task_type:
                 system = f"[Task Type: {request.task_type.value}]\n\n{system}"
 
-            # Make API call
-            response = self.client.messages.create(
+            # Make API call with retry
+            response = self._call_api(
                 model=self.model_name,
                 max_tokens=request.max_tokens,
                 system=system if system else None,

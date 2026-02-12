@@ -11,6 +11,7 @@
 import React, { useState, useMemo } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { formatCurrency as formatCurrencyCentral } from '../../_lib/format';
+import { api } from '../../_lib/api/client';
 import type { BaseFinancialData, WhatIfAnalysisProps } from './whatIfTypes';
 import { TAX_RATES_2025 } from './whatIfTypes';
 import { WHAT_IF_SCENARIOS } from './whatIfScenarios';
@@ -28,21 +29,25 @@ export function WhatIfAnalysis({ baseData, clientId, period, onScenarioSelect }:
     if (!clientId || !period) return;
     let cancelled = false;
     setMizanLoading(true);
-    fetch(`/api/v1/vergus/analyze?client_id=${clientId}&period=${period}`)
-      .then(res => res.ok ? res.json() : null)
-      .then(data => {
-        if (cancelled || !data) return;
-        const summary = data.summary || {};
-        const profile = data.profile || {};
+    api.get<{ summary?: Record<string, unknown>; profile?: Record<string, unknown> }>(
+      '/api/v1/vergus/analyze',
+      { params: { client_id: clientId, period } }
+    )
+      .then(({ data: respData }) => {
+        if (cancelled || !respData) return;
+        const summary = (respData.summary || {}) as Record<string, unknown>;
+        const profile = (respData.profile || {}) as Record<string, unknown>;
+        const asgariKv = summary.asgari_kv_kontrolu as Record<string, number> | undefined;
+        const maliProfil = (summary.mali_profil || {}) as Record<string, number>;
         setMizanData({
-          kvMatrahi: summary.asgari_kv_kontrolu?.hesaplanan_kv
-            ? (summary.asgari_kv_kontrolu.hesaplanan_kv / (summary.kv_orani || 0.25))
+          kvMatrahi: asgariKv?.hesaplanan_kv
+            ? (asgariKv.hesaplanan_kv / ((summary.kv_orani as number) || 0.25))
             : 0,
-          toplamHasilat: data.summary?.mali_profil?.toplam_hasilat || 0,
-          ihracatHasilati: data.summary?.mali_profil?.ihracat_hasilat || 0,
-          personelSayisi: profile.personel_sayisi || 0,
+          toplamHasilat: maliProfil.toplam_hasilat || 0,
+          ihracatHasilati: maliProfil.ihracat_hasilat || 0,
+          personelSayisi: (profile.personel_sayisi as number) || 0,
           argePersonel: 0,
-          kvOrani: summary.kv_orani || TAX_RATES_2025.kv,
+          kvOrani: (summary.kv_orani as number) || TAX_RATES_2025.kv,
         });
       })
       .catch(() => {})

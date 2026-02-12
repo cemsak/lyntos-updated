@@ -20,20 +20,11 @@ import json
 import sqlite3
 import logging
 from datetime import datetime
-from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
-# Database path
-DB_PATH = Path(__file__).parent.parent / "database" / "lyntos.db"
-
-
-def get_connection() -> sqlite3.Connection:
-    """Veritabanı bağlantısı"""
-    conn = sqlite3.connect(str(DB_PATH))
-    conn.row_factory = sqlite3.Row
-    return conn
+from database.db import get_connection
 
 
 class RuleManager:
@@ -54,8 +45,7 @@ class RuleManager:
         offset: int = 0
     ) -> Tuple[List[Dict[str, Any]], int]:
         """Tüm kuralları getir (filtreli)"""
-        conn = get_connection()
-        try:
+        with get_connection() as conn:
             cursor = conn.cursor()
 
             # Base query
@@ -119,14 +109,10 @@ class RuleManager:
 
             return rules, total
 
-        finally:
-            conn.close()
-
     @staticmethod
     def get_rule_by_id(rule_id: str) -> Optional[Dict[str, Any]]:
         """Tek bir kuralı getir"""
-        conn = get_connection()
-        try:
+        with get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT * FROM rules WHERE rule_id = ?", (rule_id,))
             row = cursor.fetchone()
@@ -148,138 +134,129 @@ class RuleManager:
 
             return rule
 
-        finally:
-            conn.close()
-
     @staticmethod
     def create_rule(rule_data: Dict[str, Any], created_by: str = "system") -> Dict[str, Any]:
         """Yeni kural oluştur"""
-        conn = get_connection()
-        try:
+        with get_connection() as conn:
             cursor = conn.cursor()
+            try:
+                # JSON alanlarını string'e çevir
+                def to_json(val):
+                    if isinstance(val, (list, dict)):
+                        return json.dumps(val, ensure_ascii=False)
+                    return val or '[]' if isinstance(val, list) else '{}'
 
-            # JSON alanlarını string'e çevir
-            def to_json(val):
-                if isinstance(val, (list, dict)):
-                    return json.dumps(val, ensure_ascii=False)
-                return val or '[]' if isinstance(val, list) else '{}'
+                now = datetime.now().isoformat()
 
-            now = datetime.now().isoformat()
-
-            cursor.execute("""
-                INSERT INTO rules (
-                    rule_id, name, name_tr, version, category, priority, severity,
-                    description, algorithm, thresholds, inputs, outputs, accounts,
-                    sector_thresholds, inspector_questions, answer_templates,
-                    required_documents, legal_refs, test_cases, evidence_required,
-                    source_type, source_file, is_active, created_at, updated_at, created_by
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                rule_data.get('rule_id'),
-                rule_data.get('name'),
-                rule_data.get('name_tr', rule_data.get('name')),
-                rule_data.get('version', '1.0.0'),
-                rule_data.get('category', 'UNKNOWN'),
-                rule_data.get('priority', 'MEDIUM').upper(),
-                rule_data.get('severity', 'MEDIUM').upper(),
-                rule_data.get('description', ''),
-                rule_data.get('algorithm', ''),
-                to_json(rule_data.get('thresholds', {})),
-                to_json(rule_data.get('inputs', [])),
-                to_json(rule_data.get('outputs', [])),
-                to_json(rule_data.get('accounts', [])),
-                to_json(rule_data.get('sector_thresholds', {})),
-                to_json(rule_data.get('inspector_questions', [])),
-                to_json(rule_data.get('answer_templates', [])),
-                to_json(rule_data.get('required_documents', [])),
-                to_json(rule_data.get('legal_refs', [])),
-                to_json(rule_data.get('test_cases', [])),
-                to_json(rule_data.get('evidence_required', [])),
-                rule_data.get('source_type', 'db'),
-                rule_data.get('source_file', ''),
-                1,
-                now,
-                now,
-                created_by
-            ))
-
-            conn.commit()
-            return RuleManager.get_rule_by_id(rule_data.get('rule_id'))
-
-        finally:
-            conn.close()
+                cursor.execute("""
+                    INSERT INTO rules (
+                        rule_id, name, name_tr, version, category, priority, severity,
+                        description, algorithm, thresholds, inputs, outputs, accounts,
+                        sector_thresholds, inspector_questions, answer_templates,
+                        required_documents, legal_refs, test_cases, evidence_required,
+                        source_type, source_file, is_active, created_at, updated_at, created_by
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    rule_data.get('rule_id'),
+                    rule_data.get('name'),
+                    rule_data.get('name_tr', rule_data.get('name')),
+                    rule_data.get('version', '1.0.0'),
+                    rule_data.get('category', 'UNKNOWN'),
+                    rule_data.get('priority', 'MEDIUM').upper(),
+                    rule_data.get('severity', 'MEDIUM').upper(),
+                    rule_data.get('description', ''),
+                    rule_data.get('algorithm', ''),
+                    to_json(rule_data.get('thresholds', {})),
+                    to_json(rule_data.get('inputs', [])),
+                    to_json(rule_data.get('outputs', [])),
+                    to_json(rule_data.get('accounts', [])),
+                    to_json(rule_data.get('sector_thresholds', {})),
+                    to_json(rule_data.get('inspector_questions', [])),
+                    to_json(rule_data.get('answer_templates', [])),
+                    to_json(rule_data.get('required_documents', [])),
+                    to_json(rule_data.get('legal_refs', [])),
+                    to_json(rule_data.get('test_cases', [])),
+                    to_json(rule_data.get('evidence_required', [])),
+                    rule_data.get('source_type', 'db'),
+                    rule_data.get('source_file', ''),
+                    1,
+                    now,
+                    now,
+                    created_by
+                ))
+                conn.commit()
+                return RuleManager.get_rule_by_id(rule_data.get('rule_id'))
+            except sqlite3.Error:
+                conn.rollback()
+                raise
 
     @staticmethod
     def update_rule(rule_id: str, updates: Dict[str, Any], updated_by: str = "system") -> Optional[Dict[str, Any]]:
         """Kural güncelle"""
-        conn = get_connection()
-        try:
+        with get_connection() as conn:
             cursor = conn.cursor()
+            try:
+                # Mevcut kuralı kontrol et
+                cursor.execute("SELECT * FROM rules WHERE rule_id = ?", (rule_id,))
+                if not cursor.fetchone():
+                    return None
 
-            # Mevcut kuralı kontrol et
-            cursor.execute("SELECT * FROM rules WHERE rule_id = ?", (rule_id,))
-            if not cursor.fetchone():
-                return None
+                # Güncellenebilir alanlar
+                allowed_fields = [
+                    'name', 'name_tr', 'version', 'category', 'priority', 'severity',
+                    'description', 'algorithm', 'thresholds', 'inputs', 'outputs',
+                    'accounts', 'sector_thresholds', 'inspector_questions',
+                    'answer_templates', 'required_documents', 'legal_refs',
+                    'test_cases', 'evidence_required', 'is_active', 'is_deprecated',
+                    'deprecated_by', 'effective_from', 'effective_until'
+                ]
 
-            # Güncellenebilir alanlar
-            allowed_fields = [
-                'name', 'name_tr', 'version', 'category', 'priority', 'severity',
-                'description', 'algorithm', 'thresholds', 'inputs', 'outputs',
-                'accounts', 'sector_thresholds', 'inspector_questions',
-                'answer_templates', 'required_documents', 'legal_refs',
-                'test_cases', 'evidence_required', 'is_active', 'is_deprecated',
-                'deprecated_by', 'effective_from', 'effective_until'
-            ]
+                set_clauses = []
+                params = []
 
-            set_clauses = []
-            params = []
+                for field in allowed_fields:
+                    if field in updates:
+                        val = updates[field]
+                        if isinstance(val, (list, dict)):
+                            val = json.dumps(val, ensure_ascii=False)
+                        set_clauses.append(f"{field} = ?")
+                        params.append(val)
 
-            for field in allowed_fields:
-                if field in updates:
-                    val = updates[field]
-                    if isinstance(val, (list, dict)):
-                        val = json.dumps(val, ensure_ascii=False)
-                    set_clauses.append(f"{field} = ?")
-                    params.append(val)
+                if not set_clauses:
+                    return RuleManager.get_rule_by_id(rule_id)
 
-            if not set_clauses:
+                set_clauses.append("updated_at = ?")
+                params.append(datetime.now().isoformat())
+
+                set_clauses.append("updated_by = ?")
+                params.append(updated_by)
+
+                params.append(rule_id)
+
+                query = f"UPDATE rules SET {', '.join(set_clauses)} WHERE rule_id = ?"
+                cursor.execute(query, params)
+                conn.commit()
                 return RuleManager.get_rule_by_id(rule_id)
-
-            set_clauses.append("updated_at = ?")
-            params.append(datetime.now().isoformat())
-
-            set_clauses.append("updated_by = ?")
-            params.append(updated_by)
-
-            params.append(rule_id)
-
-            query = f"UPDATE rules SET {', '.join(set_clauses)} WHERE rule_id = ?"
-            cursor.execute(query, params)
-            conn.commit()
-
-            return RuleManager.get_rule_by_id(rule_id)
-
-        finally:
-            conn.close()
+            except sqlite3.Error:
+                conn.rollback()
+                raise
 
     @staticmethod
     def deprecate_rule(rule_id: str, deprecated_by: str = None, reason: str = None) -> bool:
         """Kuralı deprecated yap (silme yerine)"""
-        conn = get_connection()
-        try:
+        with get_connection() as conn:
             cursor = conn.cursor()
-
-            cursor.execute("""
-                UPDATE rules
-                SET is_deprecated = 1, deprecated_by = ?, updated_at = ?
-                WHERE rule_id = ?
-            """, (deprecated_by, datetime.now().isoformat(), rule_id))
-
-            conn.commit()
-            return cursor.rowcount > 0
-
-        finally:
-            conn.close()
+            try:
+                cursor.execute("""
+                    UPDATE rules
+                    SET is_deprecated = 1, deprecated_by = ?, updated_at = ?
+                    WHERE rule_id = ?
+                """, (deprecated_by, datetime.now().isoformat(), rule_id))
+                conn.commit()
+                return cursor.rowcount > 0
+            except sqlite3.Error:
+                conn.rollback()
+                raise
 
     # ═══════════════════════════════════════════════════════════
     # KATEGORİ VE İSTATİSTİK
@@ -288,8 +265,7 @@ class RuleManager:
     @staticmethod
     def get_categories() -> List[Dict[str, Any]]:
         """Kategorileri ve sayılarını getir"""
-        conn = get_connection()
-        try:
+        with get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
                 SELECT category, COUNT(*) as count,
@@ -303,14 +279,11 @@ class RuleManager:
                 ORDER BY count DESC
             """)
             return [dict(row) for row in cursor.fetchall()]
-        finally:
-            conn.close()
 
     @staticmethod
     def get_statistics() -> Dict[str, Any]:
         """Genel istatistikleri getir"""
-        conn = get_connection()
-        try:
+        with get_connection() as conn:
             cursor = conn.cursor()
 
             stats = {}
@@ -349,9 +322,6 @@ class RuleManager:
 
             return stats
 
-        finally:
-            conn.close()
-
     # ═══════════════════════════════════════════════════════════
     # DUPLİCATE YÖNETİMİ
     # ═══════════════════════════════════════════════════════════
@@ -359,8 +329,7 @@ class RuleManager:
     @staticmethod
     def get_duplicates(status: str = 'pending') -> List[Dict[str, Any]]:
         """Duplicate kuralları getir"""
-        conn = get_connection()
-        try:
+        with get_connection() as conn:
             cursor = conn.cursor()
 
             query = """
@@ -380,9 +349,6 @@ class RuleManager:
 
             return [dict(row) for row in cursor.fetchall()]
 
-        finally:
-            conn.close()
-
     @staticmethod
     def resolve_duplicate(
         rule_id_1: str,
@@ -391,37 +357,36 @@ class RuleManager:
         resolved_by: str = "system"
     ) -> bool:
         """Duplicate çözümle"""
-        conn = get_connection()
-        try:
+        with get_connection() as conn:
             cursor = conn.cursor()
+            try:
+                now = datetime.now().isoformat()
 
-            now = datetime.now().isoformat()
-
-            # Duplicate kaydını güncelle
-            cursor.execute("""
-                UPDATE rule_duplicates
-                SET resolution = ?, resolved_at = ?, resolved_by = ?
-                WHERE (rule_id_1 = ? AND rule_id_2 = ?)
-                   OR (rule_id_1 = ? AND rule_id_2 = ?)
-            """, (resolution, now, resolved_by, rule_id_1, rule_id_2, rule_id_2, rule_id_1))
-
-            # Eğer deprecate kararı verildiyse
-            if resolution == 'deprecate_1':
+                # Duplicate kaydını güncelle
                 cursor.execute("""
-                    UPDATE rules SET is_deprecated = 1, deprecated_by = ?, updated_at = ?
-                    WHERE rule_id = ?
-                """, (rule_id_2, now, rule_id_1))
-            elif resolution == 'deprecate_2':
-                cursor.execute("""
-                    UPDATE rules SET is_deprecated = 1, deprecated_by = ?, updated_at = ?
-                    WHERE rule_id = ?
-                """, (rule_id_1, now, rule_id_2))
+                    UPDATE rule_duplicates
+                    SET resolution = ?, resolved_at = ?, resolved_by = ?
+                    WHERE (rule_id_1 = ? AND rule_id_2 = ?)
+                       OR (rule_id_1 = ? AND rule_id_2 = ?)
+                """, (resolution, now, resolved_by, rule_id_1, rule_id_2, rule_id_2, rule_id_1))
 
-            conn.commit()
-            return cursor.rowcount > 0
+                # Eğer deprecate kararı verildiyse
+                if resolution == 'deprecate_1':
+                    cursor.execute("""
+                        UPDATE rules SET is_deprecated = 1, deprecated_by = ?, updated_at = ?
+                        WHERE rule_id = ?
+                    """, (rule_id_2, now, rule_id_1))
+                elif resolution == 'deprecate_2':
+                    cursor.execute("""
+                        UPDATE rules SET is_deprecated = 1, deprecated_by = ?, updated_at = ?
+                        WHERE rule_id = ?
+                    """, (rule_id_1, now, rule_id_2))
 
-        finally:
-            conn.close()
+                conn.commit()
+                return cursor.rowcount > 0
+            except sqlite3.Error:
+                conn.rollback()
+                raise
 
     # ═══════════════════════════════════════════════════════════
     # MEVZUAT REFERANS YÖNETİMİ
@@ -430,8 +395,7 @@ class RuleManager:
     @staticmethod
     def get_rule_legal_refs(rule_id: str) -> List[Dict[str, Any]]:
         """Kural için mevzuat referanslarını getir"""
-        conn = get_connection()
-        try:
+        with get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
                 SELECT m.*, l.link_type, l.notes as link_notes
@@ -441,8 +405,6 @@ class RuleManager:
                 ORDER BY l.link_type, m.yururluk_tarih DESC
             """, (rule_id,))
             return [dict(row) for row in cursor.fetchall()]
-        finally:
-            conn.close()
 
     @staticmethod
     def link_rule_to_mevzuat(
@@ -452,20 +414,19 @@ class RuleManager:
         notes: str = None
     ) -> bool:
         """Kuralı mevzuata bağla"""
-        conn = get_connection()
-        try:
+        with get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("""
-                INSERT OR REPLACE INTO rule_mevzuat_link (rule_id, mevzuat_id, link_type, notes)
-                VALUES (?, ?, ?, ?)
-            """, (rule_id, mevzuat_id, link_type, notes))
-            conn.commit()
-            return True
-        except Exception as e:
-            logger.error(f"Error linking rule {rule_id} to mevzuat {mevzuat_id}: {e}")
-            return False
-        finally:
-            conn.close()
+            try:
+                cursor.execute("""
+                    INSERT OR REPLACE INTO rule_mevzuat_link (rule_id, mevzuat_id, link_type, notes)
+                    VALUES (?, ?, ?, ?)
+                """, (rule_id, mevzuat_id, link_type, notes))
+                conn.commit()
+                return True
+            except sqlite3.Error as e:
+                conn.rollback()
+                logger.error(f"Error linking rule {rule_id} to mevzuat {mevzuat_id}: {e}")
+                return False
 
     # ═══════════════════════════════════════════════════════════
     # KURAL ÇALIŞTIRMA LOGLARİ
@@ -483,28 +444,28 @@ class RuleManager:
         triggered_by: str = 'system'
     ) -> int:
         """Kural çalışma sonucunu logla"""
-        conn = get_connection()
-        try:
+        with get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("""
-                INSERT INTO rule_execution_log (
+            try:
+                cursor.execute("""
+                    INSERT INTO rule_execution_log (
+                        rule_id, client_id, period_id, result_status, result_score,
+                        result_data, execution_time_ms, triggered_by
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
                     rule_id, client_id, period_id, result_status, result_score,
-                    result_data, execution_time_ms, triggered_by
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                rule_id, client_id, period_id, result_status, result_score,
-                json.dumps(result_data or {}), execution_time_ms, triggered_by
-            ))
-            conn.commit()
-            return cursor.lastrowid
-        finally:
-            conn.close()
+                    json.dumps(result_data or {}), execution_time_ms, triggered_by
+                ))
+                conn.commit()
+                return cursor.lastrowid
+            except sqlite3.Error:
+                conn.rollback()
+                raise
 
     @staticmethod
     def get_execution_stats(rule_id: str, days: int = 30) -> Dict[str, Any]:
         """Kural çalışma istatistiklerini getir"""
-        conn = get_connection()
-        try:
+        with get_connection() as conn:
             cursor = conn.cursor()
 
             stats = {'rule_id': rule_id}
@@ -537,9 +498,6 @@ class RuleManager:
             stats['avg_execution_time_ms'] = cursor.fetchone()[0]
 
             return stats
-
-        finally:
-            conn.close()
 
 
 # ═══════════════════════════════════════════════════════════

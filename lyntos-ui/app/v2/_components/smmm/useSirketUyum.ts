@@ -15,8 +15,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useDashboardScope, useScopeComplete } from '../scope/ScopeProvider';
-import { getAuthToken } from '../../_lib/auth';
-import { API_BASE_URL } from '../../_lib/config/api';
+import { api } from '../../_lib/api/client';
 
 // Şirket türü
 export type SirketTuru = 'A.Ş.' | 'Ltd.Şti.' | 'Bilinmiyor';
@@ -130,29 +129,18 @@ export function useSirketUyum() {
       setLoading(true);
       setError(null);
 
-      const url = `${API_BASE_URL}/api/v1/tax-certificate/${encodeURIComponent(selectedClient.id)}`;
-
       try {
-        const token = getAuthToken();
-        const headers: Record<string, string> = {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        };
+        const res = await api.get<TaxCertificateResponse['data']>(
+          `/api/v1/tax-certificate/${encodeURIComponent(selectedClient.id)}`
+        );
 
-        if (token) {
-          headers['Authorization'] = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
-        }
-
-        const res = await fetch(url, { headers });
-
-        if (!res.ok) {
+        if (!res.ok || !res.data) {
           console.warn('[SirketUyum] Tax certificate API failed:', res.status, '- using client data only');
           setTaxCertificates([]);
           return;
         }
 
-        const json: TaxCertificateResponse = await res.json();
-        setTaxCertificates(json.data?.certificates || []);
+        setTaxCertificates(res.data?.certificates || []);
       } catch (err) {
         console.warn('[SirketUyum] Tax certificate fetch error - using client data only:', err);
         setTaxCertificates([]);

@@ -3,12 +3,15 @@ LYNTOS API v2 - Mizan (Trial Balance) Sync Endpoint
 Receives parsed mizan data from frontend and persists to mizan_entries table.
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 import sqlite3
 import logging
+
+from middleware.auth import verify_token, check_client_access
+from utils.period_utils import normalize_period_db
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +88,7 @@ def get_db_connection():
 # ============== ENDPOINTS ==============
 
 @router.post("/sync", response_model=MizanSyncResponse)
-async def sync_mizan_data(request: MizanSyncRequest):
+async def sync_mizan_data(request: MizanSyncRequest, user: dict = Depends(verify_token)):
     """
     Sync parsed mizan data from frontend to database.
 
@@ -95,6 +98,10 @@ async def sync_mizan_data(request: MizanSyncRequest):
     3. Inserts all new entries
     4. Returns sync results with totals
     """
+
+    # Override tenant_id with authenticated user's ID
+    smmm_id = user["id"]
+    request.meta.tenant_id = smmm_id
 
     errors: List[str] = []
     synced_count = 0
@@ -112,6 +119,8 @@ async def sync_mizan_data(request: MizanSyncRequest):
             missing_data={"fields": ["tenant_id", "client_id", "period_id"]},
             actions=["Provide valid meta information"]
         )
+
+    await check_client_access(user, request.meta.client_id)
 
     if not request.entries or len(request.entries) == 0:
         return MizanSyncResponse(
@@ -231,11 +240,15 @@ async def sync_mizan_data(request: MizanSyncRequest):
 
 
 @router.get("/summary/{period_id}", response_model=MizanSummary)
-async def get_mizan_summary(period_id: str, tenant_id: str, client_id: str):
+async def get_mizan_summary(period_id: str, client_id: str, user: dict = Depends(verify_token)):
     """
     Get mizan summary for a specific period.
     Includes totals grouped by account type (aktif, pasif, gelir, gider).
     """
+    smmm_id = user["id"]
+    period_id = normalize_period_db(period_id)  # M-02: 2025-Q1 → 2025_Q1
+    await check_client_access(user, client_id)
+
     conn = None
     try:
         conn = get_db_connection()
@@ -252,7 +265,7 @@ async def get_mizan_summary(period_id: str, tenant_id: str, client_id: str):
                 MAX(updated_at) as synced_at
             FROM mizan_entries
             WHERE tenant_id = ? AND client_id = ? AND period_id = ?
-        """, (tenant_id, client_id, period_id))
+        """, (smmm_id, client_id, period_id))
 
         row = cursor.fetchone()
 
@@ -268,7 +281,7 @@ async def get_mizan_summary(period_id: str, tenant_id: str, client_id: str):
             FROM mizan_entries
             WHERE tenant_id = ? AND client_id = ? AND period_id = ?
             GROUP BY SUBSTR(hesap_kodu, 1, 1)
-        """, (tenant_id, client_id, period_id))
+        """, (smmm_id, client_id, period_id))
 
         account_groups = {r["hesap_grubu"]: dict(r) for r in cursor.fetchall()}
 
@@ -305,7 +318,7 @@ async def get_mizan_summary(period_id: str, tenant_id: str, client_id: str):
 
         return MizanSummary(
             period_id=period_id,
-            tenant_id=tenant_id,
+            tenant_id=smmm_id,
             client_id=client_id,
             entry_count=row["entry_count"],
             toplam_borc=row["toplam_borc"] or 0,
@@ -331,8 +344,8 @@ async def get_mizan_summary(period_id: str, tenant_id: str, client_id: str):
 @router.get("/entries/{period_id}")
 async def get_mizan_entries(
     period_id: str,
-    tenant_id: str,
     client_id: str,
+    user: dict = Depends(verify_token),
     hesap_prefix: Optional[str] = None,
     limit: int = 1000,
     offset: int = 0
@@ -341,6 +354,10 @@ async def get_mizan_entries(
     Get mizan entries for a specific period.
     Optionally filter by account code prefix (e.g., "100" for cash accounts).
     """
+    smmm_id = user["id"]
+    period_id = normalize_period_db(period_id)  # M-02
+    await check_client_access(user, client_id)
+
     conn = None
     try:
         conn = get_db_connection()
@@ -351,7 +368,7 @@ async def get_mizan_entries(
             FROM mizan_entries
             WHERE tenant_id = ? AND client_id = ? AND period_id = ?
         """
-        params: List[Any] = [tenant_id, client_id, period_id]
+        params: List[Any] = [smmm_id, client_id, period_id]
 
         if hesap_prefix:
             query += " AND hesap_kodu LIKE ?"
@@ -368,7 +385,7 @@ async def get_mizan_entries(
             SELECT COUNT(*) as total FROM mizan_entries
             WHERE tenant_id = ? AND client_id = ? AND period_id = ?
         """
-        count_params: List[Any] = [tenant_id, client_id, period_id]
+        count_params: List[Any] = [smmm_id, client_id, period_id]
 
         if hesap_prefix:
             count_query += " AND hesap_kodu LIKE ?"
@@ -393,10 +410,14 @@ async def get_mizan_entries(
 
 
 @router.delete("/clear/{period_id}")
-async def clear_mizan_data(period_id: str, tenant_id: str, client_id: str):
+async def clear_mizan_data(period_id: str, client_id: str, user: dict = Depends(verify_token)):
     """
     Delete all mizan entries for a specific period.
     """
+    smmm_id = user["id"]
+    period_id = normalize_period_db(period_id)  # M-02
+    await check_client_access(user, client_id)
+
     conn = None
     try:
         conn = get_db_connection()
@@ -405,7 +426,7 @@ async def clear_mizan_data(period_id: str, tenant_id: str, client_id: str):
         cursor.execute("""
             DELETE FROM mizan_entries
             WHERE tenant_id = ? AND client_id = ? AND period_id = ?
-        """, (tenant_id, client_id, period_id))
+        """, (smmm_id, client_id, period_id))
 
         deleted_count = cursor.rowcount
         conn.commit()

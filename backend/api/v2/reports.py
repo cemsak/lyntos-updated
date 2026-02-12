@@ -5,12 +5,13 @@ LYNTOS Reports API
 Profesyonel PDF rapor üretimi ve yönetimi.
 """
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from typing import Optional
 import logging
 
+from middleware.auth import verify_token, check_client_access
 from services.report_generator import ReportGenerator
 
 logger = logging.getLogger(__name__)
@@ -28,7 +29,7 @@ class GenerateReportRequest(BaseModel):
     format: str = Field(default="pdf", description="Çıktı formatı (pdf)")
     client_id: str = Field(..., description="Müşteri ID")
     period: str = Field(..., description="Dönem (2026-Q1 vb.)")
-    smmm_id: Optional[str] = Field(default="", description="SMMM ID")
+    smmm_id: Optional[str] = Field(default=None, description="Deprecated: token'dan alınır (VT-10)")
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -42,8 +43,10 @@ VALID_REPORT_TYPES = [
 
 
 @router.post("/generate")
-async def generate_report(req: GenerateReportRequest):
+async def generate_report(req: GenerateReportRequest, user: dict = Depends(verify_token)):
     """PDF rapor üret"""
+    await check_client_access(user, req.client_id)
+    smmm_id = user["id"]
     if req.report_type not in VALID_REPORT_TYPES:
         raise HTTPException(
             status_code=400,
@@ -55,7 +58,7 @@ async def generate_report(req: GenerateReportRequest):
             report_type=req.report_type,
             client_id=req.client_id,
             period_id=req.period,
-            smmm_id=req.smmm_id or "",
+            smmm_id=smmm_id,
             report_format=req.format,
         )
         return {"success": True, "data": result}
@@ -68,18 +71,23 @@ async def generate_report(req: GenerateReportRequest):
 async def list_reports(
     client_id: Optional[str] = Query(default=None),
     period: Optional[str] = Query(default=None),
+    limit: int = Query(100, ge=1, le=500, description="Max rapor sayısı (VT-8)"),
+    offset: int = Query(0, ge=0, description="Sayfa offset"),
+    user: dict = Depends(verify_token),
 ):
     """Üretilmiş rapor listesi"""
     try:
         data = generator.list_reports(client_id, period)
-        return {"success": True, "data": data, "count": len(data)}
+        total = len(data)
+        paginated = data[offset:offset + limit]
+        return {"success": True, "data": paginated, "count": len(paginated), "total": total}
     except Exception as e:
         logger.error(f"list_reports error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/download/{report_id}")
-async def download_report(report_id: str):
+async def download_report(report_id: str, user: dict = Depends(verify_token)):
     """Rapor dosyasını indir"""
     file_path = generator.get_report_path(report_id)
     if not file_path:

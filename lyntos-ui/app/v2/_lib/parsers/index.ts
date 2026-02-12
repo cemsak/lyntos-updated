@@ -90,7 +90,7 @@ export async function parseFile(file: DetectedFile) {
 
     // SGK APHB Excel
     case 'SGK_APHB_EXCEL':
-      return { type: 'aphb' as const, data: parseAPHBExcel(file) };
+      return { type: 'aphb' as const, data: await parseAPHBExcel(file) };
 
     // e-Defter (XML)
     case 'E_DEFTER_YEVMIYE_XML':

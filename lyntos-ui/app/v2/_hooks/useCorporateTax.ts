@@ -3,19 +3,7 @@
 import { useState, useCallback } from 'react';
 import { useDashboardScope } from '../_components/scope/ScopeProvider';
 import { ENDPOINTS, buildScopedUrl } from '../_components/contracts/endpoints';
-import { API_BASE_URL } from '../_lib/config/api';
-
-// Get authorization header from session/cookie in production
-function getAuthHeader(smmmId: string): string {
-  // In development, use DEV prefix
-  if (process.env.NODE_ENV === 'development') {
-    return `Bearer DEV_${smmmId}`;
-  }
-  // In production, use proper token from session
-  // TODO: Implement proper token retrieval from auth context
-  const token = typeof window !== 'undefined' ? sessionStorage.getItem('auth_token') : null;
-  return token ? `Bearer ${token}` : '';
-}
+import { api } from '../_lib/api/client';
 
 interface TicariKar {
   donem_kari: number;
@@ -105,19 +93,12 @@ export function useCorporateTax(): UseCorporateTaxResult {
         period: scope.period
       });
 
-      const fullUrl = `${API_BASE_URL}${url}`;
+      const { data: json, error: apiError } = await api.get<{ data: CorporateTaxData }>(url);
 
-      const response = await fetch(fullUrl, {
-        headers: {
-          'Authorization': getAuthHeader(scope.smmm_id)
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`API hatasi: ${response.status}`);
+      if (apiError || !json) {
+        throw new Error(apiError || 'Kurumlar vergisi verisi alinamadi');
       }
 
-      const json = await response.json();
       setData(json.data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Bilinmeyen hata');
@@ -138,19 +119,15 @@ export function useCorporateTax(): UseCorporateTaxResult {
         period: scope.period
       });
 
-      const fullUrl = `${API_BASE_URL}${url}&scenario=${scenario}`;
+      const { data: json, error: apiError } = await api.get<{ data: ForecastData }>(
+        url,
+        { params: { scenario } }
+      );
 
-      const response = await fetch(fullUrl, {
-        headers: {
-          'Authorization': getAuthHeader(scope.smmm_id)
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`Tahmin verisi alinamadi: ${response.status}`);
+      if (apiError || !json) {
+        throw new Error(apiError || 'Tahmin verisi alinamadi');
       }
 
-      const json = await response.json();
       setForecast(json.data);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Tahmin verisi alinamadi';

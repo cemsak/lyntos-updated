@@ -14,7 +14,7 @@ Endpoints:
 - DELETE /api/v2/opening-balance/{client_id}/{period_id}/{fiscal_year} - Sil
 """
 
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends
 from typing import Optional, List
 from pydantic import BaseModel
 import tempfile
@@ -22,6 +22,8 @@ import os
 from datetime import datetime
 
 from services.opening_balance_service import opening_balance_service
+from middleware.auth import verify_token, check_client_access
+from utils.period_utils import normalize_period_db
 
 router = APIRouter(prefix="/opening-balance", tags=["opening-balance"])
 
@@ -92,8 +94,10 @@ class DashboardStatusResponse(BaseModel):
 # ════════════════════════════════════════════════════════════════
 
 @router.get("/{client_id}/{period_id}/summary", response_model=OpeningBalanceSummaryResponse)
-async def get_summary(client_id: str, period_id: str, fiscal_year: Optional[int] = None):
+async def get_summary(client_id: str, period_id: str, user: dict = Depends(verify_token), fiscal_year: Optional[int] = None):
     """Açılış bakiyesi özet durumunu getir"""
+    period_id = normalize_period_db(period_id)
+    await check_client_access(user, client_id)
     summary = opening_balance_service.get_summary(client_id, period_id, fiscal_year)
 
     if not summary:
@@ -121,8 +125,10 @@ async def get_summary(client_id: str, period_id: str, fiscal_year: Optional[int]
 
 
 @router.get("/{client_id}/{period_id}/balances", response_model=List[OpeningBalanceItem])
-async def get_balances(client_id: str, period_id: str, fiscal_year: Optional[int] = None):
+async def get_balances(client_id: str, period_id: str, user: dict = Depends(verify_token), fiscal_year: Optional[int] = None):
     """Hesap bazında açılış bakiyelerini getir"""
+    period_id = normalize_period_db(period_id)
+    await check_client_access(user, client_id)
     balances = opening_balance_service.get_balances(client_id, period_id, fiscal_year)
 
     return [
@@ -138,16 +144,18 @@ async def get_balances(client_id: str, period_id: str, fiscal_year: Optional[int
 
 
 @router.get("/{client_id}/{period_id}/status", response_model=DashboardStatusResponse)
-async def get_dashboard_status(client_id: str, period_id: str):
+async def get_dashboard_status(client_id: str, period_id: str, user: dict = Depends(verify_token)):
     """
     Dashboard için açılış bakiyesi durumunu getir
 
     Bu endpoint dashboard'daki "Açılış Bakiyesi" kartı için kullanılır.
     """
+    period_id = normalize_period_db(period_id)
+    await check_client_access(user, client_id)
     # Period'dan yılı çıkar (örn: "2025-Q1" -> 2025)
     try:
         fiscal_year = int(period_id.split('-')[0])
-    except:
+    except (ValueError, IndexError):
         fiscal_year = datetime.now().year
 
     summary = opening_balance_service.get_summary(client_id, period_id, fiscal_year)
@@ -203,7 +211,8 @@ async def upload_mizan(
     client_id: str,
     period_id: str,
     fiscal_year: int = Form(...),
-    file: UploadFile = File(...)
+    file: UploadFile = File(...),
+    user: dict = Depends(verify_token)
 ):
     """
     Açılış mizanı Excel dosyası yükle
@@ -211,6 +220,8 @@ async def upload_mizan(
     Beklenen format:
     - HESAP KODU | HESAP ADI | BORÇ | ALACAK | BORÇ BAKİYE | ALACAK BAKİYE
     """
+    period_id = normalize_period_db(period_id)
+    await check_client_access(user, client_id)
     if not file.filename.endswith(('.xlsx', '.xls')):
         raise HTTPException(status_code=400, detail="Sadece Excel dosyaları (.xlsx, .xls) desteklenir")
 
@@ -251,7 +262,8 @@ async def upload_mizan(
 async def extract_from_yevmiye(
     client_id: str,
     period_id: str,
-    fiscal_year: int
+    fiscal_year: int,
+    user: dict = Depends(verify_token)
 ):
     """
     Yevmiye defterindeki açılış fişinden bakiyeleri çıkar
@@ -259,6 +271,8 @@ async def extract_from_yevmiye(
     Bu endpoint, yevmiye'de "AÇILIŞ" açıklamalı kayıtları bulur ve
     bunları açılış bakiyesi olarak kaydeder.
     """
+    period_id = normalize_period_db(period_id)
+    await check_client_access(user, client_id)
     result = opening_balance_service.load_from_yevmiye(
         client_id=client_id,
         period_id=period_id,
@@ -284,9 +298,12 @@ async def extract_from_yevmiye(
 async def add_manual_balance(
     client_id: str,
     period_id: str,
-    request: ManualBalanceRequest
+    request: ManualBalanceRequest,
+    user: dict = Depends(verify_token)
 ):
     """Manuel olarak tek hesap için açılış bakiyesi ekle"""
+    period_id = normalize_period_db(period_id)
+    await check_client_access(user, client_id)
     result = opening_balance_service.add_manual_balance(
         client_id=client_id,
         period_id=period_id,
@@ -310,6 +327,7 @@ async def add_manual_balance(
 async def get_missing_balances(
     client_id: str,
     period_id: str,
+    user: dict = Depends(verify_token),
     fiscal_year: Optional[int] = None
 ):
     """
@@ -317,6 +335,8 @@ async def get_missing_balances(
 
     Bu endpoint, cross-check C3 hatasının nedenini tespit etmek için kullanılır.
     """
+    period_id = normalize_period_db(period_id)
+    await check_client_access(user, client_id)
     result = opening_balance_service.calculate_missing_opening_balances(
         client_id=client_id,
         period_id=period_id,
@@ -342,8 +362,10 @@ async def get_missing_balances(
 
 
 @router.delete("/{client_id}/{period_id}/{fiscal_year}")
-async def delete_balances(client_id: str, period_id: str, fiscal_year: int):
+async def delete_balances(client_id: str, period_id: str, fiscal_year: int, user: dict = Depends(verify_token)):
     """Belirli bir yılın açılış bakiyelerini sil"""
+    period_id = normalize_period_db(period_id)
+    await check_client_access(user, client_id)
     result = opening_balance_service.delete_balances(
         client_id=client_id,
         period_id=period_id,

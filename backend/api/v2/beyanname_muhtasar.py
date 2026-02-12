@@ -6,11 +6,11 @@ Mizan ile çapraz kontrol yapar ve risk sinyalleri üretir.
 
 Mevzuat: GVK Md. 94 (stopaj), 193 SK, 5510 SK (SGK prim)
 TDHP: 335 Personele Borçlar, 360 Ödenecek Vergi, 361 SGK Primleri
-
-NO AUTH REQUIRED - Frontend'den doğrudan erişilebilir.
 """
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
+from middleware.auth import verify_token, check_client_access
+from utils.period_utils import get_period_db
 from pydantic import BaseModel
 from typing import List, Optional
 import logging
@@ -285,8 +285,8 @@ def _donem_karsilastirma(beyannameler: List[MuhtasarBeyanname]) -> tuple:
 @router.get("/muhtasar", response_model=MuhtasarRiskResponse)
 async def get_muhtasar_risk_kontrol(
     client_id: str = Query(..., description="Müşteri ID"),
-    period_id: str = Query(..., description="Dönem ID (örn: 2025-Q1)"),
-    tenant_id: str = Query("default", description="Tenant ID")
+    period_id: str = Depends(get_period_db),
+    user: dict = Depends(verify_token)
 ):
     """
     Muhtasar Beyanname Risk Kontrol
@@ -296,6 +296,7 @@ async def get_muhtasar_risk_kontrol(
     - SGK prim oranı kontrolü (361 vs 335)
     - Dönemler arası tutarlılık (dalgalanma tespiti)
     """
+    await check_client_access(user, client_id)
     try:
         with get_connection() as conn:
             cursor = conn.cursor()

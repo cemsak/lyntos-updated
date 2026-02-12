@@ -62,7 +62,7 @@ export interface CrossCheckState {
 
 // ============== API CONFIG ==============
 
-import { API_BASE_URL } from '../_lib/config/api';
+import { api } from '../_lib/api/client';
 
 // ============== HOOK ==============
 
@@ -94,16 +94,16 @@ export function useCrossCheck(
     setIsError(false);
     setError(null);
 
-    const url = `${API_BASE_URL}/api/v2/cross-check/run/${encodeURIComponent(period)}?tenant_id=${encodeURIComponent(tenantId)}&client_id=${encodeURIComponent(clientId)}`;
-
     try {
-      const response = await fetch(url);
+      const { data: result, error: apiError } = await api.get<CrossCheckSummary>(
+        `/api/v2/cross-check/run/${encodeURIComponent(period)}`,
+        { params: { tenant_id: tenantId, client_id: clientId } }
+      );
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+      if (apiError || !result) {
+        throw new Error(apiError || 'Kontroller calistirilamadi');
       }
 
-      const result: CrossCheckSummary = await response.json();
       setData(result);
 
     } catch (err) {
@@ -170,16 +170,16 @@ export function useCrossCheckStatus(
     setIsLoading(true);
     setIsError(false);
 
-    const url = `${API_BASE_URL}/api/v2/cross-check/status/${encodeURIComponent(period)}?tenant_id=${encodeURIComponent(tenantId)}&client_id=${encodeURIComponent(clientId)}`;
-
     try {
-      const response = await fetch(url);
+      const { data: result, error: apiError } = await api.get<CrossCheckQuickStatus>(
+        `/api/v2/cross-check/status/${encodeURIComponent(period)}`,
+        { params: { tenant_id: tenantId, client_id: clientId } }
+      );
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+      if (apiError || !result) {
+        throw new Error(apiError || 'Status alinamadi');
       }
 
-      const result: CrossCheckQuickStatus = await response.json();
       setStatus(result);
 
     } catch {

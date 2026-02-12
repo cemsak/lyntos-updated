@@ -5,15 +5,16 @@ LYNTOS Tax Parameters API
 Pratik Bilgiler vergi parametreleri, beyan tarihleri ve hesap makineleri.
 """
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import BaseModel, Field
 from typing import Optional, List
 import logging
 
+from middleware.auth import verify_token
 from services.tax_parameter_service import TaxParameterService
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/tax-parameters", tags=["TaxParameters"])
+router = APIRouter(prefix="/tax-parameters", tags=["TaxParameters"], dependencies=[Depends(verify_token)])
 
 service = TaxParameterService()
 

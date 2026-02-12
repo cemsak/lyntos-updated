@@ -12,11 +12,9 @@ Endpoint'ler:
 
 Mevzuat: VUK Md. 177, TTK Md. 64, VUK Md. 323
 TDHP: 120 Alıcılar, 320 Satıcılar, 128 Şüpheli Ticari Alacaklar
-
-NO AUTH REQUIRED - Frontend'den doğrudan erişilebilir.
 """
 
-from fastapi import APIRouter, HTTPException, Query, UploadFile, File
+from fastapi import APIRouter, HTTPException, Query, UploadFile, File, Depends
 from pydantic import BaseModel
 from typing import Dict, List, Optional
 import logging
@@ -24,6 +22,9 @@ import logging
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
+from middleware.auth import verify_token, check_client_access
+from utils.period_utils import get_period_db
 
 from services.cari_mutabakat_service import (
     parse_ekstre_csv,
@@ -142,7 +143,8 @@ class ConfirmRequest(BaseModel):
 async def upload_ekstre(
     file: UploadFile = File(...),
     client_id: str = Query(..., description="Mükellef ID"),
-    period_id: str = Query(..., description="Dönem (ör: 2025-Q1)"),
+    period_id: str = Depends(get_period_db),
+    user: dict = Depends(verify_token),
 ):
     """
     Cari hesap ekstre dosyası yükler ve otomatik mizan karşılaştırması yapar.
@@ -152,6 +154,7 @@ async def upload_ekstre(
 
     Karşılaştırma sonuçları otomatik olarak DB'ye kaydedilir.
     """
+    await check_client_access(user, client_id)
     if not client_id or not period_id:
         raise HTTPException(status_code=400, detail="client_id ve period_id zorunlu")
 
@@ -220,8 +223,11 @@ async def upload_ekstre(
 @router.get("/list")
 async def list_mutabakat(
     client_id: str = Query(..., description="Mükellef ID"),
-    period_id: str = Query(..., description="Dönem"),
+    period_id: str = Depends(get_period_db),
     filtre: Optional[str] = Query(None, description="Filtre: tumu/farkli/onaylanan/supheli"),
+    limit: int = Query(500, ge=1, le=5000, description="Max kayıt sayısı (VT-8)"),
+    offset: int = Query(0, ge=0, description="Sayfa offset"),
+    user: dict = Depends(verify_token),
 ):
     """
     Kayıtlı mutabakat sonuçlarını listeler.
@@ -232,16 +238,22 @@ async def list_mutabakat(
     - onaylanan: SMMM tarafından onaylananlar
     - supheli: VUK 323 şüpheli alacak riski olanlar
     """
+    await check_client_access(user, client_id)
     if not client_id or not period_id:
         raise HTTPException(status_code=400, detail="client_id ve period_id zorunlu")
 
     try:
         result = get_mutabakat_list(client_id, period_id, filtre)
+        total = len(result)
+        paginated = result[offset:offset + limit]
         return {
             'basarili': True,
-            'kayit_sayisi': len(result),
+            'kayit_sayisi': len(paginated),
+            'toplam': total,
+            'limit': limit,
+            'offset': offset,
             'filtre': filtre or 'tumu',
-            'sonuclar': result,
+            'sonuclar': paginated,
         }
     except Exception as e:
         logger.error(f"[CariMutabakat] List hatası: {e}")
@@ -249,7 +261,7 @@ async def list_mutabakat(
 
 
 @router.post("/onayla", response_model=OnayResponse)
-async def onayla(body: OnayRequest):
+async def onayla(body: OnayRequest, user: dict = Depends(verify_token)):
     """
     SMMM toplu onay işlemi.
 
@@ -275,6 +287,7 @@ async def onayla(body: OnayRequest):
 @router.post("/preview")
 async def preview(
     file: UploadFile = File(...),
+    user: dict = Depends(verify_token),
 ):
     """
     CSV/Excel dosyasını analiz edip sütun haritası ve örnek satırlar döndürür.
@@ -342,8 +355,9 @@ async def preview(
 async def confirm(
     file: UploadFile = File(...),
     client_id: str = Query(..., description="Mükellef ID"),
-    period_id: str = Query(..., description="Dönem (ör: 2026-Q1)"),
+    period_id: str = Depends(get_period_db),
     column_mapping: str = Query(..., description="JSON encoded column_mapping"),
+    user: dict = Depends(verify_token),
 ):
     """
     Preview onaylandıktan sonra, onaylı sütun haritasıyla mutabakat çalıştırır.
@@ -351,6 +365,7 @@ async def confirm(
     column_mapping parametresi JSON string olarak gönderilir:
     {"hesap_kodu": {"source_column": "HspKodu", "source_index": 0, ...}, ...}
     """
+    await check_client_access(user, client_id)
     import json as json_mod
 
     filename = file.filename or "unknown"
@@ -410,7 +425,8 @@ async def confirm(
 @router.get("/ozet", response_model=DashboardOzet)
 async def ozet(
     client_id: str = Query(..., description="Mükellef ID"),
-    period_id: str = Query(..., description="Dönem"),
+    period_id: str = Depends(get_period_db),
+    user: dict = Depends(verify_token),
 ):
     """
     Dashboard için cari mutabakat özeti.
@@ -418,6 +434,7 @@ async def ozet(
     Toplam hesap, uyumlu/farklı/onaylanan sayıları,
     toplam fark tutarı ve şüpheli alacak sayısını döndürür.
     """
+    await check_client_access(user, client_id)
     if not client_id or not period_id:
         raise HTTPException(status_code=400, detail="client_id ve period_id zorunlu")
 
@@ -438,8 +455,8 @@ class KararRequest(BaseModel):
     period_id: str
     hesap_kodu: str
     karar: str  # RESMI | DEFTER_DISI | BILINMIYOR
-    smmm_id: str = "SMMM"
     not_metni: str = ""
+    smmm_id: Optional[str] = None  # Deprecated: token'dan alınır (VT-10)
 
 
 class KararItem(BaseModel):
@@ -452,11 +469,11 @@ class TopluKararRequest(BaseModel):
     client_id: str
     period_id: str
     kararlar: List[KararItem]
-    smmm_id: str = "SMMM"
+    smmm_id: Optional[str] = None  # Deprecated: token'dan alınır (VT-10)
 
 
 @router.post("/karar")
-async def karar_kaydet(body: KararRequest):
+async def karar_kaydet(body: KararRequest, user: dict = Depends(verify_token)):
     """
     Tek SMMM kararı kaydet (UPSERT).
 
@@ -465,13 +482,15 @@ async def karar_kaydet(body: KararRequest):
     - DEFTER_DISI: Defter dışı nedenlerden kaynaklanan fark
     - BILINMIYOR: Henüz karar verilmemiş
     """
+    await check_client_access(user, body.client_id)
+    smmm_id = user["id"]
     try:
         result = save_karar(
             client_id=body.client_id,
             period_id=body.period_id,
             hesap_kodu=body.hesap_kodu,
             karar=body.karar,
-            smmm_id=body.smmm_id,
+            smmm_id=smmm_id,
             not_metni=body.not_metni,
         )
         return {"basarili": True, **result}
@@ -485,7 +504,8 @@ async def karar_kaydet(body: KararRequest):
 @router.get("/kararlar")
 async def kararlar_listele(
     client_id: str = Query(..., description="Mükellef ID"),
-    period_id: str = Query(..., description="Dönem"),
+    period_id: str = Depends(get_period_db),
+    user: dict = Depends(verify_token),
 ):
     """
     Tüm SMMM kararlarını getir.
@@ -493,6 +513,7 @@ async def kararlar_listele(
     Returns:
         {hesap_kodu: {karar, not, tarih}} formatında dict
     """
+    await check_client_access(user, client_id)
     if not client_id or not period_id:
         raise HTTPException(status_code=400, detail="client_id ve period_id zorunlu")
 
@@ -505,20 +526,22 @@ async def kararlar_listele(
 
 
 @router.post("/kararlar/toplu")
-async def kararlar_toplu_kaydet(body: TopluKararRequest):
+async def kararlar_toplu_kaydet(body: TopluKararRequest, user: dict = Depends(verify_token)):
     """
     Toplu SMMM kararı kaydet.
 
     localStorage'dan migration için veya toplu karar işlemleri için kullanılır.
     Her kayıt UPSERT mantığıyla çalışır.
     """
+    await check_client_access(user, body.client_id)
+    smmm_id = user["id"]
     try:
         items = [{"hesap_kodu": k.hesap_kodu, "karar": k.karar, "not_metni": k.not_metni} for k in body.kararlar]
         result = save_kararlar_toplu(
             client_id=body.client_id,
             period_id=body.period_id,
             kararlar=items,
-            smmm_id=body.smmm_id,
+            smmm_id=smmm_id,
         )
         return {"basarili": True, **result}
     except Exception as e:

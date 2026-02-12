@@ -89,34 +89,16 @@ const DOC_TYPE_LABELS: Record<string, string> = {
 // API CONFIG
 // ============================================================================
 
-import { getApiBaseUrl } from '../_lib/config/api';
+import { API_ENDPOINTS } from '../_lib/config/api';
+import { api } from '../_lib/api/client';
 
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
 
-async function fetchWithTimeout(url: string, timeoutMs: number = 5000): Promise<Response> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    const response = await fetch(url, { signal: controller.signal });
-    clearTimeout(timeoutId);
-    return response;
-  } catch (error) {
-    clearTimeout(timeoutId);
-    throw error;
-  }
-}
-
-async function safeFetch<T>(url: string, defaultValue: T): Promise<T> {
-  try {
-    const response = await fetchWithTimeout(url);
-    if (!response.ok) return defaultValue;
-    return await response.json();
-  } catch {
-    return defaultValue;
-  }
+async function safeFetch<T>(url: string, defaultValue: T, params?: Record<string, string | number | boolean | undefined>): Promise<T> {
+  const { data, ok } = await api.get<T>(url, { timeout: 5000, params });
+  return ok && data !== null ? data : defaultValue;
 }
 
 // ============================================================================
@@ -145,48 +127,43 @@ export function useRightRailData(
     setIsError(false);
     setError(null);
 
-    const apiBase = getApiBaseUrl();
+    const scopeParams = { period, smmm_id: tenantId, client_id: clientId };
+    const donemParams = { tenant_id: tenantId, client_id: clientId };
 
     try {
       // Fetch all APIs in parallel
       const [rightRailSummary, donemStatus, dataQualityResponse] = await Promise.all([
-        // 0. NEW: Right rail summary API (aggregated data)
+        // 0. Right rail summary API (aggregated data)
         safeFetch<{
-          data?: {
-            kritikSayisi?: number;
-            yuksekSayisi?: number;
-            eksikBelgeSayisi?: number;
-            oneriler?: Array<{ baslik: string; aciklama: string; oncelik: string }>;
-            kanitPaketi?: {
-              durum?: string;
-              tamamlanan?: string[];
-              progress?: number;
-            };
+          kritikSayisi?: number;
+          yuksekSayisi?: number;
+          eksikBelgeSayisi?: number;
+          oneriler?: Array<{ baslik: string; aciklama: string; oncelik: string }>;
+          kanitPaketi?: {
+            durum?: string;
+            tamamlanan?: string[];
+            progress?: number;
           };
-        }>(`${apiBase}/api/v1/contracts/right-rail-summary?period=${encodeURIComponent(period)}&smmm_id=${encodeURIComponent(tenantId)}&client_id=${encodeURIComponent(clientId)}`, {}),
+        }>(API_ENDPOINTS.contracts.kurganRisk, {}, scopeParams),
 
-        // 1. Donem status (eksik belgeler) - our v2 API
+        // 1. Donem status (eksik belgeler) - v2 API
         safeFetch<{
           byDocType?: Record<string, unknown[]>;
           totalCount?: number;
-        }>(`${apiBase}/api/v2/donem/status/${encodeURIComponent(period)}?tenant_id=${encodeURIComponent(tenantId)}&client_id=${encodeURIComponent(clientId)}`, {}),
+        }>(API_ENDPOINTS.donem.status(period), {}, donemParams),
 
         // 2. Data quality (v1 API)
         safeFetch<{
-          data?: {
-            score?: number;
-            quality_score?: number;
-          };
           score?: number;
-        }>(`${apiBase}/api/v1/contracts/data-quality?period=${encodeURIComponent(period)}&smmm_id=${encodeURIComponent(tenantId)}&client_id=${encodeURIComponent(clientId)}`, {}),
+          quality_score?: number;
+        }>(API_ENDPOINTS.contracts.dataQuality, {}, scopeParams),
       ]);
 
-      // Extract right rail summary data (new aggregated endpoint)
-      const summaryData = rightRailSummary.data || {};
-      const kritikSayisi = summaryData.kritikSayisi ?? 0;
-      const yuksekSayisi = summaryData.yuksekSayisi ?? 0;
-      const kanitPaketiFromApi = summaryData.kanitPaketi || {};
-      const onerilerFromApi = summaryData.oneriler || [];
+      // Extract right rail summary data (auto-normalized by api client)
+      const kritikSayisi = rightRailSummary.kritikSayisi ?? 0;
+      const yuksekSayisi = rightRailSummary.yuksekSayisi ?? 0;
+      const kanitPaketiFromApi = rightRailSummary.kanitPaketi || {};
+      const onerilerFromApi = rightRailSummary.oneriler || [];
 
       // Process document status
       const byDocType = donemStatus.byDocType || {};
@@ -203,10 +180,9 @@ export function useRightRailData(
 
       const missingDocCount = BIG_6_DOC_TYPES.length - presentDocCount;
 
-      // Process data quality
-      const dataQualityScore = dataQualityResponse.data?.score ??
-                               dataQualityResponse.data?.quality_score ??
-                               dataQualityResponse.score ?? 0;
+      // Process data quality (auto-normalized, envelope unwrapped)
+      const dataQualityScore = dataQualityResponse.score ??
+                               dataQualityResponse.quality_score ?? 0;
 
       // Calculate completion percentage
       // Formula: (presentDocs / totalDocs) * 100
@@ -272,7 +248,7 @@ export function useRightRailData(
         highCount: yuksekSayisi,
         mediumCount: 0,
         lowCount: 0,
-        missingDocCount: summaryData.eksikBelgeSayisi ?? missingDocCount,
+        missingDocCount: rightRailSummary.eksikBelgeSayisi ?? missingDocCount,
         presentDocCount,
         totalDocCategories: BIG_6_DOC_TYPES.length,
         completionPercent,

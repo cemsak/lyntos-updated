@@ -7,11 +7,11 @@ Muhasebe tekniğine uygun cross-check:
 
 edefter_entries tablosu E-Defter XML'den parse edilmiş doğru veriyi içerir.
 mizan_entries tablosu dönem sonu bakiyelerini içerir.
-
-NO AUTH REQUIRED - Frontend'den doğrudan erişilebilir.
 """
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
+from utils.period_utils import get_period_db
+from middleware.auth import verify_token, check_client_access
 from pydantic import BaseModel
 from typing import List, Optional
 import logging
@@ -78,8 +78,8 @@ class CrossCheckResponse(BaseModel):
 @router.get("/cross-check", response_model=CrossCheckResponse)
 async def get_cross_check(
     client_id: str = Query(..., description="Müşteri ID"),
-    period_id: str = Query(..., description="Dönem ID (örn: 2025-Q1)"),
-    tenant_id: str = Query("default", description="Tenant ID")
+    period_id: str = Depends(get_period_db),
+    user: dict = Depends(verify_token)
 ):
     """
     Muhasebe Defter Cross-Check
@@ -97,6 +97,7 @@ async def get_cross_check(
     Muhasebe kuralı: Kebir dönem içi hareketlerin toplamı,
     Mizan ise dönem sonu bakiyelerdir. Net bakiyeler eşleşmelidir.
     """
+    await check_client_access(user, client_id)
     try:
         with get_connection() as conn:
             cursor = conn.cursor()
